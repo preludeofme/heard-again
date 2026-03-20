@@ -200,21 +200,136 @@ Acceptance criteria:
 
 Goal: centralize local state and interactions behind “service-like” modules or hooks.
 
-- [ ] Introduce page-level controllers/hooks for each route:
-  - [ ] `useDashboardController` (memory wall selection, quick actions)
-  - [ ] `useStoriesController` (form state, optimistic UI for new contribution)
-  - [ ] `useVoiceLabController` (filters, sample playback state, recording modal state)
-  - [ ] `useDocumentsController` (filters, selection, share UI)
-  - [ ] `useTalkController` (message list, typing/listening state machine)
-- [ ] Standardize UI state patterns:
-  - [ ] `isLoading`, `hasError`, `errorMessage`
-  - [ ] toast/alert pattern
-  - [ ] consistent empty state triggers
+- [x] Introduce page-level controllers/hooks for each route:
+  - [x] `useDashboardController` (memory wall selection, quick actions)
+  - [x] `useStoriesController` (form state, optimistic UI for new contribution)
+  - [x] `useVoiceLabController` (filters, sample playback state, recording modal state)
+  - [x] `useDocumentsController` (filters, selection, share UI)
+  - [x] `useTalkController` (message list, typing/listening state machine)
+- [x] Standardize UI state patterns:
+  - [x] `isLoading`, `hasError`, `errorMessage`
+  - [x] toast/alert pattern
+  - [x] consistent empty state triggers
 
 Acceptance criteria:
 
-- [ ] No page directly mutates mock arrays; controller owns mutations.
-- [ ] Each major UI action triggers a controller method.
+- [x] No page directly mutates mock arrays; controller owns mutations.
+- [x] Each major UI action triggers a controller method.
+
+---
+
+## Phase 4.5 — Voice Cloning Infrastructure (GPT-SoVITS)
+
+### Backend Setup
+- [ ] Set up GPT-SoVITS Docker service
+  - [ ] Configure docker-compose.yml with GPU support
+  - [ ] Set up CUDA 12.6/12.8 environment
+  - [ ] Configure shared memory (16GB+)
+  - [ ] Set up persistent model storage
+  - [ ] Network configuration for API access
+
+- [ ] Create GPT-SoVITS API wrapper
+  - [ ] `/api/voice/train` - Start training job
+  - [ ] `/api/voice/train/status` - Check training progress
+  - [ ] `/api/voice/synthesize` - Generate speech
+  - [ ] `/api/voice/upload-sample` - Upload audio samples
+  - [ ] `/api/voice/models` - List trained models
+
+- [ ] Database schema updates
+  - [ ] VoiceModel table (id, userId, name, status, modelPath, metadata)
+  - [ ] TrainingJob table (id, userId, modelId, status, progress, samples)
+  - [ ] AudioSample table (id, userId, jobId, path, duration, quality)
+
+### Frontend Integration
+- [ ] VoiceLabController enhancements
+  - [ ] Training state management
+  - [ ] Progress tracking with real-time updates
+  - [ ] Error handling for training failures
+  - [ ] Model selection and management
+
+- [ ] UI Components for Voice Cloning
+  - [ ] Training progress indicator with stages
+  - [ ] Audio quality checker interface
+  - [ ] Model management dashboard
+  - [ ] Voice preview and comparison player
+
+### Voice Collection Workflow
+- [ ] Enhanced recording interface
+  - [ ] Real-time waveform visualization
+  - [ ] Audio quality metrics display
+  - [ ] Background noise detection
+  - [ ] 60-second minimum duration enforcement
+
+- [ ] Sample management system
+  - [ ] Multiple sample upload with drag-drop
+  - [ ] Sample preview and trimming tools
+  - [ ] Quality scoring system
+  - [ ] Batch processing capabilities
+
+### Training Pipeline Integration
+- [ ] Pre-processing automation
+  - [ ] Audio format conversion
+  - [ ] Noise reduction filters
+  - [ ] Voice separation (UVR5)
+  - [ ] Automatic audio segmentation
+
+- [ ] ASR and Text Processing
+  - [ ] Speech-to-text for training data
+  - [ ] Text correction interface
+  - [ ] Multi-language support
+
+- [ ] Model Training Management
+  - [ ] Job queue with priority handling
+  - [ ] GPU resource allocation
+  - [ ] Training progress callbacks
+  - [ ] Model validation and testing
+
+### Voice Synthesis Integration
+- [ ] TTS API Integration
+  - [ ] Text preprocessing and cleanup
+  - [ ] Emotion and style controls
+  - [ ] Speed and pitch adjustment
+  - [ ] Batch synthesis capability
+
+- [ ] Talk Page Voice Features
+  - [ ] Voice selection dropdown
+  - [ ] Real-time synthesis streaming
+  - [ ] Audio caching for repeated phrases
+  - [ ] Voice comparison A/B testing
+
+### Quality and Performance
+- [ ] Output validation system
+  - [ ] Voice similarity scoring
+  - [ ] Naturalness metrics
+  - [ ] User feedback collection
+  - [ ] Quality improvement suggestions
+
+- [ ] Performance optimization
+  - [ ] Model caching strategy
+  - [ ] Synthesis response time < 2 seconds
+  - [ ] Concurrent request handling
+  - [ ] Resource usage monitoring
+
+### Security and Privacy
+- [ ] Data protection measures
+  - [ ] Encrypt audio data at rest
+  - [ ] Secure model storage
+  - [ ] User data isolation
+  - [ ] GDPR compliance checklist
+
+- [ ] Access control implementation
+  - [ ] Rate limiting on training requests
+  - [ ] Resource quotas per user
+  - [ ] Authentication for all voice endpoints
+  - [ ] Audit logging for voice operations
+
+Acceptance criteria:
+
+- [ ] Users can train a voice model with 1 minute of audio
+- [ ] Training completes within 30 minutes on GPU
+- [ ] Synthesized speech responds in < 2 seconds
+- [ ] Voice similarity score > 85% for trained models
+- [ ] All voice data encrypted and isolated per user
 
 ---
 
