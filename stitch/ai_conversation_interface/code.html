@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Heard Again | The Living Archive</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&amp;family=Manrope:wght@200..800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "on-primary-container": "#9db9d5",
+                        "surface-container-highest": "#e5e2dd",
+                        "inverse-on-surface": "#f3f0eb",
+                        "on-tertiary-container": "#cfb28b",
+                        "surface": "#fcf9f4",
+                        "on-primary-fixed": "#001d32",
+                        "primary-fixed-dim": "#adcae6",
+                        "surface-container-high": "#ebe8e3",
+                        "surface-dim": "#dcdad5",
+                        "on-secondary-fixed-variant": "#384a4d",
+                        "surface-variant": "#e5e2dd",
+                        "error": "#ba1a1a",
+                        "on-surface-variant": "#43474d",
+                        "surface-bright": "#fcf9f4",
+                        "primary": "#16334a",
+                        "on-tertiary-fixed": "#281801",
+                        "on-tertiary-fixed-variant": "#584325",
+                        "background": "#fcf9f4",
+                        "surface-container": "#f0ede8",
+                        "tertiary-fixed": "#feddb4",
+                        "primary-container": "#2e4a62",
+                        "surface-container-low": "#f6f3ee",
+                        "on-secondary-fixed": "#0c1e21",
+                        "on-secondary": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "on-tertiary": "#ffffff",
+                        "secondary-fixed-dim": "#b7cacd",
+                        "secondary-fixed": "#d3e6e9",
+                        "outline-variant": "#c3c7cd",
+                        "on-error": "#ffffff",
+                        "secondary": "#506164",
+                        "error-container": "#ffdad6",
+                        "tertiary": "#402e11",
+                        "outline": "#73777d",
+                        "primary-fixed": "#cde5ff",
+                        "inverse-primary": "#adcae6",
+                        "tertiary-container": "#594426",
+                        "on-error-container": "#93000a",
+                        "on-surface": "#1c1c19",
+                        "on-background": "#1c1c19",
+                        "inverse-surface": "#31302d",
+                        "tertiary-fixed-dim": "#e0c29a",
+                        "surface-container-lowest": "#ffffff",
+                        "on-primary-fixed-variant": "#2d4961",
+                        "surface-tint": "#45617a",
+                        "on-secondary-container": "#546669",
+                        "secondary-container": "#d0e3e6"
+                    },
+                    fontFamily: {
+                        "headline": ["Newsreader", "serif"],
+                        "body": ["Manrope", "sans-serif"],
+                        "label": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "3xl": "1.5rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .orb-glow {
+            background: radial-gradient(circle at center, #adcae6 0%, transparent 70%);
+        }
+        .organic-pulse {
+            box-shadow: 0 0 60px rgba(173, 202, 230, 0.3);
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body selection:bg-primary-fixed">
+<aside class="fixed left-0 top-0 h-full flex flex-col p-6 z-40 w-64 bg-[#f6f3ee] dark:bg-slate-900">
+<div class="mb-10">
+<h1 class="text-[#16334a] dark:text-blue-100 font-serif font-semibold text-2xl tracking-tight">The Living Archive</h1>
+<p class="text-slate-500 text-xs font-label mt-1">Memory Preservation</p>
+</div>
+<nav class="flex-1 space-y-2">
+<a class="flex items-center gap-3 px-4 py-3 text-slate-600 dark:text-slate-400 hover:bg-[#ebe8e3] dark:hover:bg-slate-800/50 hover:translate-x-1 transition-all duration-300 rounded-xl" href="#">
+<span class="material-symbols-outlined" data-icon="home">home</span>
+<span class="font-medium">Home</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 bg-[#ffffff] dark:bg-slate-800 text-[#16334a] dark:text-blue-200 rounded-xl font-semibold shadow-sm Active: opacity-90 scale-[0.98]" href="#">
+<span class="material-symbols-outlined" data-icon="forum">forum</span>
+<span class="font-medium">Talk</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-600 dark:text-slate-400 hover:bg-[#ebe8e3] dark:hover:bg-slate-800/50 hover:translate-x-1 transition-all duration-300 rounded-xl" href="#">
+<span class="material-symbols-outlined" data-icon="settings_voice">settings_voice</span>
+<span class="font-medium">Voice Lab</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-600 dark:text-slate-400 hover:bg-[#ebe8e3] dark:hover:bg-slate-800/50 hover:translate-x-1 transition-all duration-300 rounded-xl" href="#">
+<span class="material-symbols-outlined" data-icon="description">description</span>
+<span class="font-medium">Documents</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-600 dark:text-slate-400 hover:bg-[#ebe8e3] dark:hover:bg-slate-800/50 hover:translate-x-1 transition-all duration-300 rounded-xl" href="#">
+<span class="material-symbols-outlined" data-icon="auto_stories">auto_stories</span>
+<span class="font-medium">Stories</span>
+</a>
+</nav>
+<div class="pt-6 mt-6 space-y-2 border-t border-outline-variant/10">
+<a class="flex items-center gap-3 px-4 py-2 text-slate-500 hover:text-primary transition-colors text-sm" href="#">
+<span class="material-symbols-outlined text-lg" data-icon="help">help</span>
+<span>Support</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 text-slate-500 hover:text-primary transition-colors text-sm" href="#">
+<span class="material-symbols-outlined text-lg" data-icon="shield_lock">shield_lock</span>
+<span>Privacy Settings</span>
+</a>
+</div>
+</aside>
+<main class="ml-64 min-h-screen flex flex-col relative overflow-hidden">
+<header class="sticky top-0 z-50 bg-[#fcf9f4]/80 backdrop-blur-md">
+<div class="flex justify-between items-center px-8 py-6 w-full max-w-screen-2xl mx-auto">
+<div class="flex items-center gap-4">
+<button class="material-symbols-outlined text-primary hover:bg-surface-container-high p-2 rounded-full transition-colors" data-icon="arrow_back">arrow_back</button>
+<div>
+<h2 class="font-headline italic text-2xl text-primary leading-tight">Conversation with Evelyn</h2>
+<span class="flex items-center gap-1.5 text-xs font-label text-secondary uppercase tracking-widest">
+<span class="w-1.5 h-1.5 bg-tertiary-fixed-dim rounded-full animate-pulse"></span>
+                            Live Presence
+                        </span>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex -space-x-2">
+<img alt="Evelyn's Profile" class="w-12 h-12 rounded-full ring-4 ring-surface shadow-md object-cover" data-alt="Close up portrait of an elderly woman with soft lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDD1_IihVRcUpiKlN71PR4G6xgkreYOPRshRywNtFjuFH6FIyXQlcoDtyo6UIb8PFdnROuMelE_jPWPWV9pNzbrSl6GWsQmH7N5Ycxtg7oXvDyIC4Qw11PQlF1KJ4fT4IMGCHuFBRtkqueXV1ffCsGPU9g1OMgWj6dAg_0GHQVGNaWf-eL2195hzqk23qJBKjbcbZLiX3_giBghH2UQMR-ozllNP9pz0WCw-WqizzSFp2Dzt5JuQfmwEG84scorI2v2FAmaxL6MKiA"/>
+</div>
+<div class="h-8 w-px bg-outline-variant/20"></div>
+<div class="flex items-center gap-3">
+<button class="material-symbols-outlined p-2 text-primary hover:bg-surface-container-high rounded-full transition-all" data-icon="notifications">notifications</button>
+<button class="material-symbols-outlined p-2 text-primary hover:bg-surface-container-high rounded-full transition-all" data-icon="settings">settings</button>
+</div>
+</div>
+</div>
+<div class="bg-[#f6f3ee] h-[1px] w-full"></div>
+</header>
+<section class="flex-1 max-w-4xl mx-auto w-full px-8 py-12 flex flex-col">
+<div class="flex-1 space-y-12">
+<div class="flex flex-col items-start max-w-[80%]">
+<div class="flex items-center gap-3 mb-3">
+<span class="font-label text-xs text-secondary font-bold uppercase tracking-wider">Evelyn</span>
+<span class="text-[10px] text-outline">10:42 AM</span>
+</div>
+<div class="bg-surface-container-low p-6 rounded-3xl rounded-tl-none text-lg font-body leading-relaxed text-on-surface shadow-sm">
+                        Tell me more about that summer in the mountains, dear. I remember the air smelling of pine and cold stone. Do you still have those photographs we took by the lake?
+                    </div>
+</div>
+<div class="flex flex-col items-end self-end max-w-[80%]">
+<div class="flex items-center gap-3 mb-3">
+<span class="text-[10px] text-outline">10:44 AM</span>
+<span class="font-label text-xs text-secondary font-bold uppercase tracking-wider">You</span>
+</div>
+<div class="bg-primary text-on-primary p-6 rounded-3xl rounded-tr-none text-lg font-body leading-relaxed shadow-lg">
+                        I found them last week in the attic. They’re a bit faded, but your smile is just as clear as I remember. We were wearing those matching wool sweaters you knitted.
+                    </div>
+</div>
+<div class="flex flex-col items-center py-20 relative">
+<div class="absolute inset-0 orb-glow blur-[100px] opacity-40"></div>
+<div class="relative w-48 h-48 flex items-center justify-center">
+<div class="absolute w-full h-full rounded-full border border-primary-fixed-dim/30 animate-[spin_10s_linear_infinite]"></div>
+<div class="absolute w-[120%] h-[120%] rounded-full border border-tertiary-fixed-dim/10 animate-[spin_15s_linear_infinite_reverse]"></div>
+<div class="w-32 h-32 rounded-full bg-gradient-to-br from-primary to-primary-container organic-pulse flex items-center justify-center relative overflow-hidden">
+<div class="absolute inset-0 bg-white/10 blur-xl translate-y-4"></div>
+<span class="material-symbols-outlined text-on-primary text-4xl" data-icon="settings_voice" style="font-variation-settings: 'FILL' 1;">settings_voice</span>
+</div>
+</div>
+<p class="mt-8 font-headline italic text-xl text-primary animate-pulse">Evelyn is listening...</p>
+</div>
+<div class="flex flex-col items-start max-w-[80%] opacity-60">
+<div class="flex items-center gap-3 mb-3">
+<span class="font-label text-xs text-secondary font-bold uppercase tracking-wider">Evelyn</span>
+</div>
+<div class="flex gap-2 p-4 bg-surface-container-low rounded-2xl w-20 justify-center">
+<div class="w-2 h-2 bg-primary/40 rounded-full animate-bounce"></div>
+<div class="w-2 h-2 bg-primary/40 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+<div class="w-2 h-2 bg-primary/40 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+</div>
+</div>
+</div>
+<div class="mt-12 sticky bottom-8">
+<div class="bg-surface-container-lowest/80 backdrop-blur-2xl p-6 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.08)] flex items-center gap-6">
+<button class="group flex flex-col items-center gap-1 transition-all">
+<div class="p-3 rounded-2xl bg-surface-container-high group-hover:bg-error-container group-hover:text-on-error-container transition-all">
+<span class="material-symbols-outlined" data-icon="mic_off">mic_off</span>
+</div>
+<span class="text-[10px] font-label font-bold uppercase tracking-tighter text-outline">Mute</span>
+</button>
+<div class="flex-1 h-16 bg-surface-container-high rounded-2xl flex items-center px-6 group transition-all focus-within:bg-white focus-within:ring-2 ring-primary/5">
+<input class="bg-transparent border-none focus:ring-0 w-full font-body text-lg text-on-surface placeholder:text-outline/60" placeholder="Type a memory or just say hello..." type="text"/>
+<button class="material-symbols-outlined text-primary-container opacity-40 hover:opacity-100 transition-opacity" data-icon="image">image</button>
+</div>
+<div class="flex items-center gap-3">
+<button class="h-16 w-16 rounded-2xl bg-secondary-container text-on-secondary-container flex items-center justify-center hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-3xl" data-icon="mic">mic</span>
+</button>
+<button class="h-16 px-8 rounded-2xl bg-gradient-to-br from-primary to-primary-container text-on-primary font-bold tracking-wide flex items-center gap-2 hover:shadow-lg transition-all hover:-translate-y-0.5 active:scale-95">
+<span>Send</span>
+<span class="material-symbols-outlined text-lg" data-icon="send" style="font-variation-settings: 'FILL' 1;">send</span>
+</button>
+</div>
+</div>
+<p class="text-center mt-4 text-[11px] font-label text-outline/60 uppercase tracking-[0.2em]">Encrypted Connection • Archive Active</p>
+</div>
+</section>
+<div class="absolute -right-64 top-1/4 w-[500px] h-[500px] bg-tertiary-fixed-dim/10 rounded-full blur-[120px] pointer-events-none"></div>
+<div class="absolute -left-32 bottom-0 w-[400px] h-[400px] bg-primary-fixed-dim/5 rounded-full blur-[100px] pointer-events-none"></div>
+</main>
+</body></html>

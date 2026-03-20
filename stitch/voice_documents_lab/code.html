@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&amp;family=Manrope:wght@200..800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-primary-container": "#9db9d5",
+              "surface-container-highest": "#e5e2dd",
+              "inverse-on-surface": "#f3f0eb",
+              "on-tertiary-container": "#cfb28b",
+              "surface": "#fcf9f4",
+              "on-primary-fixed": "#001d32",
+              "primary-fixed-dim": "#adcae6",
+              "surface-container-high": "#ebe8e3",
+              "surface-dim": "#dcdad5",
+              "on-secondary-fixed-variant": "#384a4d",
+              "surface-variant": "#e5e2dd",
+              "error": "#ba1a1a",
+              "on-surface-variant": "#43474d",
+              "surface-bright": "#fcf9f4",
+              "primary": "#16334a",
+              "on-tertiary-fixed": "#281801",
+              "on-tertiary-fixed-variant": "#584325",
+              "background": "#fcf9f4",
+              "surface-container": "#f0ede8",
+              "tertiary-fixed": "#feddb4",
+              "primary-container": "#2e4a62",
+              "surface-container-low": "#f6f3ee",
+              "on-secondary-fixed": "#0c1e21",
+              "on-secondary": "#ffffff",
+              "on-primary": "#ffffff",
+              "on-tertiary": "#ffffff",
+              "secondary-fixed-dim": "#b7cacd",
+              "secondary-fixed": "#d3e6e9",
+              "outline-variant": "#c3c7cd",
+              "on-error": "#ffffff",
+              "secondary": "#506164",
+              "error-container": "#ffdad6",
+              "tertiary": "#402e11",
+              "outline": "#73777d",
+              "primary-fixed": "#cde5ff",
+              "inverse-primary": "#adcae6",
+              "tertiary-container": "#594426",
+              "on-error-container": "#93000a",
+              "on-surface": "#1c1c19",
+              "on-background": "#1c1c19",
+              "inverse-surface": "#31302d",
+              "tertiary-fixed-dim": "#e0c29a",
+              "surface-container-lowest": "#ffffff",
+              "on-primary-fixed-variant": "#2d4961",
+              "surface-tint": "#45617a",
+              "on-secondary-container": "#546669",
+              "secondary-container": "#d0e3e6"
+            },
+            fontFamily: {
+              "headline": ["Newsreader", "serif"],
+              "body": ["Manrope", "sans-serif"],
+              "label": ["Manrope", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Manrope', sans-serif; }
+        .font-serif { font-family: 'Newsreader', serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface selection:bg-primary-container/30">
+<!-- TopAppBar -->
+<header class="docked full-width top-0 sticky z-50 bg-[#fcf9f4] dark:bg-slate-950">
+<div class="flex justify-between items-center px-8 py-4 w-full max-w-screen-2xl mx-auto">
+<div class="flex items-center gap-8">
+<span class="text-[#16334a] dark:text-blue-100 font-serif font-bold text-xl">Heard Again</span>
+<nav class="hidden md:flex gap-6">
+<a class="text-slate-500 dark:text-slate-400 font-medium hover:text-[#2e4a62] transition-colors" href="#">Home</a>
+<a class="text-[#16334a] dark:text-blue-300 font-bold hover:text-[#2e4a62] transition-colors" href="#">Voice Lab</a>
+<a class="text-slate-500 dark:text-slate-400 font-medium hover:text-[#2e4a62] transition-colors" href="#">Documents</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 text-slate-500 hover:text-[#16334a] transition-transform active:scale-95">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="p-2 text-slate-500 hover:text-[#16334a] transition-transform active:scale-95">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+<div class="w-10 h-10 rounded-full overflow-hidden border-2 border-surface-container-high">
+<img class="w-full h-full object-cover" data-alt="User profile avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBhknZlhrRmHvK39zVfri1_Bsn8sJ2PJe59izl2r9aMcSwDDFwIDDQ1SY6mOnEnBjCBh3zmi3pDJkVEIYGtaOW2oBSlBsDZt2Co2h7ZffsQnlkbXI_vCO0599-G8ScdQoiunIJVrYe26Emwk4bmlxkv7VzxHcShF2UXPK594_e_ESZ9dUQ5OM9s6KrYT38nbper1DXZYuKb0fpBV3AlQKAEtEFh5Zw7DRzfnhPA31-8FSBWAOCV3LZQKAi0cRCRwih2dV3hyE_Wcwg"/>
+</div>
+</div>
+</div>
+<div class="bg-[#f6f3ee] dark:bg-slate-900 h-[1px] w-full"></div>
+</header>
+<div class="flex min-h-screen">
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-0 h-full flex flex-col p-6 z-40 bg-[#f6f3ee] dark:bg-slate-900 w-64 hidden lg:flex">
+<div class="mb-10">
+<h2 class="text-[#16334a] dark:text-blue-100 font-serif font-semibold text-lg">The Living Archive</h2>
+<p class="text-slate-500 text-xs uppercase tracking-wider">Memory Preservation</p>
+</div>
+<nav class="flex-1 space-y-2">
+<a class="flex items-center gap-3 px-4 py-3 text-slate-600 dark:text-slate-400 hover:bg-[#ebe8e3] dark:hover:bg-slate-800/50 rounded-xl transition-all hover:translate-x-1" href="#">
+<span class="material-symbols-outlined" data-icon="home">home</span>
+<span class="font-medium">Home</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 bg-[#ffffff] dark:bg-slate-800 text-[#16334a] dark:text-blue-200 rounded-xl font-semibold shadow-sm active:opacity-90 active:scale-[0.98]" href="#">
+<span class="material-symbols-outlined" data-icon="settings_voice">settings_voice</span>
+<span class="font-medium">Voice Lab</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-600 dark:text-slate-400 hover:bg-[#ebe8e3] dark:hover:bg-slate-800/50 rounded-xl transition-all hover:translate-x-1" href="#">
+<span class="material-symbols-outlined" data-icon="description">description</span>
+<span class="font-medium">Documents</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-600 dark:text-slate-400 hover:bg-[#ebe8e3] dark:hover:bg-slate-800/50 rounded-xl transition-all hover:translate-x-1" href="#">
+<span class="material-symbols-outlined" data-icon="auto_stories">auto_stories</span>
+<span class="font-medium">Stories</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-600 dark:text-slate-400 hover:bg-[#ebe8e3] dark:hover:bg-slate-800/50 rounded-xl transition-all hover:translate-x-1" href="#">
+<span class="material-symbols-outlined" data-icon="forum">forum</span>
+<span class="font-medium">Talk</span>
+</a>
+</nav>
+<button class="mt-4 mb-8 bg-gradient-to-br from-primary to-primary-container text-white py-3 px-6 rounded-xl font-bold flex items-center justify-center gap-2 hover:opacity-95 transition-all">
+<span class="material-symbols-outlined text-sm" data-icon="mic">mic</span>
+                Start Recording
+            </button>
+<div class="pt-6 mt-6 border-t border-slate-200 dark:border-slate-800 space-y-2">
+<a class="flex items-center gap-3 px-4 py-2 text-slate-500 text-sm hover:translate-x-1 transition-all" href="#">
+<span class="material-symbols-outlined text-lg" data-icon="help">help</span>
+                    Support
+                </a>
+<a class="flex items-center gap-3 px-4 py-2 text-slate-500 text-sm hover:translate-x-1 transition-all" href="#">
+<span class="material-symbols-outlined text-lg" data-icon="shield_lock">shield_lock</span>
+                    Privacy Settings
+                </a>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="flex-1 lg:ml-64 p-8 md:p-12 lg:p-16">
+<!-- Header Section -->
+<section class="mb-16">
+<h1 class="font-serif italic text-4xl lg:text-5xl text-primary mb-4 tracking-tight">Voice &amp; Documents Lab</h1>
+<p class="text-secondary max-w-2xl font-body leading-relaxed">
+                    Preserving the resonance of your story. This is where your voice finds its digital double and your physical memories are cataloged for eternity.
+                </p>
+</section>
+<!-- Split Layout (Asymmetric Bento Grid) -->
+<div class="grid grid-cols-1 xl:grid-cols-12 gap-10">
+<!-- Voice Cloning Section (Col 1-5) -->
+<div class="xl:col-span-5 flex flex-col gap-8">
+<div class="bg-surface-container-low rounded-3xl p-8 shadow-sm">
+<div class="flex justify-between items-start mb-10">
+<div>
+<h3 class="font-serif text-2xl text-primary mb-1">Voice Cloning</h3>
+<p class="text-slate-500 text-sm">Status: Calibration in progress</p>
+</div>
+<span class="bg-tertiary-fixed text-on-tertiary-fixed text-[10px] font-bold px-2 py-1 rounded tracking-widest uppercase">Active</span>
+</div>
+<!-- Progress Circle & Stats -->
+<div class="flex items-center gap-10 mb-10">
+<div class="relative w-28 h-28 flex items-center justify-center">
+<svg class="w-full h-full -rotate-90">
+<circle class="text-surface-container-high" cx="56" cy="56" fill="transparent" r="50" stroke="currentColor" stroke-width="8"></circle>
+<circle class="text-primary" cx="56" cy="56" fill="transparent" r="50" stroke="currentColor" stroke-dasharray="314" stroke-dashoffset="78" stroke-width="8"></circle>
+</svg>
+<span class="absolute font-headline text-xl text-primary">75%</span>
+</div>
+<div class="space-y-1">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+<span class="text-on-surface font-semibold">15 recordings uploaded</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-tertiary-fixed-dim"></span>
+<span class="text-slate-500 italic">5 more needed</span>
+</div>
+</div>
+</div>
+<!-- Waveform Graphic -->
+<div class="bg-surface-container-lowest rounded-2xl p-6 mb-8 flex items-end justify-between h-20 gap-1">
+<div class="w-1 bg-primary rounded-full h-8 opacity-40"></div>
+<div class="w-1 bg-primary rounded-full h-12 opacity-60"></div>
+<div class="w-1 bg-primary rounded-full h-16 opacity-80"></div>
+<div class="w-1 bg-primary rounded-full h-10 opacity-50"></div>
+<div class="w-1 bg-primary rounded-full h-6 opacity-30"></div>
+<div class="w-1 bg-primary rounded-full h-14 opacity-70"></div>
+<div class="w-1 bg-primary rounded-full h-10 opacity-50"></div>
+<div class="w-1 bg-primary rounded-full h-16 opacity-90"></div>
+<div class="w-1 bg-primary rounded-full h-12 opacity-60"></div>
+<div class="w-1 bg-primary rounded-full h-8 opacity-40"></div>
+<div class="w-1 bg-primary rounded-full h-14 opacity-70"></div>
+<div class="w-1 bg-primary rounded-full h-18 opacity-100"></div>
+<div class="w-1 bg-primary rounded-full h-12 opacity-60"></div>
+</div>
+<button class="w-full bg-gradient-to-r from-primary to-primary-container text-white py-4 rounded-xl font-bold flex items-center justify-center gap-3 transition-transform active:scale-95 shadow-lg shadow-primary/10">
+<span class="material-symbols-outlined" data-icon="mic">mic</span>
+                            Record Sample
+                        </button>
+</div>
+<!-- Voice Sample List -->
+<div class="space-y-4">
+<h4 class="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Recent Samples</h4>
+<div class="bg-surface-container-lowest rounded-2xl p-4 flex items-center gap-4 transition-all hover:bg-surface-container-high group">
+<div class="w-10 h-10 rounded-full bg-secondary-container flex items-center justify-center text-on-secondary-container">
+<span class="material-symbols-outlined" data-icon="play_arrow" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</div>
+<div class="flex-1">
+<p class="text-sm font-bold text-primary">Childhood Home Memories</p>
+<p class="text-[10px] text-slate-400">Oct 12, 2023 • 2:45s</p>
+</div>
+<span class="material-symbols-outlined text-slate-300 group-hover:text-primary transition-colors" data-icon="more_vert">more_vert</span>
+</div>
+<div class="bg-surface-container-lowest rounded-2xl p-4 flex items-center gap-4 transition-all hover:bg-surface-container-high group">
+<div class="w-10 h-10 rounded-full bg-secondary-container flex items-center justify-center text-on-secondary-container">
+<span class="material-symbols-outlined" data-icon="play_arrow" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</div>
+<div class="flex-1">
+<p class="text-sm font-bold text-primary">Recipe for Sunday Roast</p>
+<p class="text-[10px] text-slate-400">Oct 09, 2023 • 1:12s</p>
+</div>
+<span class="material-symbols-outlined text-slate-300 group-hover:text-primary transition-colors" data-icon="more_vert">more_vert</span>
+</div>
+</div>
+</div>
+<!-- Document Archive Section (Col 6-12) -->
+<div class="xl:col-span-7">
+<div class="flex justify-between items-center mb-10">
+<h3 class="font-serif text-2xl text-primary">Document Archive</h3>
+<div class="flex gap-2">
+<button class="px-4 py-2 bg-surface-container-high rounded-full text-xs font-bold text-primary hover:bg-surface-container-highest transition-colors">All</button>
+<button class="px-4 py-2 bg-transparent rounded-full text-xs font-bold text-slate-500 hover:bg-surface-container-low transition-colors">PDFs</button>
+<button class="px-4 py-2 bg-transparent rounded-full text-xs font-bold text-slate-500 hover:bg-surface-container-low transition-colors">Handwritten</button>
+</div>
+</div>
+<!-- Asymmetric Document Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<!-- Card 1 -->
+<div class="bg-surface-container-lowest rounded-3xl p-5 shadow-sm hover:shadow-md transition-shadow group cursor-pointer border border-transparent hover:border-outline-variant/10">
+<div class="aspect-[4/3] rounded-2xl overflow-hidden mb-5 relative bg-surface-container-high">
+<img class="w-full h-full object-cover grayscale opacity-80 group-hover:scale-105 transition-transform duration-500" data-alt="Sepia photograph of an old letter with script handwriting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAZ3Z6939Bb30W9QgKEQNKALBy1Ljtog1rQvqY29g76WE70nWVRnuw5IiOMA68sn-1k8QLVLy6xn322CY5x85JLvIX9fugmJvwIPhQUtOIf5vxgnG6ebzHZ6ZKhZnoOJ5onGtxkh3OSc55W_2cSV38199edGmJtsHpC05C05UCq52spz5Pl9CreqrN0n-YStOnAoXmmmpjWm03tctR7m2WSQzL2pV6DOcHlCipKwSIaz25ingmEU0KJ93KpO6uCkaldzhOC920OqS4"/>
+<div class="absolute top-4 left-4 bg-white/80 backdrop-blur-md px-3 py-1 rounded-full flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[14px]" data-icon="edit_note">edit_note</span>
+<span class="text-[10px] font-bold uppercase tracking-wider">Letter</span>
+</div>
+</div>
+<div class="flex justify-between items-start">
+<div>
+<h4 class="font-headline text-lg text-primary leading-tight mb-1">Letter to Sarah, 1974</h4>
+<p class="text-slate-400 text-xs">Uploaded Dec 05, 2023</p>
+</div>
+<span class="material-symbols-outlined text-slate-300" data-icon="ios_share">ios_share</span>
+</div>
+</div>
+<!-- Card 2 (Offset/Different height feel) -->
+<div class="bg-surface-container-lowest rounded-3xl p-5 shadow-sm hover:shadow-md transition-shadow group cursor-pointer border border-transparent hover:border-outline-variant/10 mt-6 md:mt-12">
+<div class="aspect-[4/3] rounded-2xl overflow-hidden mb-5 relative bg-surface-container-high">
+<img class="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-500" data-alt="Digital document scan with text and official stamp" src="https://lh3.googleusercontent.com/aida-public/AB6AXuApBA6CQwBszCDI9Few5zIFxxYXkoQ_Lh9ysP1UZIMgoRGuZmBXqzpVUzpzZH9mo8skF7O6MSxfHn6SnB7dKDrV7EmRmGx4AV8GbqiWlgvr_KH4Lvt22_xqJwj_75i-44a4-MwUTTlZs-4gVVtH-WhpsiHDFVkLm9ymQKi-0py340e7lt7Gm1mJmR-msNW01Km6M5Ub-h7Lw3ct8PAbiA9lq_mJFAAcXPuznr_v3gXhtdlaSW3S8SNDZ1nsarda28MHlYjlQoDLP64"/>
+<div class="absolute top-4 left-4 bg-white/80 backdrop-blur-md px-3 py-1 rounded-full flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[14px]" data-icon="description">description</span>
+<span class="text-[10px] font-bold uppercase tracking-wider">PDF</span>
+</div>
+</div>
+<div class="flex justify-between items-start">
+<div>
+<h4 class="font-headline text-lg text-primary leading-tight mb-1">Estate Deed - Main St</h4>
+<p class="text-slate-400 text-xs">Uploaded Nov 28, 2023</p>
+</div>
+<span class="material-symbols-outlined text-slate-300" data-icon="ios_share">ios_share</span>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="bg-surface-container-lowest rounded-3xl p-5 shadow-sm hover:shadow-md transition-shadow group cursor-pointer border border-transparent hover:border-outline-variant/10">
+<div class="aspect-[4/3] rounded-2xl overflow-hidden mb-5 relative bg-surface-container-high">
+<img class="w-full h-full object-cover grayscale opacity-80 group-hover:scale-105 transition-transform duration-500" data-alt="Old black and white family portrait photograph" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCyDt0b_aO3rRlQUt7zZDGDJTE2-u5tx2UN5rgqhe2sIfiP3-CC2vAgMnhcBXJ_G1rMCyWeLfQ-nNWsBajfg9ngL9fUbc9jeUa5s6m4GAiDlmr8oL65WAWYFumq3bbMXjvsn7W6k7GoHO8NQlXtJS0BYMn_IEUz343bvUdjf0rr5LoJYs8ACZUUNIn0uMiuyjtjqpV4TKoABj6WdcP64-PBJLRfLY-iz-XI60ItfgZp6WjriyygPJ6qPG407XSGnBUvvuRciwlGTGs"/>
+<div class="absolute top-4 left-4 bg-white/80 backdrop-blur-md px-3 py-1 rounded-full flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[14px]" data-icon="image">image</span>
+<span class="text-[10px] font-bold uppercase tracking-wider">Photo</span>
+</div>
+</div>
+<div class="flex justify-between items-start">
+<div>
+<h4 class="font-headline text-lg text-primary leading-tight mb-1">Grandfather in Normandy</h4>
+<p class="text-slate-400 text-xs">Uploaded Oct 15, 2023</p>
+</div>
+<span class="material-symbols-outlined text-slate-300" data-icon="ios_share">ios_share</span>
+</div>
+</div>
+<!-- Add New Document Card -->
+<div class="border-2 border-dashed border-outline-variant/30 rounded-3xl flex flex-col items-center justify-center p-8 mt-6 md:mt-12 hover:bg-surface-container-low transition-colors cursor-pointer group">
+<div class="w-16 h-16 rounded-full bg-surface-container-high flex items-center justify-center text-primary group-hover:scale-110 transition-transform mb-4">
+<span class="material-symbols-outlined text-3xl" data-icon="add">add</span>
+</div>
+<p class="font-bold text-primary">Upload Artifact</p>
+<p class="text-[10px] text-slate-400 text-center mt-1">PDF, JPG, or Handwritten Scans</p>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

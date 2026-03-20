@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&amp;family=Manrope:wght@200..800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-primary-container": "#9db9d5",
+              "surface-container-highest": "#e5e2dd",
+              "inverse-on-surface": "#f3f0eb",
+              "on-tertiary-container": "#cfb28b",
+              "surface": "#fcf9f4",
+              "on-primary-fixed": "#001d32",
+              "primary-fixed-dim": "#adcae6",
+              "surface-container-high": "#ebe8e3",
+              "surface-dim": "#dcdad5",
+              "on-secondary-fixed-variant": "#384a4d",
+              "surface-variant": "#e5e2dd",
+              "error": "#ba1a1a",
+              "on-surface-variant": "#43474d",
+              "surface-bright": "#fcf9f4",
+              "primary": "#16334a",
+              "on-tertiary-fixed": "#281801",
+              "on-tertiary-fixed-variant": "#584325",
+              "background": "#fcf9f4",
+              "surface-container": "#f0ede8",
+              "tertiary-fixed": "#feddb4",
+              "primary-container": "#2e4a62",
+              "surface-container-low": "#f6f3ee",
+              "on-secondary-fixed": "#0c1e21",
+              "on-secondary": "#ffffff",
+              "on-primary": "#ffffff",
+              "on-tertiary": "#ffffff",
+              "secondary-fixed-dim": "#b7cacd",
+              "secondary-fixed": "#d3e6e9",
+              "outline-variant": "#c3c7cd",
+              "on-error": "#ffffff",
+              "secondary": "#506164",
+              "error-container": "#ffdad6",
+              "tertiary": "#402e11",
+              "outline": "#73777d",
+              "primary-fixed": "#cde5ff",
+              "inverse-primary": "#adcae6",
+              "tertiary-container": "#594426",
+              "on-error-container": "#93000a",
+              "on-surface": "#1c1c19",
+              "on-background": "#1c1c19",
+              "inverse-surface": "#31302d",
+              "tertiary-fixed-dim": "#e0c29a",
+              "surface-container-lowest": "#ffffff",
+              "on-primary-fixed-variant": "#2d4961",
+              "surface-tint": "#45617a",
+              "on-secondary-container": "#546669",
+              "secondary-container": "#d0e3e6"
+            },
+            fontFamily: {
+              "headline": ["Newsreader"],
+              "body": ["Manrope"],
+              "label": ["Manrope"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Manrope', sans-serif; background-color: #fcf9f4; color: #1c1c19; }
+        .font-serif { font-family: 'Newsreader', serif; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+    </style>
+</head>
+<body class="bg-surface text-on-surface">
+<!-- TopAppBar Component -->
+<header class="docked full-width top-0 sticky z-50 bg-[#fcf9f4] dark:bg-slate-950">
+<div class="flex justify-between items-center px-8 py-4 w-full max-w-screen-2xl mx-auto">
+<div class="flex items-center gap-8">
+<span class="text-[#16334a] dark:text-blue-100 font-serif font-bold text-xl">Heard Again</span>
+<nav class="hidden md:flex gap-6">
+<a class="text-[#16334a] dark:text-blue-300 font-bold hover:text-[#2e4a62] transition-colors duration-300" href="#">Home</a>
+<a class="text-slate-500 dark:text-slate-400 font-medium hover:text-[#2e4a62] transition-colors duration-300" href="#">Voice Lab</a>
+<a class="text-slate-500 dark:text-slate-400 font-medium hover:text-[#2e4a62] transition-colors duration-300" href="#">Stories</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="hidden sm:flex items-center bg-surface-container px-4 py-2 rounded-full">
+<span class="material-symbols-outlined text-outline text-sm">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-sm w-48" placeholder="Search memories..." type="text"/>
+</div>
+<button class="material-symbols-outlined text-primary scale-95 transition-transform duration-200">notifications</button>
+<button class="material-symbols-outlined text-primary scale-95 transition-transform duration-200">settings</button>
+<img class="w-8 h-8 rounded-full object-cover" data-alt="User profile avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCDYVGAp8G_I7EGTfNw6roGtGDt38Kuhu6myR57_Ny2wNMKIgUl8-qfXBkKh3RbMqB_l0kM7mSgDshxlTe7WPZBXcbpPNWs1DAKteocpxEA_ZCrZ7BMdD8KycXYdCLEMhtRQPHc2qVeR5_uBZZGGE4nnM9Lp8A2bs8bIhMb7zK00qn3w5GIe3JgvVypsDTYJq_FA_-JJT8lLHRF3Acrp54TH9XhHrsU7XxPE0krhyIyXByNM2ZK0-KiEaYyfdAuXHTZPf3RTHbHVyo"/>
+</div>
+</div>
+<div class="bg-[#f6f3ee] dark:bg-slate-900 h-[1px] w-full"></div>
+</header>
+<div class="flex min-h-screen">
+<!-- SideNavBar Component -->
+<aside class="fixed left-0 top-0 h-full flex flex-col p-6 z-40 bg-[#f6f3ee] dark:bg-slate-900 h-screen w-64 border-r-0 hidden lg:flex pt-24">
+<div class="mb-10">
+<h2 class="text-[#16334a] dark:text-blue-100 font-serif font-semibold text-lg">The Living Archive</h2>
+<p class="text-xs text-slate-500 uppercase tracking-widest">Memory Preservation</p>
+</div>
+<nav class="flex-1 space-y-2">
+<a class="flex items-center gap-3 px-4 py-3 bg-[#ffffff] dark:bg-slate-800 text-[#16334a] dark:text-blue-200 rounded-xl font-semibold shadow-sm hover:translate-x-1 transition-all duration-300" href="#">
+<span class="material-symbols-outlined">home</span>
+<span>Home</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-600 dark:text-slate-400 hover:bg-[#ebe8e3] dark:hover:bg-slate-800/50 rounded-xl hover:translate-x-1 transition-all duration-300" href="#">
+<span class="material-symbols-outlined">settings_voice</span>
+<span>Voice Lab</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-600 dark:text-slate-400 hover:bg-[#ebe8e3] dark:hover:bg-slate-800/50 rounded-xl hover:translate-x-1 transition-all duration-300" href="#">
+<span class="material-symbols-outlined">description</span>
+<span>Documents</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-600 dark:text-slate-400 hover:bg-[#ebe8e3] dark:hover:bg-slate-800/50 rounded-xl hover:translate-x-1 transition-all duration-300" href="#">
+<span class="material-symbols-outlined">auto_stories</span>
+<span>Stories</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-600 dark:text-slate-400 hover:bg-[#ebe8e3] dark:hover:bg-slate-800/50 rounded-xl hover:translate-x-1 transition-all duration-300" href="#">
+<span class="material-symbols-outlined">forum</span>
+<span>Talk</span>
+</a>
+</nav>
+<div class="mt-auto space-y-4">
+<button class="w-full py-3 px-4 bg-gradient-to-br from-primary to-primary-container text-white rounded-xl font-semibold shadow-md active:opacity-90 active:scale-[0.98] transition-all">
+                    Start Recording
+                </button>
+<div class="pt-6 space-y-2">
+<a class="flex items-center gap-3 px-4 py-2 text-sm text-slate-500 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined text-lg">help</span>
+<span>Support</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 text-sm text-slate-500 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined text-lg">shield_lock</span>
+<span>Privacy Settings</span>
+</a>
+</div>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="flex-1 lg:ml-64 p-8 pt-12">
+<div class="max-w-6xl mx-auto space-y-16">
+<!-- Hero Section: Profile & Voice -->
+<section class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+<!-- Profile Card -->
+<div class="lg:col-span-5 bg-surface-container-lowest rounded-xl p-8 shadow-[0_10px_40px_rgba(28,28,25,0.06)] flex flex-col items-center text-center">
+<div class="relative mb-6">
+<div class="w-32 h-32 rounded-full overflow-hidden ring-4 ring-surface-container">
+<img class="w-full h-full object-cover" data-alt="Portrait of an elderly woman smiling warmly" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDkOs7bznEKdi8siTPvvDwvBVIvpfNAWsDFZ_iaKEO940nDhe6AbBWHkrhI4ujGf_UEzkEevJJr8sautsIGBRKULWtnfg62FHShvSEeFsKqmb84qUH09Szspry-gBSc73fJtuCfpVZTecXMTJKgX39Mgo1MRx0xj1Labda9vwiE42VtHciUJ1kyxp-aRjaxc9VHFoPjeMlbw64oQ8Sn5xYmegsu9YYC3fHDXQ2lb4H3yA-w5JIvfz4Q1KkzvBWAcv9jy601j3hcKqQ"/>
+</div>
+<div class="absolute bottom-0 right-0 bg-tertiary-fixed text-on-tertiary-fixed p-1.5 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">favorite</span>
+</div>
+</div>
+<h1 class="font-serif text-3xl text-primary mb-2">Evelyn Thorne</h1>
+<p class="text-secondary font-medium mb-6 italic">1942 — Present</p>
+<p class="text-on-surface-variant leading-relaxed text-sm max-w-xs">
+                            Architect, storyteller, and the heart of our family. Her voice carries the wisdom of seven decades and the warmth of a thousand Sunday dinners.
+                        </p>
+</div>
+<!-- Voice Sample Section -->
+<div class="lg:col-span-7 h-full flex flex-col justify-center">
+<div class="bg-surface-container-low rounded-xl p-8 relative overflow-hidden h-full">
+<div class="flex items-center justify-between mb-8">
+<div>
+<h3 class="font-serif text-2xl text-primary">Voice Sample</h3>
+<p class="text-sm text-secondary">Generated Legacy Clone — High Fidelity</p>
+</div>
+<button class="w-14 h-14 bg-primary text-on-primary rounded-full flex items-center justify-center shadow-lg hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-3xl" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</button>
+</div>
+<!-- Waveform Visualization -->
+<div class="flex items-end gap-1 h-24 mb-4">
+<div class="w-1.5 h-1/2 bg-primary rounded-full opacity-40"></div>
+<div class="w-1.5 h-3/4 bg-primary rounded-full opacity-60"></div>
+<div class="w-1.5 h-2/3 bg-primary rounded-full"></div>
+<div class="w-1.5 h-1/4 bg-tertiary-fixed-dim rounded-full"></div>
+<div class="w-1.5 h-5/6 bg-primary rounded-full"></div>
+<div class="w-1.5 h-full bg-primary rounded-full"></div>
+<div class="w-1.5 h-2/3 bg-primary rounded-full"></div>
+<div class="w-1.5 h-1/2 bg-tertiary-fixed-dim rounded-full"></div>
+<div class="w-1.5 h-3/4 bg-primary rounded-full"></div>
+<div class="w-1.5 h-1/2 bg-primary rounded-full opacity-80"></div>
+<div class="w-1.5 h-1/3 bg-primary rounded-full opacity-60"></div>
+<div class="w-1.5 h-1/2 bg-primary rounded-full"></div>
+<div class="w-1.5 h-3/4 bg-primary rounded-full"></div>
+<div class="w-1.5 h-full bg-primary rounded-full"></div>
+<div class="w-1.5 h-5/6 bg-primary rounded-full opacity-90"></div>
+<div class="w-1.5 h-1/4 bg-tertiary-fixed-dim rounded-full"></div>
+<div class="w-1.5 h-1/2 bg-primary rounded-full"></div>
+<div class="w-1.5 h-2/3 bg-primary rounded-full"></div>
+<div class="w-1.5 h-3/4 bg-primary rounded-full opacity-70"></div>
+<div class="w-1.5 h-1/2 bg-primary rounded-full opacity-50"></div>
+<div class="w-1.5 h-1/4 bg-tertiary-fixed-dim rounded-full"></div>
+<div class="w-1.5 h-1/2 bg-primary rounded-full opacity-40"></div>
+</div>
+<div class="flex justify-between text-[10px] text-outline font-bold tracking-tighter uppercase">
+<span>0:00</span>
+<span>"The story of the blue house..."</span>
+<span>2:45</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Memory Wall - Bento Grid Style -->
+<section>
+<div class="flex items-baseline justify-between mb-8">
+<h2 class="font-serif text-4xl text-primary">Memory Wall</h2>
+<a class="text-sm font-semibold text-secondary hover:underline underline-offset-4" href="#">View All Stories</a>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+<!-- Card 1 -->
+<div class="bg-surface-container-lowest p-6 rounded-xl shadow-sm border-b-4 border-primary-container/10 flex flex-col">
+<div class="flex items-center gap-3 mb-4">
+<span class="material-symbols-outlined text-tertiary-container">auto_stories</span>
+<span class="text-xs font-bold uppercase tracking-widest text-outline">Story</span>
+</div>
+<p class="font-serif text-lg text-primary mb-4 leading-snug italic">"The time we got lost in the rainy streets of Florence and ended up in that tiny bakery..."</p>
+<div class="mt-auto flex items-center justify-between">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-secondary-container flex items-center justify-center text-[10px] font-bold text-on-secondary-container">M</div>
+<span class="text-xs text-secondary">Marcus Thorne</span>
+</div>
+<button class="material-symbols-outlined text-primary-container text-xl">play_circle</button>
+</div>
+</div>
+<!-- Card 2 - Larger/Asymmetric -->
+<div class="md:col-span-2 bg-surface-container p-8 rounded-xl flex flex-col md:flex-row gap-6">
+<div class="w-full md:w-1/3 aspect-square rounded-lg overflow-hidden shrink-0">
+<img class="w-full h-full object-cover grayscale opacity-80 hover:grayscale-0 transition-all duration-700" data-alt="Old polaroid of a family picnic in a garden" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBUVAz5N9koH7sUTKPxSarCJoVo-HbgtyLJ1Lf9NSfWPSAtn0dlBn7cxagFbn7_UnoPKAKp4nOezXlv9RZTHWAlEEq5qP8lfp_5Lt6UInd34i5XONMx6ewl7xKMEHRxNSy_5Cd1HyrCIgmNdKr4aMQn7G224cZQ6fR18QTpSwkWsH8aikdcRMq8DmpJHWd0ltbwRRCnB3P3ciT7fyXMlP18AIC4JnXOLSjcENPiyz4pT5Inc8Jh7iU5o-Y0IeKq_EOSGPLvwyeFOzk"/>
+</div>
+<div class="flex flex-col justify-center">
+<div class="flex items-center gap-3 mb-4">
+<span class="material-symbols-outlined text-tertiary-container">mic</span>
+<span class="text-xs font-bold uppercase tracking-widest text-outline">Audio Memory</span>
+</div>
+<h4 class="font-serif text-2xl text-primary mb-3">Sunday Morning Garden Talks</h4>
+<p class="text-on-surface-variant text-sm leading-relaxed mb-6">A 15-minute conversation about the first time she planted the rose bushes. Recorded during the summer of '19.</p>
+<button class="flex items-center gap-2 text-primary font-bold hover:gap-3 transition-all">
+<span>Listen to Legacy</span>
+<span class="material-symbols-outlined">trending_flat</span>
+</button>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="bg-surface-container-lowest p-6 rounded-xl shadow-sm border-b-4 border-tertiary-fixed-dim/20">
+<p class="text-sm text-on-surface-variant leading-relaxed mb-6 italic">"She always said that the secret to a good life was 'one part hard work, two parts laughter, and a very good pair of walking shoes'."</p>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-tertiary-fixed flex items-center justify-center text-[10px] font-bold text-on-tertiary-fixed">S</div>
+<span class="text-xs text-secondary">Sarah L.</span>
+</div>
+<span class="text-[10px] font-bold text-outline">2 DAYS AGO</span>
+</div>
+</div>
+<!-- Card 4 -->
+<div class="lg:col-span-2 bg-surface-container-high p-8 rounded-xl flex flex-col justify-between">
+<div class="max-w-md">
+<h4 class="font-serif text-2xl text-primary mb-2">The Archive Collection</h4>
+<p class="text-on-surface-variant text-sm">344 Recordings | 12 Collections | 3 Family Editors</p>
+</div>
+<div class="flex gap-2 mt-6">
+<div class="h-12 w-12 rounded bg-surface-container-lowest"></div>
+<div class="h-12 w-12 rounded bg-surface-container-lowest"></div>
+<div class="h-12 w-12 rounded bg-surface-container-lowest"></div>
+<div class="h-12 w-12 rounded bg-primary text-on-primary flex items-center justify-center font-bold text-xs">+31</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Quick Actions -->
+<section class="bg-surface-dim/30 rounded-2xl p-8">
+<div class="text-center mb-10">
+<h3 class="font-serif text-3xl text-primary mb-2">Preserve the Present</h3>
+<p class="text-secondary max-w-lg mx-auto">Every conversation is a thread in the tapestry of legacy. Add a new moment to the archive today.</p>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+<button class="bg-surface-container-lowest p-6 rounded-xl hover:bg-surface-container-high transition-colors flex flex-col items-center gap-4 text-center group">
+<div class="w-12 h-12 rounded-full bg-secondary-container flex items-center justify-center text-on-secondary-container group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined">forum</span>
+</div>
+<span class="font-bold text-primary">Start Conversation</span>
+</button>
+<button class="bg-surface-container-lowest p-6 rounded-xl hover:bg-surface-container-high transition-colors flex flex-col items-center gap-4 text-center group">
+<div class="w-12 h-12 rounded-full bg-tertiary-fixed flex items-center justify-center text-on-tertiary-fixed group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined">edit_note</span>
+</div>
+<span class="font-bold text-primary">New Story</span>
+</button>
+<button class="bg-surface-container-lowest p-6 rounded-xl hover:bg-surface-container-high transition-colors flex flex-col items-center gap-4 text-center group">
+<div class="w-12 h-12 rounded-full bg-primary-fixed flex items-center justify-center text-on-primary-fixed group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined">upload</span>
+</div>
+<span class="font-bold text-primary">Upload Recording</span>
+</button>
+</div>
+</section>
+</div>
+<!-- Footer Spacing -->
+<div class="h-20"></div>
+</main>
+</div>
+<!-- Mobile Navigation -->
+<div class="md:hidden fixed bottom-0 left-0 right-0 bg-[#fcf9f4] border-t border-surface-container-high px-6 py-3 flex justify-between items-center z-50">
+<a class="flex flex-col items-center text-[#16334a] font-bold" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="text-[10px]">Home</span>
+</a>
+<a class="flex flex-col items-center text-slate-500" href="#">
+<span class="material-symbols-outlined">settings_voice</span>
+<span class="text-[10px]">Lab</span>
+</a>
+<button class="bg-primary text-white p-3 rounded-full -mt-10 shadow-lg">
+<span class="material-symbols-outlined">add</span>
+</button>
+<a class="flex flex-col items-center text-slate-500" href="#">
+<span class="material-symbols-outlined">auto_stories</span>
+<span class="text-[10px]">Stories</span>
+</a>
+<a class="flex flex-col items-center text-slate-500" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="text-[10px]">Profile</span>
+</a>
+</div>
+</body></html>
