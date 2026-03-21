@@ -3,9 +3,12 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
+    "dev": "next dev -p 3002 -H 0.0.0.0 --webpack",
+    "dev:debug": "NODE_ENV=development DEBUG=* next dev -p 3002 -H 0.0.0.0 --webpack",
+    "build": "next build --webpack",
+    "start": "next build && next start -p 3002 -H 0.0.0.0",
+    "start:voice": "docker compose -f docker-compose.voice.yml up -d",
+    "stop:voice": "docker compose -f docker-compose.voice.yml down",
     "lint": "next lint"
   },
   "dependencies": {
@@ -16,11 +19,13 @@
     "@mui/system": "^7.3.9",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "@types/uuid": "^10.0.0",
     "date-fns": "^4.1.0",
     "next": "^16.2.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
     "@types/node": "25.5.0"

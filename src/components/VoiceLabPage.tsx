@@ -1,18 +1,54 @@
 import { Box, Typography, Card, CardContent, Button, Grid, Chip, IconButton, LinearProgress, CircularProgress } from '@mui/material'
-import { Mic as MicIcon, CloudUpload as UploadIcon, PlayArrow as PlayIcon, Pause as PauseIcon, MoreVert as MoreVertIcon, FilterList as FilterIcon } from '@mui/icons-material'
+import { Mic as MicIcon, CloudUpload as UploadIcon, PlayArrow as PlayIcon, Pause as PauseIcon, MoreVert as MoreVertIcon, FilterList as FilterIcon, Person as PersonIcon } from '@mui/icons-material'
 import { AudioSample, VoiceCloneStatus, DocumentArtifact } from '@/types'
 import { useState } from 'react'
 import { EmptyState, LoadingState } from './UIStates'
+import { VoiceTrainingModal } from './VoiceTrainingModal'
+import { useVoiceLabController } from '@/controllers'
 
 interface VoiceLabPageProps {
-  audioSamples: AudioSample[]
-  voiceCloneStatus: VoiceCloneStatus
-  documents: DocumentArtifact[]
+  // Props will be managed by controller
 }
 
-export function VoiceLabPage({ audioSamples, voiceCloneStatus, documents }: VoiceLabPageProps) {
-  const [selectedFilter, setSelectedFilter] = useState('All')
-  const [isPlaying, setIsPlaying] = useState<string | null>(null)
+export function VoiceLabPage({}: VoiceLabPageProps) {
+  const {
+    audioSamples,
+    voiceCloneStatus,
+    documents,
+    voiceModels,
+    selectedFilter,
+    isPlaying,
+    isRecording,
+    isUploading,
+    isLoading,
+    hasError,
+    errorMessage,
+    showRecordingModal,
+    trainingJob,
+    isTraining,
+    trainingSamples,
+    preprocessingStatus,
+    asrStatus,
+    queuePosition,
+    estimatedStartTime,
+    setSelectedFilter,
+    togglePlaySample,
+    startRecording,
+    stopRecording,
+    uploadDocument,
+    shareDocument,
+    refreshData,
+    toggleRecordingModal,
+    uploadTrainingSample,
+    removeTrainingSample,
+    startVoiceTraining,
+    synthesizeSpeech,
+    loadVoiceModels,
+    preprocessSamples,
+    runASR,
+    checkQueueStatus,
+    cancelTrainingJob,
+  } = useVoiceLabController()
 
   const filteredDocuments = documents.filter(doc => 
     selectedFilter === 'All' || doc.type === selectedFilter
@@ -119,6 +155,7 @@ export function VoiceLabPage({ audioSamples, voiceCloneStatus, documents }: Voic
               variant="contained"
               size="large"
               startIcon={<MicIcon />}
+              onClick={toggleRecordingModal}
               sx={{
                 background: 'linear-gradient(135deg, #16334a 0%, #2e4a62 100%)',
                 py: 2,
@@ -130,7 +167,7 @@ export function VoiceLabPage({ audioSamples, voiceCloneStatus, documents }: Voic
                 }
               }}
             >
-              Record Sample
+              Train Voice Clone
             </Button>
 
             {/* Recent Samples */}
@@ -158,7 +195,7 @@ export function VoiceLabPage({ audioSamples, voiceCloneStatus, documents }: Voic
                     <CardContent sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
                       <IconButton
                         size="small"
-                        onClick={() => setIsPlaying(isPlaying === sample.id ? null : sample.id)}
+                        onClick={() => togglePlaySample(sample.id)}
                         sx={{ 
                           backgroundColor: '#ffffff',
                           '&:hover': { backgroundColor: '#d0e3e6' }
@@ -348,6 +385,26 @@ export function VoiceLabPage({ audioSamples, voiceCloneStatus, documents }: Voic
       </Box>
     </Grid>
   </Grid>
-</Box>
+    
+    {/* Voice Training Modal */}
+    <VoiceTrainingModal
+      open={showRecordingModal}
+      onClose={toggleRecordingModal}
+      trainingSamples={trainingSamples}
+      onUploadSample={uploadTrainingSample}
+      onRemoveSample={removeTrainingSample}
+      onStartTraining={startVoiceTraining}
+      isUploading={isUploading}
+      isTraining={isTraining}
+      trainingJob={trainingJob}
+      preprocessingStatus={preprocessingStatus}
+      asrStatus={asrStatus}
+      queuePosition={queuePosition}
+      estimatedStartTime={estimatedStartTime}
+      onPreprocessSamples={preprocessSamples}
+      onRunASR={runASR}
+      onCancelTrainingJob={cancelTrainingJob}
+    />
+  </Box>
   )
 }

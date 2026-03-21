@@ -19,98 +19,134 @@ export function Dashboard({ legacySubject, memoryWallItems }: DashboardProps) {
       <Box sx={{ mb: 6 }}>
         <Grid container spacing={3}>
           {/* Profile Card */}
-          <Grid size={{ xs: 12, md: 6 }}>
+          <Grid size={{ xs: 12, md: 5 }}>
             <Card
               sx={{
                 backgroundColor: '#ffffff',
                 borderRadius: 3,
-                p: 3,
+                p: 4,
                 height: '100%',
                 display: 'flex',
                 flexDirection: 'column',
+                alignItems: 'center',
+                textAlign: 'center',
+                boxShadow: '0 10px 40px rgba(28,28,25,0.06)',
               }}
             >
-              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 3, mb: 3 }}>
+              <Box sx={{ position: 'relative', mb: 3 }}>
                 <Avatar
                   src={legacySubject.avatarUrl}
-                  sx={{ width: 80, height: 80 }}
+                  sx={{ 
+                    width: 128, 
+                    height: 128, 
+                    border: '4px solid #f0ede8'
+                  }}
                 />
-                <Box sx={{ flex: 1 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                    <Typography variant="h4" className="serif-font">
-                      {legacySubject.fullName}
-                    </Typography>
-                    <HeartIcon sx={{ color: '#e74c3c', fontSize: 24 }} />
-                  </Box>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    {legacySubject.lifespanText}
-                  </Typography>
-                  <Typography variant="body1" sx={{ lineHeight: 1.6 }}>
-                    {legacySubject.bio}
-                  </Typography>
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    bottom: 0,
+                    right: 0,
+                    backgroundColor: '#e0c29a',
+                    color: '#281801',
+                    p: 1,
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <HeartIcon sx={{ fontSize: 16 }} />
                 </Box>
               </Box>
+              <Typography variant="h3" className="serif-font" sx={{ color: '#16334a', mb: 1 }}>
+                {legacySubject.fullName}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3, fontStyle: 'italic', fontWeight: 500 }}>
+                {legacySubject.lifespanText}
+              </Typography>
+              <Typography variant="body1" sx={{ lineHeight: 1.6, maxWidth: 250 }}>
+                {legacySubject.bio}
+              </Typography>
             </Card>
           </Grid>
 
           {/* Voice Sample Card */}
-          <Grid size={{ xs: 12, md: 6 }}>
+          <Grid size={{ xs: 12, md: 7 }}>
             <Card
               sx={{
-                backgroundColor: '#ffffff',
+                backgroundColor: '#f0ede8',
                 borderRadius: 3,
-                p: 3,
+                p: 4,
                 height: '100%',
                 display: 'flex',
                 flexDirection: 'column',
+                position: 'relative',
+                overflow: 'hidden',
               }}
             >
-              <Typography variant="h6" sx={{ mb: 1 }}>
-                Voice Sample
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Generated Legacy Clone — High Fidelity
-              </Typography>
-              
-              <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', py: 4 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+                <Box>
+                  <Typography variant="h4" className="serif-font" sx={{ color: '#16334a' }}>
+                    Voice Sample
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Generated Legacy Clone — High Fidelity
+                  </Typography>
+                </Box>
                 <IconButton
                   onClick={() => setIsPlaying(!isPlaying)}
                   sx={{
                     backgroundColor: '#16334a',
                     color: 'white',
-                    width: 80,
-                    height: 80,
-                    mb: 3,
+                    width: 56,
+                    height: 56,
+                    boxShadow: '0 4px 12px rgba(22, 51, 74, 0.3)',
                     '&:hover': {
                       backgroundColor: '#2e4a62',
+                      transform: 'scale(1.05)',
                     },
                   }}
                 >
-                  {isPlaying ? <PauseIcon sx={{ fontSize: 40 }} /> : <PlayIcon sx={{ fontSize: 40 }} />}
+                  {isPlaying ? <PauseIcon sx={{ fontSize: 32 }} /> : <PlayIcon sx={{ fontSize: 32 }} />}
                 </IconButton>
-                
-                {/* Waveform Visualization */}
-                <Box sx={{ width: '100%', display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                  <Typography variant="caption">0:00</Typography>
-                  <Box sx={{ flex: 1, height: 40, display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    {[...Array(50)].map((_, i) => (
-                      <Box
-                        key={i}
-                        sx={{
-                          flex: 1,
-                          height: Math.random() * 30 + 10,
-                          backgroundColor: i % 5 === 0 ? '#16334a' : '#e0c29a',
-                          borderRadius: 1,
-                        }}
-                      />
-                    ))}
-                  </Box>
-                  <Typography variant="caption">2:45</Typography>
+              </Box>
+              
+              {/* Waveform Visualization */}
+              <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <Box sx={{ display: 'flex', alignItems: 'end', gap: 0.75, height: 96, mb: 2 }}>
+                  {/* Matching mockup waveform pattern exactly - 22 bars */}
+                  <Box sx={{ width: 6, height: '50%', backgroundColor: '#16334a', borderRadius: 1, opacity: 0.4 }} />
+                  <Box sx={{ width: 6, height: '75%', backgroundColor: '#16334a', borderRadius: 1, opacity: 0.6 }} />
+                  <Box sx={{ width: 6, height: '67%', backgroundColor: '#16334a', borderRadius: 1 }} />
+                  <Box sx={{ width: 6, height: '25%', backgroundColor: '#e0c29a', borderRadius: 1 }} />
+                  <Box sx={{ width: 6, height: '83%', backgroundColor: '#16334a', borderRadius: 1 }} />
+                  <Box sx={{ width: 6, height: '100%', backgroundColor: '#16334a', borderRadius: 1 }} />
+                  <Box sx={{ width: 6, height: '67%', backgroundColor: '#16334a', borderRadius: 1 }} />
+                  <Box sx={{ width: 6, height: '50%', backgroundColor: '#e0c29a', borderRadius: 1 }} />
+                  <Box sx={{ width: 6, height: '75%', backgroundColor: '#16334a', borderRadius: 1 }} />
+                  <Box sx={{ width: 6, height: '50%', backgroundColor: '#16334a', borderRadius: 1, opacity: 0.8 }} />
+                  <Box sx={{ width: 6, height: '33%', backgroundColor: '#16334a', borderRadius: 1, opacity: 0.6 }} />
+                  <Box sx={{ width: 6, height: '50%', backgroundColor: '#16334a', borderRadius: 1 }} />
+                  <Box sx={{ width: 6, height: '75%', backgroundColor: '#16334a', borderRadius: 1 }} />
+                  <Box sx={{ width: 6, height: '100%', backgroundColor: '#16334a', borderRadius: 1 }} />
+                  <Box sx={{ width: 6, height: '93%', backgroundColor: '#16334a', borderRadius: 1, opacity: 0.9 }} />
+                  <Box sx={{ width: 6, height: '25%', backgroundColor: '#e0c29a', borderRadius: 1 }} />
+                  <Box sx={{ width: 6, height: '50%', backgroundColor: '#16334a', borderRadius: 1 }} />
+                  <Box sx={{ width: 6, height: '67%', backgroundColor: '#16334a', borderRadius: 1 }} />
+                  <Box sx={{ width: 6, height: '75%', backgroundColor: '#16334a', borderRadius: 1, opacity: 0.7 }} />
+                  <Box sx={{ width: 6, height: '50%', backgroundColor: '#16334a', borderRadius: 1, opacity: 0.5 }} />
+                  <Box sx={{ width: 6, height: '25%', backgroundColor: '#e0c29a', borderRadius: 1 }} />
+                  <Box sx={{ width: 6, height: '50%', backgroundColor: '#16334a', borderRadius: 1, opacity: 0.4 }} />
                 </Box>
                 
-                <Typography variant="body2" color="text.secondary" className="serif-font" sx={{ fontStyle: 'italic' }}>
-                  "The best way to remember is to share."
-                </Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', typography: 'caption', color: '#73777d', fontWeight: 'bold', letterSpacing: '0.05em' }}>
+                  <span>0:00</span>
+                  <Typography variant="caption" className="serif-font" sx={{ fontStyle: 'italic', color: '#546669' }}>
+                    "The story of the blue house..."
+                  </Typography>
+                  <span>2:45</span>
+                </Box>
               </Box>
             </Card>
           </Grid>

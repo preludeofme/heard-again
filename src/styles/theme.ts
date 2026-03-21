@@ -27,36 +27,62 @@ const theme = createTheme({
     // Custom properties for Material Design 3 colors
     // Using type assertion to avoid TypeScript errors
     ...({
+      'surface-container': '#f0ede8',
+      'surface-container-low': '#f6f3ee',
+      'surface-container-lowest': '#ffffff',
+      'surface-container-high': '#ebe8e3',
+      'surface-dim': '#dcdad5',
+      'surface-bright': '#fcf9f4',
       'primary-container': '#2e4a62',
       'secondary-container': '#d0e3e6',
-      'tertiary-fixed-dim': '#e0c29a', // Waveform background
-      outline: '#c3c7cd',
+      'tertiary-fixed-dim': '#e0c29a',
+      'tertiary-fixed': '#feddb4',
+      'on-tertiary-fixed': '#281801',
+      'outline': '#73777d',
       'outline-variant': '#c3c7cd',
+      'on-surface-variant': '#43474d',
     } as any),
   },
   typography: {
-    fontFamily: "'Manrope', sans-serif",
+    fontFamily: 'var(--font-manrope), sans-serif',
     h1: {
-      fontFamily: "'Newsreader', serif",
+      fontFamily: 'var(--font-newsreader), serif',
       fontSize: '3.5rem',
       lineHeight: 1.2,
+      fontWeight: 600,
     },
     h2: {
-      fontFamily: "'Newsreader', serif",
+      fontFamily: 'var(--font-newsreader), serif',
       fontSize: '1.75rem',
       lineHeight: 1.3,
+      fontWeight: 500,
+    },
+    h3: {
+      fontFamily: 'var(--font-newsreader), serif',
+      fontSize: '1.5rem',
+      lineHeight: 1.3,
+      fontWeight: 500,
+    },
+    h4: {
+      fontFamily: 'var(--font-newsreader), serif',
+      fontSize: '1.25rem',
+      lineHeight: 1.3,
+      fontWeight: 500,
     },
     body1: {
       fontSize: '1rem',
       lineHeight: 1.6,
+      fontWeight: 400,
     },
     body2: {
       fontSize: '0.875rem',
       lineHeight: 1.6,
+      fontWeight: 400,
     },
     caption: {
       fontSize: '0.75rem',
-      fontFamily: "'Manrope', sans-serif",
+      fontFamily: 'var(--font-manrope), sans-serif',
+      fontWeight: 400,
     },
   },
   shape: {
@@ -109,7 +135,7 @@ const theme = createTheme({
           transition: 'all 0.2s ease-in-out',
           '&:hover': {
             transform: 'translateY(-2px)',
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
+            boxShadow: '0 10px 40px rgba(28, 28, 25, 0.06)',
           },
           '&[tabIndex="0"]:focus': {
             outline: '2px solid #16334a',

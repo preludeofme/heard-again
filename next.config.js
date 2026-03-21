@@ -1,6 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Add empty Turbopack config to avoid webpack conflict
+  turbopack: {},
   images: {
     remotePatterns: [
       {
@@ -8,6 +10,12 @@ const nextConfig = {
         hostname: 'localhost',
       },
     ],
+  },
+  // Configure logging for development
+  logging: {
+    fetches: {
+      fullUrl: true,
+    },
   },
 }
 

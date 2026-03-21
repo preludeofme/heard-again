@@ -1,7 +1,6 @@
 import Head from 'next/head'
 import { Layout } from '@/components/Layout'
 import { VoiceLabPage } from '@/components/VoiceLabPage'
-import { mockAudioSamples, mockVoiceCloneStatus, mockDocuments } from '@/data/mockData'
 
 export default function VoiceLab() {
   return (
@@ -11,11 +10,7 @@ export default function VoiceLab() {
         <meta name="description" content="Voice & Documents Lab" />
       </Head>
       <Layout>
-        <VoiceLabPage 
-          audioSamples={mockAudioSamples}
-          voiceCloneStatus={mockVoiceCloneStatus}
-          documents={mockDocuments}
-        />
+        <VoiceLabPage />
       </Layout>
     </>
   )

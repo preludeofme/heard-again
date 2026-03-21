@@ -71,3 +71,54 @@ export interface MemoryWallItem {
     additional: number
   }
 }
+
+export interface VoiceModel {
+  id: string
+  userId: string
+  name: string
+  displayName?: string
+  gptName?: string // Name used in GPT-SoVITS
+  status: 'training' | 'ready' | 'failed'
+  language: string
+  sampleCount: number
+  createdAt: Date | string
+  modelPath?: string
+  similarityScore?: number
+  isGPTModel?: boolean // Whether this is a GPT-SoVITS native model
+  metadata?: {
+    trainingTime?: number
+    lastUsed?: Date
+    version?: string
+  }
+}
+
+export interface AudioCache {
+  [key: string]: {
+    audioUrl: string
+    modelId: string
+    text: string
+    createdAt: Date
+    duration: number
+  }
+}
+
+export interface VoiceSynthesisRequest {
+  modelId: string
+  text: string
+  language?: string
+  speed?: number
+  pitch?: number
+  emotion?: string
+  style?: string
+}
+
+export interface VoiceSynthesisResponse {
+  success: boolean
+  audioUrl: string
+  modelId: string
+  text: string
+  language: string
+  duration: number
+  synthesisTime: number
+  cached?: boolean
+}
