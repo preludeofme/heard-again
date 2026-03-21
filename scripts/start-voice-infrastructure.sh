@@ -34,7 +34,7 @@ docker compose -f docker-compose.voice.yml ps
 echo ""
 echo "✅ Voice Infrastructure Started!"
 echo "📍 Service URLs:"
-echo "   - GPT-SoVITS API: http://localhost:9874"
+echo "   - GPT-SoVITS API: http://0.0.0.0:9888"
 echo "   - GPT-SoVITS Web UI: http://localhost:9873"
 echo "   - Redis: localhost:6379"
 echo "   - PostgreSQL: localhost:5432"

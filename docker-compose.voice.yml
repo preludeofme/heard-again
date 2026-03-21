@@ -6,7 +6,7 @@ services:
     image: breakstring/gpt-sovits:latest
     container_name: gpt-sovits-api
     ports:
-      - "9874:9874"  # GPT-SoVITS Gradio Web UI
+      - "9888:9874"  # GPT-SoVITS Gradio Web UI (changed to 9888)
       - "9873:9873"  # GPT-SoVITS Web UI (alternative)
       - "9880:9880"  # GPT-SoVITS FastAPI TTS Inference
     volumes:
@@ -19,6 +19,8 @@ services:
     environment:
       - CUDA_VISIBLE_DEVICES=0
       - SHARE_MEMORY=16G
+      - GRADIO_SERVER_NAME=0.0.0.0
+      - GRADIO_SERVER_PORT=9874
     deploy:
       resources:
         reservations:

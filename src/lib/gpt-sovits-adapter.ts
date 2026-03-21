@@ -1,7 +1,7 @@
 // GPT-SoVITS Integration Layer
 // This adapts the GPT-SoVITS Gradio API to our expected format
 
-const GPT_SOVITS_BASE_URL = process.env.GPT_SOVITS_URL || 'http://localhost:9874';
+const GPT_SOVITS_BASE_URL = process.env.GPT_SOVITS_URL || 'http://localhost:9888';
 
 export interface TrainingJob {
   id: string;
@@ -234,8 +234,8 @@ export class GPTSoVITSAdapter {
   }): Promise<SynthesisResult> {
     await this.initialize();
     
-    // GPT-SoVITS FastAPI synthesis endpoint
-    const synthesisUrl = `${process.env.GPT_SOVITS_URL?.replace(':9874', ':9880') || 'http://localhost:9880'}/`;
+    // GPT-SoVITS FastAPI synthesis endpoint (still on port 9880)
+    const synthesisUrl = `${process.env.GPT_SOVITS_URL?.replace(':9888', ':9880') || 'http://localhost:9880'}/`;
     
     try {
       console.log('[GPT-SoVITS] Starting synthesis:', { synthesisUrl, modelRef: params.modelRef, text: params.text });
