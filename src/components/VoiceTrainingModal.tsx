@@ -251,15 +251,6 @@ export function VoiceTrainingModal({
               </AccordionDetails>
             </Accordion>
 
-            {/* GPT-SoVITS Status */}
-            {trainingJob.usingRealGPT && (
-              <Alert severity="success" sx={{ mb: 2 }}>
-                <Typography variant="body2">
-                  ✓ Using real GPT-SoVITS engine for processing
-                </Typography>
-              </Alert>
-            )}
-            
             {trainingJob.error && (
               <Typography color="error" variant="body2">
                 Error: {trainingJob.error}

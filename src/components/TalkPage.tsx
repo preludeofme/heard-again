@@ -91,19 +91,7 @@ export function TalkPage({ messages, legacySubject }: TalkPageProps) {
                     <Typography variant="body2">
                       {model.displayName || model.name}
                     </Typography>
-                    {model.isGPTModel && (
-                      <Chip 
-                        label="GPT-SoVITS" 
-                        size="small" 
-                        sx={{ 
-                          fontSize: '0.65rem', 
-                          height: 20,
-                          backgroundColor: '#e3f2fd',
-                          color: '#1976d2'
-                        }} 
-                      />
-                    )}
-                    {model.similarityScore && !model.isGPTModel && (
+                    {model.similarityScore && (
                       <Typography variant="caption" sx={{ color: '#666' }}>
                         {Math.round(model.similarityScore * 100)}%
                       </Typography>

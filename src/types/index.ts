@@ -77,14 +77,12 @@ export interface VoiceModel {
   userId: string
   name: string
   displayName?: string
-  gptName?: string // Name used in GPT-SoVITS
   status: 'training' | 'ready' | 'failed'
   language: string
   sampleCount: number
   createdAt: Date | string
   modelPath?: string
   similarityScore?: number
-  isGPTModel?: boolean // Whether this is a GPT-SoVITS native model
   metadata?: {
     trainingTime?: number
     lastUsed?: Date

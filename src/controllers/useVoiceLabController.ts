@@ -227,12 +227,10 @@ export function useVoiceLabController(): VoiceLabControllerState & VoiceLabContr
       // Store the file with its ID for later use in training
       const fileWithId = new File([file], file.name, { type: file.type })
       ;(fileWithId as any).fileId = uploadData.fileId
-      ;(fileWithId as any).gptPath = uploadData.gptPath
       
       console.log('File with ID:', {
         name: file.name,
-        fileId: uploadData.fileId,
-        gptPath: uploadData.gptPath
+        fileId: uploadData.fileId
       })
       
       setState(prev => ({
@@ -241,7 +239,7 @@ export function useVoiceLabController(): VoiceLabControllerState & VoiceLabContr
         isUploading: false,
       }))
 
-      showSuccess('Sample uploaded successfully' + (uploadData.gptPath ? ' and sent to GPT-SoVITS' : ''))
+      showSuccess('Sample uploaded successfully')
     } catch (error) {
       setState(prev => ({
         ...prev,
@@ -328,13 +326,11 @@ export function useVoiceLabController(): VoiceLabControllerState & VoiceLabContr
           progress: 0,
           currentStage: 'queued',
           createdAt: new Date().toISOString(),
-          usingRealGPT: result.usingRealGPT,
-          gptJobId: result.gptJobId,
         },
         isTraining: false,
       }))
 
-      showSuccess(result.usingRealGPT ? 'Voice training started with GPT-SoVITS!' : 'Voice training started!')
+      showSuccess('Voice training started!')
       
       // Start polling for status
       const pollStatus = setInterval(async () => {

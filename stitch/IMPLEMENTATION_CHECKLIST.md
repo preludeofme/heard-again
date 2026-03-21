@@ -218,17 +218,17 @@ Acceptance criteria:
 
 ---
 
-## Phase 4.5 — Voice Cloning Infrastructure (GPT-SoVITS)
+## Phase 4.5 — Voice Cloning Infrastructure
 
 ### Backend Setup
-- [ ] Set up GPT-SoVITS Docker service
+- [ ] Set up Voice Cloning Docker service
   - [ ] Configure docker-compose.yml with GPU support
   - [ ] Set up CUDA 12.6/12.8 environment
   - [ ] Configure shared memory (16GB+)
   - [ ] Set up persistent model storage
   - [ ] Network configuration for API access
 
-- [x] Create GPT-SoVITS API wrapper
+- [x] Create Voice Cloning API wrapper
   - [x] `/api/voice/train` - Start training job
   - [x] `/api/voice/train/status` - Check training progress
   - [x] `/api/voice/synthesize` - Generate speech
@@ -264,11 +264,11 @@ Acceptance criteria:
   - [x] Sample preview and trimming tools
   - [x] Quality scoring system
   - [x] Batch processing capabilities
-- [x] GPT-SoVITS server connectivity
+- [x] Voice Cloning server connectivity
   - [x] Server is running and accessible
   - [x] API endpoints are responding
   - [x] Training requests are being sent
-  - [ ] Proper data formatting for GPT-SoVITS
+  - [ ] Proper data formatting for voice cloning system
 
 ### Training Pipeline Integration
 - [x] Pre-processing automation
@@ -319,13 +319,13 @@ Acceptance criteria:
   - [ ] Model access controls
 
 ### Docker Infrastructure (Remaining)
-- [x] Set up GPT-SoVITS Docker service
+- [x] Set up Voice Cloning Docker service
   - [x] Configure docker-compose.yml with GPU support
   - [x] Set up CUDA 12.6/12.8 environment
   - [x] Configure shared memory (16GB+)
   - [x] Set up persistent model storage
   - [x] Network configuration for API access
-- [ ] Implement proper GPT-SoVITS data pipeline
+- [ ] Implement proper voice cloning data pipeline
   - [ ] Audio upload and preprocessing workflow
   - [ ] ASR transcription integration
   - [ ] .list file generation with audio paths and transcriptions
