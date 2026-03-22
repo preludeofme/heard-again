@@ -7,6 +7,7 @@ interface VoiceModel {
   id: string
   userId: string
   name: string
+  displayName?: string
   status: 'training' | 'ready' | 'failed'
   language: string
   sampleCount: number
@@ -75,6 +76,7 @@ interface VoiceLabControllerActions {
   cancelTrainingJob: (jobId: string) => Promise<void>
   designAndCloneVoice: (profileName: string, instruct: string, refText: string, language?: string) => Promise<void>
   blendVoiceProfile: (profileName: string, instruct: string, styleRefText?: string, language?: string) => Promise<void>
+  deleteVoiceProfile: (profileId: string) => Promise<void>
 }
 
 export function useVoiceLabController(): VoiceLabControllerState & VoiceLabControllerActions {
@@ -629,6 +631,29 @@ export function useVoiceLabController(): VoiceLabControllerState & VoiceLabContr
     }
   }, [state.trainingSamples, showSuccess, showError])
 
+  const deleteVoiceProfile = useCallback(async (profileId: string) => {
+    try {
+      const response = await fetch(`/api/voice/delete-profile?profileId=${encodeURIComponent(profileId)}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(`Delete failed: ${errorText}`)
+      }
+
+      setState(prev => ({
+        ...prev,
+        voiceModels: prev.voiceModels.filter(m => m.id !== profileId),
+      }))
+
+      showSuccess('Voice profile deleted')
+    } catch (error) {
+      console.error('Failed to delete voice profile:', error)
+      showError('Failed to delete voice profile')
+    }
+  }, [showSuccess, showError])
+
   const cancelTrainingJob = useCallback(async (jobId: string) => {
     try {
       const response = await fetch(`/api/voice/queue?jobId=${jobId}`, {
@@ -672,5 +697,6 @@ export function useVoiceLabController(): VoiceLabControllerState & VoiceLabContr
     cancelTrainingJob,
     designAndCloneVoice,
     blendVoiceProfile,
+    deleteVoiceProfile,
   }
 }
