@@ -56,6 +56,7 @@ const navItems = [
   { label: 'Voice Lab', href: '/voice-lab', icon: 'settings_voice' },
   { label: 'Documents', href: '/documents', icon: 'description' },
   { label: 'Stories', href: '/stories', icon: 'auto_stories' },
+  { label: 'Family Tree', href: '/family-tree', icon: 'account_tree' },
   { label: 'Talk', href: '/talk', icon: 'forum' },
 ]
 

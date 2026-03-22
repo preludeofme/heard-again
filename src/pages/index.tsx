@@ -1,22 +1,14 @@
-import { GetStaticProps } from 'next'
 import Head from 'next/head'
-import { Layout } from '@/components/Layout'
-import { Dashboard } from '@/components/Dashboard'
-import { mockLegacySubject, mockMemoryWall } from '@/data/mockData'
+import { LandingPage } from '@/components/LandingPage'
 
-export default function HomePage() {
+export default function Home() {
   return (
     <>
       <Head>
-        <title>Heard Again - Home</title>
-        <meta name="description" content="The Living Archive" />
+        <title>Heard Again | Preserve the Voices That Matter Most</title>
+        <meta name="description" content="A collaborative sanctuary for your family's identity. Invite loved ones to share memories and build a collective portrait of a legacy that lasts forever." />
       </Head>
-      <Layout>
-        <Dashboard 
-          legacySubject={mockLegacySubject}
-          memoryWallItems={mockMemoryWall}
-        />
-      </Layout>
+      <LandingPage />
     </>
   )
 }
