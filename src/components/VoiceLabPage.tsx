@@ -48,6 +48,7 @@ export function VoiceLabPage({}: VoiceLabPageProps) {
     runASR,
     checkQueueStatus,
     cancelTrainingJob,
+    blendVoiceProfile,
   } = useVoiceLabController()
 
   const filteredDocuments = documents.filter(doc => 
@@ -393,17 +394,10 @@ export function VoiceLabPage({}: VoiceLabPageProps) {
       trainingSamples={trainingSamples}
       onUploadSample={uploadTrainingSample}
       onRemoveSample={removeTrainingSample}
-      onStartTraining={startVoiceTraining}
+      onCreateVoice={startVoiceTraining}
       isUploading={isUploading}
       isTraining={isTraining}
       trainingJob={trainingJob}
-      preprocessingStatus={preprocessingStatus}
-      asrStatus={asrStatus}
-      queuePosition={queuePosition}
-      estimatedStartTime={estimatedStartTime}
-      onPreprocessSamples={preprocessSamples}
-      onRunASR={runASR}
-      onCancelTrainingJob={cancelTrainingJob}
     />
   </Box>
   )

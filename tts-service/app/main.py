@@ -23,6 +23,7 @@ from app.config import (
 )
 from app.model_manager import model_manager
 from app.transcriber import transcribe_audio
+from app.style_presets import resolve_style_params, list_presets
 
 logging.basicConfig(
     level=logging.INFO,
@@ -55,8 +56,14 @@ async def startup():
     try:
         model_manager.load_model()
     except Exception as e:
-        logger.error(f"Model failed to load on startup: {e}")
-        logger.info("Service will start without model — use /api/tts/load-model to retry.")
+        logger.error(f"Base model failed to load on startup: {e}")
+        logger.info("Service will start without base model — use /api/tts/load-model to retry.")
+
+    try:
+        model_manager.load_design_model()
+    except Exception as e:
+        logger.error(f"Design model failed to load on startup: {e}")
+        logger.info("Voice design will be unavailable — use /api/tts/load-design-model to retry.")
 
 
 @app.on_event("shutdown")
@@ -72,18 +79,30 @@ async def shutdown():
 async def health_check():
     return {
         "status": "ok",
-        "model_loaded": model_manager.is_loaded,
-        "model_name": model_manager.model_name,
+        "base_model_loaded": model_manager.base_loaded,
+        "base_model_name": model_manager.base_model_name,
+        "design_model_loaded": model_manager.design_loaded,
+        "design_model_name": model_manager.design_model_name,
         "gpu": model_manager.get_gpu_info(),
     }
 
 
 @app.post("/api/tts/load-model")
 async def load_model():
-    """Manually trigger model loading (useful if startup load failed)."""
+    """Manually trigger base model loading."""
     try:
         model_manager.load_model()
-        return {"success": True, "message": "Model loaded successfully"}
+        return {"success": True, "message": "Base model loaded successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/tts/load-design-model")
+async def load_design_model():
+    """Manually trigger VoiceDesign model loading."""
+    try:
+        model_manager.load_design_model()
+        return {"success": True, "message": "VoiceDesign model loaded successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -152,6 +171,7 @@ class CreateProfileRequest(BaseModel):
     fileId: str
     refText: Optional[str] = None
     profileName: str
+    styleInstruct: Optional[str] = None
 
 
 @app.post("/api/tts/create-voice-profile")
@@ -185,6 +205,9 @@ async def create_voice_profile(req: CreateProfileRequest):
     safe_name = "".join(c if c.isalnum() or c in "-_ " else "" for c in req.profileName)
     safe_name = safe_name.strip().replace(" ", "_") or req.fileId
 
+    # Resolve style params from natural language description
+    style_params = resolve_style_params(instruct=req.styleInstruct) if req.styleInstruct else {}
+
     try:
         start = time.time()
         profile_path = model_manager.create_voice_profile(
@@ -194,11 +217,23 @@ async def create_voice_profile(req: CreateProfileRequest):
         )
         elapsed = time.time() - start
 
+        # Save style metadata alongside the profile
+        if req.styleInstruct or style_params:
+            meta_path = VOICE_PROFILES_DIR / f"{safe_name}.json"
+            meta_path.write_text(json.dumps({
+                "profileId": safe_name,
+                "styleInstruct": req.styleInstruct or "",
+                "styleParams": style_params,
+            }))
+            logger.info(f"Saved style metadata: {meta_path}")
+
         return {
             "success": True,
             "profileId": safe_name,
             "profilePath": str(profile_path),
             "processingTime": round(elapsed, 2),
+            "styleInstruct": req.styleInstruct,
+            "styleParams": style_params,
         }
     except Exception as e:
         logger.error(f"Voice profile creation failed: {e}")
@@ -235,6 +270,181 @@ async def delete_voice_profile(profile_id: str):
 
 
 # ---------------------------------------------------------------------------
+# Voice Design (natural language → voice)
+# ---------------------------------------------------------------------------
+
+class DesignVoiceRequest(BaseModel):
+    text: str
+    instruct: str
+    language: str = "English"
+
+
+@app.post("/api/tts/design-voice")
+async def design_voice(req: DesignVoiceRequest):
+    """Generate speech with a designed voice from a natural-language description."""
+    if not model_manager.design_loaded:
+        raise HTTPException(status_code=503, detail="VoiceDesign model not loaded")
+
+    try:
+        start = time.time()
+        audio_data, sr = model_manager.design_voice(
+            text=req.text,
+            instruct=req.instruct,
+            language=req.language,
+        )
+        elapsed = time.time() - start
+
+        output_id = str(uuid.uuid4())
+        output_path = GENERATED_AUDIO_DIR / f"{output_id}.wav"
+        sf.write(str(output_path), audio_data, sr)
+
+        duration = len(audio_data) / sr
+
+        return {
+            "success": True,
+            "audioId": output_id,
+            "audioUrl": f"/api/tts/audio/{output_id}",
+            "duration": round(duration, 2),
+            "sampleRate": sr,
+            "synthesisTime": round(elapsed, 2),
+        }
+    except Exception as e:
+        logger.error(f"Voice design failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class DesignAndCloneRequest(BaseModel):
+    refText: str
+    instruct: str
+    profileName: str
+    language: str = "English"
+
+
+@app.post("/api/tts/design-and-clone")
+async def design_and_clone(req: DesignAndCloneRequest):
+    """
+    Hybrid workflow: Design a voice with natural language → create a reusable clone profile.
+
+    This combines VoiceDesign + Base model to produce a .pt profile that captures
+    the designed voice characteristics for consistent future synthesis.
+    """
+    if not model_manager.design_loaded:
+        raise HTTPException(status_code=503, detail="VoiceDesign model not loaded")
+    if not model_manager.base_loaded:
+        raise HTTPException(status_code=503, detail="Base model not loaded")
+
+    safe_name = "".join(c if c.isalnum() or c in "-_ " else "" for c in req.profileName)
+    safe_name = safe_name.strip().replace(" ", "_") or f"designed_{uuid.uuid4().hex[:8]}"
+
+    try:
+        start = time.time()
+        profile_path, design_audio_path = model_manager.design_and_clone_profile(
+            ref_text=req.refText,
+            instruct=req.instruct,
+            profile_name=safe_name,
+            language=req.language,
+        )
+        elapsed = time.time() - start
+
+        # Get the design audio ID for preview
+        design_audio_id = Path(design_audio_path).stem.replace("design_", "")
+
+        return {
+            "success": True,
+            "profileId": safe_name,
+            "profilePath": str(profile_path),
+            "designAudioUrl": f"/api/tts/audio/design_{design_audio_id}",
+            "processingTime": round(elapsed, 2),
+            "instruct": req.instruct,
+        }
+    except Exception as e:
+        logger.error(f"Design-and-clone failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ---------------------------------------------------------------------------
+# Blended Voice (real person's identity + designed style)
+# ---------------------------------------------------------------------------
+
+class BlendVoiceRequest(BaseModel):
+    fileId: str
+    refText: Optional[str] = None
+    instruct: str
+    styleRefText: Optional[str] = None
+    profileName: str
+    language: str = "English"
+
+
+@app.post("/api/tts/blend-voice")
+async def blend_voice(req: BlendVoiceRequest):
+    """
+    Create a voice profile that blends a real person's voice with a designed style.
+
+    Takes the speaker identity (timbre) from a real audio recording and combines
+    it with the prosodic style (emotion, cadence, tone) from a VoiceDesign
+    natural language description. The result is a profile that sounds like the
+    real person speaking with the designed characteristics.
+    """
+    if not model_manager.design_loaded:
+        raise HTTPException(status_code=503, detail="VoiceDesign model not loaded")
+    if not model_manager.base_loaded:
+        raise HTTPException(status_code=503, detail="Base model not loaded")
+
+    # Find the reference audio file (exclude .json sidecar)
+    ref_files = [f for f in REFERENCE_AUDIO_DIR.glob(f"{req.fileId}.*") if f.suffix != ".json"]
+    if not ref_files:
+        raise HTTPException(status_code=404, detail="Reference audio not found")
+    ref_path = str(ref_files[0])
+
+    # Load stored transcript if not provided
+    if not req.refText:
+        meta_path = REFERENCE_AUDIO_DIR / f"{req.fileId}.json"
+        if meta_path.exists():
+            meta = json.loads(meta_path.read_text())
+            req.refText = meta.get("transcript", None)
+            logger.info(f"Using stored transcript: {(req.refText or '')[:80]}...")
+
+    if not req.refText:
+        raise HTTPException(
+            status_code=400,
+            detail="No transcript available for the reference audio.",
+        )
+
+    # Default style reference text if not provided
+    style_ref_text = req.styleRefText or "Hello, how are you doing today? It's really nice to see you again."
+
+    safe_name = "".join(c if c.isalnum() or c in "-_ " else "" for c in req.profileName)
+    safe_name = safe_name.strip().replace(" ", "_") or f"blended_{uuid.uuid4().hex[:8]}"
+
+    try:
+        start = time.time()
+        profile_path, design_audio_path = model_manager.blend_voice_profile(
+            ref_audio_path=ref_path,
+            ref_text=req.refText,
+            instruct=req.instruct,
+            style_ref_text=style_ref_text,
+            profile_name=safe_name,
+            language=req.language,
+        )
+        elapsed = time.time() - start
+
+        design_audio_id = Path(design_audio_path).stem.replace("design_", "")
+
+        return {
+            "success": True,
+            "profileId": safe_name,
+            "profilePath": str(profile_path),
+            "designAudioUrl": f"/api/tts/audio/design_{design_audio_id}",
+            "processingTime": round(elapsed, 2),
+            "instruct": req.instruct,
+            "blendMode": True,
+        }
+    except Exception as e:
+        logger.error(f"Blend-voice failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ---------------------------------------------------------------------------
 # Speech synthesis
 # ---------------------------------------------------------------------------
 
@@ -242,6 +452,7 @@ class SynthesizeRequest(BaseModel):
     profileId: str
     text: str
     language: str = "English"
+    style: Optional[str] = None
 
 
 @app.post("/api/tts/synthesize")
@@ -254,12 +465,29 @@ async def synthesize_speech(req: SynthesizeRequest):
     if not profile_path.exists():
         raise HTTPException(status_code=404, detail="Voice profile not found")
 
+    # Resolve style params: explicit override > profile metadata > defaults
+    gen_kwargs = {}
+    if req.style:
+        gen_kwargs = resolve_style_params(style=req.style)
+    else:
+        meta_path = VOICE_PROFILES_DIR / f"{req.profileId}.json"
+        if meta_path.exists():
+            try:
+                meta = json.loads(meta_path.read_text())
+                saved_params = meta.get("styleParams", {})
+                if saved_params:
+                    gen_kwargs = saved_params
+                    logger.info(f"Using saved style for {req.profileId}: {meta.get('styleInstruct', '')}")
+            except Exception:
+                pass
+
     try:
         start = time.time()
         audio_data, sr = model_manager.synthesize_from_profile(
             profile_path=str(profile_path),
             text=req.text,
             language=req.language,
+            gen_kwargs=gen_kwargs if gen_kwargs else None,
         )
         elapsed = time.time() - start
 
@@ -272,7 +500,7 @@ async def synthesize_speech(req: SynthesizeRequest):
 
         logger.info(
             f"Synthesized {duration:.1f}s audio in {elapsed:.1f}s "
-            f"(profile={req.profileId})"
+            f"(profile={req.profileId}, style={gen_kwargs or 'default'})"
         )
 
         return {

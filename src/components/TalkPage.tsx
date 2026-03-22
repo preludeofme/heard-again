@@ -1,4 +1,4 @@
-import { Box, Typography, Card, CardContent, Button, IconButton, TextField, Avatar, Chip, Select, MenuItem, FormControl, InputLabel, Slider, Dialog,DialogTitle,DialogContent,DialogActions } from '@mui/material'
+import { Box, Typography, Card, CardContent, Button, IconButton, TextField, Avatar, Chip, Select, MenuItem, FormControl, InputLabel, Slider, Dialog, DialogTitle, DialogContent, DialogActions, CircularProgress } from '@mui/material'
 import { ArrowBack as BackIcon, Mic as MicIcon, MicOff as MuteIcon, Send as SendIcon, AddPhotoAlternate as PhotoIcon, VolumeUp as SpeakerIcon, Settings as SettingsIcon, Compare as CompareIcon, Close as CloseIcon } from '@mui/icons-material'
 import { ConversationMessage, LegacySubject, VoiceModel } from '@/types'
 import { useState, useRef, useEffect } from 'react'
@@ -18,6 +18,7 @@ export function TalkPage({ messages, legacySubject }: TalkPageProps) {
   const [showComparisonDialog, setShowComparisonDialog] = useState(false)
   const [comparisonText, setComparisonText] = useState('')
   const [comparisonResults, setComparisonResults] = useState<{ audioA: string | null; audioB: string | null } | null>(null)
+  const [isComparing, setIsComparing] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   
   const controller = useTalkController()
@@ -477,8 +478,8 @@ export function TalkPage({ messages, legacySubject }: TalkPageProps) {
                   label="Voice A"
                   onChange={(e) => {
                     const model = controller.voiceModels.find(m => m.id === e.target.value)
-                    if (model && controller.comparisonModelB) {
-                      controller.setComparisonModels(model, controller.comparisonModelB)
+                    if (model) {
+                      controller.setComparisonModelA(model)
                     }
                   }}
                 >
@@ -497,8 +498,8 @@ export function TalkPage({ messages, legacySubject }: TalkPageProps) {
                   label="Voice B"
                   onChange={(e) => {
                     const model = controller.voiceModels.find(m => m.id === e.target.value)
-                    if (model && controller.comparisonModelA) {
-                      controller.setComparisonModels(controller.comparisonModelA, model)
+                    if (model) {
+                      controller.setComparisonModelB(model)
                     }
                   }}
                 >
@@ -517,13 +518,20 @@ export function TalkPage({ messages, legacySubject }: TalkPageProps) {
             fullWidth
             onClick={async () => {
               if (comparisonText && controller.comparisonModelA && controller.comparisonModelB) {
-                const { audioA, audioB } = await controller.compareVoices(comparisonText)
-                setComparisonResults({ audioA, audioB })
+                setComparisonResults(null)
+                setIsComparing(true)
+                try {
+                  const { audioA, audioB } = await controller.compareVoices(comparisonText)
+                  setComparisonResults({ audioA, audioB })
+                } finally {
+                  setIsComparing(false)
+                }
               }
             }}
-            disabled={!comparisonText || !controller.comparisonModelA || !controller.comparisonModelB}
+            disabled={!comparisonText || !controller.comparisonModelA || !controller.comparisonModelB || isComparing}
+            startIcon={isComparing ? <CircularProgress size={18} color="inherit" /> : undefined}
           >
-            Generate Comparison
+            {isComparing ? 'Generating...' : 'Generate Comparison'}
           </Button>
           
           {/* Display Comparison Results */}

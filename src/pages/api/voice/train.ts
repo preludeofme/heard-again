@@ -7,7 +7,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { samples, language, modelName } = req.body
+    const { samples, language, modelName, styleInstruct } = req.body
 
     if (!samples || !Array.isArray(samples) || samples.length === 0) {
       return res.status(400).json({ success: false, error: 'No samples provided' })
@@ -23,6 +23,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         fileId: primaryFileId,
         refText: null, // Will be auto-transcribed by the model
         profileName: modelName || `voice_${Date.now()}`,
+        styleInstruct: styleInstruct || null,
       },
     })
 
@@ -33,6 +34,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       status: 'completed',
       profilePath: data.profilePath,
       processingTime: data.processingTime,
+      styleInstruct: data.styleInstruct,
+      styleParams: data.styleParams,
     })
   } catch (error: any) {
     console.error('[API] Train/create-profile error:', error.message)

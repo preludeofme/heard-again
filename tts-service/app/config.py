@@ -14,6 +14,7 @@ for d in [DATA_DIR, VOICE_PROFILES_DIR, REFERENCE_AUDIO_DIR, GENERATED_AUDIO_DIR
 
 # Model configuration
 MODEL_NAME = os.getenv("QWEN_TTS_MODEL", "Qwen/Qwen3-TTS-12Hz-1.7B-Base")
+VOICE_DESIGN_MODEL_NAME = os.getenv("QWEN_TTS_DESIGN_MODEL", "Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign")
 DEVICE = os.getenv("QWEN_TTS_DEVICE", "cuda:0")
 DTYPE = os.getenv("QWEN_TTS_DTYPE", "bfloat16")
 

@@ -151,19 +151,22 @@ const theme = createTheme({
             backgroundColor: '#ebe8e3',
             borderRadius: 8,
             transition: 'all 0.2s ease-in-out',
+            color: '#1c1c19',
             '& fieldset': {
               border: 'none',
             },
+            '&:hover': {
+              backgroundColor: '#e0ddd8',
+            },
             '&:hover fieldset': {
               border: 'none',
-              backgroundColor: '#e0ddd8',
+            },
+            '&.Mui-focused': {
+              backgroundColor: '#ffffff',
+              boxShadow: '0 0 0 1px rgba(208, 227, 230, 0.5)',
             },
             '&.Mui-focused fieldset': {
               border: '1px solid rgba(208, 227, 230, 0.5)',
-              backgroundColor: '#ffffff',
-            },
-            '&.Mui-focused': {
-              boxShadow: '0 0 0 1px rgba(208, 227, 230, 0.5)',
             },
           },
         },

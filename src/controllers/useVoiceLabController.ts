@@ -61,7 +61,7 @@ interface VoiceLabControllerActions {
   // Voice cloning actions
   uploadTrainingSample: (file: File) => Promise<void>
   removeTrainingSample: (index: number) => void
-  startVoiceTraining: (modelName: string, language: string) => Promise<void>
+  startVoiceTraining: (modelName: string, language: string, styleInstruct?: string) => Promise<void>
   checkTrainingStatus: (jobId: string) => Promise<void>
   synthesizeSpeech: (modelId: string, text: string) => Promise<string>
   loadVoiceModels: () => Promise<void>
@@ -73,6 +73,8 @@ interface VoiceLabControllerActions {
   runASR: (language: string) => Promise<void>
   checkQueueStatus: () => Promise<void>
   cancelTrainingJob: (jobId: string) => Promise<void>
+  designAndCloneVoice: (profileName: string, instruct: string, refText: string, language?: string) => Promise<void>
+  blendVoiceProfile: (profileName: string, instruct: string, styleRefText?: string, language?: string) => Promise<void>
 }
 
 export function useVoiceLabController(): VoiceLabControllerState & VoiceLabControllerActions {
@@ -258,7 +260,7 @@ export function useVoiceLabController(): VoiceLabControllerState & VoiceLabContr
     }))
   }, [])
 
-  const startVoiceTraining = useCallback(async (modelName: string, language: string) => {
+  const startVoiceTraining = useCallback(async (modelName: string, language: string, styleInstruct?: string) => {
     console.log('Starting voice profile creation with:', { modelName, language, sampleCount: state.trainingSamples.length })
     
     if (state.trainingSamples.length === 0) {
@@ -296,6 +298,7 @@ export function useVoiceLabController(): VoiceLabControllerState & VoiceLabContr
         samples: sampleFileIds,
         language,
         modelName,
+        styleInstruct: styleInstruct || null,
       }
       
       console.log('Sending voice profile creation request:', requestBody)
@@ -508,6 +511,124 @@ export function useVoiceLabController(): VoiceLabControllerState & VoiceLabContr
     }
   }, [])
 
+  const designAndCloneVoice = useCallback(async (
+    profileName: string,
+    instruct: string,
+    refText: string,
+    language: string = 'English',
+  ) => {
+    setState(prev => ({ ...prev, isTraining: true }))
+
+    try {
+      const response = await fetch('/api/voice/design-and-clone', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profileName, instruct, refText, language }),
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(`Voice design failed: ${errorText}`)
+      }
+
+      const result = await response.json()
+      console.log('Voice design+clone result:', result)
+
+      setState(prev => ({
+        ...prev,
+        trainingJob: {
+          id: result.profileId,
+          modelId: result.profileId,
+          status: 'completed',
+          progress: 100,
+          currentStage: 'completed',
+          createdAt: new Date().toISOString(),
+          completedAt: new Date().toISOString(),
+        },
+        isTraining: false,
+      }))
+
+      showSuccess(`Voice "${profileName}" designed and saved! You can now use it in Talk.`)
+      loadVoiceModels()
+    } catch (error) {
+      console.error('Design-and-clone error:', error)
+      setState(prev => ({
+        ...prev,
+        isTraining: false,
+        hasError: true,
+        errorMessage: 'Failed to design voice',
+      }))
+      showError('Failed to design voice')
+    }
+  }, [showSuccess, showError])
+
+  const blendVoiceProfile = useCallback(async (
+    profileName: string,
+    instruct: string,
+    styleRefText?: string,
+    language: string = 'English',
+  ) => {
+    if (state.trainingSamples.length === 0) {
+      showError('Please upload a reference audio sample first')
+      return
+    }
+
+    setState(prev => ({ ...prev, isTraining: true }))
+
+    try {
+      const fileIds = state.trainingSamples.map(s => (s as any).fileId).filter(Boolean)
+      if (fileIds.length === 0) {
+        throw new Error('No uploaded samples found')
+      }
+
+      const response = await fetch('/api/voice/blend-voice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fileId: fileIds[0],
+          instruct,
+          styleRefText,
+          profileName,
+          language,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(`Blend failed: ${errorText}`)
+      }
+
+      const result = await response.json()
+      console.log('Blend voice result:', result)
+
+      setState(prev => ({
+        ...prev,
+        trainingJob: {
+          id: result.profileId,
+          modelId: result.profileId,
+          status: 'completed',
+          progress: 100,
+          currentStage: 'completed',
+          createdAt: new Date().toISOString(),
+          completedAt: new Date().toISOString(),
+        },
+        isTraining: false,
+      }))
+
+      showSuccess(`Blended voice "${profileName}" created! Real identity + designed style.`)
+      loadVoiceModels()
+    } catch (error) {
+      console.error('Blend voice error:', error)
+      setState(prev => ({
+        ...prev,
+        isTraining: false,
+        hasError: true,
+        errorMessage: 'Failed to create blended voice profile',
+      }))
+      showError('Failed to create blended voice profile')
+    }
+  }, [state.trainingSamples, showSuccess, showError])
+
   const cancelTrainingJob = useCallback(async (jobId: string) => {
     try {
       const response = await fetch(`/api/voice/queue?jobId=${jobId}`, {
@@ -549,5 +670,7 @@ export function useVoiceLabController(): VoiceLabControllerState & VoiceLabContr
     runASR,
     checkQueueStatus,
     cancelTrainingJob,
+    designAndCloneVoice,
+    blendVoiceProfile,
   }
 }

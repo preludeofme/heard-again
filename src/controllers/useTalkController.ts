@@ -38,6 +38,8 @@ interface TalkControllerActions {
   stopAudio: () => void
   toggleVoiceComparison: () => void
   setComparisonModels: (modelA: VoiceModel, modelB: VoiceModel) => void
+  setComparisonModelA: (model: VoiceModel) => void
+  setComparisonModelB: (model: VoiceModel) => void
   compareVoices: (text: string) => Promise<{ audioA: string | null; audioB: string | null }>
 }
 
@@ -365,6 +367,14 @@ export function useTalkController(): TalkControllerState & TalkControllerActions
     }))
   }, [])
 
+  const setComparisonModelA = useCallback((model: VoiceModel) => {
+    setState(prev => ({ ...prev, comparisonModelA: model }))
+  }, [])
+
+  const setComparisonModelB = useCallback((model: VoiceModel) => {
+    setState(prev => ({ ...prev, comparisonModelB: model }))
+  }, [])
+
   // Compare voices
   const compareVoices = useCallback(async (text: string): Promise<{ audioA: string | null; audioB: string | null }> => {
     if (!state.comparisonModelA || !state.comparisonModelB) {
@@ -399,6 +409,8 @@ export function useTalkController(): TalkControllerState & TalkControllerActions
     stopAudio,
     toggleVoiceComparison,
     setComparisonModels,
+    setComparisonModelA,
+    setComparisonModelB,
     compareVoices,
   }
 }

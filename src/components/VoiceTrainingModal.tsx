@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useRef } from 'react'
 import {
   Dialog,
   DialogTitle,
@@ -8,35 +8,21 @@ import {
   Typography,
   Box,
   TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  LinearProgress,
   Chip,
   IconButton,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemSecondaryAction,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  Switch,
-  FormControlLabel,
-  Divider,
+  LinearProgress,
   Alert,
+  CircularProgress,
 } from '@mui/material'
 import {
   CloudUpload as UploadIcon,
   Delete as DeleteIcon,
-  Mic as MicIcon,
   Close as CloseIcon,
-  ExpandMore as ExpandMoreIcon,
-  Settings as SettingsIcon,
-  Schedule as ScheduleIcon,
-  Cancel as CancelIcon,
+  CheckCircle as CheckCircleIcon,
+  AudioFile as AudioFileIcon,
+  RecordVoiceOver as VoiceIcon,
 } from '@mui/icons-material'
+import { AudioTrimmer } from './AudioTrimmer'
 
 interface VoiceTrainingModalProps {
   open: boolean
@@ -44,18 +30,20 @@ interface VoiceTrainingModalProps {
   trainingSamples: File[]
   onUploadSample: (file: File) => Promise<void>
   onRemoveSample: (index: number) => void
-  onStartTraining: (modelName: string, language: string) => Promise<void>
+  onCreateVoice: (modelName: string, language: string, styleInstruct?: string) => Promise<void>
   isUploading: boolean
   isTraining: boolean
   trainingJob: any
-  preprocessingStatus: string
-  asrStatus: string
-  queuePosition: number | null
-  estimatedStartTime: Date | null
-  onPreprocessSamples: (options: { noiseReduction: boolean; voiceSeparation: boolean }) => Promise<void>
-  onRunASR: (language: string) => Promise<void>
-  onCancelTrainingJob: (jobId: string) => Promise<void>
 }
+
+const STYLE_SUGGESTIONS = [
+  'Warm and gentle, slow deliberate pace',
+  'Energetic and upbeat, fast-talking',
+  'Calm and soothing, like reading a bedtime story',
+  'Cheerful with a slight southern drawl',
+  'Soft-spoken and thoughtful, with long pauses',
+  'Strong and confident, clear enunciation',
+]
 
 export function VoiceTrainingModal({
   open,
@@ -63,386 +51,428 @@ export function VoiceTrainingModal({
   trainingSamples,
   onUploadSample,
   onRemoveSample,
-  onStartTraining,
+  onCreateVoice,
   isUploading,
   isTraining,
   trainingJob,
-  preprocessingStatus,
-  asrStatus,
-  queuePosition,
-  estimatedStartTime,
-  onPreprocessSamples,
-  onRunASR,
-  onCancelTrainingJob,
 }: VoiceTrainingModalProps) {
-  const [modelName, setModelName] = useState('')
-  const [language, setLanguage] = useState('en')
-  const [noiseReduction, setNoiseReduction] = useState(true)
-  const [voiceSeparation, setVoiceSeparation] = useState(true)
-  const [advancedSettings, setAdvancedSettings] = useState(false)
+  const [voiceName, setVoiceName] = useState('')
+  const [voiceDescription, setVoiceDescription] = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Generate default model name on mount
-  useEffect(() => {
-    const defaultName = `Voice Model ${new Date().toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric',
-      year: 'numeric'
-    })}`
-    setModelName(defaultName)
-  }, [])
+  // ── Local file state (before trimming / upload) ──
+  const [rawFile, setRawFile] = useState<File | null>(null)
+  const [isTrimming, setIsTrimming] = useState(false)
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFilePick = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
-      await onUploadSample(file)
+      setRawFile(file)
+      setIsTrimming(true)
+    }
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
     }
   }
 
-  const handleStartTraining = async () => {
-    if (!modelName.trim()) return
-    await onStartTraining(modelName, language)
-    setModelName('')
+  const handleTrimComplete = async (trimmedFile: File) => {
+    setIsTrimming(false)
+    setRawFile(null)
+    await onUploadSample(trimmedFile)
   }
 
-  const handlePreprocess = async () => {
-    await onPreprocessSamples({ noiseReduction, voiceSeparation })
+  const handleDiscardFile = () => {
+    setRawFile(null)
+    setIsTrimming(false)
   }
 
-  const handleRunASR = async () => {
-    await onRunASR(language)
+  const handleRemoveUploaded = () => {
+    onRemoveSample(0)
+    setRawFile(null)
+    setIsTrimming(false)
   }
 
-  const getStageLabel = (stage: string) => {
-    const stageLabels: Record<string, string> = {
-      queued: 'Queued',
-      slicing: 'Slicing audio segments...',
-      enhancement: 'Enhancing audio quality...',
-      asr_transcription: 'Converting speech to text...',
-      generating_list: 'Preparing training data...',
-      training: 'Training voice model...',
-      validation: 'Validating model...',
-      completed: 'Completed',
+  const handleCreate = async () => {
+    if (!voiceName.trim() || trainingSamples.length === 0) return
+    await onCreateVoice(
+      voiceName.trim(),
+      'English',
+      voiceDescription.trim() || undefined,
+    )
+  }
+
+  const handleClose = () => {
+    if (!isTraining) {
+      setVoiceName('')
+      setVoiceDescription('')
+      setRawFile(null)
+      setIsTrimming(false)
+      onClose()
     }
-    return stageLabels[stage] || stage
   }
 
-  const formatTime = (date: Date | null) => {
-    if (!date) return 'Unknown'
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  const handleSuggestionClick = (suggestion: string) => {
+    setVoiceDescription(suggestion)
   }
+
+  const isComplete = trainingJob?.status === 'completed'
+  const hasAudio = trainingSamples.length > 0
+  const canCreate = hasAudio && voiceName.trim().length > 0 && !isTraining
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle>
+    <Dialog
+      open={open}
+      onClose={handleClose}
+      maxWidth="sm"
+      fullWidth
+      PaperProps={{
+        sx: {
+          borderRadius: 3,
+          backgroundColor: '#fcf9f4',
+        },
+      }}
+    >
+      <DialogTitle sx={{ pb: 1 }}>
         <Box display="flex" justifyContent="space-between" alignItems="center">
-          <Typography variant="h5">Train Voice Clone</Typography>
-          <IconButton onClick={onClose} size="small">
+          <Box>
+            <Typography variant="h5" className="serif-font" sx={{ color: '#16334a', fontWeight: 600 }}>
+              Create Voice
+            </Typography>
+            <Typography variant="body2" sx={{ color: '#546669', mt: 0.5 }}>
+              Upload a recording and describe how they sound
+            </Typography>
+          </Box>
+          <IconButton onClick={handleClose} size="small" disabled={isTraining}>
             <CloseIcon />
           </IconButton>
         </Box>
       </DialogTitle>
 
-      <DialogContent>
-        {trainingJob ? (
-          <Box>
-            <Typography variant="h6" gutterBottom>
-              Training in Progress
+      <DialogContent sx={{ pt: 2 }}>
+        {/* ── Success State ── */}
+        {isComplete ? (
+          <Box sx={{ textAlign: 'center', py: 4 }}>
+            <CheckCircleIcon sx={{ fontSize: 64, color: '#4caf50', mb: 2 }} />
+            <Typography variant="h5" className="serif-font" sx={{ color: '#16334a', mb: 1 }}>
+              Voice Created!
             </Typography>
-            <Typography variant="body2" color="text.secondary" gutterBottom>
-              Model: {modelName}
+            <Typography variant="body1" sx={{ color: '#546669', mb: 1 }}>
+              <strong>{voiceName || trainingJob?.modelId}</strong> is ready to use.
             </Typography>
-            
-            {/* Queue Position */}
-            {queuePosition && (
-              <Alert severity="info" sx={{ mb: 2 }}>
-                <Box display="flex" alignItems="center" gap={1}>
-                  <ScheduleIcon />
-                  <Typography variant="body2">
-                    Queue Position: {queuePosition} • Estimated start: {formatTime(estimatedStartTime)}
-                  </Typography>
-                </Box>
-              </Alert>
-            )}
-
-            <Box mb={2}>
-              <LinearProgress 
-                variant="determinate" 
-                value={trainingJob.progress} 
-                sx={{ height: 10, borderRadius: 5 }}
-              />
-              <Typography variant="body2" sx={{ mt: 1 }}>
-                {trainingJob.progress}% - {getStageLabel(trainingJob.currentStage)}
-              </Typography>
-            </Box>
-
-            {/* Pipeline Progress Details */}
-            <Accordion sx={{ mb: 2 }}>
-              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Typography variant="subtitle2">Pipeline Progress</Typography>
-              </AccordionSummary>
-              <AccordionDetails>
-                <Box display="flex" flexDirection="column" gap={2}>
-                  {/* Audio Slicing */}
-                  <Box>
-                    <Typography variant="body2" gutterBottom>
-                      Audio Slicing: {trainingJob.currentStage === 'slicing' ? 'Processing...' : 
-                                   ['training', 'validation', 'completed'].includes(trainingJob.currentStage) ? 'Completed' : 'Pending'}
-                    </Typography>
-                    <LinearProgress 
-                      variant={trainingJob.currentStage === 'slicing' ? 'indeterminate' : 'determinate'}
-                      value={['training', 'validation', 'completed'].includes(trainingJob.currentStage) ? 100 : 0}
-                      sx={{ height: 4, borderRadius: 2 }}
-                    />
-                  </Box>
-                  
-                  {/* Voice Enhancement */}
-                  <Box>
-                    <Typography variant="body2" gutterBottom>
-                      Voice Enhancement: {trainingJob.currentStage === 'enhancement' ? 'Processing...' : 
-                                       ['training', 'validation', 'completed'].includes(trainingJob.currentStage) ? 'Completed' : 'Pending'}
-                    </Typography>
-                    <LinearProgress 
-                      variant={trainingJob.currentStage === 'enhancement' ? 'indeterminate' : 'determinate'}
-                      value={['training', 'validation', 'completed'].includes(trainingJob.currentStage) ? 100 : 0}
-                      sx={{ height: 4, borderRadius: 2 }}
-                    />
-                  </Box>
-                  
-                  {/* ASR Transcription */}
-                  <Box>
-                    <Typography variant="body2" gutterBottom>
-                      Speech-to-Text: {trainingJob.currentStage === 'asr_transcription' ? 'Processing...' : 
-                                      ['training', 'validation', 'completed'].includes(trainingJob.currentStage) ? 'Completed' : 'Pending'}
-                    </Typography>
-                    <LinearProgress 
-                      variant={trainingJob.currentStage === 'asr_transcription' ? 'indeterminate' : 'determinate'}
-                      value={['training', 'validation', 'completed'].includes(trainingJob.currentStage) ? 100 : 0}
-                      sx={{ height: 4, borderRadius: 2 }}
-                    />
-                  </Box>
-                  
-                  {/* List File Generation */}
-                  <Box>
-                    <Typography variant="body2" gutterBottom>
-                      Training Data Prep: {trainingJob.currentStage === 'generating_list' ? 'Processing...' : 
-                                         ['training', 'validation', 'completed'].includes(trainingJob.currentStage) ? 'Completed' : 'Pending'}
-                    </Typography>
-                    <LinearProgress 
-                      variant={trainingJob.currentStage === 'generating_list' ? 'indeterminate' : 'determinate'}
-                      value={['training', 'validation', 'completed'].includes(trainingJob.currentStage) ? 100 : 0}
-                      sx={{ height: 4, borderRadius: 2 }}
-                    />
-                  </Box>
-                  
-                  {/* Model Training */}
-                  <Box>
-                    <Typography variant="body2" gutterBottom>
-                      Model Training: {trainingJob.currentStage === 'training' ? 'Processing...' : 
-                                     trainingJob.currentStage === 'completed' ? 'Completed' : 'Pending'}
-                    </Typography>
-                    <LinearProgress 
-                      variant={trainingJob.currentStage === 'training' ? 'determinate' : 'determinate'}
-                      value={trainingJob.currentStage === 'training' ? trainingJob.progress : 
-                             trainingJob.currentStage === 'completed' ? 100 : 0}
-                      sx={{ height: 4, borderRadius: 2 }}
-                    />
-                  </Box>
-                </Box>
-              </AccordionDetails>
-            </Accordion>
-
-            {trainingJob.error && (
-              <Typography color="error" variant="body2">
-                Error: {trainingJob.error}
-              </Typography>
-            )}
-
-            <Box mt={2}>
-              <Button
-                variant="outlined"
-                color="error"
-                startIcon={<CancelIcon />}
-                onClick={() => onCancelTrainingJob(trainingJob.id)}
-                disabled={trainingJob.status === 'processing'}
-              >
-                Cancel Training
-              </Button>
-            </Box>
+            <Typography variant="body2" sx={{ color: '#8a9a9d' }}>
+              Head to the Talk page to start a conversation with this voice.
+            </Typography>
           </Box>
         ) : (
           <Box>
-            <Typography variant="body1" gutterBottom>
-              Upload audio samples to create a voice clone. We recommend at least 1 minute of clear audio.
-            </Typography>
-
-            {/* Upload Section */}
-            <Box mb={3}>
-              <input
-                accept="audio/*"
-                style={{ display: 'none' }}
-                id="audio-upload"
-                type="file"
-                onChange={handleFileUpload}
-                disabled={isUploading}
-              />
-              <label htmlFor="audio-upload">
-                <Button
-                  variant="outlined"
-                  component="span"
-                  startIcon={<UploadIcon />}
-                  disabled={isUploading}
-                  fullWidth
-                  sx={{ py: 2, borderStyle: 'dashed' }}
-                >
-                  {isUploading ? 'Uploading...' : 'Upload Audio Sample'}
-                </Button>
-              </label>
-            </Box>
-
-            {/* Sample List */}
-            {trainingSamples.length > 0 && (
-              <Box mb={3}>
-                <Typography variant="subtitle2" gutterBottom>
-                  Uploaded Samples ({trainingSamples.length})
-                </Typography>
-                <List dense>
-                  {trainingSamples.map((file, index) => (
-                    <ListItem key={index}>
-                      <ListItemText
-                        primary={file.name}
-                        secondary={`${(file.size / 1024 / 1024).toFixed(2)} MB`}
-                      />
-                      <ListItemSecondaryAction>
-                        <IconButton
-                          edge="end"
-                          onClick={() => onRemoveSample(index)}
-                          disabled={isTraining}
-                        >
-                          <DeleteIcon />
-                        </IconButton>
-                      </ListItemSecondaryAction>
-                    </ListItem>
-                  ))}
-                </List>
-              </Box>
-            )}
-
-            {/* Model Configuration */}
-            {trainingSamples.length > 0 && (
-              <Box mb={3}>
-                <TextField
-                  fullWidth
-                  label="Model Name"
-                  value={modelName}
-                  onChange={(e) => setModelName(e.target.value)}
-                  margin="normal"
-                  disabled={isTraining}
-                  helperText="Default name generated automatically"
-                />
-                <FormControl fullWidth margin="normal">
-                  <InputLabel>Language</InputLabel>
-                  <Select
-                    value={language}
-                    onChange={(e) => setLanguage(e.target.value)}
-                    disabled={isTraining}
-                  >
-                    <MenuItem value="en">English</MenuItem>
-                    <MenuItem value="zh">Chinese</MenuItem>
-                    <MenuItem value="ja">Japanese</MenuItem>
-                    <MenuItem value="ko">Korean</MenuItem>
-                    <MenuItem value="yue">Cantonese</MenuItem>
-                  </Select>
-                </FormControl>
-              </Box>
-            )}
-
-            {/* Advanced Settings */}
-            <Accordion>
-              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Box display="flex" alignItems="center" gap={1}>
-                  <SettingsIcon />
-                  <Typography variant="subtitle2">Advanced Settings</Typography>
-                </Box>
-              </AccordionSummary>
-              <AccordionDetails>
-                <Box display="flex" flexDirection="column" gap={2}>
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={noiseReduction}
-                        onChange={(e) => setNoiseReduction(e.target.checked)}
-                        disabled={isTraining}
-                      />
-                    }
-                    label="Apply Noise Reduction"
-                  />
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={voiceSeparation}
-                        onChange={(e) => setVoiceSeparation(e.target.checked)}
-                        disabled={isTraining}
-                      />
-                    }
-                    label="Voice Separation (UVR5)"
-                  />
-                  <Divider />
-                  <Button
-                    variant="outlined"
-                    onClick={handlePreprocess}
-                    disabled={isTraining || preprocessingStatus === 'processing'}
-                    fullWidth
-                  >
-                    Preprocess Audio
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    onClick={handleRunASR}
-                    disabled={isTraining || asrStatus === 'processing'}
-                    fullWidth
-                  >
-                    Run Speech-to-Text
-                  </Button>
-                </Box>
-              </AccordionDetails>
-            </Accordion>
-
-            {/* Tips */}
-            <Box mt={3}>
-              <Typography variant="subtitle2" gutterBottom>
-                Tips for best results:
+            {/* ── Step 1: Pick & Trim Audio ── */}
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="subtitle2" sx={{ color: '#16334a', mb: 1.5, fontWeight: 600 }}>
+                1. Upload a recording of their voice
               </Typography>
-              <Box display="flex" flexWrap="wrap" gap={1}>
-                <Chip label="Clear audio quality" size="small" />
-                <Chip label="Minimal background noise" size="small" />
-                <Chip label="Consistent speaking style" size="small" />
-                <Chip label="1+ minute total duration" size="small" />
+
+              {/* State A: No file selected yet */}
+              {!rawFile && !hasAudio && (
+                <Box>
+                  <input
+                    accept="audio/*"
+                    style={{ display: 'none' }}
+                    id="audio-upload"
+                    ref={fileInputRef}
+                    type="file"
+                    onChange={handleFilePick}
+                    disabled={isUploading}
+                  />
+                  <label htmlFor="audio-upload">
+                    <Button
+                      variant="outlined"
+                      component="span"
+                      disabled={isUploading}
+                      fullWidth
+                      sx={{
+                        py: 4,
+                        borderStyle: 'dashed',
+                        borderColor: '#d0e3e6',
+                        borderWidth: 2,
+                        backgroundColor: '#ffffff',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 1,
+                        '&:hover': {
+                          borderColor: '#16334a',
+                          backgroundColor: '#f6f3ee',
+                        },
+                      }}
+                    >
+                      <UploadIcon sx={{ fontSize: 32, color: '#adcae6' }} />
+                      <Typography variant="body2" sx={{ color: '#546669', textTransform: 'none' }}>
+                        Click to choose an audio file
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: '#8a9a9d', textTransform: 'none' }}>
+                        MP3, WAV, M4A, FLAC — any length, you can trim it next
+                      </Typography>
+                    </Button>
+                  </label>
+                </Box>
+              )}
+
+              {/* State B: File picked, show trimmer */}
+              {rawFile && isTrimming && !hasAudio && (
+                <Box>
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 2,
+                      p: 1.5,
+                      mb: 1,
+                      backgroundColor: '#ffffff',
+                      borderRadius: 2,
+                      border: '1px solid #d0e3e6',
+                    }}
+                  >
+                    <AudioFileIcon sx={{ color: '#16334a', fontSize: 24 }} />
+                    <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          fontWeight: 600,
+                          color: '#16334a',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          fontSize: '0.8rem',
+                        }}
+                      >
+                        {rawFile.name}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: '#546669' }}>
+                        {(rawFile.size / 1024 / 1024).toFixed(1)} MB — select a clip below
+                      </Typography>
+                    </Box>
+                    <IconButton size="small" onClick={handleDiscardFile} sx={{ color: '#546669' }}>
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </Box>
+
+                  <AudioTrimmer
+                    file={rawFile}
+                    onTrimComplete={handleTrimComplete}
+                    disabled={isUploading}
+                  />
+
+                  {isUploading && (
+                    <Alert
+                      severity="info"
+                      sx={{
+                        mt: 2,
+                        backgroundColor: '#e8f0fe',
+                        border: '1px solid #d0e3e6',
+                      }}
+                    >
+                      <Typography variant="body2" sx={{ fontWeight: 600, color: '#16334a' }}>
+                        Uploading & transcribing clip...
+                      </Typography>
+                      <LinearProgress
+                        sx={{ mt: 1, borderRadius: 1, '& .MuiLinearProgress-bar': { backgroundColor: '#16334a' } }}
+                      />
+                    </Alert>
+                  )}
+                </Box>
+              )}
+
+              {/* State C: Trimmed & uploaded */}
+              {hasAudio && (
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 2,
+                    p: 2,
+                    backgroundColor: '#ffffff',
+                    borderRadius: 2,
+                    border: '1px solid #d0e3e6',
+                  }}
+                >
+                  <AudioFileIcon sx={{ color: '#16334a', fontSize: 28 }} />
+                  <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: 600,
+                        color: '#16334a',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {trainingSamples[0].name}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: '#546669' }}>
+                      {(trainingSamples[0].size / 1024 / 1024).toFixed(1)} MB
+                    </Typography>
+                  </Box>
+                  <Chip
+                    label="Ready"
+                    size="small"
+                    sx={{ backgroundColor: '#d0e3e6', color: '#16334a', fontWeight: 600 }}
+                  />
+                  <IconButton
+                    size="small"
+                    onClick={handleRemoveUploaded}
+                    disabled={isTraining}
+                    sx={{ color: '#546669' }}
+                  >
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
+                </Box>
+              )}
+            </Box>
+
+            {/* ── Step 2: Name the Voice ── */}
+            <Box sx={{ mb: 3, opacity: hasAudio ? 1 : 0.4, pointerEvents: hasAudio ? 'auto' : 'none' }}>
+              <Typography variant="subtitle2" sx={{ color: '#16334a', mb: 1.5, fontWeight: 600 }}>
+                2. Name this voice
+              </Typography>
+              <TextField
+                fullWidth
+                placeholder="e.g. Grandpa Buck, Mom, Uncle Ray"
+                value={voiceName}
+                onChange={(e) => setVoiceName(e.target.value)}
+                disabled={isTraining}
+                variant="outlined"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    backgroundColor: '#ffffff',
+                    borderRadius: 2,
+                    color: '#16334a',
+                  },
+                  '& .MuiOutlinedInput-input': {
+                    color: '#16334a',
+                  },
+                  '& .MuiOutlinedInput-input::placeholder': {
+                    color: '#8a9a9d',
+                    opacity: 1,
+                  },
+                }}
+              />
+            </Box>
+
+            {/* ── Step 3: Describe the Voice ── */}
+            <Box sx={{ mb: 2, opacity: hasAudio ? 1 : 0.4, pointerEvents: hasAudio ? 'auto' : 'none' }}>
+              <Typography variant="subtitle2" sx={{ color: '#16334a', mb: 1.5, fontWeight: 600 }}>
+                3. Describe how they talked
+              </Typography>
+              <TextField
+                fullWidth
+                multiline
+                rows={3}
+                placeholder="Describe their speaking style, pace, and personality. For example: 'Warm and gentle, spoke slowly with a slight southern accent, always sounded like they were smiling'"
+                value={voiceDescription}
+                onChange={(e) => setVoiceDescription(e.target.value)}
+                disabled={isTraining}
+                variant="outlined"
+                sx={{
+                  mb: 1.5,
+                  '& .MuiOutlinedInput-root': {
+                    backgroundColor: '#ffffff',
+                    borderRadius: 2,
+                    color: '#16334a',
+                  },
+                  '& .MuiOutlinedInput-input, & .MuiInputBase-inputMultiline': {
+                    color: '#16334a',
+                  },
+                  '& .MuiOutlinedInput-input::placeholder, & .MuiInputBase-inputMultiline::placeholder': {
+                    color: '#8a9a9d',
+                    opacity: 1,
+                  },
+                }}
+              />
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+                {STYLE_SUGGESTIONS.map((suggestion) => (
+                  <Chip
+                    key={suggestion}
+                    label={suggestion}
+                    size="small"
+                    onClick={() => handleSuggestionClick(suggestion)}
+                    sx={{
+                      backgroundColor: voiceDescription === suggestion ? '#16334a' : '#f6f3ee',
+                      color: voiceDescription === suggestion ? '#ffffff' : '#546669',
+                      fontSize: '0.7rem',
+                      cursor: 'pointer',
+                      '&:hover': {
+                        backgroundColor: voiceDescription === suggestion ? '#2e4a62' : '#ebe8e3',
+                      },
+                    }}
+                  />
+                ))}
               </Box>
             </Box>
+
+            {/* ── Creating State ── */}
+            {isTraining && (
+              <Alert
+                severity="info"
+                icon={<VoiceIcon />}
+                sx={{
+                  mt: 2,
+                  backgroundColor: '#e8f0fe',
+                  border: '1px solid #d0e3e6',
+                  '& .MuiAlert-icon': { color: '#16334a' },
+                }}
+              >
+                <Typography variant="body2" sx={{ fontWeight: 600, color: '#16334a' }}>
+                  Creating voice profile...
+                </Typography>
+                <Typography variant="caption" sx={{ color: '#546669' }}>
+                  Analyzing voice identity and applying style. This takes about 10-15 seconds.
+                </Typography>
+                <LinearProgress
+                  sx={{ mt: 1, borderRadius: 1, '& .MuiLinearProgress-bar': { backgroundColor: '#16334a' } }}
+                />
+              </Alert>
+            )}
           </Box>
         )}
       </DialogContent>
 
-      <DialogActions>
-        {!trainingJob && (
+      <DialogActions sx={{ px: 3, pb: 2.5 }}>
+        {isComplete ? (
+          <Button
+            onClick={handleClose}
+            variant="contained"
+            fullWidth
+            sx={{
+              background: 'linear-gradient(135deg, #16334a 0%, #2e4a62 100%)',
+              py: 1.5,
+              fontWeight: 600,
+              fontSize: '1rem',
+            }}
+          >
+            Done
+          </Button>
+        ) : (
           <>
-            <Button onClick={onClose} disabled={isTraining}>
+            <Button onClick={handleClose} disabled={isTraining} sx={{ color: '#546669' }}>
               Cancel
             </Button>
             <Button
-              onClick={handleStartTraining}
+              onClick={handleCreate}
               variant="contained"
-              disabled={!modelName.trim() || trainingSamples.length === 0 || isTraining}
-              startIcon={<MicIcon />}
+              disabled={!canCreate}
+              startIcon={isTraining ? <CircularProgress size={18} color="inherit" /> : <VoiceIcon />}
+              sx={{
+                background: canCreate
+                  ? 'linear-gradient(135deg, #16334a 0%, #2e4a62 100%)'
+                  : undefined,
+                px: 4,
+                py: 1.25,
+                fontWeight: 600,
+              }}
             >
-              {isTraining ? 'Starting...' : 'Start Training'}
+              {isTraining ? 'Creating...' : 'Create Voice'}
             </Button>
           </>
-        )}
-        {trainingJob && trainingJob.status === 'completed' && (
-          <Button onClick={onClose} variant="contained">
-            Done
-          </Button>
         )}
       </DialogActions>
     </Dialog>
