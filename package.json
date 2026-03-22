@@ -10,7 +10,12 @@
     "start:tts": "cd tts-service && ./start.sh",
     "start:voice": "docker compose -f docker-compose.voice.yml up -d",
     "stop:voice": "docker compose -f docker-compose.voice.yml down",
-    "lint": "next lint"
+    "lint": "next lint",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio",
+    "db:seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -18,6 +23,7 @@
     "@mui/icons-material": "^7.3.9",
     "@mui/material": "^7.3.9",
     "@mui/system": "^7.3.9",
+    "@prisma/client": "^6.6.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@types/uuid": "^10.0.0",
@@ -30,6 +36,8 @@
     "wavesurfer.js": "^7.12.4"
   },
   "devDependencies": {
-    "@types/node": "25.5.0"
+    "@types/node": "25.5.0",
+    "prisma": "^6.6.0",
+    "tsx": "^4.19.0"
   }
 }

@@ -1,0 +1,707 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// CORE ACCOUNT & IDENTITY MODELS
+// ============================================
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String?  // null for OAuth users
+  oauthProvider String? // google, github, etc.
+  oauthId   String?
+  
+  displayName String?
+  avatarUrl String?
+  
+  status    UserStatus @default(ACTIVE)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  lastLoginAt DateTime?
+  
+  // Relations
+  ownedWorkspaces Workspace[] @relation("WorkspaceOwner")
+  memberships     Membership[]
+  createdStories  Story[] @relation("StoryCreator")
+  comments        StoryComment[]
+  voiceProfiles   VoiceProfile[]
+  
+  defaultWorkspaceId String?
+  
+  @@index([email])
+  @@index([oauthProvider, oauthId])
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  DELETED
+}
+
+model Workspace {
+  id          String   @id @default(uuid())
+  name        String
+  slug        String   @unique // for subdomain routing: slug.heardagain.com
+  
+  ownerId     String
+  owner       User     @relation("WorkspaceOwner", fields: [ownerId], references: [id])
+  
+  planType    PlanType @default(FREE)
+  deploymentMode DeploymentMode @default(LOCAL)
+  
+  // Billing
+  billingCustomerId String?
+  currentSubscriptionId String?
+  subscription  Subscription?
+  
+  // Features & Entitlements (cached from subscription for fast access)
+  tunnelEnabled     Boolean @default(false)
+  cloudGpuEnabled   Boolean @default(false)
+  storageQuotaBytes BigInt @default(0)
+  memberQuota       Int @default(1)
+  generationMinuteQuota Int @default(0)
+  
+  status      WorkspaceStatus @default(ACTIVE)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  members     Membership[]
+  instances   Instance[]
+  people      Person[]
+  stories     Story[]
+  voiceProfiles VoiceProfile[]
+  assets      Asset[]
+  auditLogs   AuditLog[]
+  collections Collection[]
+  
+  @@index([ownerId])
+  @@index([slug])
+}
+
+enum PlanType {
+  FREE              // Local self-hosted
+  CONNECTED         // Connected self-hosted with tunnel
+  HYBRID            // Connected + cloud GPU
+  CLOUD             // Fully cloud hosted
+}
+
+enum DeploymentMode {
+  LOCAL     // Self-hosted, local only
+  TUNNELED  // Self-hosted with HeardAgain.com tunnel
+  CLOUD     // Fully hosted by Heard Again
+}
+
+enum WorkspaceStatus {
+  ACTIVE
+  SUSPENDED
+  CANCELLED
+}
+
+model Membership {
+  id          String   @id @default(uuid())
+  
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  role        WorkspaceRole @default(VIEWER)
+  
+  invitedById String?
+  invitedAt   DateTime?
+  joinedAt    DateTime @default(now())
+  
+  status      MembershipStatus @default(ACTIVE)
+  
+  // Permissions override (optional, null means use role defaults)
+  canCreateStories  Boolean?
+  canEditStories    Boolean?
+  canDeleteStories  Boolean?
+  canManagePeople   Boolean?
+  canManageVoices   Boolean?
+  canManageBilling  Boolean?
+  canManageMembers  Boolean?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@unique([workspaceId, userId])
+  @@index([workspaceId])
+  @@index([userId])
+}
+
+enum WorkspaceRole {
+  OWNER     // Full control including billing
+  ADMIN     // Can manage content and members, not billing
+  EDITOR    // Can create and edit stories
+  VIEWER    // Can view and listen only
+  LEGACY    // Extended family - limited upload access
+}
+
+enum MembershipStatus {
+  PENDING   // Invited but not accepted
+  ACTIVE
+  SUSPENDED
+  REMOVED
+}
+
+model Instance {
+  id          String   @id @default(uuid())
+  
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  
+  type        InstanceType
+  status      InstanceStatus @default(REGISTERING)
+  version     String
+  
+  // Deployment config
+  computeMode ComputeMode @default(LOCAL)
+  dataMode     DataMode @default(LOCAL)
+  
+  // Tunnel config (for CONNECTED/HYBRID modes)
+  tunnelEnabled   Boolean @default(false)
+  tunnelSubdomain String?
+  tunnelToken     String? // For secure tunnel authentication
+  
+  // Connection tracking
+  registeredAt    DateTime @default(now())
+  lastHeartbeatAt DateTime?
+  
+  // Cloud deployment config (for CLOUD mode)
+  region          String?
+  hostUrl         String?
+  
+  metadata        Json?    // Flexible config storage
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([workspaceId])
+  @@index([tunnelSubdomain])
+}
+
+enum InstanceType {
+  LOCAL     // User's own hardware
+  CLOUD     // Heard Again hosted
+  HYBRID    // Local data, cloud compute
+}
+
+enum InstanceStatus {
+  REGISTERING
+  ACTIVE
+  UPDATING
+  OFFLINE
+  DECOMMISSIONED
+}
+
+enum ComputeMode {
+  LOCAL     // GPU on local machine
+  CLOUD     // Cloud GPU only
+  HYBRID    // Prefer local, fallback to cloud
+}
+
+enum DataMode {
+  LOCAL     // Local storage only
+  CLOUD     // Cloud storage only
+  SYNCED    // Local + cloud backup
+}
+
+model Subscription {
+  id          String   @id @default(uuid())
+  
+  workspaceId String   @unique
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  
+  planId      String   // Reference to plan definition
+  plan        Plan     @relation(fields: [planId], references: [id])
+  
+  // Billing
+  billingStatus   BillingStatus @default(TRIAL)
+  stripeSubscriptionId String?
+  stripeCustomerId     String?
+  
+  renewalDate     DateTime?
+  cancelledAt     DateTime?
+  
+  // Usage tracking
+  generationMinutesUsed Int @default(0)
+  storageBytesUsed      BigInt @default(0)
+  lastBillingResetAt    DateTime @default(now())
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([workspaceId])
+  @@index([stripeSubscriptionId])
+}
+
+model Plan {
+  id          String   @id @default(cuid())
+  
+  name        String   @unique
+  planType    PlanType
+  
+  // Pricing
+  priceMonthlyCents   Int
+  priceYearlyCents    Int?
+  
+  // Entitlements
+  tunnelEnabled     Boolean @default(false)
+  cloudGpuEnabled   Boolean @default(false)
+  cloudStorageEnabled Boolean @default(false)
+  generationMinutesIncluded Int @default(0)
+  storageQuotaBytes BigInt @default(0)
+  memberQuota       Int @default(1)
+  voiceProfileQuota Int @default(0)
+  
+  // Features
+  prioritySupport   Boolean @default(false)
+  advancedAnalytics Boolean @default(false)
+  
+  isActive          Boolean @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  subscriptions     Subscription[]
+}
+
+enum BillingStatus {
+  TRIAL
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  EXPIRED
+}
+
+// ============================================
+// CONTENT MODELS
+// ============================================
+
+model Person {
+  id          String   @id @default(uuid())
+  
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  
+  // Basic info
+  firstName   String
+  lastName    String?
+  displayName String?  // Override for how they appear in stories
+  
+  // Dates
+  birthDate   DateTime?
+  deathDate   DateTime?
+  isDeceased  Boolean @default(false)
+  
+  // Bio
+  bio         String?  // Markdown supported
+  avatarAssetId String?
+  
+  // Metadata
+  tags        String[] // For categorization
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String
+  
+  // Relations
+  storiesAsSubject Story[] @relation("StorySubject")
+  storiesAsSpeaker Story[] @relation("StorySpeaker")
+  voiceProfiles    VoiceProfile[]
+  relationshipsAsSource PersonRelationship[] @relation("RelationshipSource")
+  relationshipsAsTarget PersonRelationship[] @relation("RelationshipTarget")
+  
+  @@index([workspaceId])
+  @@index([firstName, lastName])
+}
+
+model PersonRelationship {
+  id          String   @id @default(uuid())
+  
+  sourcePersonId String
+  sourcePerson   Person   @relation("RelationshipSource", fields: [sourcePersonId], references: [id], onDelete: Cascade)
+  
+  targetPersonId String
+  targetPerson   Person   @relation("RelationshipTarget", fields: [targetPersonId], references: [id], onDelete: Cascade)
+  
+  relationshipType RelationshipType
+  isBiological   Boolean @default(true) // vs. adoptive, step, etc.
+  
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  @@unique([sourcePersonId, targetPersonId, relationshipType])
+  @@index([sourcePersonId])
+  @@index([targetPersonId])
+}
+
+enum RelationshipType {
+  PARENT      // Source is parent of target
+  CHILD       // Source is child of target
+  SPOUSE      // Married/partnered
+  SIBLING     // Brother/sister
+  GRANDPARENT
+  GRANDCHILD
+  AUNT_UNCLE
+  NIECE_NEPHEW
+  COUSIN
+  FRIEND
+  COLLEAGUE
+  OTHER
+}
+
+model Story {
+  id          String   @id @default(uuid())
+  
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  
+  title       String
+  content     String   // Markdown text
+  
+  // Story classification
+  storyType   StoryType @default(MEMORY)
+  
+  // People involved
+  subjectId   String?  // Who the story is about
+  subject     Person?  @relation("StorySubject", fields: [subjectId], references: [id])
+  
+  speakerId   String?  // Who is telling the story (if different from subject)
+  speaker     Person?  @relation("StorySpeaker", fields: [speakerId], references: [id])
+  
+  // AI Generation
+  generatedAudioAssetId String?  // Link to generated TTS audio
+  voiceProfileId String?  // Which voice was used
+  generationJobId String? // Reference to async job
+  
+  // Timeline
+  storyDate   DateTime? // When the story took place
+  storyDatePrecision DatePrecision @default(EXACT)
+  
+  // Metadata
+  tags        String[]
+  status      StoryStatus @default(DRAFT)
+  isPinned    Boolean @default(false)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String
+  createdBy   User     @relation("StoryCreator", fields: [createdById], references: [id])
+  
+  // Relations
+  assets      StoryAsset[]
+  comments    StoryComment[]
+  
+  @@index([workspaceId])
+  @@index([subjectId])
+  @@index([speakerId])
+  @@index([storyDate])
+  @@index([status])
+}
+
+enum StoryType {
+  MEMORY      // Personal recollection
+  INTERVIEW   // Q&A format
+  LETTER      // Written correspondence
+  DOCUMENT    // Historical document
+  TRIBUTE     // Memorial/remembrance
+  PODCAST     // Audio story
+}
+
+enum DatePrecision {
+  EXACT
+  YEAR_MONTH  // Know year and month only
+  YEAR        // Know year only
+  DECADE      // 1990s, etc.
+  APPROXIMATE // "Around 1950"
+}
+
+enum StoryStatus {
+  DRAFT
+  REVIEW      // Pending approval
+  PUBLISHED
+  ARCHIVED
+}
+
+model StoryComment {
+  id          String   @id @default(uuid())
+  
+  storyId     String
+  story       Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  
+  content     String
+  
+  // Threading support
+  parentId    String?
+  parent      StoryComment? @relation("CommentThread", fields: [parentId], references: [id])
+  replies     StoryComment[] @relation("CommentThread")
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([storyId])
+  @@index([userId])
+  @@index([parentId])
+}
+
+// ============================================
+// ASSET / FILE MODELS
+// ============================================
+
+model Asset {
+  id          String   @id @default(uuid())
+  
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  
+  // File info
+  filename    String
+  originalName String
+  mimeType    String
+  sizeBytes   BigInt
+  
+  // Storage
+  storageType StorageType
+  storagePath String   // Path/URL to actual file
+  storageBucket String? // For object storage
+  
+  // Asset type
+  assetType   AssetType
+  
+  // Metadata (extracted)
+  durationSeconds Float? // For audio/video
+  width       Int?       // For images/video
+  height      Int?       // For images/video
+  transcript  String?    // For audio ( Whisper output)
+  metadata    Json?      // EXIF, ID3, etc.
+  
+  // Processing status
+  processingStatus ProcessingStatus @default(PENDING)
+  processingError String?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  uploadedById String
+  
+  // Relations
+  storyAssets StoryAsset[]
+  
+  @@index([workspaceId])
+  @@index([assetType])
+  @@index([processingStatus])
+}
+
+enum StorageType {
+  LOCAL       // Local filesystem
+  S3          // Object storage
+  CLOUDFLARE_R2
+  AZURE_BLOB
+  GOOGLE_CLOUD
+}
+
+enum AssetType {
+  AUDIO       // Recording, music
+  VIDEO       // Video recording
+  IMAGE       // Photo, scan
+  DOCUMENT    // PDF, Word, etc.
+  TRANSCRIPT  // Generated text from audio
+  GENERATED_AUDIO // AI-generated TTS output
+}
+
+enum ProcessingStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+// Junction table: Stories <-> Assets
+model StoryAsset {
+  id          String   @id @default(uuid())
+  
+  storyId     String
+  story       Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  
+  assetId     String
+  asset       Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  
+  // How the asset is used in the story
+  assetRole   AssetRole @default(ATTACHMENT)
+  sortOrder   Int @default(0)
+  caption     String?
+  
+  createdAt   DateTime @default(now())
+  
+  @@unique([storyId, assetId])
+  @@index([storyId])
+  @@index([assetId])
+}
+
+enum AssetRole {
+  PRIMARY     // Main content (e.g., the recording)
+  ATTACHMENT  // Supporting file
+  TRANSCRIPT  // Text version
+  THUMBNAIL   // Preview image
+}
+
+// ============================================
+// VOICE / TTS MODELS
+// ============================================
+
+model VoiceProfile {
+  id          String   @id @default(uuid())
+  
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  
+  // Who this voice represents
+  personId    String?
+  person      Person?  @relation(fields: [personId], references: [id], onDelete: SetNull)
+  
+  createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id])
+  
+  name        String   // e.g., "Grandpa Buck"
+  description String?  // How they talked
+  
+  // Voice data (stored as file reference)
+  modelPath   String   // Path to .pt checkpoint file
+  modelType   VoiceModelType @default(QWEN3_BASE)
+  
+  // Source reference (if cloned from audio)
+  sourceAssetId String?
+  sourceTranscript String? // Text of the reference recording
+  
+  // Style parameters (stored as JSON for flexibility)
+  styleParams Json?    // { temperature, top_p, top_k, repetition_penalty, etc. }
+  
+  // Metadata
+  isDefault   Boolean @default(false) // Default voice for this person
+  isCloned    Boolean @default(true) // vs. designed voice
+  status      VoiceStatus @default(READY)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  generationJobs VoiceGenerationJob[]
+  
+  @@index([workspaceId])
+  @@index([personId])
+  @@index([createdById])
+}
+
+enum VoiceModelType {
+  QWEN3_BASE      // Cloned from real audio
+  QWEN3_DESIGN    // Designed from text description
+}
+
+enum VoiceStatus {
+  TRAINING
+  READY
+  ERROR
+  DISABLED
+}
+
+model VoiceGenerationJob {
+  id          String   @id @default(uuid())
+  
+  voiceProfileId String
+  voiceProfile   VoiceProfile @relation(fields: [voiceProfileId], references: [id], onDelete: Cascade)
+  
+  storyId     String?
+  
+  // Input
+  text        String
+  styleOverride Json?  // Override style params for this generation
+  
+  // Job status
+  status      GenerationStatus @default(QUEUED)
+  priority    Int @default(5)   // 1-10, higher = more priority
+  
+  // Processing
+  queuedAt    DateTime @default(now())
+  startedAt   DateTime?
+  completedAt DateTime?
+  
+  // Results
+  outputAssetId String?
+  errorMessage  String?
+  
+  // Cloud tracking (for hybrid/cloud modes)
+  cloudJobId  String?  // External job reference
+  computeInstance String? // Which instance processed it
+  
+  // Usage
+  durationSeconds Float? // Output audio length
+  computeTimeSeconds Float? // Processing time
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([voiceProfileId])
+  @@index([status])
+  @@index([queuedAt])
+}
+
+enum GenerationStatus {
+  QUEUED
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+// ============================================
+// AUDIT & SECURITY
+// ============================================
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  
+  actorId     String?  // User who performed action (null for system)
+  actorType   ActorType
+  
+  action      String   // e.g., "story.create", "voice.generate", "member.invite"
+  resourceType String  // e.g., "story", "voice", "member"
+  resourceId  String?
+  
+  // Request context
+  ipAddress   String?
+  userAgent   String?
+  
+  // Change details
+  beforeState Json?
+  afterState  Json?
+  metadata    Json?
+  
+  createdAt   DateTime @default(now())
+  
+  @@index([workspaceId])
+  @@index([action])
+  @@index([resourceType, resourceId])
+  @@index([createdAt])
+}
+
+enum ActorType {
+  USER
+  SYSTEM
+  API_KEY
+  WEBHOOK
+}
