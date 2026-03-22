@@ -7,6 +7,7 @@
     "dev:debug": "NODE_ENV=development DEBUG=* next dev -p 3002 -H 0.0.0.0 --webpack",
     "build": "next build --webpack",
     "start": "next build && next start -p 3002 -H 0.0.0.0",
+    "start:tts": "cd tts-service && ./start.sh",
     "start:voice": "docker compose -f docker-compose.voice.yml up -d",
     "stop:voice": "docker compose -f docker-compose.voice.yml down",
     "lint": "next lint"

@@ -62,6 +62,8 @@ export function useTalkController(): TalkControllerState & TalkControllerActions
   })
   
   const audioRef = useRef<HTMLAudioElement | null>(null)
+  const synthesizeSpeechRef = useRef<(text: string, modelId?: string) => Promise<string | null>>(async () => null)
+  const playAudioRef = useRef<(audioUrl: string) => void>(() => {})
 
   // Simulate typing indicator
   useEffect(() => {
@@ -97,14 +99,15 @@ export function useTalkController(): TalkControllerState & TalkControllerActions
     }))
 
     try {
-      // Simulate API call
+      // Simulate API call for AI text response
       await new Promise(resolve => setTimeout(resolve, 1500))
       
+      const responseText = generateAIResponse(state.inputText)
       const aiResponse: ConversationMessage = {
         id: (Date.now() + 1).toString(),
         sender: 'LegacySubject',
         timestamp: new Date(),
-        content: generateAIResponse(state.inputText),
+        content: responseText,
         state: 'sent',
       }
 
@@ -114,6 +117,18 @@ export function useTalkController(): TalkControllerState & TalkControllerActions
         isLoading: false,
         talkState: 'typing',
       }))
+
+      // Auto-synthesize voice for the AI response if a voice model is selected
+      if (state.selectedVoiceModel) {
+        try {
+          const audioUrl = await synthesizeSpeechRef.current(responseText, state.selectedVoiceModel.id)
+          if (audioUrl) {
+            playAudioRef.current(audioUrl)
+          }
+        } catch (e) {
+          console.warn('[TALK] Voice synthesis for response failed (non-critical):', e)
+        }
+      }
     } catch (error) {
       setState(prev => ({
         ...prev,
@@ -122,7 +137,7 @@ export function useTalkController(): TalkControllerState & TalkControllerActions
         errorMessage: 'Failed to send message',
       }))
     }
-  }, [state.inputText])
+  }, [state.inputText, state.selectedVoiceModel])
 
   const setInputText = useCallback((text: string) => {
     setState(prev => ({ ...prev, inputText: text }))
@@ -314,6 +329,12 @@ export function useTalkController(): TalkControllerState & TalkControllerActions
     
     audio.play()
   }, [])
+
+  // Keep refs in sync so sendMessage can call these without hoisting issues
+  useEffect(() => {
+    synthesizeSpeechRef.current = synthesizeSpeech
+    playAudioRef.current = playAudio
+  }, [synthesizeSpeech, playAudio])
 
   // Stop audio
   const stopAudio = useCallback(() => {

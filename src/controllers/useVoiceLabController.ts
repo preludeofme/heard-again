@@ -259,7 +259,7 @@ export function useVoiceLabController(): VoiceLabControllerState & VoiceLabContr
   }, [])
 
   const startVoiceTraining = useCallback(async (modelName: string, language: string) => {
-    console.log('Starting voice training with:', { modelName, language, sampleCount: state.trainingSamples.length })
+    console.log('Starting voice profile creation with:', { modelName, language, sampleCount: state.trainingSamples.length })
     
     if (state.trainingSamples.length === 0) {
       showError('Please upload at least one audio sample')
@@ -298,7 +298,7 @@ export function useVoiceLabController(): VoiceLabControllerState & VoiceLabContr
         modelName,
       }
       
-      console.log('Sending training request:', requestBody)
+      console.log('Sending voice profile creation request:', requestBody)
       
       const response = await fetch('/api/voice/train', {
         method: 'POST',
@@ -306,61 +306,46 @@ export function useVoiceLabController(): VoiceLabControllerState & VoiceLabContr
         body: JSON.stringify(requestBody),
       })
 
-      console.log('Training response status:', response.status)
+      console.log('Voice profile response status:', response.status)
       
       if (!response.ok) {
         const errorText = await response.text()
-        console.error('Training failed:', errorText)
-        throw new Error(`Training failed to start: ${errorText}`)
+        console.error('Voice profile creation failed:', errorText)
+        throw new Error(`Voice profile creation failed: ${errorText}`)
       }
 
       const result = await response.json()
-      console.log('Training started successfully:', result)
+      console.log('Voice profile created successfully:', result)
       
+      // Qwen3-TTS creates voice profiles nearly instantly (no long training)
       setState(prev => ({
         ...prev,
         trainingJob: {
-          id: result.jobId,
+          id: result.jobId || result.modelId,
           modelId: result.modelId,
-          status: result.status || 'queued',
-          progress: 0,
-          currentStage: 'queued',
+          status: 'completed',
+          progress: 100,
+          currentStage: 'completed',
           createdAt: new Date().toISOString(),
+          completedAt: new Date().toISOString(),
         },
         isTraining: false,
+        trainingSamples: [],
       }))
 
-      showSuccess('Voice training started!')
+      showSuccess('Voice profile created! You can now use it in Talk.')
       
-      // Start polling for status
-      const pollStatus = setInterval(async () => {
-        const statusResponse = await fetch(`/api/voice/train/${result.jobId}/status`)
-        if (statusResponse.ok) {
-          const statusData = await statusResponse.json()
-          setState(prev => ({
-            ...prev,
-            trainingJob: statusData,
-          }))
-          
-          if (statusData.status === 'completed') {
-            clearInterval(pollStatus)
-            showSuccess('Voice training completed!')
-            loadVoiceModels()
-          } else if (statusData.status === 'failed') {
-            clearInterval(pollStatus)
-            showError(`Voice training failed: ${statusData.error || 'Unknown error'}`)
-          }
-        }
-      }, 2000)
+      // Refresh voice models list
+      loadVoiceModels()
     } catch (error) {
-      console.error('Training error:', error)
+      console.error('Voice profile creation error:', error)
       setState(prev => ({
         ...prev,
         isTraining: false,
         hasError: true,
-        errorMessage: 'Failed to start voice training',
+        errorMessage: 'Failed to create voice profile',
       }))
-      showError('Failed to start voice training')
+      showError('Failed to create voice profile')
     }
   }, [state.trainingSamples, showSuccess, showError])
 
