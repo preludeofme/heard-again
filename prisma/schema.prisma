@@ -574,8 +574,6 @@ model Person {
   storiesAsSubject Story[] @relation("StorySubject")
   storiesAsSpeaker Story[] @relation("StorySpeaker")
   voiceProfiles    VoiceProfile[]
-  relationshipsAsSource PersonRelationship[] @relation("RelationshipSource")
-  relationshipsAsTarget PersonRelationship[] @relation("RelationshipTarget")
   voiceConsents    VoiceConsent[]
   names            PersonName[]
   events           PersonEvent[]
@@ -595,42 +593,6 @@ enum GedcomSex {
   F
   U
   X
-}
-
-model PersonRelationship {
-  id          String   @id @default(uuid())
-  
-  sourcePersonId String
-  sourcePerson   Person   @relation("RelationshipSource", fields: [sourcePersonId], references: [id], onDelete: Cascade)
-  
-  targetPersonId String
-  targetPerson   Person   @relation("RelationshipTarget", fields: [targetPersonId], references: [id], onDelete: Cascade)
-  
-  relationshipType RelationshipType
-  isBiological   Boolean @default(true) // vs. adoptive, step, etc.
-  
-  notes          String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  
-  @@unique([sourcePersonId, targetPersonId, relationshipType])
-  @@index([sourcePersonId])
-  @@index([targetPersonId])
-}
-
-enum RelationshipType {
-  PARENT      // Source is parent of target
-  CHILD       // Source is child of target
-  SPOUSE      // Married/partnered
-  SIBLING     // Brother/sister
-  GRANDPARENT
-  GRANDCHILD
-  AUNT_UNCLE
-  NIECE_NEPHEW
-  COUSIN
-  FRIEND
-  COLLEAGUE
-  OTHER
 }
 
 model Story {

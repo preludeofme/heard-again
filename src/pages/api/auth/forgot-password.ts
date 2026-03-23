@@ -4,6 +4,53 @@ import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
 import { validate, rules } from '@/lib/validation'
 import crypto from 'crypto'
 
+async function sendPasswordResetEmail(params: {
+  to: string
+  resetUrl: string
+  userName: string
+}): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY
+  const fromEmail = process.env.EMAIL_FROM
+
+  if (!apiKey || !fromEmail) {
+    console.warn('[auth/forgot-password] Email service not configured; logging reset URL for development')
+    console.log(`Password reset URL for ${params.to}: ${params.resetUrl}`)
+    return
+  }
+
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: fromEmail,
+      to: [params.to],
+      subject: 'Reset your Heard Again password',
+      html: `
+        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #16334a;">
+          <h2>Password reset request</h2>
+          <p>Hi ${params.userName},</p>
+          <p>We received a request to reset your Heard Again password.</p>
+          <p>
+            <a href="${params.resetUrl}" style="display:inline-block;padding:10px 16px;background:#16334a;color:#fff;text-decoration:none;border-radius:6px;">
+              Reset password
+            </a>
+          </p>
+          <p>If you did not request this, you can safely ignore this email.</p>
+          <p>This link expires in 1 hour.</p>
+        </div>
+      `,
+    }),
+  })
+
+  if (!response.ok) {
+    const body = await response.text()
+    throw new Error(`Failed to send reset email: ${body}`)
+  }
+}
+
 export default apiHandler({
   POST: async (req, res) => {
     const { email } = req.body
@@ -42,7 +89,7 @@ export default apiHandler({
 
     // Store the token in VerificationToken table
     // Using email as identifier and token for the reset flow
-    await prisma.verificationToken.create({
+    await (prisma as any).verificationToken.create({
       data: {
         identifier: `password-reset:${user.id}`,
         token,
@@ -50,22 +97,17 @@ export default apiHandler({
       },
     })
 
-    // TODO: Send email with reset link
-    // For now, log the reset URL for development
     const resetUrl = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/reset-password?token=${token}`
-    console.log(`Password reset URL for ${email}: ${resetUrl}`)
 
-    // In production, you would send an email here using a service like:
-    // - Resend (resend.com)
-    // - SendGrid
-    // - AWS SES
-    // - Postmark
-    // Example:
-    // await sendPasswordResetEmail({
-    //   to: user.email,
-    //   resetUrl,
-    //   userName: user.displayName || user.email,
-    // })
+    try {
+      await sendPasswordResetEmail({
+        to: user.email,
+        resetUrl,
+        userName: user.displayName || user.email,
+      })
+    } catch (emailError) {
+      console.error('[auth/forgot-password] Failed to send reset email:', emailError)
+    }
 
     return successResponse(res, {
       message: 'If an account exists with this email, you will receive password reset instructions.',

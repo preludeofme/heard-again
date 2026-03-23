@@ -114,6 +114,25 @@ export function TalkPage({ legacySubject }: TalkPageProps) {
             mr: 1
           }} 
         />
+        <Chip
+          size="small"
+          label={`Voice: ${controller.synthesisStatus}`}
+          sx={{
+            textTransform: 'capitalize',
+            backgroundColor:
+              controller.synthesisStatus === 'processing' ? '#fff3e0'
+              : controller.synthesisStatus === 'completed' ? '#e8f5e9'
+              : controller.synthesisStatus === 'failed' ? '#ffebee'
+              : '#eceff1',
+            color:
+              controller.synthesisStatus === 'processing' ? '#ef6c00'
+              : controller.synthesisStatus === 'completed' ? '#2e7d32'
+              : controller.synthesisStatus === 'failed' ? '#c62828'
+              : '#546669',
+            fontWeight: 600,
+            mr: 1,
+          }}
+        />
         <Avatar 
           src={legacySubject.avatarUrl} 
           sx={{ width: 40, height: 40, mr: 1 }}
@@ -346,6 +365,20 @@ export function TalkPage({ legacySubject }: TalkPageProps) {
         <Typography variant="caption" sx={{ color: '#546669', mt: 2, display: 'block', textAlign: 'center' }}>
           Encrypted Connection • Archive Active
         </Typography>
+
+        {controller.lastSynthesisOutputAssetDownloadUrl && (
+          <Box sx={{ mt: 1, display: 'flex', justifyContent: 'center' }}>
+            <Button
+              size="small"
+              variant="text"
+              component="a"
+              href={controller.lastSynthesisOutputAssetDownloadUrl}
+              sx={{ textTransform: 'none' }}
+            >
+              Download latest generated audio
+            </Button>
+          </Box>
+        )}
       </Box>
       
       {/* Voice Settings Dialog */}

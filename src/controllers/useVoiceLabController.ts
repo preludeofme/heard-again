@@ -364,21 +364,23 @@ export function useVoiceLabController(): VoiceLabControllerState & VoiceLabContr
 
       console.log('Voice profile response status:', response.status)
       
-      if (!response.ok) {
-        const errorText = await response.text()
-        console.error('Voice profile creation failed:', errorText)
-        throw new Error(`Voice profile creation failed: ${errorText}`)
+      const result = await response.json()
+
+      if (!response.ok || !result.success) {
+        const message = result.error || 'Voice profile creation failed'
+        console.error('Voice profile creation failed:', message)
+        throw new Error(message)
       }
 
-      const result = await response.json()
       console.log('Voice profile created successfully:', result)
+      const persistedModelId = result.dbProfileId || result.modelId
       
       // Qwen3-TTS creates voice profiles nearly instantly (no long training)
       setState(prev => ({
         ...prev,
         trainingJob: {
-          id: result.jobId || result.modelId,
-          modelId: result.modelId,
+          id: result.jobId || persistedModelId,
+          modelId: persistedModelId,
           status: 'completed',
           progress: 100,
           currentStage: 'completed',
@@ -387,6 +389,8 @@ export function useVoiceLabController(): VoiceLabControllerState & VoiceLabContr
         },
         isTraining: false,
         trainingSamples: [],
+        hasError: false,
+        errorMessage: null,
       }))
 
       showSuccess('Voice profile created! You can now use it in Talk.')
@@ -394,14 +398,15 @@ export function useVoiceLabController(): VoiceLabControllerState & VoiceLabContr
       // Refresh voice models list
       loadVoiceModels()
     } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to create voice profile'
       console.error('Voice profile creation error:', error)
       setState(prev => ({
         ...prev,
         isTraining: false,
         hasError: true,
-        errorMessage: 'Failed to create voice profile',
+        errorMessage: message,
       }))
-      showError('Failed to create voice profile')
+      showError(message)
     }
   }, [state.trainingSamples, showSuccess, showError])
 

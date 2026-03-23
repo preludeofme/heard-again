@@ -78,7 +78,7 @@
 - [x] `POST /api/auth/reset-password` - Generate reset token
 - [x] `POST /api/auth/reset-password/verify` - Verify token validity
 - [x] `POST /api/auth/reset-password/update` - Update password
-- [ ] Email service integration (Resend/SendGrid/AWS SES)
+- [x] Email service integration (Resend/SendGrid/AWS SES)
 
 ### Protected Routes & Middleware
 - [x] Create `middleware.ts` for route protection
@@ -117,8 +117,8 @@
 - [x] `DELETE /api/workspaces/[id]/members/[userId]` - Remove member
 
 ### Controllers - Workspace
-- [ ] `useWorkspaceController.ts` - Workspace management
-- [ ] `useMembershipController.ts` - Members and invites
+- [x] `useWorkspaceController.ts` - Workspace management
+- [x] `useMembershipController.ts` - Members and invites
 
 ### Dashboard
 - [x] `GET /api/dashboard/stats` - Workspace stats, memory wall, family members
@@ -148,6 +148,7 @@
 - [x] `POST /api/people/[id]/relationships` - Create relationship
 - [x] `GET /api/people/[id]/relationships` - Get person's relationships
 - [x] `DELETE /api/relationships/[id]` - Remove relationship
+- [x] Remove legacy `PersonRelationship`/`RelationshipType` and standardize relationship APIs on `FamilyUnit` + `FamilyChild`
 
 ### Controllers - Family Tree
 - [x] FamilyTreePage.tsx - Wired to /api/people (real API)
@@ -285,6 +286,7 @@
 - [x] Add and apply migration for `PersonName`, `PersonEvent`, `FamilyUnit`, `FamilyChild`, and `PersonExternalRef`
 - [x] Rebuild `POST /api/import/gedcom` to persist normalized GEDCOM entities with stable `gedcomXref` IDs
 - [x] Rebuild `POST /api/export/gedcom` to generate GEDCOM from normalized entities for round-trip fidelity
+- [x] Apply cleanup migration to drop legacy relationship schema (`PersonRelationship` + `RelationshipType`)
 
 ### API Routes - Import
 - [x] `POST /api/import/gedcom` - Import GEDCOM file
@@ -479,16 +481,80 @@ The Python TTS service is fully functional:
 22. ~~Add connection pooling for production database~~ ✓
 23. ~~TTS service environment configuration~~ ✓
 24. ~~Upload/storage configuration (local/S3/R2)~~ ✓
+25. ~~Normalize family relationships to `FamilyUnit`/`FamilyChild` and remove legacy `PersonRelationship`~~ ✓
+26. ~~GEDCOM import/export refactor for normalized round-trip (`gedcomXref`)~~ ✓
 
 **Phase 1: Foundation & Infrastructure - COMPLETE ✓**
 
 **Next Up:**
-1. UI polish and testing of current features
-2. Review remaining lower priority items
+1. Add automated test coverage for critical API flows (relationships, GEDCOM import/export, voice generation)
+2. Begin billing/Stripe Phase 9 API scaffolding
+3. Prepare manual QA checklist for high-risk flows (voice generation, GEDCOM import/export, relationship editing)
 
 **Lower Priority:**
-1. Password reset flow + email service
-2. Billing/Stripe integration
-3. Import/Export
-4. Self-hosting tunnel
+1. Billing/Stripe integration
+2. Self-hosting tunnel
+
+---
+
+## Sprint Checklist (File-by-File)
+
+### Sprint A: Voice DB Integration
+
+1) `src/pages/api/voice/train.ts`
+- [x] Persist `VoiceProfile` + metadata during train flow
+- [x] Return created DB profile ID in response
+
+2) `src/pages/api/voice/synthesize.ts`
+- [x] Persist `VoiceGenerationJob` lifecycle (started/completed/failed)
+- [x] Link generated asset + profile/person context
+
+3) `src/controllers/useVoiceLabController.ts`
+- [x] Align controller payload/response typing with new train DB response
+- [x] Show robust loading/error states for DB-backed training jobs
+
+4) `src/pages/talk.tsx` (or active Talk page component)
+- [x] Wire synth job status display to updated synth endpoint
+- [x] Confirm generated audio playback works from stored asset references
+
+### Sprint B: Family Tree Relationship UX
+
+1) `src/components/FamilyTreePage.tsx`
+- [x] Add relationship editor entry point (button/menu)
+- [x] Add zoom/pan controls UI shell (working interactions)
+
+2) `src/components/PersonModal.tsx`
+- [x] Add create/delete relationship actions using normalized IDs (`fam:*`, `fc:*`)
+- [x] Keep person relationships tab synced after mutations
+
+3) `src/pages/family-tree.tsx`
+- [x] Refresh tree data after relationship mutations
+- [x] Verify add-person flow still works with restricted relationship types
+
+4) `src/components/AddPersonModal.tsx`
+- [x] Confirm relationship create step fully maps to normalized API (`PARENT`/`CHILD`/`SPOUSE`)
+- [x] Add/adjust validation messaging for unsupported relationship shapes
+
+### Sprint C: Quality Checks (High-Risk Paths)
+
+1) `src/pages/api/import/gedcom.ts`
+- [x] Validate import summary counters against actual writes
+- [x] Validate idempotent upsert behavior for repeated imports
+
+2) `src/pages/api/export/gedcom.ts`
+- [x] Validate round-trip outputs for names/events/families
+- [x] Validate stable `gedcomXref` fallback behavior
+
+3) `src/pages/api/people/[id]/relationships.ts`
+- [x] Validate relationship creation edge cases (self-link, duplicates, parent/child consistency)
+- [x] Validate delete/update compatibility with `DELETE /api/relationships/[id]`
+
+4) `src/pages/api/relationships/[id].ts`
+- [x] Validate `fam:*` and `fc:*` deletion semantics
+- [x] Validate workspace authorization and not-found behavior
+
+### Suggested Execution Order
+- [x] A1 → A2 → A3 → A4
+- [x] B1 → B2 → B3 → B4
+- [x] C1 → C2 → C3 → C4
 

@@ -88,10 +88,35 @@ export default function FamilyTree() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(personData),
       })
-      if (res.ok) {
-        // Refresh the tree
-        fetchPeople()
+
+      const created = await res.json()
+      if (!res.ok || !created.success) {
+        throw new Error(created.error || 'Failed to create person')
       }
+
+      const createdPersonId: string | undefined = created.data?.id
+      const relationshipType = personData.relationshipType
+      const relationshipTargetId = personData.relationshipTo
+      const supportedRelationshipTypes = new Set(['PARENT', 'CHILD', 'SPOUSE'])
+
+      if (
+        createdPersonId
+        && relationshipTargetId
+        && relationshipType
+        && supportedRelationshipTypes.has(relationshipType)
+      ) {
+        await fetch(`/api/people/${createdPersonId}/relationships`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            targetPersonId: relationshipTargetId,
+            relationshipType,
+          }),
+        })
+      }
+
+      // Refresh the tree
+      fetchPeople()
     } catch {
       // Handle error
     }
@@ -123,6 +148,7 @@ export default function FamilyTree() {
         onClose={() => {
           setIsPersonModalOpen(false)
           setSelectedPersonId(null)
+          fetchPeople()
         }}
         onSave={() => fetchPeople()}
         onDelete={() => fetchPeople()}

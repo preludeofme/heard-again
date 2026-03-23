@@ -43,13 +43,6 @@ const RELATIONSHIP_TYPES = [
   { value: 'PARENT', label: 'Parent' },
   { value: 'CHILD', label: 'Child' },
   { value: 'SPOUSE', label: 'Spouse/Partner' },
-  { value: 'SIBLING', label: 'Sibling' },
-  { value: 'GRANDPARENT', label: 'Grandparent' },
-  { value: 'GRANDCHILD', label: 'Grandchild' },
-  { value: 'AUNT_UNCLE', label: 'Aunt/Uncle' },
-  { value: 'NIECE_NEPHEW', label: 'Niece/Nephew' },
-  { value: 'COUSIN', label: 'Cousin' },
-  { value: 'OTHER', label: 'Other' },
 ]
 
 const STEPS = ['Basic Info', 'Life Dates', 'Biography', 'Relationships']
@@ -76,7 +69,12 @@ export function AddPersonModal({ open, onClose, onSave, existingPeople = [] }: A
   })
 
   const handleChange = (field: keyof CreatePersonData, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }))
+    setFormData((prev) => {
+      if (field === 'relationshipTo' && !value) {
+        return { ...prev, relationshipTo: '', relationshipType: '' }
+      }
+      return { ...prev, [field]: value }
+    })
     setError(null)
   }
 
@@ -94,6 +92,12 @@ export function AddPersonModal({ open, onClose, onSave, existingPeople = [] }: A
             setError('Death date must be after birth date')
             return false
           }
+        }
+        return true
+      case 3:
+        if (formData.relationshipTo && !formData.relationshipType) {
+          setError('Please choose a relationship type when linking to an existing person')
+          return false
         }
         return true
       default:
@@ -279,6 +283,9 @@ export function AddPersonModal({ open, onClose, onSave, existingPeople = [] }: A
           <Box>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
               Optionally add a relationship to an existing family member.
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
+              Supported relationship types: Parent, Child, and Spouse/Partner.
             </Typography>
             <Grid container spacing={3}>
               <Grid size={{ xs: 12 }}>

@@ -35,9 +35,16 @@ export default apiHandler({
           select: {
             storiesAsSubject: true,
             voiceProfiles: true,
-            relationshipsAsSource: true,
-            relationshipsAsTarget: true,
           },
+        },
+        husbandInFamilies: {
+          select: { id: true },
+        },
+        wifeInFamilies: {
+          select: { id: true },
+        },
+        familyChildLinks: {
+          select: { id: true },
         },
       },
       orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
@@ -59,7 +66,7 @@ export default apiHandler({
       counts: {
         stories: p._count.storiesAsSubject,
         voiceProfiles: p._count.voiceProfiles,
-        relationships: p._count.relationshipsAsSource + p._count.relationshipsAsTarget,
+        relationships: p.husbandInFamilies.length + p.wifeInFamilies.length + p.familyChildLinks.length,
       },
       createdAt: p.createdAt,
     }))

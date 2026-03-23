@@ -24,20 +24,6 @@ export default apiHandler({
             createdAt: true,
           },
         },
-        relationshipsAsSource: {
-          include: {
-            targetPerson: {
-              select: { id: true, firstName: true, lastName: true, avatarAssetId: true },
-            },
-          },
-        },
-        relationshipsAsTarget: {
-          include: {
-            sourcePerson: {
-              select: { id: true, firstName: true, lastName: true, avatarAssetId: true },
-            },
-          },
-        },
         _count: {
           select: {
             storiesAsSubject: true,
@@ -50,6 +36,109 @@ export default apiHandler({
 
     if (!person) {
       throw Errors.notFound('Person')
+    }
+
+    const familyUnits = await prisma.familyUnit.findMany({
+      where: {
+        workspaceId: user.workspaceId,
+        OR: [
+          { husbandId: personId },
+          { wifeId: personId },
+          { children: { some: { childId: personId } } },
+        ],
+      },
+      include: {
+        husband: {
+          select: { id: true, firstName: true, lastName: true, avatarAssetId: true },
+        },
+        wife: {
+          select: { id: true, firstName: true, lastName: true, avatarAssetId: true },
+        },
+        children: {
+          include: {
+            child: {
+              select: { id: true, firstName: true, lastName: true, avatarAssetId: true },
+            },
+          },
+          orderBy: { sortOrder: 'asc' },
+        },
+      },
+    })
+
+    const relationships: Array<{
+      id: string
+      type: 'SPOUSE' | 'PARENT' | 'CHILD'
+      direction: 'outgoing' | 'incoming'
+      isBiological: boolean
+      person: {
+        id: string
+        firstName: string
+        lastName: string | null
+        avatarAssetId: string | null
+      }
+    }> = []
+
+    for (const family of familyUnits) {
+      if (family.husbandId === personId && family.wife) {
+        relationships.push({
+          id: `fam:${family.id}:spouse:${family.wife.id}`,
+          type: 'SPOUSE',
+          direction: 'outgoing',
+          isBiological: true,
+          person: family.wife,
+        })
+      }
+
+      if (family.wifeId === personId && family.husband) {
+        relationships.push({
+          id: `fam:${family.id}:spouse:${family.husband.id}`,
+          type: 'SPOUSE',
+          direction: 'outgoing',
+          isBiological: true,
+          person: family.husband,
+        })
+      }
+
+      const isParent = family.husbandId === personId || family.wifeId === personId
+      if (isParent) {
+        for (const childLink of family.children) {
+          relationships.push({
+            id: `fc:${family.id}:${childLink.childId}:child`,
+            type: 'CHILD',
+            direction: 'outgoing',
+            isBiological: childLink.relationshipType === 'BIOLOGICAL',
+            person: childLink.child,
+          })
+        }
+      }
+
+      let isChild = false
+      for (const child of family.children) {
+        if (child.childId === personId) {
+          isChild = true
+          break
+        }
+      }
+      if (isChild) {
+        if (family.husband && family.husband.id !== personId) {
+          relationships.push({
+            id: `fc:${family.id}:${personId}:parent:${family.husband.id}`,
+            type: 'PARENT',
+            direction: 'incoming',
+            isBiological: true,
+            person: family.husband,
+          })
+        }
+        if (family.wife && family.wife.id !== personId) {
+          relationships.push({
+            id: `fc:${family.id}:${personId}:parent:${family.wife.id}`,
+            type: 'PARENT',
+            direction: 'incoming',
+            isBiological: true,
+            person: family.wife,
+          })
+        }
+      }
     }
 
     return successResponse(res, {
@@ -69,22 +158,7 @@ export default apiHandler({
       avatarUrl: person.avatarAsset?.storagePath || null,
       tags: person.tags,
       voiceProfiles: person.voiceProfiles,
-      relationships: [
-        ...person.relationshipsAsSource.map((r) => ({
-          id: r.id,
-          type: r.relationshipType,
-          direction: 'outgoing' as const,
-          isBiological: r.isBiological,
-          person: r.targetPerson,
-        })),
-        ...person.relationshipsAsTarget.map((r) => ({
-          id: r.id,
-          type: r.relationshipType,
-          direction: 'incoming' as const,
-          isBiological: r.isBiological,
-          person: r.sourcePerson,
-        })),
-      ],
+      relationships,
       counts: person._count,
       createdAt: person.createdAt,
       updatedAt: person.updatedAt,

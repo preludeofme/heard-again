@@ -18,6 +18,9 @@ interface TalkControllerState {
   audioCache: AudioCache
   isPlayingAudio: boolean
   currentAudioUrl: string | null
+  synthesisStatus: 'idle' | 'processing' | 'completed' | 'failed'
+  lastSynthesisJobId: string | null
+  lastSynthesisOutputAssetDownloadUrl: string | null
   voiceComparisonMode: boolean
   comparisonModelA: VoiceModel | null
   comparisonModelB: VoiceModel | null
@@ -57,6 +60,9 @@ export function useTalkController(): TalkControllerState & TalkControllerActions
     audioCache: {},
     isPlayingAudio: false,
     currentAudioUrl: null,
+    synthesisStatus: 'idle',
+    lastSynthesisJobId: null,
+    lastSynthesisOutputAssetDownloadUrl: null,
     voiceComparisonMode: false,
     comparisonModelA: null,
     comparisonModelB: null,
@@ -65,6 +71,43 @@ export function useTalkController(): TalkControllerState & TalkControllerActions
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const synthesizeSpeechRef = useRef<(text: string, modelId?: string) => Promise<string | null>>(async () => null)
   const playAudioRef = useRef<(audioUrl: string) => void>(() => {})
+
+  const sleep = useCallback((ms: number) => new Promise((resolve) => setTimeout(resolve, ms)), [])
+
+  const pollVoiceJobUntilFinal = useCallback(async (jobId: string) => {
+    const maxAttempts = 8
+
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      const response = await fetch(`/api/voice/jobs/${jobId}`)
+      const payload = await response.json()
+      if (!response.ok || !payload.success) {
+        throw new Error(payload.error || 'Failed to poll voice generation job')
+      }
+
+      const job = payload.data as {
+        status: 'QUEUED' | 'PROCESSING' | 'COMPLETED' | 'FAILED'
+        errorMessage: string | null
+        outputAssetDownloadUrl: string | null
+      }
+
+      if (job.status === 'FAILED') {
+        throw new Error(job.errorMessage || 'Voice generation job failed')
+      }
+
+      if (job.status === 'COMPLETED') {
+        return job
+      }
+
+      setState(prev => ({
+        ...prev,
+        synthesisStatus: job.status === 'QUEUED' || job.status === 'PROCESSING' ? 'processing' : prev.synthesisStatus,
+      }))
+
+      await sleep(600)
+    }
+
+    throw new Error('Voice generation job timed out')
+  }, [sleep])
 
   // Simulate typing indicator
   useEffect(() => {
@@ -263,6 +306,13 @@ export function useTalkController(): TalkControllerState & TalkControllerActions
     }
 
     try {
+      setState(prev => ({
+        ...prev,
+        synthesisStatus: 'processing',
+        hasError: false,
+        errorMessage: null,
+      }))
+
       const response = await fetch('/api/voice/synthesize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -275,26 +325,50 @@ export function useTalkController(): TalkControllerState & TalkControllerActions
         }),
       })
 
-      const data: VoiceSynthesisResponse = await response.json()
+      const data = await response.json()
+      const synthesisData = data as VoiceSynthesisResponse & {
+        jobId?: string
+        outputAssetDownloadUrl?: string | null
+        error?: string
+      }
       
-      if (data.success) {
+      if (response.ok && synthesisData.success) {
+        let outputAssetDownloadUrl = synthesisData.outputAssetDownloadUrl || null
+
+        if (synthesisData.jobId) {
+          const job = await pollVoiceJobUntilFinal(synthesisData.jobId)
+          if (job.outputAssetDownloadUrl) {
+            outputAssetDownloadUrl = job.outputAssetDownloadUrl
+          }
+        }
+
         // Cache the result
         setState(prev => ({
           ...prev,
+          synthesisStatus: 'completed',
+          lastSynthesisJobId: synthesisData.jobId || null,
+          lastSynthesisOutputAssetDownloadUrl: outputAssetDownloadUrl,
           audioCache: {
             ...prev.audioCache,
             [cacheKey]: {
-              audioUrl: data.audioUrl,
+              audioUrl: synthesisData.audioUrl,
               modelId: targetModelId,
               text,
               createdAt: new Date(),
-              duration: data.duration,
+              duration: synthesisData.duration,
             },
           },
         }))
         
-        return data.audioUrl
+        return synthesisData.audioUrl
       }
+
+      setState(prev => ({
+        ...prev,
+        synthesisStatus: 'failed',
+        hasError: true,
+        errorMessage: synthesisData.error || 'Speech synthesis failed',
+      }))
       
       return null
     } catch (error: any) {
@@ -304,9 +378,15 @@ export function useTalkController(): TalkControllerState & TalkControllerActions
         textLength: text.length,
         error: error?.message || String(error)
       })
+      setState(prev => ({
+        ...prev,
+        synthesisStatus: 'failed',
+        hasError: true,
+        errorMessage: error?.message || 'Speech synthesis failed',
+      }))
       return null
     }
-  }, [state.selectedVoiceModel, state.audioCache])
+  }, [state.selectedVoiceModel, state.audioCache, pollVoiceJobUntilFinal])
 
   // Play audio
   const playAudio = useCallback((audioUrl: string) => {

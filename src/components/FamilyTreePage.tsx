@@ -12,6 +12,10 @@ import {
   ZoomIn,
   ZoomOut,
   RestartAlt,
+  KeyboardArrowLeft,
+  KeyboardArrowRight,
+  KeyboardArrowUp,
+  KeyboardArrowDown,
   Add,
   AutoFixHigh,
   AutoStories,
@@ -73,6 +77,8 @@ export function FamilyTreePage({ people, onPersonClick, onAddPerson }: FamilyTre
   const [addEditMode, setAddEditMode] = useState<'create' | 'edit'>('create')
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [zoomLevel, setZoomLevel] = useState(1)
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 })
 
   // Data states
   const [personDetail, setPersonDetail] = useState<any>(null)
@@ -197,6 +203,37 @@ export function FamilyTreePage({ people, onPersonClick, onAddPerson }: FamilyTre
   const handleAddRelationship = (personId: string) => {
     console.log('Add relationship for person:', personId)
     // TODO: Open relationship editor
+  }
+
+  const handleZoomIn = () => {
+    setZoomLevel((prev) => Math.min(prev + 0.1, 1.8))
+  }
+
+  const handleZoomOut = () => {
+    setZoomLevel((prev) => Math.max(prev - 0.1, 0.6))
+  }
+
+  const handlePan = (dx: number, dy: number) => {
+    setPanOffset((prev) => ({ x: prev.x + dx, y: prev.y + dy }))
+  }
+
+  const handleResetView = () => {
+    setZoomLevel(1)
+    setPanOffset({ x: 0, y: 0 })
+  }
+
+  const handleOpenRelationshipEditor = () => {
+    const fallbackPersonId = selectedPersonId
+      || (familyData.parents[0] ? String(familyData.parents[0].id) : null)
+      || (familyData.children[0] ? String(familyData.children[0].id) : null)
+      || (familyData.grandparents[0] ? String(familyData.grandparents[0].id) : null)
+
+    if (fallbackPersonId) {
+      handleAddRelationship(fallbackPersonId)
+      return
+    }
+
+    handleAddPerson()
   }
 
   const handleStoryClick = (storyId: string) => {
@@ -375,16 +412,38 @@ export function FamilyTreePage({ people, onPersonClick, onAddPerson }: FamilyTre
               borderColor: 'rgba(208, 227, 230, 0.5)',
             }}
           >
-            <IconButton size="small" sx={{ color: 'primary.main' }}>
+            <IconButton size="small" sx={{ color: 'primary.main' }} onClick={handleZoomIn}>
               <ZoomIn />
             </IconButton>
-            <IconButton size="small" sx={{ color: 'primary.main' }}>
+            <IconButton size="small" sx={{ color: 'primary.main' }} onClick={handleZoomOut}>
               <ZoomOut />
             </IconButton>
             <Box sx={{ width: 1, height: 24, bgcolor: 'rgba(208, 227, 230, 0.5)', mx: 0.5 }} />
+            <IconButton size="small" sx={{ color: 'primary.main' }} onClick={() => handlePan(0, -24)}>
+              <KeyboardArrowUp />
+            </IconButton>
+            <IconButton size="small" sx={{ color: 'primary.main' }} onClick={() => handlePan(-24, 0)}>
+              <KeyboardArrowLeft />
+            </IconButton>
+            <IconButton size="small" sx={{ color: 'primary.main' }} onClick={() => handlePan(24, 0)}>
+              <KeyboardArrowRight />
+            </IconButton>
+            <IconButton size="small" sx={{ color: 'primary.main' }} onClick={() => handlePan(0, 24)}>
+              <KeyboardArrowDown />
+            </IconButton>
+            <Box sx={{ width: 1, height: 24, bgcolor: 'rgba(208, 227, 230, 0.5)', mx: 0.5 }} />
+            <Button
+              startIcon={<PersonAdd />}
+              size="small"
+              onClick={handleOpenRelationshipEditor}
+              sx={{ color: 'primary.main', textTransform: 'none' }}
+            >
+              Edit Relationships
+            </Button>
             <Button
               startIcon={<RestartAlt />}
               size="small"
+              onClick={handleResetView}
               sx={{ color: 'primary.main', textTransform: 'none' }}
             >
               Reset View
@@ -407,6 +466,17 @@ export function FamilyTreePage({ people, onPersonClick, onAddPerson }: FamilyTre
             alignItems: 'center',
           }}
         >
+          <Box
+            sx={{
+              transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel})`,
+              transformOrigin: 'center center',
+              transition: 'transform 0.2s ease',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              width: '100%',
+            }}
+          >
           {/* Root Generation - Grandparents */}
           <Box sx={{ display: 'flex', gap: 8, position: 'relative', zIndex: 10 }}>
             {familyData.grandparents.map((person) => (
@@ -700,6 +770,7 @@ export function FamilyTreePage({ people, onPersonClick, onAddPerson }: FamilyTre
                 Add Relative
               </Typography>
             </Box>
+          </Box>
           </Box>
         </Box>
 

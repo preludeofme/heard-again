@@ -60,14 +60,29 @@ export default apiHandler({
       }),
     ])
 
+    const exportValidation = {
+      peopleTotal: people.length,
+      familiesTotal: families.length,
+      fallbackPersonXrefCount: 0,
+      fallbackFamilyXrefCount: 0,
+      peopleMissingPrimaryNameCount: 0,
+      peopleWithBirthEventCount: 0,
+      peopleWithDeathEventCount: 0,
+    }
+
     const personXrefById = new Map<string, string>()
     for (const person of people) {
-      personXrefById.set(person.id, person.gedcomXref || personGedcomId(person.id))
+      const resolved = person.gedcomXref || personGedcomId(person.id)
+      if (!person.gedcomXref) exportValidation.fallbackPersonXrefCount += 1
+      if (person.names.length === 0) exportValidation.peopleMissingPrimaryNameCount += 1
+      personXrefById.set(person.id, resolved)
     }
 
     const familyXrefById = new Map<string, string>()
     families.forEach((family, index) => {
-      familyXrefById.set(family.id, family.gedcomXref || familyGedcomId(family.id, index))
+      const resolved = family.gedcomXref || familyGedcomId(family.id, index)
+      if (!family.gedcomXref) exportValidation.fallbackFamilyXrefCount += 1
+      familyXrefById.set(family.id, resolved)
     })
 
     const familiesByPerson = new Map<string, { spouse: string[]; child: string[] }>()
@@ -134,6 +149,7 @@ export default apiHandler({
       }
 
       const birthEvent = person.events.find((event) => event.eventType === 'BIRTH')
+      if (birthEvent) exportValidation.peopleWithBirthEventCount += 1
       const birthDate = formatGedcomDate(birthEvent?.eventDate)
       const birthPlace = birthEvent?.place || null
       if (birthDate || birthPlace) {
@@ -143,6 +159,7 @@ export default apiHandler({
       }
 
       const deathEvent = person.events.find((event) => event.eventType === 'DEATH')
+      if (deathEvent) exportValidation.peopleWithDeathEventCount += 1
       const deathDate = formatGedcomDate(deathEvent?.eventDate)
       const deathPlace = deathEvent?.place || null
       if (deathDate || deathPlace) {
@@ -228,6 +245,7 @@ export default apiHandler({
             workspaceId: user.workspaceId,
             peopleCount: people.length,
             familyCount: families.length,
+            validation: exportValidation,
           },
         },
       })
@@ -258,6 +276,7 @@ export default apiHandler({
       summary: {
         people: people.length,
         familyUnits: families.length,
+        validation: exportValidation,
       },
     }, 201)
   },

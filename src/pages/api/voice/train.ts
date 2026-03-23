@@ -1,5 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { ttsRequest } from '@/lib/tts-client'
+import { prisma } from '@/lib/prisma'
+import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -7,10 +9,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { samples, language, modelName, styleInstruct } = req.body
+    const user = await getAuthUserWithWorkspace(req, res)
+    await requireWorkspaceRole(user.id, user.workspaceId, 'EDITOR')
+
+    const { samples, language, modelName, styleInstruct, personId } = req.body
 
     if (!samples || !Array.isArray(samples) || samples.length === 0) {
       return res.status(400).json({ success: false, error: 'No samples provided' })
+    }
+
+    if (personId) {
+      const person = await prisma.person.findFirst({
+        where: { id: personId, workspaceId: user.workspaceId },
+        select: { id: true },
+      })
+      if (!person) {
+        return res.status(404).json({ success: false, error: 'Person not found in workspace' })
+      }
     }
 
     // In Qwen3-TTS, "training" is really creating a voice profile from reference audio.
@@ -27,10 +42,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       },
     })
 
+    const profile = await prisma.voiceProfile.create({
+      data: {
+        workspaceId: user.workspaceId,
+        createdById: user.id,
+        personId: personId || null,
+        name: modelName || `voice_${Date.now()}`,
+        description: styleInstruct || null,
+        isCloned: true,
+        modelType: 'QWEN3_BASE',
+        engineName: 'qwen3',
+        engineVersion: language || 'English',
+        styleParams: data.styleParams || null,
+        status: 'READY',
+      },
+    })
+
     return res.status(200).json({
       success: true,
       jobId: data.profileId,
       modelId: data.profileId,
+      dbProfileId: profile.id,
       status: 'completed',
       profilePath: data.profilePath,
       processingTime: data.processingTime,

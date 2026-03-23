@@ -73,6 +73,12 @@ const PERSON_TYPES = [
   { value: 'DESCENDANT', label: 'Descendant' },
 ]
 
+const RELATIONSHIP_TYPES = [
+  { value: 'PARENT', label: 'Parent' },
+  { value: 'CHILD', label: 'Child' },
+  { value: 'SPOUSE', label: 'Spouse/Partner' },
+]
+
 export function PersonModal({ open, personId, onClose, onSave, onDelete }: PersonModalProps) {
   const [person, setPerson] = useState<PersonData | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -80,6 +86,10 @@ export function PersonModal({ open, personId, onClose, onSave, onDelete }: Perso
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState(0)
   const [isEditing, setIsEditing] = useState(false)
+  const [availablePeople, setAvailablePeople] = useState<Array<{ id: string; firstName: string; lastName?: string }>>([])
+  const [relationshipTargetId, setRelationshipTargetId] = useState('')
+  const [relationshipType, setRelationshipType] = useState('PARENT')
+  const [isMutatingRelationship, setIsMutatingRelationship] = useState(false)
 
   // Edit form state
   const [editForm, setEditForm] = useState<Partial<PersonData>>({})
@@ -101,13 +111,71 @@ export function PersonModal({ open, personId, onClose, onSave, onDelete }: Perso
     }
   }, [personId])
 
+  const loadAvailablePeople = useCallback(async () => {
+    if (!personId) return
+    try {
+      const res = await fetch('/api/people')
+      const data = await res.json()
+      if (res.ok && data.success) {
+        const people = (data.data || []).filter((p: any) => p.id !== personId)
+        setAvailablePeople(people)
+      }
+    } catch {
+      setAvailablePeople([])
+    }
+  }, [personId])
+
   useEffect(() => {
     if (open && personId) {
       fetchPerson()
+      loadAvailablePeople()
       setIsEditing(false)
       setActiveTab(0)
     }
-  }, [open, personId, fetchPerson])
+  }, [open, personId, fetchPerson, loadAvailablePeople])
+
+  const handleCreateRelationship = async () => {
+    if (!personId || !relationshipTargetId) return
+    setIsMutatingRelationship(true)
+    setError(null)
+    try {
+      const res = await fetch(`/api/people/${personId}/relationships`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          targetPersonId: relationshipTargetId,
+          relationshipType,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to create relationship')
+      setRelationshipTargetId('')
+      await fetchPerson()
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setIsMutatingRelationship(false)
+    }
+  }
+
+  const handleDeleteRelationship = async (relationshipId: string) => {
+    if (!confirm('Remove this relationship?')) return
+    setIsMutatingRelationship(true)
+    setError(null)
+    try {
+      const encodedId = encodeURIComponent(relationshipId)
+      const res = await fetch(`/api/relationships/${encodedId}`, {
+        method: 'DELETE',
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to delete relationship')
+      await fetchPerson()
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setIsMutatingRelationship(false)
+    }
+  }
 
   const handleSave = async () => {
     if (!personId || !person) return
@@ -411,6 +479,44 @@ export function PersonModal({ open, personId, onClose, onSave, onDelete }: Perso
         {/* Relationships Tab */}
         {activeTab === 1 && (
           <Box>
+            <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
+              <TextField
+                select
+                size="small"
+                label="Related Person"
+                value={relationshipTargetId}
+                onChange={(e) => setRelationshipTargetId(e.target.value)}
+                sx={{ minWidth: 220 }}
+              >
+                <MenuItem value="">Select person</MenuItem>
+                {availablePeople.map((p) => (
+                  <MenuItem key={p.id} value={p.id}>
+                    {p.firstName} {p.lastName || ''}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <TextField
+                select
+                size="small"
+                label="Type"
+                value={relationshipType}
+                onChange={(e) => setRelationshipType(e.target.value)}
+                sx={{ minWidth: 180 }}
+              >
+                {RELATIONSHIP_TYPES.map((r) => (
+                  <MenuItem key={r.value} value={r.value}>{r.label}</MenuItem>
+                ))}
+              </TextField>
+              <Button
+                variant="contained"
+                onClick={handleCreateRelationship}
+                disabled={!relationshipTargetId || isMutatingRelationship}
+                sx={{ textTransform: 'none', borderRadius: 2 }}
+              >
+                {isMutatingRelationship ? 'Saving...' : 'Add Relationship'}
+              </Button>
+            </Box>
+
             {person.relationships.length === 0 ? (
               <EmptyTabState icon={<FamilyRestroom />} message="No relationships added yet" />
             ) : (
@@ -430,6 +536,14 @@ export function PersonModal({ open, personId, onClose, onSave, onDelete }: Perso
                             {rel.type} • {rel.direction === 'outgoing' ? 'To' : 'From'}
                           </Typography>
                         </Box>
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={() => handleDeleteRelationship(rel.id)}
+                          disabled={isMutatingRelationship}
+                        >
+                          <Delete fontSize="small" />
+                        </IconButton>
                       </CardContent>
                     </Card>
                   </Grid>

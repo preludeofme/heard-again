@@ -311,6 +311,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
 
       const importedPersonIds: Record<string, string> = {}
+      const importStats = {
+        parsedIndividuals: individuals.length,
+        parsedFamilies: families.length,
+        parsedFamilyLinks: families.reduce((acc, family) => acc + family.childXrefs.length, 0),
+        personUpserts: 0,
+        personNamesWritten: 0,
+        personEventsWritten: 0,
+        personExternalRefUpserts: 0,
+        familyUpserts: 0,
+        familyChildLinksWritten: 0,
+        skippedFamilyChildLinks: 0,
+        idempotentUpsertEnabled: true,
+      }
 
       for (const individual of individuals) {
         const person = await tx.person.upsert({
@@ -347,6 +360,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             createdById: user.id,
           },
         })
+        importStats.personUpserts += 1
 
         importedPersonIds[individual.xref] = person.id
 
@@ -364,6 +378,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             gedcomXref: `${individual.xref}:NAME:1`,
           },
         })
+        importStats.personNamesWritten += 1
 
         if (individual.birthDate || individual.birthPlace) {
           await tx.personEvent.create({
@@ -376,6 +391,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               gedcomXref: `${individual.xref}:BIRT:1`,
             },
           })
+          importStats.personEventsWritten += 1
         }
 
         if (individual.deathDate || individual.deathPlace) {
@@ -389,6 +405,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               gedcomXref: `${individual.xref}:DEAT:1`,
             },
           })
+          importStats.personEventsWritten += 1
         }
 
         await tx.personExternalRef.upsert({
@@ -413,6 +430,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             },
           },
         })
+        importStats.personExternalRefUpserts += 1
       }
 
       for (const family of families) {
@@ -440,6 +458,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             divorceDate: family.divorceDate,
           },
         })
+        importStats.familyUpserts += 1
 
         await tx.familyChild.deleteMany({ where: { familyId: familyUnit.id } })
 
@@ -452,8 +471,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           }))
           .filter((row) => Boolean(row.childId))
 
+        importStats.skippedFamilyChildLinks += family.childXrefs.length - childRows.length
+
         if (childRows.length > 0) {
           await tx.familyChild.createMany({ data: childRows })
+          importStats.familyChildLinksWritten += childRows.length
         }
       }
 
@@ -466,11 +488,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           importedById: user.id,
           startedAt: new Date(),
           completedAt: new Date(),
-          resultSummary: {
-            importedIndividuals: individuals.length,
-            importedFamilies: families.length,
-            importedLinks: families.reduce((acc, family) => acc + family.childXrefs.length, 0),
-          },
+          resultSummary: importStats,
         },
       })
 
