@@ -1,0 +1,78 @@
+import { prisma } from '@/lib/prisma'
+import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
+import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
+
+export default apiHandler({
+  // GET /api/instance/status - Get instance connection status
+  GET: async (req, res) => {
+    const user = await getAuthUserWithWorkspace(req, res)
+    await requireWorkspaceRole(user.id, user.workspaceId, 'VIEWER')
+
+    const instance = await prisma.instance.findFirst({
+      where: { workspaceId: user.workspaceId },
+    })
+
+    if (!instance) {
+      return successResponse(res, {
+        registered: false,
+        message: 'No instance registered for this workspace',
+      })
+    }
+
+    // Calculate tunnel health
+    const now = new Date()
+    const tokenExpired = instance.tunnelTokenExpiresAt && instance.tunnelTokenExpiresAt < now
+    const lastHeartbeatMinutes = instance.lastHeartbeatAt
+      ? Math.floor((now.getTime() - new Date(instance.lastHeartbeatAt).getTime()) / 60000)
+      : null
+    
+    // Consider offline if no heartbeat in 5 minutes
+    const isOffline = lastHeartbeatMinutes !== null && lastHeartbeatMinutes > 5
+    
+    // Determine connection status
+    let connectionStatus: 'connected' | 'disconnected' | 'error' | 'unknown' = 'unknown'
+    if (instance.tunnelEnabled) {
+      if (isOffline || instance.status === 'OFFLINE') {
+        connectionStatus = 'disconnected'
+      } else if (instance.lastErrorAt && instance.lastErrorMessage) {
+        connectionStatus = 'error'
+      } else if (instance.lastHeartbeatAt) {
+        connectionStatus = 'connected'
+      }
+    }
+
+    return successResponse(res, {
+      registered: true,
+      instance: {
+        id: instance.id,
+        type: instance.type,
+        status: instance.status,
+        version: instance.version,
+        computeMode: instance.computeMode,
+        dataMode: instance.dataMode,
+        registeredAt: instance.registeredAt,
+        lastHeartbeatAt: instance.lastHeartbeatAt,
+      },
+      tunnel: instance.tunnelEnabled ? {
+        enabled: true,
+        subdomain: instance.tunnelSubdomain,
+        publicUrl: `https://${instance.tunnelSubdomain}.heardagain.com`,
+        tokenExpired,
+        tokenExpiresAt: instance.tunnelTokenExpiresAt,
+        lastAuthenticatedAt: instance.lastAuthenticatedAt,
+        connectionStatus,
+        lastHeartbeatMinutes,
+      } : {
+        enabled: false,
+      },
+      health: {
+        connectionStatus,
+        isOffline,
+        lastError: instance.lastErrorAt ? {
+          at: instance.lastErrorAt,
+          message: instance.lastErrorMessage,
+        } : null,
+      },
+    })
+  },
+})
