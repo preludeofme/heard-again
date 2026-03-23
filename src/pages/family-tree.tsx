@@ -1,7 +1,7 @@
 import Head from 'next/head'
 import { FamilyTreePage } from '@/components/pages/FamilyTreePage'
 import { PersonModal } from '@/components/modals/PersonModal'
-import { AddPersonModal, CreatePersonData } from '@/components/modals/AddPersonModal'
+import { AddEditPersonModal, PersonFormData } from '@/components/modals/AddEditPersonModal'
 import { useEffect, useState, useCallback } from 'react'
 import { Box, CircularProgress } from '@mui/material'
 
@@ -149,7 +149,7 @@ export default function FamilyTree() {
     setIsPersonModalOpen(true)
   }
 
-  const handleAddPerson = async (personData: CreatePersonData) => {
+  const handleAddPerson = async (personData: PersonFormData) => {
     try {
       const res = await fetch('/api/people', {
         method: 'POST',
@@ -224,10 +224,11 @@ export default function FamilyTree() {
         onDelete={() => fetchPeople()}
       />
       
-      <AddPersonModal
+      <AddEditPersonModal
         open={isAddPersonModalOpen}
         onClose={() => setIsAddPersonModalOpen(false)}
-        onSave={handleAddPerson}
+        mode="create"
+        onSubmit={handleAddPerson}
         existingPeople={people.map(p => ({ id: p.id, firstName: p.firstName, lastName: p.lastName }))}
       />
     </>

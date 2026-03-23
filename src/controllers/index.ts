@@ -12,6 +12,11 @@ export { useVoiceProfiles } from './useVoiceProfiles'
 export { useVoiceTraining } from './useVoiceTraining'
 export { useDocumentUpload } from './useDocumentUpload'
 export { useVoiceSynthesis } from './useVoiceSynthesis'
+export { useConversation } from './useConversation'
+export { useVoicePlayback } from './useVoicePlayback'
+export { useVoiceComparison } from './useVoiceComparison'
+export { useTalkSynthesis } from './useTalkSynthesis'
+export { useTalkVoiceModels } from './useTalkVoiceModels'
 
 // Composed hook for backward compatibility
 export { useVoiceLab } from './useVoiceLab'

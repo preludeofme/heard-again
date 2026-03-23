@@ -1,513 +1,127 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { ConversationMessage, LegacySubject, VoiceModel, AudioCache, VoiceSynthesisResponse } from '@/types'
-import { logger } from '@/lib/client-logger'
+import { LegacySubject, VoiceModel } from '@/types'
+import { useVoicePlayback } from './useVoicePlayback'
+import { useConversation } from './useConversation'
+import { useVoiceComparison } from './useVoiceComparison'
+import { useTalkSynthesis } from './useTalkSynthesis'
+import { useTalkVoiceModels } from './useTalkVoiceModels'
 
-type TalkState = 'idle' | 'listening' | 'typing' | 'processing'
-
-interface TalkControllerState {
-  messages: ConversationMessage[]
-  legacySubject: LegacySubject
-  inputText: string
-  talkState: TalkState
-  isLoading: boolean
+interface TalkControllerErrorState {
   hasError: boolean
   errorMessage: string | null
-  isListening: boolean
-  voiceModels: VoiceModel[]
-  selectedVoiceModel: VoiceModel | null
-  audioCache: AudioCache
-  isPlayingAudio: boolean
-  currentAudioUrl: string | null
-  synthesisStatus: 'idle' | 'processing' | 'completed' | 'failed'
-  lastSynthesisJobId: string | null
-  lastSynthesisOutputAssetDownloadUrl: string | null
-  voiceComparisonMode: boolean
-  comparisonModelA: VoiceModel | null
-  comparisonModelB: VoiceModel | null
 }
 
-interface TalkControllerActions {
-  sendMessage: () => Promise<void>
-  setInputText: (text: string) => void
-  startListening: () => void
-  stopListening: () => void
-  clearError: () => void
-  refreshConversation: () => Promise<void>
-  loadVoiceModels: () => Promise<void>
-  selectVoiceModel: (model: VoiceModel) => void
-  synthesizeSpeech: (text: string, modelId?: string) => Promise<string | null>
-  playAudio: (audioUrl: string) => void
-  stopAudio: () => void
-  toggleVoiceComparison: () => void
-  setComparisonModels: (modelA: VoiceModel, modelB: VoiceModel) => void
-  setComparisonModelA: (model: VoiceModel) => void
-  setComparisonModelB: (model: VoiceModel) => void
-  compareVoices: (text: string) => Promise<{ audioA: string | null; audioB: string | null }>
-}
-
-export function useTalkController(): TalkControllerState & TalkControllerActions {
-  const [state, setState] = useState<TalkControllerState>({
-    messages: [],
-    legacySubject: { id: '', fullName: '', lifespanText: '', bio: '', avatarUrl: '', accentIcon: 'heart' },
-    inputText: '',
-    talkState: 'idle',
-    isLoading: false,
-    hasError: false,
-    errorMessage: null,
-    isListening: false,
-    voiceModels: [],
-    selectedVoiceModel: null,
-    audioCache: {},
-    isPlayingAudio: false,
-    currentAudioUrl: null,
-    synthesisStatus: 'idle',
-    lastSynthesisJobId: null,
-    lastSynthesisOutputAssetDownloadUrl: null,
-    voiceComparisonMode: false,
-    comparisonModelA: null,
-    comparisonModelB: null,
-  })
-  
-  const audioRef = useRef<HTMLAudioElement | null>(null)
+export function useTalkController() {
+  const selectedVoiceModelRef = useRef<VoiceModel | null>(null)
   const synthesizeSpeechRef = useRef<(text: string, modelId?: string) => Promise<string | null>>(async () => null)
   const playAudioRef = useRef<(audioUrl: string) => void>(() => {})
 
-  const sleep = useCallback((ms: number) => new Promise((resolve) => setTimeout(resolve, ms)), [])
+  const [errorState, setErrorState] = useState<TalkControllerErrorState>({
+    hasError: false,
+    errorMessage: null,
+  })
 
-  const pollVoiceJobUntilFinal = useCallback(async (jobId: string) => {
-    const maxAttempts = 8
+  const legacySubject: LegacySubject = {
+    id: '',
+    fullName: '',
+    lifespanText: '',
+    bio: '',
+    avatarUrl: '',
+    accentIcon: 'heart',
+  }
 
-    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-      const response = await fetch(`/api/voice/jobs/${jobId}`)
-      const payload = await response.json()
-      if (!response.ok || !payload.success) {
-        throw new Error(payload.error || 'Failed to poll voice generation job')
+  const voiceModels = useTalkVoiceModels({
+    onError: (message) => {
+      setErrorState({ hasError: true, errorMessage: message })
+    },
+  })
+
+  const playback = useVoicePlayback((message) => {
+    setErrorState({ hasError: true, errorMessage: message })
+  })
+
+  const conversation = useConversation({
+    onAssistantMessage: async (text: string) => {
+      const selectedModel = selectedVoiceModelRef.current
+      if (!selectedModel) {
+        return
       }
 
-      const job = payload.data as {
-        status: 'QUEUED' | 'PROCESSING' | 'COMPLETED' | 'FAILED'
-        errorMessage: string | null
-        outputAssetDownloadUrl: string | null
-      }
-
-      if (job.status === 'FAILED') {
-        throw new Error(job.errorMessage || 'Voice generation job failed')
-      }
-
-      if (job.status === 'COMPLETED') {
-        return job
-      }
-
-      setState(prev => ({
-        ...prev,
-        synthesisStatus: job.status === 'QUEUED' || job.status === 'PROCESSING' ? 'processing' : prev.synthesisStatus,
-      }))
-
-      await sleep(600)
-    }
-
-    throw new Error('Voice generation job timed out')
-  }, [sleep])
-
-  // Simulate typing indicator
-  useEffect(() => {
-    if (state.talkState === 'typing') {
-      const timer = setTimeout(() => {
-        setState(prev => ({
-          ...prev,
-          talkState: 'idle',
-        }))
-      }, 3000)
-      return () => clearTimeout(timer)
-    }
-  }, [state.talkState])
-
-  const sendMessage = useCallback(async () => {
-    if (!state.inputText.trim()) return
-
-    const userMessage: ConversationMessage = {
-      id: Date.now().toString(),
-      sender: 'User',
-      timestamp: new Date(),
-      content: state.inputText,
-      state: 'sent',
-    }
-
-    setState(prev => ({
-      ...prev,
-      messages: [...prev.messages, userMessage],
-      inputText: '',
-      isLoading: true,
-      hasError: false,
-      errorMessage: null,
-    }))
-
-    try {
-      // Simulate API call for AI text response
-      await new Promise(resolve => setTimeout(resolve, 1500))
-      
-      const responseText = generateAIResponse(state.inputText)
-      const aiResponse: ConversationMessage = {
-        id: (Date.now() + 1).toString(),
-        sender: 'LegacySubject',
-        timestamp: new Date(),
-        content: responseText,
-        state: 'sent',
-      }
-
-      setState(prev => ({
-        ...prev,
-        messages: [...prev.messages, aiResponse],
-        isLoading: false,
-        talkState: 'typing',
-      }))
-
-      // Auto-synthesize voice for the AI response if a voice model is selected
-      if (state.selectedVoiceModel) {
-        try {
-          const audioUrl = await synthesizeSpeechRef.current(responseText, state.selectedVoiceModel.id)
-          if (audioUrl) {
-            playAudioRef.current(audioUrl)
-          }
-        } catch (e) {
-          console.warn('[TALK] Voice synthesis for response failed (non-critical):', e)
+      try {
+        const audioUrl = await synthesizeSpeechRef.current(text, selectedModel.id)
+        if (audioUrl) {
+          playAudioRef.current(audioUrl)
         }
+      } catch (e) {
+        console.warn('[TALK] Voice synthesis for response failed (non-critical):', e)
       }
-    } catch (error) {
-      setState(prev => ({
-        ...prev,
-        isLoading: false,
-        hasError: true,
-        errorMessage: 'Failed to send message',
-      }))
-    }
-  }, [state.inputText, state.selectedVoiceModel])
+    },
+    onError: (message) => {
+      setErrorState({ hasError: true, errorMessage: message })
+    },
+  })
 
-  const setInputText = useCallback((text: string) => {
-    setState(prev => ({ ...prev, inputText: text }))
-  }, [])
-
-  const startListening = useCallback(() => {
-    setState(prev => ({
-      ...prev,
-      isListening: true,
-      talkState: 'listening',
-    }))
-
-    // Simulate voice recognition
-    setTimeout(() => {
-      setState(prev => ({
-        ...prev,
-        isListening: false,
-        talkState: 'processing',
-        inputText: "This is a simulated voice message about a fond memory.",
-      }))
-
-      // Simulate processing
-      setTimeout(() => {
-        setState(prev => ({
-          ...prev,
-          talkState: 'idle',
-        }))
-      }, 1000)
-    }, 3000)
-  }, [])
-
-  const stopListening = useCallback(() => {
-    setState(prev => ({
-      ...prev,
-      isListening: false,
-      talkState: 'idle',
-    }))
-  }, [])
+  const synthesis = useTalkSynthesis({
+    selectedVoiceModelId: voiceModels.selectedVoiceModel?.id,
+    onError: (message) => {
+      setErrorState({ hasError: true, errorMessage: message })
+    },
+  })
 
   const clearError = useCallback(() => {
-    setState(prev => ({
-      ...prev,
-      hasError: false,
-      errorMessage: null,
-    }))
+    setErrorState({ hasError: false, errorMessage: null })
   }, [])
 
-  const refreshConversation = useCallback(async () => {
-    setState(prev => ({ ...prev, isLoading: true, hasError: false, errorMessage: null }))
-    
-    try {
-      // Conversations are ephemeral — clear and start fresh
-      setState(prev => ({
-        ...prev,
-        messages: [],
-        isLoading: false,
-      }))
-    } catch (error) {
-      setState(prev => ({
-        ...prev,
-        isLoading: false,
-        hasError: true,
-        errorMessage: 'Failed to refresh conversation',
-      }))
-    }
-  }, [])
+  useEffect(() => {
+    selectedVoiceModelRef.current = voiceModels.selectedVoiceModel
+  }, [voiceModels.selectedVoiceModel])
 
-  // Load available voice models
-  const loadVoiceModels = useCallback(async () => {
-    try {
-      console.log('[TALK] Loading voice models...')
-      const response = await fetch('/api/voice/profiles')
-      const data = await response.json()
-      
-      if (data.success) {
-        const profiles = data.data || []
-        const models: VoiceModel[] = profiles.map((p: any) => ({
-          id: p.id,
-          name: p.name,
-          displayName: p.displayName || p.name,
-          status: (p.status || 'READY').toLowerCase(),
-          language: p.language || 'en',
-          sampleCount: p.sampleCount || 0,
-          createdAt: p.createdAt,
-          modelPath: p.modelPath,
-          similarityScore: p.similarityScore,
-        }))
-        setState(prev => ({
-          ...prev,
-          voiceModels: models,
-          selectedVoiceModel: models.length > 0 ? models[0] : null,
-        }))
-      }
-    } catch (error: any) {
-      console.error('[TALK] Failed to load voice models:', error)
-      await logger.logError('Failed to load voice models', { error: error?.message || String(error) })
-    }
-  }, [])
-
-  // Select a voice model
-  const selectVoiceModel = useCallback((model: VoiceModel) => {
-    setState(prev => ({ ...prev, selectedVoiceModel: model }))
-  }, [])
-
-  // Synthesize speech with caching
-  const synthesizeSpeech = useCallback(async (text: string, modelId?: string): Promise<string | null> => {
-    const targetModelId = modelId || state.selectedVoiceModel?.id
-    
-    if (!targetModelId) {
-      setState(prev => ({
-        ...prev,
-        hasError: true,
-        errorMessage: 'No voice model selected',
-      }))
-      return null
-    }
-
-    // Check cache first
-    const cacheKey = `${targetModelId}_${text.substring(0, 100)}`
-    if (state.audioCache[cacheKey]) {
-      return state.audioCache[cacheKey].audioUrl
-    }
-
-    try {
-      setState(prev => ({
-        ...prev,
-        synthesisStatus: 'processing',
-        hasError: false,
-        errorMessage: null,
-      }))
-
-      const response = await fetch('/api/voice/synthesize', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          modelId: targetModelId,
-          text,
-          language: 'en',
-          speed: 1.0,
-          pitch: 1.0,
-        }),
-      })
-
-      const data = await response.json()
-      const synthesisData = data as VoiceSynthesisResponse & {
-        jobId?: string
-        outputAssetDownloadUrl?: string | null
-        error?: string
-      }
-      
-      if (response.ok && synthesisData.success) {
-        let outputAssetDownloadUrl = synthesisData.outputAssetDownloadUrl || null
-
-        if (synthesisData.jobId) {
-          const job = await pollVoiceJobUntilFinal(synthesisData.jobId)
-          if (job.outputAssetDownloadUrl) {
-            outputAssetDownloadUrl = job.outputAssetDownloadUrl
-          }
-        }
-
-        // Cache the result
-        setState(prev => ({
-          ...prev,
-          synthesisStatus: 'completed',
-          lastSynthesisJobId: synthesisData.jobId || null,
-          lastSynthesisOutputAssetDownloadUrl: outputAssetDownloadUrl,
-          audioCache: {
-            ...prev.audioCache,
-            [cacheKey]: {
-              audioUrl: synthesisData.audioUrl,
-              modelId: targetModelId,
-              text,
-              createdAt: new Date(),
-              duration: synthesisData.duration,
-            },
-          },
-        }))
-        
-        return synthesisData.audioUrl
-      }
-
-      setState(prev => ({
-        ...prev,
-        synthesisStatus: 'failed',
-        hasError: true,
-        errorMessage: synthesisData.error || 'Speech synthesis failed',
-      }))
-      
-      return null
-    } catch (error: any) {
-      console.error('Speech synthesis error:', error)
-      await logger.logError('Speech synthesis failed', { 
-        modelId: targetModelId, 
-        textLength: text.length,
-        error: error?.message || String(error)
-      })
-      setState(prev => ({
-        ...prev,
-        synthesisStatus: 'failed',
-        hasError: true,
-        errorMessage: error?.message || 'Speech synthesis failed',
-      }))
-      return null
-    }
-  }, [state.selectedVoiceModel, state.audioCache, pollVoiceJobUntilFinal])
-
-  // Play audio
-  const playAudio = useCallback((audioUrl: string) => {
-    if (audioRef.current) {
-      audioRef.current.pause()
-    }
-
-    const audio = new Audio(audioUrl)
-    audioRef.current = audio
-    
-    setState(prev => ({ ...prev, isPlayingAudio: true, currentAudioUrl: audioUrl }))
-    
-    audio.onended = () => {
-      setState(prev => ({ ...prev, isPlayingAudio: false, currentAudioUrl: null }))
-    }
-    
-    audio.onerror = () => {
-      setState(prev => ({ 
-        ...prev, 
-        isPlayingAudio: false, 
-        currentAudioUrl: null,
-        hasError: true,
-        errorMessage: 'Failed to play audio',
-      }))
-    }
-    
-    audio.play()
-  }, [])
+  const comparison = useVoiceComparison({
+    voiceModels: voiceModels.voiceModels,
+    synthesizeSpeech: synthesis.synthesizeSpeech,
+  })
 
   // Keep refs in sync so sendMessage can call these without hoisting issues
   useEffect(() => {
-    synthesizeSpeechRef.current = synthesizeSpeech
-    playAudioRef.current = playAudio
-  }, [synthesizeSpeech, playAudio])
-
-  // Stop audio
-  const stopAudio = useCallback(() => {
-    if (audioRef.current) {
-      audioRef.current.pause()
-      audioRef.current = null
-    }
-    
-    setState(prev => ({ ...prev, isPlayingAudio: false, currentAudioUrl: null }))
-  }, [])
-
-  // Toggle voice comparison mode
-  const toggleVoiceComparison = useCallback(() => {
-    setState(prev => ({ 
-      ...prev, 
-      voiceComparisonMode: !prev.voiceComparisonMode,
-      comparisonModelA: !prev.voiceComparisonMode && prev.voiceModels.length > 0 ? prev.voiceModels[0] : null,
-      comparisonModelB: !prev.voiceComparisonMode && prev.voiceModels.length > 1 ? prev.voiceModels[1] : null,
-    }))
-  }, [])
-
-  // Set comparison models
-  const setComparisonModels = useCallback((modelA: VoiceModel, modelB: VoiceModel) => {
-    setState(prev => ({
-      ...prev,
-      comparisonModelA: modelA,
-      comparisonModelB: modelB,
-    }))
-  }, [])
-
-  const setComparisonModelA = useCallback((model: VoiceModel) => {
-    setState(prev => ({ ...prev, comparisonModelA: model }))
-  }, [])
-
-  const setComparisonModelB = useCallback((model: VoiceModel) => {
-    setState(prev => ({ ...prev, comparisonModelB: model }))
-  }, [])
-
-  // Compare voices
-  const compareVoices = useCallback(async (text: string): Promise<{ audioA: string | null; audioB: string | null }> => {
-    if (!state.comparisonModelA || !state.comparisonModelB) {
-      return { audioA: null, audioB: null }
-    }
-
-    const [audioA, audioB] = await Promise.all([
-      synthesizeSpeech(text, state.comparisonModelA.id),
-      synthesizeSpeech(text, state.comparisonModelB.id),
-    ])
-
-    return { audioA, audioB }
-  }, [state.comparisonModelA, state.comparisonModelB, synthesizeSpeech])
-
-  // Load voice models on mount
-  useEffect(() => {
-    loadVoiceModels()
-  }, [loadVoiceModels])
+    synthesizeSpeechRef.current = synthesis.synthesizeSpeech
+    playAudioRef.current = playback.playAudio
+  }, [synthesis.synthesizeSpeech, playback.playAudio])
 
   return {
-    ...state,
-    sendMessage,
-    setInputText,
-    startListening,
-    stopListening,
+    hasError: errorState.hasError,
+    errorMessage: errorState.errorMessage,
+    legacySubject,
+    messages: conversation.messages,
+    inputText: conversation.inputText,
+    talkState: conversation.talkState,
+    isLoading: conversation.isLoading,
+    isListening: conversation.isListening,
+    voiceModels: voiceModels.voiceModels,
+    selectedVoiceModel: voiceModels.selectedVoiceModel,
+    audioCache: synthesis.audioCache,
+    isPlayingAudio: playback.isPlayingAudio,
+    currentAudioUrl: playback.currentAudioUrl,
+    synthesisStatus: synthesis.synthesisStatus,
+    lastSynthesisJobId: synthesis.lastSynthesisJobId,
+    lastSynthesisOutputAssetDownloadUrl: synthesis.lastSynthesisOutputAssetDownloadUrl,
+    voiceComparisonMode: comparison.voiceComparisonMode,
+    comparisonModelA: comparison.comparisonModelA,
+    comparisonModelB: comparison.comparisonModelB,
+    sendMessage: conversation.sendMessage,
+    setInputText: conversation.setInputText,
+    startListening: conversation.startListening,
+    stopListening: conversation.stopListening,
     clearError,
-    refreshConversation,
-    loadVoiceModels,
-    selectVoiceModel,
-    synthesizeSpeech,
-    playAudio,
-    stopAudio,
-    toggleVoiceComparison,
-    setComparisonModels,
-    setComparisonModelA,
-    setComparisonModelB,
-    compareVoices,
+    refreshConversation: conversation.refreshConversation,
+    loadVoiceModels: voiceModels.loadVoiceModels,
+    selectVoiceModel: voiceModels.selectVoiceModel,
+    synthesizeSpeech: synthesis.synthesizeSpeech,
+    playAudio: playback.playAudio,
+    stopAudio: playback.stopAudio,
+    toggleVoiceComparison: comparison.toggleVoiceComparison,
+    setComparisonModels: comparison.setComparisonModels,
+    setComparisonModelA: comparison.setComparisonModelA,
+    setComparisonModelB: comparison.setComparisonModelB,
+    compareVoices: comparison.compareVoices,
   }
-}
-
-// Helper function to generate AI responses
-function generateAIResponse(userMessage: string): string {
-  const responses = [
-    "That's a wonderful memory. I remember that day so clearly...",
-    "Yes, those were such special times. Let me tell you more about it...",
-    "I'm so glad you asked about that. It brings back such warm feelings...",
-    "Ah, that takes me back. I was just thinking about that the other day...",
-    "Thank you for sharing that with me. It means so much to hear these memories...",
-  ]
-  
-  return responses[Math.floor(Math.random() * responses.length)]
 }

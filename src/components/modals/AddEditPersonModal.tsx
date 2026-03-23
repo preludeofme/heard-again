@@ -42,6 +42,15 @@ export interface PersonFormData {
   personType: 'PRIMARY' | 'ANCESTOR' | 'DESCENDANT' | 'RELATED'
   role?: string
   avatarUrl?: string
+  // Optional relationship fields for create flow
+  relationshipTo?: string
+  relationshipType?: 'PARENT' | 'CHILD' | 'SPOUSE'
+}
+
+export interface ExistingPerson {
+  id: string
+  firstName: string
+  lastName?: string
 }
 
 interface AddEditPersonModalProps {
@@ -51,6 +60,8 @@ interface AddEditPersonModalProps {
   mode: 'create' | 'edit'
   onSubmit: (data: PersonFormData) => Promise<void>
   isSubmitting?: boolean
+  // Optional: for relationship creation during add
+  existingPeople?: ExistingPerson[]
 }
 
 const PERSON_TYPES = [
@@ -76,7 +87,14 @@ const COMMON_ROLES = [
   'Caregiver',
 ]
 
-const STEPS = ['Basic Info', 'Dates & Details', 'Review']
+const STEPS_CREATE = ['Basic Info', 'Dates & Details', 'Relationships', 'Review']
+const STEPS_EDIT = ['Basic Info', 'Dates & Details', 'Review']
+
+const RELATIONSHIP_TYPES = [
+  { value: 'PARENT', label: 'Parent' },
+  { value: 'CHILD', label: 'Child' },
+  { value: 'SPOUSE', label: 'Spouse/Partner' },
+]
 
 export function AddEditPersonModal({
   open,
@@ -85,7 +103,9 @@ export function AddEditPersonModal({
   mode,
   onSubmit,
   isSubmitting = false,
+  existingPeople,
 }: AddEditPersonModalProps) {
+  const steps = mode === 'create' && existingPeople?.length ? STEPS_CREATE : STEPS_EDIT
   const [activeStep, setActiveStep] = useState(0)
   const [formData, setFormData] = useState<PersonFormData>({
     firstName: '',
@@ -159,6 +179,13 @@ export function AddEditPersonModal({
         if (death < birth) {
           newErrors.deathDate = 'Death date cannot be before birth date'
         }
+      }
+    }
+
+    // Validate relationships step if applicable
+    if (step === 2 && mode === 'create' && existingPeople?.length) {
+      if (formData.relationshipTo && !formData.relationshipType) {
+        newErrors.relationshipType = 'Please select a relationship type'
       }
     }
 
@@ -494,6 +521,68 @@ export function AddEditPersonModal({
     </Box>
   )
 
+  // Step 3: Relationships (only shown in create mode with existing people)
+  const renderRelationships = () => (
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+      <Typography variant="subtitle1" sx={{ color: '#16334a', fontWeight: 600 }}>
+        Link to Existing Person (Optional)
+      </Typography>
+      <Typography variant="body2" sx={{ color: '#666' }}>
+        You can connect this new person to someone already in your family tree
+      </Typography>
+
+      <FormControl fullWidth>
+        <InputLabel>Existing Person</InputLabel>
+        <Select
+          value={formData.relationshipTo || ''}
+          label="Existing Person"
+          onChange={(e) => handleChange('relationshipTo', e.target.value)}
+          sx={{ borderRadius: 2 }}
+        >
+          <MenuItem value="">
+            <em>None - standalone entry</em>
+          </MenuItem>
+          {existingPeople?.map((p) => (
+            <MenuItem key={p.id} value={p.id}>
+              {p.firstName} {p.lastName}
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+
+      {formData.relationshipTo && (
+        <FormControl fullWidth>
+          <InputLabel>Relationship Type *</InputLabel>
+          <Select
+            value={formData.relationshipType || ''}
+            label="Relationship Type *"
+            onChange={(e) => handleChange('relationshipType', e.target.value)}
+            error={!!errors.relationshipType}
+            sx={{ borderRadius: 2 }}
+          >
+            <MenuItem value="">
+              <em>Select relationship...</em>
+            </MenuItem>
+            {RELATIONSHIP_TYPES.map((type) => (
+              <MenuItem key={type.value} value={type.value}>
+                {type.label}
+              </MenuItem>
+            ))}
+          </Select>
+          {errors.relationshipType && (
+            <FormHelperText error>{errors.relationshipType}</FormHelperText>
+          )}
+        </FormControl>
+      )}
+
+      <Box sx={{ mt: 2, p: 2, backgroundColor: '#f6f3ee', borderRadius: 2 }}>
+        <Typography variant="caption" sx={{ color: '#666' }}>
+          Example: If you&apos;re adding your grandmother, you might link her to your father as &quot;Parent&quot;
+        </Typography>
+      </Box>
+    </Box>
+  )
+
   const renderStepContent = () => {
     switch (activeStep) {
       case 0:
@@ -501,6 +590,12 @@ export function AddEditPersonModal({
       case 1:
         return renderDatesDetails()
       case 2:
+        // Show relationships step only in create mode with existing people
+        if (mode === 'create' && existingPeople?.length) {
+          return renderRelationships()
+        }
+        return renderReview()
+      case 3:
         return renderReview()
       default:
         return null
@@ -535,7 +630,7 @@ export function AddEditPersonModal({
 
       <DialogContent sx={{ pt: 2 }}>
         <Stepper activeStep={activeStep} sx={{ mb: 4 }}>
-          {STEPS.map((label) => (
+          {steps.map((label: string) => (
             <Step key={label}>
               <StepLabel>{label}</StepLabel>
             </Step>
@@ -559,7 +654,7 @@ export function AddEditPersonModal({
           Back
         </Button>
         <Box sx={{ flex: 1 }} />
-        {activeStep === STEPS.length - 1 ? (
+        {activeStep === steps.length - 1 ? (
           <Button
             variant="contained"
             onClick={handleSubmit}

@@ -36,11 +36,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       method: 'POST',
       body: {
         fileId: primaryFileId,
-        refText: null, // Will be auto-transcribed by the model
+        refText: null,
         profileName: modelName || `voice_${Date.now()}`,
         styleInstruct: styleInstruct || null,
       },
     })
+
+    // Use the TTS service's profileId as our modelArtifactAssetId for lookup
+    const ttsProfileId = data.profileId
 
     const profile = await prisma.voiceProfile.create({
       data: {
@@ -55,14 +58,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         engineVersion: language || 'English',
         styleParams: data.styleParams || null,
         status: 'READY',
+        externalId: ttsProfileId, // Store TTS profile ID here (no FK constraint)
       },
     })
 
     return res.status(200).json({
       success: true,
       jobId: data.profileId,
-      modelId: data.profileId,
-      dbProfileId: profile.id,
+      modelId: profile.id, // Return the database ID for client use
+      ttsProfileId: data.profileId, // Also return TTS profile ID
       status: 'completed',
       profilePath: data.profilePath,
       processingTime: data.processingTime,

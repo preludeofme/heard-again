@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react'
 import { StoryContribution } from '@/types'
+import { ApiError, handleApiResponse } from '@/lib/errors'
 
 interface StoriesControllerState {
   stories: StoryContribution[]
@@ -7,19 +8,18 @@ interface StoriesControllerState {
   isLoading: boolean
   hasError: boolean
   errorMessage: string | null
-  formTitle: string
-  formContent: string
-  formType: 'text' | 'audio'
+}
+
+interface CreateStoryInput {
+  title: string
+  content: string
+  storyType: 'MEMORY' | 'AUDIO_RECORDING'
 }
 
 interface StoriesControllerActions {
-  setFormTitle: (title: string) => void
-  setFormContent: (content: string) => void
-  setFormType: (type: 'text' | 'audio') => void
-  submitStory: (title?: string, content?: string) => Promise<void>
+  submitStory: (input: CreateStoryInput) => Promise<void>
   submitAudioStory: (audioBlob: Blob, duration: number, title?: string) => Promise<void>
   refreshStories: () => Promise<void>
-  clearForm: () => void
 }
 
 export function useStoriesController(): StoriesControllerState & StoriesControllerActions {
@@ -29,41 +29,51 @@ export function useStoriesController(): StoriesControllerState & StoriesControll
     isLoading: true,
     hasError: false,
     errorMessage: null,
-    formTitle: '',
-    formContent: '',
-    formType: 'text',
   })
 
-  const fetchStories = useCallback(async () => {
+  // Interface for the raw API response (not the view model)
+interface StoryApiResponse {
+  id: string
+  createdBy?: {
+    displayName?: string
+    email?: string
+  }
+  excerpt?: string
+  title?: string
+  createdAt: string
+  hasAudio?: boolean
+}
+
+function mapStoryToContribution(s: StoryApiResponse): StoryContribution {
+  return {
+    id: s.id,
+    authorName: s.createdBy?.displayName || s.createdBy?.email || 'Unknown',
+    authorRole: 'Family',
+    authorAvatarUrl: '',
+    content: s.excerpt || s.title || '',
+    createdAt: new Date(s.createdAt),
+    type: s.hasAudio ? 'audio' : 'text',
+    audioDurationSeconds: undefined,
+  }
+}
+
+const fetchStories = useCallback(async () => {
     setState(prev => ({ ...prev, isLoading: true, hasError: false, errorMessage: null }))
 
     try {
       const response = await fetch('/api/stories')
-      const data = await response.json()
 
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Failed to load stories')
-      }
-
-      // Map API response to StoryContribution format
-      const stories: StoryContribution[] = (data.data.stories || []).map((s: any) => ({
-        id: s.id,
-        authorName: s.createdBy?.displayName || s.createdBy?.email || 'Unknown',
-        authorRole: 'Family',
-        authorAvatarUrl: undefined,
-        content: s.excerpt || s.title,
-        createdAt: new Date(s.createdAt),
-        type: s.hasAudio ? 'audio' : 'text',
-        audioDurationSeconds: undefined,
-      }))
+      const data = await handleApiResponse<{ stories: StoryApiResponse[] }>(response)
+      const stories = (data?.stories || []).map(mapStoryToContribution)
 
       setState(prev => ({ ...prev, stories, isLoading: false }))
-    } catch (error: any) {
+    } catch (error) {
+      const apiError = ApiError.fromError(error)
       setState(prev => ({
         ...prev,
         isLoading: false,
         hasError: true,
-        errorMessage: error.message || 'Failed to load stories',
+        errorMessage: apiError.message,
       }))
     }
   }, [])
@@ -73,23 +83,8 @@ export function useStoriesController(): StoriesControllerState & StoriesControll
     fetchStories()
   }, [fetchStories])
 
-  const setFormTitle = useCallback((title: string) => {
-    setState(prev => ({ ...prev, formTitle: title }))
-  }, [])
-
-  const setFormContent = useCallback((content: string) => {
-    setState(prev => ({ ...prev, formContent: content }))
-  }, [])
-
-  const setFormType = useCallback((type: 'text' | 'audio') => {
-    setState(prev => ({ ...prev, formType: type }))
-  }, [])
-
-  const submitStory = useCallback(async (titleOverride?: string, contentOverride?: string) => {
-    const title = titleOverride ?? state.formTitle
-    const content = contentOverride ?? state.formContent
-
-    if (!title.trim() || !content.trim()) {
+  const submitStory = useCallback(async (input: CreateStoryInput) => {
+    if (!input.title.trim() || !input.content.trim()) {
       setState(prev => ({
         ...prev,
         hasError: true,
@@ -98,47 +93,38 @@ export function useStoriesController(): StoriesControllerState & StoriesControll
       return
     }
 
-    setState(prev => ({ 
-      ...prev, 
-      isSubmitting: true, 
-      hasError: false, 
-      errorMessage: null 
+    setState(prev => ({
+      ...prev,
+      isSubmitting: true,
+      hasError: false,
+      errorMessage: null,
     }))
 
     try {
       const response = await fetch('/api/stories', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title,
-          content,
-          storyType: state.formType === 'audio' ? 'AUDIO_RECORDING' : 'MEMORY',
-        }),
+        body: JSON.stringify(input),
       })
 
-      const data = await response.json()
-
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Failed to create story')
-      }
+      await handleApiResponse(response)
 
       // Refresh the stories list to get the new story
       setState(prev => ({
         ...prev,
         isSubmitting: false,
-        formTitle: '',
-        formContent: '',
       }))
       await fetchStories()
-    } catch (error: any) {
+    } catch (error) {
+      const apiError = ApiError.fromError(error)
       setState(prev => ({
         ...prev,
         isSubmitting: false,
         hasError: true,
-        errorMessage: error.message || 'Failed to submit story. Please try again.',
+        errorMessage: apiError.message,
       }))
     }
-  }, [state.formTitle, state.formContent, state.formType, fetchStories])
+  }, [fetchStories])
 
   const refreshStories = useCallback(async () => {
     await fetchStories()
@@ -182,49 +168,29 @@ export function useStoriesController(): StoriesControllerState & StoriesControll
         }),
       })
 
-      const data = await response.json()
-
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Failed to create story')
-      }
+      await handleApiResponse(response)
 
       // Refresh the stories list
       setState(prev => ({
         ...prev,
         isSubmitting: false,
-        formTitle: '',
-        formContent: '',
       }))
       await fetchStories()
-    } catch (error: any) {
+    } catch (error) {
+      const apiError = ApiError.fromError(error)
       setState(prev => ({
         ...prev,
         isSubmitting: false,
         hasError: true,
-        errorMessage: error.message || 'Failed to submit audio. Please try again.',
+        errorMessage: apiError.message,
       }))
     }
   }, [fetchStories])
 
-  const clearForm = useCallback(() => {
-    setState(prev => ({
-      ...prev,
-      formTitle: '',
-      formContent: '',
-      formType: 'text',
-      hasError: false,
-      errorMessage: null,
-    }))
-  }, [])
-
   return {
     ...state,
-    setFormTitle,
-    setFormContent,
-    setFormType,
     submitStory,
     submitAudioStory,
     refreshStories,
-    clearForm,
   }
 }

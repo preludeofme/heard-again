@@ -34,6 +34,7 @@ export function VoiceLabPage({}: VoiceLabPageProps) {
     synthesizeSpeech,
     loadVoiceModels,
     deleteVoiceProfile,
+    refreshData, // Get the refresh function
   } = useVoiceLabController()
 
   // ── Local state ──
@@ -131,6 +132,12 @@ export function VoiceLabPage({}: VoiceLabPageProps) {
     if (selectedVoiceId === profileId) {
       setSelectedVoiceId(null)
     }
+  }
+
+  // ── Create voice with auto-refresh ──
+  const handleCreateVoice = async (modelName: string, language: string, styleInstruct?: string) => {
+    await startVoiceTraining(modelName, language, styleInstruct)
+    await refreshData() // Refresh the voice list after creation
   }
 
   return (
@@ -423,7 +430,7 @@ export function VoiceLabPage({}: VoiceLabPageProps) {
         trainingSamples={trainingSamples}
         onUploadSample={uploadTrainingSample}
         onRemoveSample={removeTrainingSample}
-        onCreateVoice={startVoiceTraining}
+        onCreateVoice={handleCreateVoice}
         isUploading={isUploading}
         isTraining={isTraining}
         trainingJob={trainingJob}

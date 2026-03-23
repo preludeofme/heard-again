@@ -47,7 +47,11 @@ These issues should block scaling, major feature work, or team velocity:
 
 **Evidence:**
 - `/src/controllers/useVoiceLabController.ts` – 770 lines, 50-line state interface, mixed document upload + voice training + preprocessing concerns
-- `/src/controllers/useTalkController.ts` – 514 lines, complex audio caching logic mixed with conversation state
+- `/src/controllers/useTalkController.ts` – now reduced to 128 lines and composed from focused hooks (`useConversation`, `useVoicePlayback`, `useVoiceComparison`, `useTalkSynthesis`, `useTalkVoiceModels`)
+
+**Progress Note (Mar 23, 2026):**
+- `useTalkController` decomposition is complete for Finding 5.5
+- `useVoiceLabController` legacy implementation still exists and remains monolithic
 
 ### Issue 3: Unsafe Type Assertions
 **Why it matters:** 32 instances of `any` in controllers alone. Type safety is a primary reason for using TypeScript; pervasive `any` negates this benefit and hides refactoring hazards.
@@ -80,7 +84,7 @@ Each service receives PrismaClient via constructor injection.
 
 ---
 
-### [x]  Finding 2: Overgrown Custom Hooks (Controllers)
+### [ ]  Finding 2: Overgrown Custom Hooks (Controllers)
 **Severity:** HIGH  
 **Affected Area:** `/src/controllers/useVoiceLabController.ts`, `/src/controllers/useTalkController.ts`  
 **Issue:** Controllers combine data fetching, form state, UI state, caching, and business logic. The `VoiceLabController` has 25+ state fields and manages documents AND voice training AND preprocessing.  
@@ -308,10 +312,19 @@ Pattern is sound; controllers need to be smaller and more focused.
 | | → useConversation(), useVoicePlayback(), useVoiceComparison() | | |
 | **5.6 Create Data Mappers** | `/src/mappers/*.ts` | 1 day | Eliminates duplication |
 
+**Progress Update (Mar 23, 2026):**
+- [x] 5.5 Extract `useVoicePlayback` from `useTalkController`
+- [x] 5.5 Extract `useConversation` from `useTalkController`
+- [x] 5.5 Extract `useVoiceComparison` from `useTalkController`
+- [x] 5.5 Extract `useTalkSynthesis` from `useTalkController`
+- [x] 5.5 Extract `useTalkVoiceModels` from `useTalkController`
+- [x] 5.5 Convert `useTalkController` into thin composed wrapper (<150 lines)
+- [x] 5.5 Task complete
+
 **Acceptance Criteria:**
-- [x] No controller exceeds 150 lines
-- [x] Each hook has single responsibility
-- [x] Mappers used consistently across all controllers
+- [ ] No controller exceeds 150 lines
+- [ ] Each hook has single responsibility
+- [ ] Mappers used consistently across all controllers
 
 ---
 

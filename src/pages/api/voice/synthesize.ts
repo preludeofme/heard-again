@@ -29,6 +29,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       select: {
         id: true,
         personId: true,
+        externalId: true, // Get the TTS profile ID
       },
     })
 
@@ -36,6 +37,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(404).json({
         success: false,
         error: 'Voice profile not found or not ready',
+      })
+    }
+
+    // Use the external TTS profile ID
+    const ttsProfileId = voiceProfile.externalId
+    if (!ttsProfileId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Voice profile missing external TTS ID',
       })
     }
 
@@ -100,7 +110,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const data = await ttsRequest('/api/tts/synthesize', {
       method: 'POST',
       body: {
-        profileId: modelId,
+        profileId: ttsProfileId, // Use the TTS service's profile ID
         text,
         language: ttsLanguage,
       },

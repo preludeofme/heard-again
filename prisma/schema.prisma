@@ -847,6 +847,9 @@ model VoiceProfile {
   name        String   // e.g., "Grandpa Buck"
   description String?  // How they talked
   
+  // External service reference (TTS engine's profile ID)
+  externalId  String?  // e.g., TTS service's profile ID (no FK constraint)
+  
   // Voice data (stored as file reference)
   modelArtifactAssetId String?  // Path to .pt checkpoint file via Asset
   modelArtifactAsset   Asset? @relation(fields: [modelArtifactAssetId], references: [id], onDelete: SetNull)
@@ -880,6 +883,7 @@ model VoiceProfile {
   @@index([workspaceId])
   @@index([personId])
   @@index([createdById])
+  @@index([externalId])
 }
 
 enum VoiceModelType {
