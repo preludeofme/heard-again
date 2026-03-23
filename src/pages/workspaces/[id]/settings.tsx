@@ -30,7 +30,7 @@ import {
   Warning as WarningIcon,
 } from '@mui/icons-material'
 import { useApi } from '@/hooks/useApi'
-import { Layout } from '@/components/Layout'
+import { Layout } from '@/components/layout/Layout'
 
 interface WorkspaceDetails {
   id: string

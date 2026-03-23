@@ -31,7 +31,7 @@ import {
 } from '@mui/icons-material'
 import Link from 'next/link'
 import { useState } from 'react'
-import { ToastProvider } from './ToastProvider'
+import { ToastProvider } from '@/components/feedback/ToastProvider'
 
 // Material Symbols Outlined icons matching the mockup
 const MaterialSymbolsIcon = ({ children, sx }: { children: string; sx?: any }) => (

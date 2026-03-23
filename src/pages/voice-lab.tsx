@@ -1,6 +1,6 @@
 import Head from 'next/head'
-import { Layout } from '@/components/Layout'
-import { VoiceLabPage } from '@/components/VoiceLabPage'
+import { Layout } from '@/components/layout/Layout'
+import { VoiceLabPage } from '@/components/pages/VoiceLabPage'
 
 export default function VoiceLab() {
   return (

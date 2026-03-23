@@ -14,7 +14,7 @@ import {
   CheckCircle as ReadyIcon,
 } from '@mui/icons-material'
 import { useState, useEffect, useRef } from 'react'
-import { VoiceTrainingModal } from './VoiceTrainingModal'
+import { VoiceTrainingModal } from '@/components/audio/VoiceTrainingModal'
 import { useVoiceLabController } from '@/controllers'
 
 interface VoiceLabPageProps {}

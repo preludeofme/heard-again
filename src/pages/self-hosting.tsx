@@ -1,10 +1,10 @@
 import Head from 'next/head'
-import { Layout } from '@/components/Layout'
-import { useState, useEffect, useCallback } from 'react'
+import { Layout } from '@/components/layout/Layout'
+import { useState, useEffect, useCallback, type ReactNode } from 'react'
 import {
   Box, Typography, Card, Button, Stepper, Step, StepLabel,
   CircularProgress, Alert, Chip, TextField, ToggleButton,
-  ToggleButtonGroup, Code, Paper, List, ListItem, ListItemIcon,
+  ToggleButtonGroup, Paper, List, ListItem, ListItemIcon,
   ListItemText, Divider, Dialog, DialogTitle, DialogContent,
   DialogActions,
 } from '@mui/material'
@@ -673,7 +673,7 @@ export default function SelfHostingPage() {
   )
 }
 
-function CodeBlock({ children }: { children: string }) {
+function CodeBlock({ children }: { children: ReactNode }) {
   return (
     <Paper
       sx={{

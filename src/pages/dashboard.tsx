@@ -1,5 +1,5 @@
 import Head from 'next/head'
-import { Dashboard } from '@/components/Dashboard'
+import { Dashboard } from '@/components/pages/Dashboard'
 import { useDashboardController } from '@/controllers/useDashboardController'
 import { Box, CircularProgress, Typography, Button } from '@mui/material'
 import { useSession } from 'next-auth/react'

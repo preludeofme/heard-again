@@ -1,5 +1,5 @@
 import Head from 'next/head'
-import { CreateAccountPage } from '@/components/CreateAccountPage'
+import { CreateAccountPage } from '@/components/pages/CreateAccountPage'
 
 export default function SignUp() {
   return (

@@ -23,8 +23,8 @@ import {
   PersonAdd,
 } from '@mui/icons-material'
 import Link from 'next/link'
-import { PersonDetailModal } from './PersonDetailModal'
-import { AddEditPersonModal, PersonFormData } from './AddEditPersonModal'
+import { PersonDetailModal } from '@/components/modals/PersonDetailModal'
+import { AddEditPersonModal, PersonFormData } from '@/components/modals/AddEditPersonModal'
 
 interface TreePerson {
   id: string | number

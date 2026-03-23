@@ -1,6 +1,6 @@
 import Head from 'next/head'
-import { Layout } from '@/components/Layout'
-import { TalkPage } from '@/components/TalkPage'
+import { Layout } from '@/components/layout/Layout'
+import { TalkPage } from '@/components/pages/TalkPage'
 import { LegacySubject } from '@/types'
 import { useEffect, useState } from 'react'
 import { Box, CircularProgress } from '@mui/material'

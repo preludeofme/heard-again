@@ -4,7 +4,7 @@ import { CssBaseline } from '@mui/material'
 import theme from '@/styles/theme'
 import { Manrope, Newsreader } from 'next/font/google'
 import { useEffect } from 'react'
-import { AuthProvider } from '@/components/AuthProvider'
+import { AuthProvider } from '@/components/auth/AuthProvider'
 import type { AppProps } from 'next/app'
 import type { Session } from 'next-auth'
 

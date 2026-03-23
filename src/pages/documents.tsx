@@ -1,6 +1,6 @@
 import Head from 'next/head'
-import { Layout } from '@/components/Layout'
-import { DocumentsPage } from '@/components/DocumentsPage'
+import { Layout } from '@/components/layout/Layout'
+import { DocumentsPage } from '@/components/pages/DocumentsPage'
 import { useDocumentsController } from '@/controllers/useDocumentsController'
 import { Box, CircularProgress, Typography, Button } from '@mui/material'
 

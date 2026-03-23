@@ -13,7 +13,7 @@ import {
   Typography,
 } from '@mui/material'
 import { Download, PictureAsPdf, Hub } from '@mui/icons-material'
-import { Layout } from '@/components/Layout'
+import { Layout } from '@/components/layout/Layout'
 
 type ExportStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'CANCELLED'
 

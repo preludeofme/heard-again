@@ -15,7 +15,7 @@ import {
   Typography,
 } from '@mui/material'
 import { UploadFile, LibraryMusic, DataObject } from '@mui/icons-material'
-import { Layout } from '@/components/Layout'
+import { Layout } from '@/components/layout/Layout'
 
 type ImportTab = 'gedcom' | 'json' | 'bulk-audio'
 

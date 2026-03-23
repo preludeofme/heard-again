@@ -1,7 +1,7 @@
 import Head from 'next/head'
-import { FamilyTreePage } from '@/components/FamilyTreePage'
-import { PersonModal } from '@/components/PersonModal'
-import { AddPersonModal, CreatePersonData } from '@/components/AddPersonModal'
+import { FamilyTreePage } from '@/components/pages/FamilyTreePage'
+import { PersonModal } from '@/components/modals/PersonModal'
+import { AddPersonModal, CreatePersonData } from '@/components/modals/AddPersonModal'
 import { useEffect, useState, useCallback } from 'react'
 import { Box, CircularProgress } from '@mui/material'
 

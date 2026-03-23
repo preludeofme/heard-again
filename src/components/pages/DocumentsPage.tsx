@@ -2,7 +2,7 @@ import { Box, Typography, Card, CardContent, Button, Grid, Chip, IconButton } fr
 import { CloudUpload as UploadIcon, FilterList as FilterIcon } from '@mui/icons-material'
 import { DocumentArtifact } from '@/types'
 import { useState } from 'react'
-import { EmptyState } from './UIStates'
+import { EmptyState } from '@/components/feedback/UIStates'
 
 interface DocumentsPageProps {
   documents: DocumentArtifact[]

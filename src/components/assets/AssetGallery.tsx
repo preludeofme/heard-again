@@ -30,7 +30,7 @@ import {
   FilterList as FilterIcon,
 } from '@mui/icons-material'
 import { useApi } from '@/hooks/useApi'
-import { AudioPlayer } from './AudioPlayer'
+import { AudioPlayer } from '@/components/audio/AudioPlayer'
 
 interface Asset {
   id: string

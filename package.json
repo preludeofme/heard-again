@@ -38,7 +38,8 @@
     "react-dom": "^19.2.4",
     "typescript": "^5.9.3",
     "uuid": "^13.0.0",
-    "wavesurfer.js": "^7.12.4"
+    "wavesurfer.js": "^7.12.4",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",

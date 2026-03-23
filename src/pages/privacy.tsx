@@ -16,7 +16,7 @@ import {
   Typography,
 } from '@mui/material'
 import { Shield, DeleteForever, Download } from '@mui/icons-material'
-import { Layout } from '@/components/Layout'
+import { Layout } from '@/components/layout/Layout'
 
 interface RetentionPolicy {
   audioRetentionDays: number

@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react'
 import { AudioSample, VoiceCloneStatus, DocumentArtifact } from '@/types'
-import { useToast } from '@/components/ToastProvider'
+import { useToast } from '@/components/feedback/ToastProvider'
 
 interface VoiceModel {
   id: string

@@ -45,10 +45,3 @@ export interface VoiceModel {
     createdAt: string;
   };
 }
-
-// Global declarations
-declare global {
-  var uploadedFiles: Map<string, UploadedFile> | undefined;
-  var voiceModelsGlobal: Map<string, VoiceModel> | undefined;
-  var trainingJobsGlobal: Map<string, TrainingJob> | undefined;
-}

@@ -4,8 +4,8 @@ import { StoryContribution } from '@/types'
 import { formatDistanceToNow } from 'date-fns'
 import { useState } from 'react'
 import { useRouter } from 'next/router'
-import { EmptyState } from './UIStates'
-import { AudioRecorder } from './AudioRecorder'
+import { EmptyState } from '@/components/feedback/UIStates'
+import { AudioRecorder } from '@/components/audio/AudioRecorder'
 
 interface StoriesPageProps {
   stories: StoryContribution[]
