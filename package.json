@@ -18,17 +18,22 @@
     "db:seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1014.0",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
     "@mui/icons-material": "^7.3.9",
     "@mui/material": "^7.3.9",
     "@mui/system": "^7.3.9",
+    "@next-auth/prisma-adapter": "^1.0.7",
     "@prisma/client": "^6.6.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@types/uuid": "^10.0.0",
+    "bcrypt": "^6.0.0",
     "date-fns": "^4.1.0",
+    "formidable": "^3.5.4",
     "next": "^16.2.0",
+    "next-auth": "^4.24.13",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "typescript": "^5.9.3",
@@ -36,6 +41,8 @@
     "wavesurfer.js": "^7.12.4"
   },
   "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
+    "@types/formidable": "^3.5.0",
     "@types/node": "25.5.0",
     "prisma": "^6.6.0",
     "tsx": "^4.19.0"

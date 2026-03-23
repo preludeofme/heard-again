@@ -4,6 +4,9 @@ import { CssBaseline } from '@mui/material'
 import theme from '@/styles/theme'
 import { Manrope, Newsreader } from 'next/font/google'
 import { useEffect } from 'react'
+import { AuthProvider } from '@/components/AuthProvider'
+import type { AppProps } from 'next/app'
+import type { Session } from 'next-auth'
 
 // Configure fonts with Next.js optimization
 const manrope = Manrope({
@@ -18,7 +21,15 @@ const newsreader = Newsreader({
   display: 'swap',
 })
 
-export default function App({ Component, pageProps }: { Component: any; pageProps: any }) {
+interface CustomAppProps extends AppProps {
+  pageProps: {
+    session?: Session
+  } & Record<string, any>
+}
+
+export default function App({ Component, pageProps }: CustomAppProps) {
+  const { session, ...restPageProps } = pageProps
+
   useEffect(() => {
     // Debug font loading
     if (typeof window !== 'undefined') {
@@ -38,10 +49,12 @@ export default function App({ Component, pageProps }: { Component: any; pageProp
 
   return (
     <div className={`${manrope.variable} ${newsreader.variable}`}>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <Component {...pageProps} />
-      </ThemeProvider>
+      <AuthProvider session={session}>
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
+          <Component {...restPageProps} />
+        </ThemeProvider>
+      </AuthProvider>
     </div>
   )
 }

@@ -1,9 +1,26 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { MemoryWallItem } from '@/types'
-import { mockMemoryWall } from '@/data/mockData'
+
+interface DashboardStats {
+  people: number
+  stories: number
+  voiceProfiles: number
+  publishedStories: number
+  draftStories: number
+}
+
+interface FamilyMember {
+  id: string
+  name: string
+  storyCount: number
+  voiceProfileCount: number
+  isDeceased: boolean
+}
 
 interface DashboardControllerState {
   memoryWall: MemoryWallItem[]
+  stats: DashboardStats
+  familyMembers: FamilyMember[]
   selectedMemory: string | null
   isLoading: boolean
   hasError: boolean
@@ -19,12 +36,47 @@ interface DashboardControllerActions {
 
 export function useDashboardController(): DashboardControllerState & DashboardControllerActions {
   const [state, setState] = useState<DashboardControllerState>({
-    memoryWall: mockMemoryWall,
+    memoryWall: [],
+    stats: { people: 0, stories: 0, voiceProfiles: 0, publishedStories: 0, draftStories: 0 },
+    familyMembers: [],
     selectedMemory: null,
-    isLoading: false,
+    isLoading: true,
     hasError: false,
     errorMessage: null,
   })
+
+  const fetchDashboard = useCallback(async () => {
+    setState(prev => ({ ...prev, isLoading: true, hasError: false, errorMessage: null }))
+
+    try {
+      const response = await fetch('/api/dashboard/stats')
+      const data = await response.json()
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to load dashboard')
+      }
+
+      setState(prev => ({
+        ...prev,
+        memoryWall: data.data.memoryWall || [],
+        stats: data.data.stats || prev.stats,
+        familyMembers: data.data.familyMembers || [],
+        isLoading: false,
+      }))
+    } catch (error: any) {
+      setState(prev => ({
+        ...prev,
+        isLoading: false,
+        hasError: true,
+        errorMessage: error.message || 'Failed to load dashboard',
+      }))
+    }
+  }, [])
+
+  // Load on mount
+  useEffect(() => {
+    fetchDashboard()
+  }, [fetchDashboard])
 
   const selectMemory = useCallback((id: string) => {
     setState(prev => ({
@@ -36,7 +88,6 @@ export function useDashboardController(): DashboardControllerState & DashboardCo
   const playAudioMemory = useCallback((id: string) => {
     const memory = state.memoryWall.find(item => item.id === id)
     if (memory?.type === 'audio-memory') {
-      // In a real app, this would trigger audio playback
       console.log('Playing audio memory:', memory.title)
     }
   }, [state.memoryWall])
@@ -44,31 +95,13 @@ export function useDashboardController(): DashboardControllerState & DashboardCo
   const shareMemory = useCallback((id: string) => {
     const memory = state.memoryWall.find(item => item.id === id)
     if (memory) {
-      // In a real app, this would open a share dialog
       console.log('Sharing memory:', memory.content || memory.title)
     }
   }, [state.memoryWall])
 
   const refreshMemoryWall = useCallback(async () => {
-    setState(prev => ({ ...prev, isLoading: true, hasError: false, errorMessage: null }))
-    
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      setState(prev => ({
-        ...prev,
-        memoryWall: mockMemoryWall, // In real app, this would be fresh data
-        isLoading: false,
-      }))
-    } catch (error) {
-      setState(prev => ({
-        ...prev,
-        isLoading: false,
-        hasError: true,
-        errorMessage: 'Failed to refresh memory wall',
-      }))
-    }
-  }, [])
+    await fetchDashboard()
+  }, [fetchDashboard])
 
   return {
     ...state,

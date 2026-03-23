@@ -1,6 +1,5 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { StoryContribution } from '@/types'
-import { mockStories } from '@/data/mockData'
 
 interface StoriesControllerState {
   stories: StoryContribution[]
@@ -17,22 +16,62 @@ interface StoriesControllerActions {
   setFormTitle: (title: string) => void
   setFormContent: (content: string) => void
   setFormType: (type: 'text' | 'audio') => void
-  submitStory: () => Promise<void>
+  submitStory: (title?: string, content?: string) => Promise<void>
+  submitAudioStory: (audioBlob: Blob, duration: number, title?: string) => Promise<void>
   refreshStories: () => Promise<void>
   clearForm: () => void
 }
 
 export function useStoriesController(): StoriesControllerState & StoriesControllerActions {
   const [state, setState] = useState<StoriesControllerState>({
-    stories: mockStories,
+    stories: [],
     isSubmitting: false,
-    isLoading: false,
+    isLoading: true,
     hasError: false,
     errorMessage: null,
     formTitle: '',
     formContent: '',
     formType: 'text',
   })
+
+  const fetchStories = useCallback(async () => {
+    setState(prev => ({ ...prev, isLoading: true, hasError: false, errorMessage: null }))
+
+    try {
+      const response = await fetch('/api/stories')
+      const data = await response.json()
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to load stories')
+      }
+
+      // Map API response to StoryContribution format
+      const stories: StoryContribution[] = (data.data.stories || []).map((s: any) => ({
+        id: s.id,
+        authorName: s.createdBy?.displayName || s.createdBy?.email || 'Unknown',
+        authorRole: 'Family',
+        authorAvatarUrl: undefined,
+        content: s.excerpt || s.title,
+        createdAt: new Date(s.createdAt),
+        type: s.hasAudio ? 'audio' : 'text',
+        audioDurationSeconds: undefined,
+      }))
+
+      setState(prev => ({ ...prev, stories, isLoading: false }))
+    } catch (error: any) {
+      setState(prev => ({
+        ...prev,
+        isLoading: false,
+        hasError: true,
+        errorMessage: error.message || 'Failed to load stories',
+      }))
+    }
+  }, [])
+
+  // Load on mount
+  useEffect(() => {
+    fetchStories()
+  }, [fetchStories])
 
   const setFormTitle = useCallback((title: string) => {
     setState(prev => ({ ...prev, formTitle: title }))
@@ -46,8 +85,11 @@ export function useStoriesController(): StoriesControllerState & StoriesControll
     setState(prev => ({ ...prev, formType: type }))
   }, [])
 
-  const submitStory = useCallback(async () => {
-    if (!state.formTitle.trim() || !state.formContent.trim()) {
+  const submitStory = useCallback(async (titleOverride?: string, contentOverride?: string) => {
+    const title = titleOverride ?? state.formTitle
+    const content = contentOverride ?? state.formContent
+
+    if (!title.trim() || !content.trim()) {
       setState(prev => ({
         ...prev,
         hasError: true,
@@ -64,58 +106,105 @@ export function useStoriesController(): StoriesControllerState & StoriesControll
     }))
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500))
-      
-      const newStory: StoryContribution = {
-        id: Date.now().toString(),
-        authorName: 'Current User',
-        authorRole: 'Family',
-        authorAvatarUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDH2xbiZgnTviGNG0o_IqBprEq0awrhqnK6OmbTFPtC5cqdN9hgINjnLqSlfKT2WROfSvN86O2yQfCrLuDonCZhKfi5sxptEtlsACdfcv6VlHLDLEPGrmnyzu13gNZ5NiZvRcTiwlhX2kqK6kNXy-C-Gy3qZto5zE4ZvR5mmg63iV54ZW2Eg-K9ygXtvUBjWTIghyrqWK6VX_iW79dEbGfE-qLYzCmLjggnNLzfIl0hXL8Lul5xSAg4p3um4MvF3oisaolqDiC_fVs',
-        content: state.formContent,
-        createdAt: new Date(),
-        type: state.formType,
-        audioDurationSeconds: state.formType === 'audio' ? 120 : undefined,
+      const response = await fetch('/api/stories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title,
+          content,
+          storyType: state.formType === 'audio' ? 'AUDIO_RECORDING' : 'MEMORY',
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to create story')
       }
 
-      // Optimistic UI: add story immediately
+      // Refresh the stories list to get the new story
       setState(prev => ({
         ...prev,
-        stories: [newStory, ...prev.stories],
         isSubmitting: false,
         formTitle: '',
         formContent: '',
       }))
-    } catch (error) {
+      await fetchStories()
+    } catch (error: any) {
       setState(prev => ({
         ...prev,
         isSubmitting: false,
         hasError: true,
-        errorMessage: 'Failed to submit story. Please try again.',
+        errorMessage: error.message || 'Failed to submit story. Please try again.',
       }))
     }
-  }, [state.formTitle, state.formContent, state.formType])
+  }, [state.formTitle, state.formContent, state.formType, fetchStories])
 
   const refreshStories = useCallback(async () => {
-    setState(prev => ({ ...prev, isLoading: true, hasError: false, errorMessage: null }))
-    
+    await fetchStories()
+  }, [fetchStories])
+
+  const submitAudioStory = useCallback(async (audioBlob: Blob, duration: number, title?: string) => {
+    setState(prev => ({
+      ...prev,
+      isSubmitting: true,
+      hasError: false,
+      errorMessage: null,
+    }))
+
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      // Step 1: Upload audio file to assets
+      const formData = new FormData()
+      formData.append('file', audioBlob, 'recording.webm')
+
+      const uploadRes = await fetch('/api/assets/upload', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!uploadRes.ok) {
+        throw new Error('Failed to upload audio')
+      }
+
+      const uploadData = await uploadRes.json()
+      const assetId = uploadData.data.id
+
+      // Step 2: Create story with audio asset
+      const storyTitle = title || `Audio Recording ${new Date().toLocaleDateString()}`
+      const response = await fetch('/api/stories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: storyTitle,
+          content: `Audio recording (${Math.round(duration)} seconds)`,
+          storyType: 'AUDIO_RECORDING',
+          assetIds: [assetId],
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to create story')
+      }
+
+      // Refresh the stories list
       setState(prev => ({
         ...prev,
-        stories: mockStories, // In real app, this would be fresh data
-        isLoading: false,
+        isSubmitting: false,
+        formTitle: '',
+        formContent: '',
       }))
-    } catch (error) {
+      await fetchStories()
+    } catch (error: any) {
       setState(prev => ({
         ...prev,
-        isLoading: false,
+        isSubmitting: false,
         hasError: true,
-        errorMessage: 'Failed to refresh stories',
+        errorMessage: error.message || 'Failed to submit audio. Please try again.',
       }))
     }
-  }, [])
+  }, [fetchStories])
 
   const clearForm = useCallback(() => {
     setState(prev => ({
@@ -134,6 +223,7 @@ export function useStoriesController(): StoriesControllerState & StoriesControll
     setFormContent,
     setFormType,
     submitStory,
+    submitAudioStory,
     refreshStories,
     clearForm,
   }

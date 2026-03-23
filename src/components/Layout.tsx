@@ -1,6 +1,7 @@
 import { ReactNode } from 'react'
 import React from 'react'
 import { useRouter } from 'next/router'
+import { useSession, signOut } from 'next-auth/react'
 import {
   Box,
   AppBar,
@@ -14,7 +15,9 @@ import {
   useMediaQuery,
   BottomNavigation,
   BottomNavigationAction,
-  SvgIcon,
+  Menu,
+  MenuItem,
+  Button,
 } from '@mui/material'
 import {
   Search as SearchIcon,
@@ -24,8 +27,7 @@ import {
   Add as AddIcon,
   Home as HomeIcon,
   Person as PersonIcon,
-  Support as SupportIcon,
-  PrivacyTip as PrivacyTipIcon,
+  Logout as LogoutIcon,
 } from '@mui/icons-material'
 import Link from 'next/link'
 import { useState } from 'react'
@@ -56,6 +58,7 @@ const navItems = [
   { label: 'Voice Lab', href: '/voice-lab', icon: 'settings_voice' },
   { label: 'Documents', href: '/documents', icon: 'description' },
   { label: 'Stories', href: '/stories', icon: 'auto_stories' },
+  { label: 'Favorites', href: '/favorites', icon: 'favorite' },
   { label: 'Family Tree', href: '/family-tree', icon: 'account_tree' },
   { label: 'Talk', href: '/talk', icon: 'forum' },
 ]
@@ -64,6 +67,74 @@ const footerNavItems = [
   { label: 'Support', href: '/support', icon: 'help' },
   { label: 'Privacy Settings', href: '/privacy', icon: 'shield_lock' },
 ]
+
+function UserMenu() {
+  const { data: session, status } = useSession()
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
+  const router = useRouter()
+
+  const handleClick = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget)
+  }
+
+  const handleClose = () => {
+    setAnchorEl(null)
+  }
+
+  const handleSignOut = async () => {
+    handleClose()
+    await signOut({ redirect: false })
+    router.push('/')
+  }
+
+  if (status === 'loading') {
+    return <Avatar sx={{ width: 32, height: 32 }} />
+  }
+
+  if (!session?.user) {
+    return (
+      <Button
+        component={Link}
+        href="/login"
+        variant="contained"
+        size="small"
+        sx={{ ml: 2 }}
+      >
+        Sign In
+      </Button>
+    )
+  }
+
+  return (
+    <>
+      <IconButton size="large" onClick={handleClick}>
+        <Avatar 
+          sx={{ width: 32, height: 32 }} 
+          src={session.user.avatarUrl || undefined}
+        >
+          {session.user.displayName?.[0] || session.user.email?.[0]}
+        </Avatar>
+      </IconButton>
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={handleClose}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <MenuItem disabled>
+          <Typography variant="body2">
+            {session.user.displayName || session.user.email}
+          </Typography>
+        </MenuItem>
+        <MenuItem onClick={handleSignOut}>
+          <LogoutIcon sx={{ mr: 1, fontSize: 20 }} />
+          Sign Out
+        </MenuItem>
+      </Menu>
+    </>
+  )
+}
 
 export function Layout({ children }: LayoutProps) {
   const router = useRouter()
@@ -111,9 +182,7 @@ export function Layout({ children }: LayoutProps) {
                     <NotificationsIcon />
                   </Badge>
                 </IconButton>
-                <IconButton size="large">
-                  <Avatar sx={{ width: 32, height: 32 }} src="/images/user-avatar.jpg" />
-                </IconButton>
+                <UserMenu />
               </Box>
             </Toolbar>
           </AppBar>
@@ -325,7 +394,7 @@ export function Layout({ children }: LayoutProps) {
                   <IconButton size="large" sx={{ color: '#16334a' }}>
                     <SettingsIcon />
                   </IconButton>
-                  <Avatar sx={{ width: 32, height: 32 }} src="/images/user-avatar.jpg" />
+                  <UserMenu />
                 </Box>
               </Toolbar>
             </AppBar>

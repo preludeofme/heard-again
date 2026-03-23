@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import {
   Box,
   Typography,
@@ -19,47 +19,34 @@ import {
   PersonAdd,
 } from '@mui/icons-material'
 import Link from 'next/link'
+import { PersonDetailModal } from './PersonDetailModal'
+import { AddEditPersonModal, PersonFormData } from './AddEditPersonModal'
 
-// Mock family tree data
-const familyData = {
-  grandparents: [
-    {
-      id: 1,
-      name: 'Arthur Emerson',
-      role: 'Grandfather',
-      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&fit=crop&crop=face',
-    },
-    {
-      id: 2,
-      name: 'Martha Emerson',
-      role: 'Grandmother',
-      avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&h=200&fit=crop&crop=face',
-    },
-  ],
-  parents: [
-    {
-      id: 3,
-      name: 'David Emerson',
-      role: 'Father',
-      memories: 52,
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=face',
-      selected: true,
-    },
-  ],
-  children: [
-    {
-      id: 4,
-      name: 'Elena Emerson',
-      role: 'Daughter',
-      avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&h=200&fit=crop&crop=face',
-    },
-    {
-      id: 5,
-      name: 'Julian Emerson',
-      role: 'Son',
-      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&crop=face',
-    },
-  ],
+interface TreePerson {
+  id: string | number
+  name: string
+  role: string
+  avatar: string
+  memories?: number
+  selected?: boolean
+}
+
+interface FamilyTreeData {
+  grandparents: TreePerson[]
+  parents: TreePerson[]
+  children: TreePerson[]
+}
+
+interface FamilyTreePageProps {
+  people?: FamilyTreeData
+  onPersonClick?: (personId: string) => void
+  onAddPerson?: () => void
+}
+
+const defaultFamilyData: FamilyTreeData = {
+  grandparents: [],
+  parents: [],
+  children: [],
 }
 
 // Tree connector line component
@@ -74,8 +61,148 @@ const TreeLine = ({ height = 40, vertical = true }: { height?: number; vertical?
   />
 )
 
-export function FamilyTreePage() {
+export function FamilyTreePage({ people, onPersonClick, onAddPerson }: FamilyTreePageProps) {
   const theme = useTheme()
+  const familyData = people && (people.grandparents.length > 0 || people.parents.length > 0 || people.children.length > 0)
+    ? people
+    : defaultFamilyData
+
+  // Modal states
+  const [detailModalOpen, setDetailModalOpen] = useState(false)
+  const [addEditModalOpen, setAddEditModalOpen] = useState(false)
+  const [addEditMode, setAddEditMode] = useState<'create' | 'edit'>('create')
+  const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Data states
+  const [personDetail, setPersonDetail] = useState<any>(null)
+  const [personStories, setPersonStories] = useState<any[]>([])
+  const [isLoadingDetail, setIsLoadingDetail] = useState(false)
+  const [detailError, setDetailError] = useState<string | null>(null)
+
+  // Handlers
+  const handlePersonClick = async (personId: string) => {
+    setSelectedPersonId(personId)
+    setDetailModalOpen(true)
+    onPersonClick?.(personId)
+    
+    // Fetch person details
+    setIsLoadingDetail(true)
+    setDetailError(null)
+    try {
+      const res = await fetch(`/api/people/${personId}`)
+      const data = await res.json()
+      if (data.success) {
+        setPersonDetail(data.data)
+        // Also fetch stories for this person
+        const storiesRes = await fetch(`/api/stories?personId=${personId}&limit=20`)
+        const storiesData = await storiesRes.json()
+        setPersonStories(storiesData.data?.stories || [])
+      } else {
+        setDetailError(data.error || 'Failed to load person details')
+      }
+    } catch (err) {
+      setDetailError('Failed to load person details')
+    } finally {
+      setIsLoadingDetail(false)
+    }
+  }
+
+  const handleAddPerson = () => {
+    setSelectedPersonId(null)
+    setAddEditMode('create')
+    setAddEditModalOpen(true)
+    onAddPerson?.()
+  }
+
+  const handleEditPerson = () => {
+    setDetailModalOpen(false)
+    setAddEditMode('edit')
+    setAddEditModalOpen(true)
+  }
+
+  const handleSubmitPerson = async (data: PersonFormData) => {
+    setIsSubmitting(true)
+    try {
+      if (addEditMode === 'create') {
+        // Create new person
+        const res = await fetch('/api/people', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            firstName: data.firstName,
+            lastName: data.lastName,
+            displayName: data.displayName,
+            birthDate: data.birthDate,
+            deathDate: data.deathDate,
+            bio: data.bio,
+            personType: data.personType,
+          }),
+        })
+        if (!res.ok) throw new Error('Failed to create person')
+      } else {
+        // Update existing person
+        if (!selectedPersonId) throw new Error('No person selected')
+        const res = await fetch(`/api/people/${selectedPersonId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            firstName: data.firstName,
+            lastName: data.lastName,
+            displayName: data.displayName,
+            birthDate: data.birthDate,
+            deathDate: data.deathDate,
+            bio: data.bio,
+            personType: data.personType,
+          }),
+        })
+        if (!res.ok) throw new Error('Failed to update person')
+      }
+      setAddEditModalOpen(false)
+      // Refresh the page to show updated data
+      window.location.reload()
+    } catch (err) {
+      console.error('Error saving person:', err)
+      // Could show an error toast here
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleDeletePerson = async (personId: string) => {
+    try {
+      const res = await fetch(`/api/people/${personId}`, {
+        method: 'DELETE',
+      })
+      if (!res.ok) throw new Error('Failed to delete person')
+      setDetailModalOpen(false)
+      // Refresh the page to show updated data
+      window.location.reload()
+    } catch (err) {
+      console.error('Error deleting person:', err)
+      // Could show an error toast here
+    }
+  }
+
+  const handleAddStory = (personId: string) => {
+    console.log('Add story for person:', personId)
+    // TODO: Navigate to story creation with person pre-selected
+  }
+
+  const handleAddVoiceProfile = (personId: string) => {
+    console.log('Add voice profile for person:', personId)
+    // TODO: Open voice training modal with person pre-selected
+  }
+
+  const handleAddRelationship = (personId: string) => {
+    console.log('Add relationship for person:', personId)
+    // TODO: Open relationship editor
+  }
+
+  const handleStoryClick = (storyId: string) => {
+    console.log('Navigate to story:', storyId)
+    // TODO: Navigate to story detail page
+  }
 
   return (
     <Box sx={{ minHeight: '100vh', display: 'flex' }}>
@@ -285,6 +412,7 @@ export function FamilyTreePage() {
             {familyData.grandparents.map((person) => (
               <Box key={person.id} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                 <Card
+                  onClick={() => handlePersonClick(String(person.id))}
                   sx={{
                     bgcolor: 'background.paper',
                     p: 3,
@@ -294,6 +422,7 @@ export function FamilyTreePage() {
                     border: '1px solid',
                     borderColor: 'rgba(22, 51, 74, 0.05)',
                     transition: 'transform 0.3s',
+                    cursor: 'pointer',
                     '&:hover': {
                       transform: 'translateY(-4px)',
                     },
@@ -342,6 +471,7 @@ export function FamilyTreePage() {
             {familyData.parents.map((person) => (
               <Box key={person.id} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                 <Card
+                  onClick={() => handlePersonClick(String(person.id))}
                   sx={{
                     bgcolor: 'primary.main',
                     p: 4,
@@ -351,6 +481,7 @@ export function FamilyTreePage() {
                     boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
                     outline: 8,
                     outlineColor: 'rgba(22, 51, 74, 0.05)',
+                    cursor: 'pointer',
                   }}
                 >
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
@@ -400,6 +531,10 @@ export function FamilyTreePage() {
                       <Button
                         variant="text"
                         startIcon={<Edit />}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handlePersonClick(String(person.id))
+                        }}
                         sx={{
                           flex: 1,
                           color: 'white',
@@ -415,6 +550,10 @@ export function FamilyTreePage() {
                       <Button
                         variant="text"
                         startIcon={<PersonAdd />}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleAddPerson()
+                        }}
                         sx={{
                           flex: 1,
                           color: 'white',
@@ -486,6 +625,7 @@ export function FamilyTreePage() {
             {familyData.children.map((person) => (
               <Box key={person.id} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                 <Card
+                  onClick={() => handlePersonClick(String(person.id))}
                   sx={{
                     bgcolor: 'background.paper',
                     p: 3,
@@ -495,6 +635,7 @@ export function FamilyTreePage() {
                     border: '1px solid',
                     borderColor: 'rgba(22, 51, 74, 0.05)',
                     transition: 'transform 0.3s',
+                    cursor: 'pointer',
                     '&:hover': {
                       transform: 'translateY(-4px)',
                     },
@@ -524,7 +665,7 @@ export function FamilyTreePage() {
           </Box>
 
           {/* Add Relative Button */}
-          <Box sx={{ mt: 8, cursor: 'pointer' }}>
+          <Box sx={{ mt: 8, cursor: 'pointer' }} onClick={handleAddPerson}>
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
               <Box
                 sx={{
@@ -666,6 +807,42 @@ export function FamilyTreePage() {
           </Button>
         </Card>
       </Box>
+
+      {/* Person Detail Modal */}
+      <PersonDetailModal
+        open={detailModalOpen}
+        onClose={() => setDetailModalOpen(false)}
+        person={personDetail}
+        stories={personStories}
+        isLoading={isLoadingDetail}
+        error={detailError}
+        onEdit={handleEditPerson}
+        onDelete={handleDeletePerson}
+        onAddStory={handleAddStory}
+        onAddVoiceProfile={handleAddVoiceProfile}
+        onAddRelationship={handleAddRelationship}
+        onStoryClick={handleStoryClick}
+      />
+
+      {/* Add/Edit Person Modal */}
+      <AddEditPersonModal
+        open={addEditModalOpen}
+        onClose={() => setAddEditModalOpen(false)}
+        mode={addEditMode}
+        person={addEditMode === 'edit' && personDetail ? {
+          firstName: personDetail.firstName,
+          lastName: personDetail.lastName,
+          displayName: personDetail.displayName,
+          birthDate: personDetail.birthDate?.split('T')[0],
+          deathDate: personDetail.deathDate?.split('T')[0],
+          bio: personDetail.bio,
+          personType: personDetail.personType,
+          role: personDetail.role,
+          avatarUrl: personDetail.avatarUrl,
+        } : undefined}
+        onSubmit={handleSubmitPerson}
+        isSubmitting={isSubmitting}
+      />
     </Box>
   )
 }

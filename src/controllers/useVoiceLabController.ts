@@ -1,6 +1,5 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { AudioSample, VoiceCloneStatus, DocumentArtifact } from '@/types'
-import { mockAudioSamples, mockVoiceCloneStatus, mockDocuments } from '@/data/mockData'
 import { useToast } from '@/components/ToastProvider'
 
 interface VoiceModel {
@@ -81,15 +80,15 @@ interface VoiceLabControllerActions {
 
 export function useVoiceLabController(): VoiceLabControllerState & VoiceLabControllerActions {
   const [state, setState] = useState<VoiceLabControllerState>({
-    audioSamples: mockAudioSamples,
-    voiceCloneStatus: mockVoiceCloneStatus,
-    documents: mockDocuments,
+    audioSamples: [],
+    voiceCloneStatus: { percentComplete: 0, uploadedCount: 0, remainingCount: 0, statusText: 'No voice profiles yet' },
+    documents: [],
     voiceModels: [],
     selectedFilter: 'All',
     isPlaying: null,
     isRecording: false,
     isUploading: false,
-    isLoading: false,
+    isLoading: true,
     hasError: false,
     errorMessage: null,
     showRecordingModal: false,
@@ -138,14 +137,23 @@ export function useVoiceLabController(): VoiceLabControllerState & VoiceLabContr
     }))
 
     try {
-      // Simulate upload
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const response = await fetch('/api/assets/upload', {
+        method: 'POST',
+        body: formData,
+      })
+
+      const data = await response.json()
+      if (!response.ok || !data.success) throw new Error(data.error || 'Upload failed')
+
+      const mimeType = data.data.mimeType || file.type
       const newDoc: DocumentArtifact = {
-        id: Date.now().toString(),
-        title: file.name,
-        type: file.type.includes('pdf') ? 'PDF' : file.type.includes('image') ? 'Photo' : 'Handwritten',
-        uploadedAt: new Date(),
+        id: data.data.id,
+        title: data.data.originalName || file.name,
+        type: mimeType.includes('pdf') ? 'PDF' : mimeType.includes('image') ? 'Photo' : 'Letter',
+        uploadedAt: new Date(data.data.createdAt),
         shareAction: 'Share',
       }
 
@@ -179,14 +187,52 @@ export function useVoiceLabController(): VoiceLabControllerState & VoiceLabContr
     setState(prev => ({ ...prev, isLoading: true, hasError: false, errorMessage: null }))
     
     try {
-      // Simulate API calls
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
+      // Fetch voice profiles and documents in parallel
+      const [profilesRes, assetsRes] = await Promise.all([
+        fetch('/api/voice/profiles'),
+        fetch('/api/assets'),
+      ])
+
+      const profilesData = profilesRes.ok ? await profilesRes.json() : null
+      const assetsData = assetsRes.ok ? await assetsRes.json() : null
+
+      const profiles = profilesData?.success ? (profilesData.data || []) : []
+      const assets = assetsData?.success ? (assetsData.data?.assets || []) : []
+
+      const voiceModels: VoiceModel[] = profiles.map((p: any) => ({
+        id: p.id,
+        userId: '',
+        name: p.name,
+        displayName: p.displayName || p.name,
+        status: (p.status || 'READY').toLowerCase() === 'ready' ? 'ready' as const : 'training' as const,
+        language: p.language || 'en',
+        sampleCount: p.sampleCount || 0,
+        createdAt: p.createdAt,
+        modelPath: p.modelPath,
+      }))
+
+      const documents: DocumentArtifact[] = assets.map((a: any) => ({
+        id: a.id,
+        title: a.originalName || a.filename,
+        type: (a.mimeType || '').includes('pdf') ? 'PDF' as const
+          : (a.mimeType || '').includes('image') ? 'Photo' as const
+          : 'Letter' as const,
+        uploadedAt: new Date(a.createdAt),
+        shareAction: 'Share',
+      }))
+
       setState(prev => ({
         ...prev,
-        audioSamples: mockAudioSamples,
-        voiceCloneStatus: mockVoiceCloneStatus,
-        documents: mockDocuments,
+        voiceModels,
+        documents,
+        voiceCloneStatus: {
+          percentComplete: voiceModels.length > 0 ? 100 : 0,
+          uploadedCount: voiceModels.length,
+          remainingCount: 0,
+          statusText: voiceModels.length > 0
+            ? `${voiceModels.length} voice profile${voiceModels.length > 1 ? 's' : ''} ready`
+            : 'No voice profiles yet',
+        },
         isLoading: false,
       }))
     } catch (error) {
@@ -198,6 +244,11 @@ export function useVoiceLabController(): VoiceLabControllerState & VoiceLabContr
       }))
     }
   }, [])
+
+  // Load data on mount
+  useEffect(() => {
+    refreshData()
+  }, [refreshData])
 
   const toggleRecordingModal = useCallback(() => {
     setState(prev => ({ ...prev, showRecordingModal: !prev.showRecordingModal }))
@@ -395,12 +446,23 @@ export function useVoiceLabController(): VoiceLabControllerState & VoiceLabContr
 
   const loadVoiceModels = useCallback(async () => {
     try {
-      const response = await fetch('/api/voice/models?userId=user123')
+      const response = await fetch('/api/voice/profiles')
       if (response.ok) {
         const data = await response.json()
+        const profiles = data.success ? (data.data || []) : []
         setState(prev => ({
           ...prev,
-          voiceModels: data.models,
+          voiceModels: profiles.map((p: any) => ({
+            id: p.id,
+            userId: '',
+            name: p.name,
+            displayName: p.displayName || p.name,
+            status: (p.status || 'READY').toLowerCase() === 'ready' ? 'ready' as const : 'training' as const,
+            language: p.language || 'en',
+            sampleCount: p.sampleCount || 0,
+            createdAt: p.createdAt,
+            modelPath: p.modelPath,
+          })),
         }))
       }
     } catch (error) {
@@ -633,7 +695,7 @@ export function useVoiceLabController(): VoiceLabControllerState & VoiceLabContr
 
   const deleteVoiceProfile = useCallback(async (profileId: string) => {
     try {
-      const response = await fetch(`/api/voice/delete-profile?profileId=${encodeURIComponent(profileId)}`, {
+      const response = await fetch(`/api/voice/profiles/${profileId}`, {
         method: 'DELETE',
       })
 

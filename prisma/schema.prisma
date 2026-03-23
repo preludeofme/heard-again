@@ -18,6 +18,11 @@ model User {
   oauthProvider String? // google, github, etc.
   oauthId   String?
   
+  // NextAuth compatibility (OAuth profile data)
+  name          String?
+  image         String?
+  emailVerified DateTime?
+  
   displayName String?
   avatarUrl String?
   
@@ -32,8 +37,23 @@ model User {
   createdStories  Story[] @relation("StoryCreator")
   comments        StoryComment[]
   voiceProfiles   VoiceProfile[]
+  createdPeople   Person[]
+  uploadedAssets  Asset[]
+  notifications   Notification[]
+  importJobs      ImportJob[]
+  exportJobs      ExportJob[]
+  collections     Collection[]
+  collectionStories CollectionStory[]
+  voiceConsents     VoiceConsent[]
+  favorites         UserStoryFavorite[]
+  invitedWorkspaceInvites WorkspaceInvite[]
+  
+  // NextAuth relations
+  accounts  Account[]
+  sessions  Session[]
   
   defaultWorkspaceId String?
+  defaultWorkspace   Workspace? @relation("UserDefaultWorkspace", fields: [defaultWorkspaceId], references: [id])
   
   @@index([email])
   @@index([oauthProvider, oauthId])
@@ -58,7 +78,6 @@ model Workspace {
   
   // Billing
   billingCustomerId String?
-  currentSubscriptionId String?
   subscription  Subscription?
   
   // Features & Entitlements (cached from subscription for fast access)
@@ -81,6 +100,11 @@ model Workspace {
   assets      Asset[]
   auditLogs   AuditLog[]
   collections Collection[]
+  invites     WorkspaceInvite[]
+  importJobs  ImportJob[]
+  exportJobs  ExportJob[]
+  voiceConsents VoiceConsent[]
+  defaultForUsers User[] @relation("UserDefaultWorkspace")
   
   @@index([ownerId])
   @@index([slug])
@@ -148,10 +172,70 @@ enum WorkspaceRole {
 }
 
 enum MembershipStatus {
-  PENDING   // Invited but not accepted
   ACTIVE
   SUSPENDED
   REMOVED
+}
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  EXPIRED
+  REVOKED
+}
+
+enum ImportSourceType {
+  GEDCOM
+  JSON
+  CSV
+  MANUAL_MIGRATION
+}
+
+enum ExportType {
+  PDF
+  JSON
+  ZIP
+  GEDCOM
+}
+
+enum JobStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum ConsentType {
+  SELF
+  FAMILY_ATTESTATION
+  ESTATE_REPRESENTATIVE
+  OTHER
+}
+
+enum GenerationMode {
+  DEFAULT
+  LOCAL
+  CLOUD
+  HYBRID
+}
+
+enum NotificationType {
+  INVITE_RECEIVED
+  INVITE_ACCEPTED
+  STORY_COMMENT
+  STORY_SHARED
+  GENERATION_COMPLETED
+  GENERATION_FAILED
+}
+
+enum PersonType {
+  FAMILY
+  FRIEND
+  MENTOR
+  COLLEAGUE
+  OTHER
 }
 
 model Instance {
@@ -172,6 +256,12 @@ model Instance {
   tunnelEnabled   Boolean @default(false)
   tunnelSubdomain String?
   tunnelToken     String? // For secure tunnel authentication
+  tunnelTokenExpiresAt DateTime?
+  lastAuthenticatedAt  DateTime?
+  
+  // Health/status tracking
+  lastErrorAt      DateTime?
+  lastErrorMessage String?
   
   // Connection tracking
   registeredAt    DateTime @default(now())
@@ -306,12 +396,23 @@ model Person {
   // Bio
   bio         String?  // Markdown supported
   avatarAssetId String?
+  avatarAsset   Asset? @relation("PersonAvatar", fields: [avatarAssetId], references: [id], onDelete: SetNull)
+  
+  // Additional name fields for genealogy
+  middleName  String?
+  nickname    String?
+  maidenName  String?
+  suffix      String? // Jr, Sr, III
+  
+  // Person categorization
+  personType  PersonType @default(FAMILY) // family, friend, other
   
   // Metadata
   tags        String[] // For categorization
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   createdById String
+  createdBy   User   @relation(fields: [createdById], references: [id])
   
   // Relations
   storiesAsSubject Story[] @relation("StorySubject")
@@ -319,9 +420,11 @@ model Person {
   voiceProfiles    VoiceProfile[]
   relationshipsAsSource PersonRelationship[] @relation("RelationshipSource")
   relationshipsAsTarget PersonRelationship[] @relation("RelationshipTarget")
+  voiceConsents    VoiceConsent[]
   
   @@index([workspaceId])
   @@index([firstName, lastName])
+  @@index([maidenName])
 }
 
 model PersonRelationship {
@@ -381,8 +484,12 @@ model Story {
   
   // AI Generation
   generatedAudioAssetId String?  // Link to generated TTS audio
+  generatedAudioAsset   Asset? @relation("StoryGeneratedAudio", fields: [generatedAudioAssetId], references: [id], onDelete: SetNull)
   voiceProfileId String?  // Which voice was used
-  generationJobId String? // Reference to async job
+  voiceProfile   VoiceProfile? @relation(fields: [voiceProfileId], references: [id], onDelete: SetNull)
+  
+  // Story preview
+  excerpt     String?  // For cards and list views
   
   // Timeline
   storyDate   DateTime? // When the story took place
@@ -401,6 +508,9 @@ model Story {
   // Relations
   assets      StoryAsset[]
   comments    StoryComment[]
+  favorites   UserStoryFavorite[]
+  collections CollectionStory[]
+  generationJobs VoiceGenerationJob[]
   
   @@index([workspaceId])
   @@index([subjectId])
@@ -495,13 +605,41 @@ model Asset {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   uploadedById String
+  uploadedBy   User   @relation(fields: [uploadedById], references: [id])
   
   // Relations
   storyAssets StoryAsset[]
+  personAvatarFor Person[] @relation("PersonAvatar")
+  voiceProfileSources VoiceProfile[] @relation("VoiceProfileSourceAsset")
+  generatedAudioForStories Story[] @relation("StoryGeneratedAudio")
+  voiceGenerationOutputs VoiceGenerationJob[] @relation("VoiceGenerationOutputAsset")
+  importSources ImportJob[] @relation("ImportSourceAsset")
+  exportOutputs ExportJob[] @relation("ExportOutputAsset")
+  modelArtifactFor VoiceProfile[]
   
   @@index([workspaceId])
   @@index([assetType])
   @@index([processingStatus])
+}
+
+// ============================================
+// USER ENGAGEMENT MODELS (Favorites & Collections)
+// ============================================
+
+model UserStoryFavorite {
+  id          String   @id @default(uuid())
+  
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  storyId     String
+  story       Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime @default(now())
+  
+  @@unique([userId, storyId])
+  @@index([userId])
+  @@index([storyId])
 }
 
 enum StorageType {
@@ -578,11 +716,17 @@ model VoiceProfile {
   description String?  // How they talked
   
   // Voice data (stored as file reference)
-  modelPath   String   // Path to .pt checkpoint file
+  modelArtifactAssetId String?  // Path to .pt checkpoint file via Asset
+  modelArtifactAsset   Asset? @relation(fields: [modelArtifactAssetId], references: [id], onDelete: SetNull)
   modelType   VoiceModelType @default(QWEN3_BASE)
+  
+  // Engine metadata for multi-engine support
+  engineName   String?   // e.g., "qwen3", "chatterbox"
+  engineVersion String?   // e.g., "1.7B-base"
   
   // Source reference (if cloned from audio)
   sourceAssetId String?
+  sourceAsset   Asset? @relation("VoiceProfileSourceAsset", fields: [sourceAssetId], references: [id], onDelete: SetNull)
   sourceTranscript String? // Text of the reference recording
   
   // Style parameters (stored as JSON for flexibility)
@@ -597,7 +741,9 @@ model VoiceProfile {
   updatedAt   DateTime @updatedAt
   
   // Relations
+  stories     Story[]
   generationJobs VoiceGenerationJob[]
+  voiceConsents VoiceConsent[]
   
   @@index([workspaceId])
   @@index([personId])
@@ -623,10 +769,14 @@ model VoiceGenerationJob {
   voiceProfile   VoiceProfile @relation(fields: [voiceProfileId], references: [id], onDelete: Cascade)
   
   storyId     String?
+  story       Story? @relation(fields: [storyId], references: [id], onDelete: SetNull)
   
   // Input
   text        String
   styleOverride Json?  // Override style params for this generation
+  
+  // Generation mode (for hybrid/local/cloud decisions)
+  generationMode GenerationMode @default(DEFAULT)
   
   // Job status
   status      GenerationStatus @default(QUEUED)
@@ -639,6 +789,7 @@ model VoiceGenerationJob {
   
   // Results
   outputAssetId String?
+  outputAsset   Asset? @relation("VoiceGenerationOutputAsset", fields: [outputAssetId], references: [id], onDelete: SetNull)
   errorMessage  String?
   
   // Cloud tracking (for hybrid/cloud modes)
@@ -704,4 +855,237 @@ enum ActorType {
   SYSTEM
   API_KEY
   WEBHOOK
+}
+
+// ============================================
+// INVITATION & COLLABORATION MODELS
+// ============================================
+
+model WorkspaceInvite {
+  id          String   @id @default(uuid())
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  email       String
+  role        WorkspaceRole @default(VIEWER)
+
+  invitedById String
+  invitedBy   User     @relation(fields: [invitedById], references: [id])
+
+  token       String   @unique
+  status      InviteStatus @default(PENDING)
+
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  declinedAt  DateTime?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([workspaceId])
+  @@index([email])
+  @@index([token])
+}
+
+// ============================================
+// IMPORT/EXPORT WORKFLOW MODELS
+// ============================================
+
+model ImportJob {
+  id            String   @id @default(uuid())
+
+  workspaceId   String
+  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  sourceType    ImportSourceType
+  sourceAssetId String?
+  sourceAsset   Asset?   @relation("ImportSourceAsset", fields: [sourceAssetId], references: [id], onDelete: SetNull)
+
+  status        JobStatus @default(PENDING)
+  errorMessage  String?
+
+  importedById  String
+  importedBy    User      @relation(fields: [importedById], references: [id])
+
+  resultSummary Json?
+
+  startedAt     DateTime?
+  completedAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([workspaceId])
+  @@index([status])
+}
+
+model ExportJob {
+  id            String   @id @default(uuid())
+
+  workspaceId   String
+  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  exportType    ExportType
+  status        JobStatus @default(PENDING)
+  errorMessage  String?
+
+  requestedById String
+  requestedBy   User      @relation(fields: [requestedById], references: [id])
+
+  outputAssetId String?
+  outputAsset   Asset?    @relation("ExportOutputAsset", fields: [outputAssetId], references: [id], onDelete: SetNull)
+
+  startedAt     DateTime?
+  completedAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([workspaceId])
+  @@index([status])
+}
+
+// ============================================
+// VOICE CONSENT & SAFETY MODELS
+// ============================================
+
+model VoiceConsent {
+  id                   String   @id @default(uuid())
+
+  workspaceId          String
+  workspace            Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  personId             String?
+  person               Person?   @relation(fields: [personId], references: [id], onDelete: SetNull)
+
+  voiceProfileId       String?
+  voiceProfile         VoiceProfile? @relation(fields: [voiceProfileId], references: [id], onDelete: SetNull)
+
+  consentType          ConsentType
+  grantedByUserId      String
+  grantedByUser        User      @relation(fields: [grantedByUserId], references: [id])
+
+  attestationText      String?
+  allowsGeneration     Boolean   @default(true)
+  allowsCloudProcessing Boolean  @default(false)
+  allowsSharing        Boolean   @default(false)
+
+  recordedAt           DateTime  @default(now())
+  revokedAt            DateTime?
+
+  metadata             Json?
+
+  @@index([workspaceId])
+  @@index([personId])
+  @@index([voiceProfileId])
+}
+
+// ============================================
+// COLLECTION MODELS
+// ============================================
+
+model Collection {
+  id          String   @id @default(uuid())
+  
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  
+  name        String
+  description String?
+  
+  createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id])
+  
+  isPinned    Boolean  @default(false)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  stories     CollectionStory[]
+  
+  @@index([workspaceId])
+  @@index([createdById])
+}
+
+model CollectionStory {
+  id           String     @id @default(uuid())
+  collectionId String
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  
+  storyId      String
+  story        Story      @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  
+  sortOrder    Int        @default(0)
+  addedAt      DateTime   @default(now())
+  addedById    String
+  addedBy      User       @relation(fields: [addedById], references: [id])
+  
+  @@unique([collectionId, storyId])
+  @@index([collectionId])
+  @@index([storyId])
+}
+
+// ============================================
+// NOTIFICATION MODELS
+// ============================================
+
+model Notification {
+  id          String   @id @default(uuid())
+
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type        NotificationType
+  title       String
+  message     String?
+  isRead      Boolean  @default(false)
+
+  resourceType String?
+  resourceId   String?
+
+  createdAt   DateTime @default(now())
+
+  @@index([userId, isRead])
+}
+
+// ============================================
+// NEXTAUTH MODELS (Required for @auth/prisma-adapter)
+// ============================================
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String  @map("user_id")
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id")
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verificationtokens")
 }

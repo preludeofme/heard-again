@@ -1,17 +1,48 @@
-import { Box, Typography, Card, CardContent, Button, Grid, TextField, IconButton, Avatar, Chip } from '@mui/material'
-import { Mic as MicIcon, AutoStories as AutoStoriesIcon, AttachFile as AttachFileIcon, AddPhotoAlternate as AddPhotoIcon, PlayArrow as PlayIcon, Schedule as ScheduleIcon, ArrowForward as ArrowForwardIcon } from '@mui/icons-material'
+import { Box, Typography, Card, CardContent, Button, Grid, TextField, IconButton, Avatar, Chip, Dialog } from '@mui/material'
+import { Mic as MicIcon, AutoStories as AutoStoriesIcon, AttachFile as AttachFileIcon, AddPhotoAlternate as AddPhotoIcon, PlayArrow as PlayIcon, Schedule as ScheduleIcon, ArrowForward as ArrowForwardIcon, Close as CloseIcon } from '@mui/icons-material'
 import { StoryContribution } from '@/types'
 import { formatDistanceToNow } from 'date-fns'
 import { useState } from 'react'
+import { useRouter } from 'next/router'
 import { EmptyState } from './UIStates'
+import { AudioRecorder } from './AudioRecorder'
 
 interface StoriesPageProps {
   stories: StoryContribution[]
+  onSubmitStory?: (title: string, content: string) => Promise<void>
+  onSubmitAudio?: (audioBlob: Blob, duration: number) => Promise<void>
 }
 
-export function StoriesPage({ stories }: StoriesPageProps) {
+export function StoriesPage({ stories, onSubmitStory, onSubmitAudio }: StoriesPageProps) {
   const [storyTitle, setStoryTitle] = useState('')
   const [storyContent, setStoryContent] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showAudioDialog, setShowAudioDialog] = useState(false)
+  const [isSubmittingAudio, setIsSubmittingAudio] = useState(false)
+  const router = useRouter()
+
+  const handlePostMemory = async () => {
+    if (!storyContent.trim() || !onSubmitStory) return
+    setIsSubmitting(true)
+    try {
+      await onSubmitStory(storyTitle, storyContent)
+      setStoryTitle('')
+      setStoryContent('')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+  
+  const handleAudioComplete = async (audioBlob: Blob, duration: number) => {
+    if (!onSubmitAudio) return
+    setIsSubmittingAudio(true)
+    try {
+      await onSubmitAudio(audioBlob, duration)
+      setShowAudioDialog(false)
+    } finally {
+      setIsSubmittingAudio(false)
+    }
+  }
 
   return (
     <Box sx={{ minHeight: '100vh', backgroundColor: '#fcf9f4' }}>
@@ -150,6 +181,7 @@ export function StoriesPage({ stories }: StoriesPageProps) {
                   fullWidth
                   variant="contained"
                   size="large"
+                  onClick={() => setShowAudioDialog(true)}
                   sx={{
                     background: 'linear-gradient(135deg, #16334a 0%, #2e4a62 100%)',
                     py: 2,
@@ -224,6 +256,8 @@ export function StoriesPage({ stories }: StoriesPageProps) {
                     </Box>
                     <Button
                       variant="contained"
+                      onClick={handlePostMemory}
+                      disabled={!storyContent.trim() || isSubmitting}
                       sx={{
                         backgroundColor: '#d0e3e6',
                         color: '#546669',
@@ -232,7 +266,7 @@ export function StoriesPage({ stories }: StoriesPageProps) {
                         }
                       }}
                     >
-                      Post Memory
+                      {isSubmitting ? 'Posting...' : 'Post Memory'}
                     </Button>
                   </Box>
                 </Box>
@@ -281,6 +315,7 @@ export function StoriesPage({ stories }: StoriesPageProps) {
               size={{ xs: 12, md: index === 1 ? 12 : 6, lg: index === 1 ? 4 : 4 }}
             >
               <Card
+                onClick={() => router.push(`/stories/${story.id}`)}
                 sx={{
                   backgroundColor: story.type === 'audio' ? '#2e4a62' : '#ffffff',
                   color: story.type === 'audio' ? 'white' : 'inherit',
@@ -438,6 +473,28 @@ export function StoriesPage({ stories }: StoriesPageProps) {
           </Box>
         </Box>
       </Box>
+      {/* Audio Recording Dialog */}
+      <Dialog
+        open={showAudioDialog}
+        onClose={() => !isSubmittingAudio && setShowAudioDialog(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 3 } }}
+      >
+        <Box sx={{ p: 0 }}>
+          <IconButton
+            onClick={() => setShowAudioDialog(false)}
+            disabled={isSubmittingAudio}
+            sx={{ position: 'absolute', right: 8, top: 8, zIndex: 1 }}
+          >
+            <CloseIcon />
+          </IconButton>
+          <AudioRecorder
+            onRecordingComplete={handleAudioComplete}
+            onCancel={() => setShowAudioDialog(false)}
+          />
+        </Box>
+      </Dialog>
     </Box>
   )
 }

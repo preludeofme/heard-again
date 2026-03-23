@@ -1,0 +1,146 @@
+import { PrismaAdapter } from '@next-auth/prisma-adapter'
+import { NextAuthOptions } from 'next-auth'
+import CredentialsProvider from 'next-auth/providers/credentials'
+import GoogleProvider from 'next-auth/providers/google'
+import bcrypt from 'bcrypt'
+import { prisma } from '@/lib/prisma'
+
+export const authOptions: NextAuthOptions = {
+  adapter: PrismaAdapter(prisma),
+  session: {
+    strategy: 'jwt',
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
+  pages: {
+    signIn: '/login',
+    signOut: '/',
+    error: '/login',
+    newUser: '/dashboard',
+  },
+  providers: [
+    // Email/Password Credentials Provider
+    CredentialsProvider({
+      name: 'credentials',
+      credentials: {
+        email: { label: 'Email', type: 'email' },
+        password: { label: 'Password', type: 'password' },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) {
+          return null
+        }
+
+        const user = await prisma.user.findUnique({
+          where: { email: credentials.email },
+        })
+
+        if (!user || !user.password) {
+          return null
+        }
+
+        const isPasswordValid = await bcrypt.compare(
+          credentials.password,
+          user.password
+        )
+
+        if (!isPasswordValid) {
+          return null
+        }
+
+        // Don't return the password
+        const { password, ...userWithoutPassword } = user
+        return userWithoutPassword
+      },
+    }),
+
+    // Google OAuth Provider
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID || '',
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+      allowDangerousEmailAccountLinking: true,
+    }),
+  ],
+  callbacks: {
+    async jwt({ token, user, account }) {
+      // On initial sign-in, persist user info into the JWT
+      if (user) {
+        token.id = user.id
+        token.email = user.email
+        // OAuth users have 'name', local users have 'displayName'
+        token.displayName = (user as any).displayName || (user as any).name || null
+        token.avatarUrl = (user as any).avatarUrl || (user as any).image || null
+        token.defaultWorkspaceId = (user as any).defaultWorkspaceId || null
+      }
+      return token
+    },
+    async session({ session, token }) {
+      if (token && session.user) {
+        session.user.id = token.id as string
+        session.user.email = token.email
+        session.user.displayName = (token.displayName as string) || null
+        session.user.avatarUrl = (token.avatarUrl as string) || null
+        session.user.defaultWorkspaceId = (token.defaultWorkspaceId as string) || null
+      }
+      return session
+    },
+    async redirect({ url, baseUrl }) {
+      // After login, default to dashboard instead of landing page
+      if (url === baseUrl || url === `${baseUrl}/`) return `${baseUrl}/dashboard`
+      if (url.startsWith('/')) return `${baseUrl}${url}`
+      else if (new URL(url).origin === baseUrl) return url
+      return `${baseUrl}/dashboard`
+    },
+  },
+  events: {
+    async signIn({ user, account }) {
+      // Update last login timestamp
+      try {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { lastLoginAt: new Date() },
+        })
+      } catch (e) {
+        console.error('Failed to update lastLoginAt:', e)
+      }
+
+      // Auto-create workspace for users who don't have one
+      try {
+        // Check if user already has a workspace
+        const existingMembership = await prisma.membership.findFirst({
+          where: { userId: user.id },
+        })
+
+        if (!existingMembership) {
+          console.log(`No workspace found for user ${user.id}, creating one...`)
+
+          // Create default workspace
+          const workspace = await prisma.workspace.create({
+            data: {
+              name: 'My Workspace',
+              slug: `workspace-${user.id.slice(0, 8)}`,
+              ownerId: user.id,
+              members: {
+                create: {
+                  userId: user.id,
+                  role: 'OWNER',
+                  status: 'ACTIVE',
+                  joinedAt: new Date(),
+                },
+              },
+            },
+          })
+
+          // Set as default workspace
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { defaultWorkspaceId: workspace.id },
+          })
+
+          console.log(`Auto-created workspace ${workspace.id} for user ${user.id}`)
+        }
+      } catch (e) {
+        console.error('Failed to auto-create workspace:', e)
+      }
+    },
+  },
+}

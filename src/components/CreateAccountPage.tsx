@@ -1,4 +1,6 @@
 import React, { useState } from 'react'
+import { useRouter } from 'next/router'
+import { signIn } from 'next-auth/react'
 import {
   Box,
   Typography,
@@ -11,6 +13,8 @@ import {
   IconButton,
   Divider,
   useTheme,
+  Alert,
+  CircularProgress,
 } from '@mui/material'
 import {
   Visibility,
@@ -21,17 +25,61 @@ import Link from 'next/link'
 
 export function CreateAccountPage() {
   const theme = useTheme()
+  const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
     password: '',
   })
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Form submission logic will go here
-    console.log('Form submitted:', formData)
+    setError(null)
+    setIsLoading(true)
+
+    try {
+      // Call signup API
+      const response = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+          displayName: formData.fullName,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || data.details?.email || data.details?.password || 'Failed to create account')
+      }
+
+      // Automatically sign in after successful signup
+      const signInResult = await signIn('credentials', {
+        email: formData.email,
+        password: formData.password,
+        redirect: false,
+      })
+
+      if (signInResult?.error) {
+        throw new Error('Account created but failed to sign in')
+      }
+
+      // Redirect to dashboard on success
+      router.push('/dashboard')
+    } catch (err: any) {
+      setError(err.message || 'An error occurred')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleGoogleSignUp = () => {
+    signIn('google', { callbackUrl: '/dashboard' })
   }
 
   return (
@@ -71,7 +119,7 @@ export function CreateAccountPage() {
             <Box sx={{ display: 'flex', gap: 2 }}>
               <Button
                 component={Link}
-                href="/signin"
+                href="/login"
                 variant="text"
                 sx={{ color: 'secondary.main' }}
               >
@@ -232,7 +280,7 @@ export function CreateAccountPage() {
                   <Typography variant="body2" sx={{ color: 'secondary.main' }}>
                     Already have an archive?{' '}
                     <Link
-                      href="/signin"
+                      href="/login"
                       style={{
                         color: theme.palette.primary.main,
                         fontWeight: 600,
@@ -245,12 +293,21 @@ export function CreateAccountPage() {
                   </Typography>
                 </Box>
 
+                {/* Error Alert */}
+                {error && (
+                  <Alert severity="error" sx={{ mb: 3 }}>
+                    {error}
+                  </Alert>
+                )}
+
                 {/* Social Logins */}
                 <Grid container spacing={2} sx={{ mb: 4 }}>
                   <Grid size={{ xs: 12, md: 6 }}>
                     <Button
                       fullWidth
                       variant="outlined"
+                      onClick={handleGoogleSignUp}
+                      disabled={isLoading}
                       sx={{
                         py: 1.5,
                         borderColor: 'rgba(208, 227, 230, 0.5)',
@@ -377,6 +434,7 @@ export function CreateAccountPage() {
                     fullWidth
                     variant="contained"
                     size="large"
+                    disabled={isLoading}
                     sx={{
                       py: 2,
                       fontSize: '1.125rem',
@@ -385,7 +443,11 @@ export function CreateAccountPage() {
                       background: 'linear-gradient(135deg, #16334a 0%, #2e4a62 100%)',
                     }}
                   >
-                    Start My Living Archive
+                    {isLoading ? (
+                      <CircularProgress size={24} sx={{ color: 'white' }} />
+                    ) : (
+                      'Start My Living Archive'
+                    )}
                   </Button>
 
                   <Typography

@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { ConversationMessage, LegacySubject, VoiceModel, AudioCache, VoiceSynthesisResponse } from '@/types'
-import { mockMessages, mockLegacySubject } from '@/data/mockData'
 import { logger } from '@/lib/client-logger'
 
 type TalkState = 'idle' | 'listening' | 'typing' | 'processing'
@@ -45,8 +44,8 @@ interface TalkControllerActions {
 
 export function useTalkController(): TalkControllerState & TalkControllerActions {
   const [state, setState] = useState<TalkControllerState>({
-    messages: mockMessages,
-    legacySubject: mockLegacySubject,
+    messages: [],
+    legacySubject: { id: '', fullName: '', lifespanText: '', bio: '', avatarUrl: '', accentIcon: 'heart' },
     inputText: '',
     talkState: 'idle',
     isLoading: false,
@@ -191,12 +190,10 @@ export function useTalkController(): TalkControllerState & TalkControllerActions
     setState(prev => ({ ...prev, isLoading: true, hasError: false, errorMessage: null }))
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
+      // Conversations are ephemeral — clear and start fresh
       setState(prev => ({
         ...prev,
-        messages: mockMessages, // In real app, this would be fresh data
+        messages: [],
         isLoading: false,
       }))
     } catch (error) {
@@ -213,20 +210,27 @@ export function useTalkController(): TalkControllerState & TalkControllerActions
   const loadVoiceModels = useCallback(async () => {
     try {
       console.log('[TALK] Loading voice models...')
-      const response = await fetch('/api/voice/models')
+      const response = await fetch('/api/voice/profiles')
       const data = await response.json()
       
-      console.log('[TALK] Models API response:', data)
-      
       if (data.success) {
-        console.log('[TALK] Found models:', data.models?.length || 0)
+        const profiles = data.data || []
+        const models: VoiceModel[] = profiles.map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          displayName: p.displayName || p.name,
+          status: (p.status || 'READY').toLowerCase(),
+          language: p.language || 'en',
+          sampleCount: p.sampleCount || 0,
+          createdAt: p.createdAt,
+          modelPath: p.modelPath,
+          similarityScore: p.similarityScore,
+        }))
         setState(prev => ({
           ...prev,
-          voiceModels: data.models || [],
-          selectedVoiceModel: data.models && data.models.length > 0 ? data.models[0] : null,
+          voiceModels: models,
+          selectedVoiceModel: models.length > 0 ? models[0] : null,
         }))
-      } else {
-        console.error('[TALK] Models API returned success=false:', data)
       }
     } catch (error: any) {
       console.error('[TALK] Failed to load voice models:', error)

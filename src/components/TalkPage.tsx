@@ -6,11 +6,10 @@ import { formatDistanceToNow } from 'date-fns'
 import { useTalkController } from '@/controllers/useTalkController'
 
 interface TalkPageProps {
-  messages: ConversationMessage[]
   legacySubject: LegacySubject
 }
 
-export function TalkPage({ messages, legacySubject }: TalkPageProps) {
+export function TalkPage({ legacySubject }: TalkPageProps) {
   const [isMuted, setIsMuted] = useState(false)
   const [isListening, setIsListening] = useState(false)
   const [isTyping, setIsTyping] = useState(false)
@@ -29,7 +28,7 @@ export function TalkPage({ messages, legacySubject }: TalkPageProps) {
 
   useEffect(() => {
     scrollToBottom()
-  }, [messages])
+  }, [controller.messages])
 
   const handleSendMessage = async () => {
     if (controller.inputText.trim()) {
@@ -137,7 +136,7 @@ export function TalkPage({ messages, legacySubject }: TalkPageProps) {
 
       {/* Messages List */}
       <Box sx={{ flexGrow: 1, overflow: 'auto', px: { xs: 2, md: 4 }, py: 4 }}>
-        {messages.map((message) => (
+        {controller.messages.map((message) => (
           <Box
             key={message.id}
             sx={{

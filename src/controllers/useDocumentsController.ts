@@ -1,6 +1,5 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { DocumentArtifact } from '@/types'
-import { mockDocuments } from '@/data/mockData'
 
 interface DocumentsControllerState {
   documents: DocumentArtifact[]
@@ -26,18 +25,59 @@ interface DocumentsControllerActions {
   closeShareDialog: () => void
 }
 
+function mapAssetType(mimeType: string): DocumentArtifact['type'] {
+  if (mimeType.includes('pdf')) return 'PDF'
+  if (mimeType.includes('image')) return 'Photo'
+  return 'Letter'
+}
+
 export function useDocumentsController(): DocumentsControllerState & DocumentsControllerActions {
   const [state, setState] = useState<DocumentsControllerState>({
-    documents: mockDocuments,
+    documents: [],
     selectedFilter: 'All',
     selectedDocuments: [],
-    isLoading: false,
+    isLoading: true,
     hasError: false,
     errorMessage: null,
     isUploading: false,
     showShareDialog: false,
     shareDocumentId: null,
   })
+
+  const fetchDocuments = useCallback(async () => {
+    setState(prev => ({ ...prev, isLoading: true, hasError: false, errorMessage: null }))
+
+    try {
+      const response = await fetch('/api/assets')
+      const data = await response.json()
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to load documents')
+      }
+
+      const documents: DocumentArtifact[] = (data.data.assets || []).map((a: any) => ({
+        id: a.id,
+        title: a.originalName || a.filename,
+        type: mapAssetType(a.mimeType),
+        uploadedAt: new Date(a.createdAt),
+        shareAction: 'Share',
+      }))
+
+      setState(prev => ({ ...prev, documents, isLoading: false }))
+    } catch (error: any) {
+      setState(prev => ({
+        ...prev,
+        isLoading: false,
+        hasError: true,
+        errorMessage: error.message || 'Failed to load documents',
+      }))
+    }
+  }, [])
+
+  // Load on mount
+  useEffect(() => {
+    fetchDocuments()
+  }, [fetchDocuments])
 
   const setSelectedFilter = useCallback((filter: string) => {
     setState(prev => ({ ...prev, selectedFilter: filter }))
@@ -75,14 +115,26 @@ export function useDocumentsController(): DocumentsControllerState & DocumentsCo
     }))
 
     try {
-      // Simulate upload
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const response = await fetch('/api/assets/upload', {
+        method: 'POST',
+        body: formData,
+      })
+
+      const data = await response.json()
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Upload failed')
+      }
+
+      // Add the new asset to the list immediately
       const newDoc: DocumentArtifact = {
-        id: Date.now().toString(),
-        title: file.name,
-        type: file.type.includes('pdf') ? 'PDF' : file.type.includes('image') ? 'Photo' : 'Handwritten',
-        uploadedAt: new Date(),
+        id: data.data.id,
+        title: data.data.originalName || file.name,
+        type: mapAssetType(data.data.mimeType || file.type),
+        uploadedAt: new Date(data.data.createdAt),
         shareAction: 'Share',
       }
 
@@ -113,8 +165,12 @@ export function useDocumentsController(): DocumentsControllerState & DocumentsCo
     setState(prev => ({ ...prev, isLoading: true, hasError: false, errorMessage: null }))
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      const response = await fetch(`/api/assets/${id}`, { method: 'DELETE' })
+      const data = await response.json()
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to delete document')
+      }
       
       setState(prev => ({
         ...prev,
@@ -122,37 +178,19 @@ export function useDocumentsController(): DocumentsControllerState & DocumentsCo
         selectedDocuments: prev.selectedDocuments.filter(docId => docId !== id),
         isLoading: false,
       }))
-    } catch (error) {
+    } catch (error: any) {
       setState(prev => ({
         ...prev,
         isLoading: false,
         hasError: true,
-        errorMessage: 'Failed to delete document',
+        errorMessage: error.message || 'Failed to delete document',
       }))
     }
   }, [])
 
   const refreshDocuments = useCallback(async () => {
-    setState(prev => ({ ...prev, isLoading: true, hasError: false, errorMessage: null }))
-    
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      setState(prev => ({
-        ...prev,
-        documents: mockDocuments, // In real app, this would be fresh data
-        isLoading: false,
-      }))
-    } catch (error) {
-      setState(prev => ({
-        ...prev,
-        isLoading: false,
-        hasError: true,
-        errorMessage: 'Failed to refresh documents',
-      }))
-    }
-  }, [])
+    await fetchDocuments()
+  }, [fetchDocuments])
 
   const closeShareDialog = useCallback(() => {
     setState(prev => ({
