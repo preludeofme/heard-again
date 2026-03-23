@@ -45,6 +45,7 @@ interface FamilyTreePageProps {
   people?: FamilyTreeData
   onPersonClick?: (personId: string) => void
   onAddPerson?: () => void
+  onEditRelationships?: (personId: string) => void
 }
 
 const defaultFamilyData: FamilyTreeData = {
@@ -65,7 +66,7 @@ const TreeLine = ({ height = 40, vertical = true }: { height?: number; vertical?
   />
 )
 
-export function FamilyTreePage({ people, onPersonClick, onAddPerson }: FamilyTreePageProps) {
+export function FamilyTreePage({ people, onPersonClick, onAddPerson, onEditRelationships }: FamilyTreePageProps) {
   const theme = useTheme()
   const familyData = people && (people.grandparents.length > 0 || people.parents.length > 0 || people.children.length > 0)
     ? people
@@ -201,8 +202,7 @@ export function FamilyTreePage({ people, onPersonClick, onAddPerson }: FamilyTre
   }
 
   const handleAddRelationship = (personId: string) => {
-    console.log('Add relationship for person:', personId)
-    // TODO: Open relationship editor
+    onEditRelationships?.(personId)
   }
 
   const handleZoomIn = () => {

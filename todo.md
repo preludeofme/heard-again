@@ -157,8 +157,8 @@
 - [x] FamilyTreePage.tsx - Wired to real people data from API
 - [x] Person detail modal/page
 - [x] Add/Edit person modal
-- [ ] Relationship editor
-- [ ] Family tree zoom/pan controls
+- [x] Relationship editor
+- [x] Family tree zoom/pan controls
 - [ ] Ability to merge families (in case multiple people create accounts and family trees) 
   - [ ] Need to figure out how to handle this such as matching family members then join the tree together
 ---

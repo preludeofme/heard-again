@@ -61,6 +61,7 @@ interface PersonData {
 interface PersonModalProps {
   open: boolean
   personId: string | null
+  initialTab?: 'overview' | 'relationships'
   onClose: () => void
   onSave?: (person: PersonData) => void
   onDelete?: (personId: string) => void
@@ -79,7 +80,7 @@ const RELATIONSHIP_TYPES = [
   { value: 'SPOUSE', label: 'Spouse/Partner' },
 ]
 
-export function PersonModal({ open, personId, onClose, onSave, onDelete }: PersonModalProps) {
+export function PersonModal({ open, personId, initialTab = 'overview', onClose, onSave, onDelete }: PersonModalProps) {
   const [person, setPerson] = useState<PersonData | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -130,9 +131,9 @@ export function PersonModal({ open, personId, onClose, onSave, onDelete }: Perso
       fetchPerson()
       loadAvailablePeople()
       setIsEditing(false)
-      setActiveTab(0)
+      setActiveTab(initialTab === 'relationships' ? 1 : 0)
     }
-  }, [open, personId, fetchPerson, loadAvailablePeople])
+  }, [open, personId, initialTab, fetchPerson, loadAvailablePeople])
 
   const handleCreateRelationship = async () => {
     if (!personId || !relationshipTargetId) return

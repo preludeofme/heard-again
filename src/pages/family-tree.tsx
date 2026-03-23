@@ -12,43 +12,87 @@ interface ApiPerson {
   displayName?: string
   avatarUrl?: string
   personType: string
-  relationships?: Array<{
-    relationshipType: string
-    relatedPerson: { id: string; firstName: string; lastName?: string }
-  }>
+  counts?: {
+    stories?: number
+    voiceProfiles?: number
+    relationships?: number
+  }
 }
 
-function mapPeopleToTree(people: ApiPerson[]) {
-  const grandparents: any[] = []
-  const parents: any[] = []
-  const children: any[] = []
+interface RelationshipEdge {
+  id: string
+  type: 'SPOUSE' | 'PARENT' | 'CHILD'
+  direction: 'outgoing' | 'incoming'
+}
+
+interface ApiPersonWithEdges extends ApiPerson {
+  relationshipEdges: RelationshipEdge[]
+}
+
+interface FamilyTreePerson {
+  id: string
+  name: string
+  role: string
+  avatar: string
+  memories?: number
+  selected?: boolean
+}
+
+interface FamilyTreeData {
+  grandparents: FamilyTreePerson[]
+  parents: FamilyTreePerson[]
+  children: FamilyTreePerson[]
+}
+
+function mapPeopleToTree(people: ApiPersonWithEdges[]): FamilyTreeData {
+  const grandparents: FamilyTreePerson[] = []
+  const parents: FamilyTreePerson[] = []
+  const children: FamilyTreePerson[] = []
 
   for (const p of people) {
+    const hasIncomingParent = p.relationshipEdges.some((r) => r.type === 'PARENT' && r.direction === 'incoming')
+    const hasOutgoingChild = p.relationshipEdges.some((r) => r.type === 'CHILD' && r.direction === 'outgoing')
+    const hasSpouse = p.relationshipEdges.some((r) => r.type === 'SPOUSE')
+
     const entry = {
       id: p.id,
       name: p.displayName || `${p.firstName}${p.lastName ? ' ' + p.lastName : ''}`,
-      role: p.personType === 'SUBJECT' ? 'Subject' : 'Family',
+      role: p.personType === 'SUBJECT' ? 'Subject' : 'Family Member',
       avatar: p.avatarUrl || '',
+      memories: p.counts?.stories || 0,
     }
 
-    // Simple generation assignment based on personType or default to parents
-    if (p.personType === 'SUBJECT') {
-      parents.push({ ...entry, memories: 0, selected: true })
-    } else {
-      children.push(entry)
+    if (hasOutgoingChild && !hasIncomingParent) {
+      grandparents.push(entry)
+      continue
     }
+
+    if (hasOutgoingChild || hasSpouse || p.personType === 'SUBJECT') {
+      parents.push({ ...entry, memories: 0, selected: true })
+      continue
+    }
+
+    if (hasIncomingParent) {
+      children.push(entry)
+      continue
+    }
+
+    parents.push(entry)
   }
 
-  // If no parents assigned, promote first person
+  if (parents.length === 0 && grandparents.length > 0) {
+    parents.push(grandparents.shift()!)
+  }
+
   if (parents.length === 0 && children.length > 0) {
-    parents.push({ ...children.shift()!, selected: true })
+    parents.push(children.shift()!)
   }
 
   return { grandparents, parents, children }
 }
 
 export default function FamilyTree() {
-  const [treeData, setTreeData] = useState<any>(null)
+  const [treeData, setTreeData] = useState<FamilyTreeData | null>(null)
   const [people, setPeople] = useState<ApiPerson[]>([])
   const [isLoading, setIsLoading] = useState(true)
   
@@ -56,14 +100,31 @@ export default function FamilyTree() {
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null)
   const [isPersonModalOpen, setIsPersonModalOpen] = useState(false)
   const [isAddPersonModalOpen, setIsAddPersonModalOpen] = useState(false)
+  const [personModalInitialTab, setPersonModalInitialTab] = useState<'overview' | 'relationships'>('overview')
 
   const fetchPeople = useCallback(async () => {
     try {
       const res = await fetch('/api/people')
       const data = await res.json()
       if (data.success && data.data) {
-        setPeople(data.data)
-        setTreeData(mapPeopleToTree(data.data))
+        const basePeople = data.data as ApiPerson[]
+        const peopleWithEdges = await Promise.all(basePeople.map(async (person): Promise<ApiPersonWithEdges> => {
+          try {
+            const relationshipsRes = await fetch(`/api/people/${person.id}/relationships`)
+            const relationshipsData = await relationshipsRes.json()
+            return {
+              ...person,
+              relationshipEdges: relationshipsRes.ok && relationshipsData.success
+                ? (relationshipsData.data as RelationshipEdge[])
+                : [],
+            }
+          } catch {
+            return { ...person, relationshipEdges: [] }
+          }
+        }))
+
+        setPeople(basePeople)
+        setTreeData(mapPeopleToTree(peopleWithEdges))
       }
     } catch {
       // Fall through to render with empty data
@@ -77,6 +138,13 @@ export default function FamilyTree() {
   }, [fetchPeople])
 
   const handlePersonClick = (personId: string) => {
+    setPersonModalInitialTab('overview')
+    setSelectedPersonId(personId)
+    setIsPersonModalOpen(true)
+  }
+
+  const handleEditRelationships = (personId: string) => {
+    setPersonModalInitialTab('relationships')
     setSelectedPersonId(personId)
     setIsPersonModalOpen(true)
   }
@@ -137,14 +205,16 @@ export default function FamilyTree() {
         <meta name="description" content="Chart your family legacy across generations." />
       </Head>
       <FamilyTreePage 
-        people={treeData} 
+        people={treeData ?? undefined} 
         onPersonClick={handlePersonClick}
         onAddPerson={() => setIsAddPersonModalOpen(true)}
+        onEditRelationships={handleEditRelationships}
       />
       
       <PersonModal
         open={isPersonModalOpen}
         personId={selectedPersonId}
+        initialTab={personModalInitialTab}
         onClose={() => {
           setIsPersonModalOpen(false)
           setSelectedPersonId(null)
