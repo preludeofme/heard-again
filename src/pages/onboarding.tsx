@@ -85,6 +85,9 @@ export default function OnboardingPage() {
       // Update session to reflect onboarding is complete
       await update()
 
+      // Small delay to ensure transaction is visible
+      await new Promise((resolve) => setTimeout(resolve, 500))
+
       // Redirect to dashboard
       router.push('/dashboard')
     } catch (err: any) {

@@ -38,28 +38,32 @@ export default apiHandler({
 
     const workspace = userWithWorkspace.defaultWorkspace
 
-    // Update workspace with family name
-    await prisma.workspace.update({
-      where: { id: workspace.id },
-      data: {
-        name: familyName,
-      },
+    // Use transaction to ensure all operations succeed or fail together
+    const result = await prisma.$transaction(async (tx) => {
+      // Update workspace with family name
+      const updatedWorkspace = await tx.workspace.update({
+        where: { id: workspace.id },
+        data: {
+          name: familyName,
+        },
+      })
+
+      // Create person record for the user
+      const person = await tx.person.create({
+        data: {
+          workspaceId: workspace.id,
+          firstName: firstName,
+          lastName: lastName || null,
+          displayName: `${firstName} ${lastName || ''}`.trim(),
+          personType: 'FAMILY',
+          createdById: user.id,
+        },
+      })
+
+      return { updatedWorkspace, person }
     })
 
-    // Create person record for the user
-    const person = await prisma.person.create({
-      data: {
-        workspaceId: workspace.id,
-        firstName: firstName,
-        lastName: lastName || null,
-        displayName: `${firstName} ${lastName || ''}`.trim(),
-        personType: 'FAMILY',
-        createdById: user.id,
-      },
-    })
-
-    // Update user to mark onboarding as complete
-    // We'll use the existing displayName field if it's not set
+    // Update user display name outside transaction (optional field)
     if (!user.displayName) {
       await prisma.user.update({
         where: { id: user.id },
@@ -72,13 +76,13 @@ export default apiHandler({
     return successResponse(res, {
       message: 'Onboarding completed successfully',
       workspace: {
-        id: workspace.id,
+        id: result.updatedWorkspace.id,
         name: familyName,
       },
       person: {
-        id: person.id,
-        firstName: person.firstName,
-        lastName: person.lastName,
+        id: result.person.id,
+        firstName: result.person.firstName,
+        lastName: result.person.lastName,
       },
     })
   },

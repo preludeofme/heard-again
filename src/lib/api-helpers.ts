@@ -13,7 +13,7 @@ export interface ApiErrorResponse {
   success: false
   error: string
   code?: string
-  details?: any
+  details?: unknown
 }
 
 export type ApiResponse<T = any> = ApiSuccessResponse<T> | ApiErrorResponse
@@ -27,14 +27,15 @@ export function errorResponse(
   message: string,
   statusCode = 500,
   code?: string,
-  details?: any
+  details?: unknown
 ) {
-  return res.status(statusCode).json({
+  const response: ApiErrorResponse = {
     success: false,
     error: message,
-    ...(code && { code }),
-    ...(details && { details }),
-  } as ApiErrorResponse)
+  }
+  if (code) response.code = code
+  if (details !== undefined) response.details = details
+  return res.status(statusCode).json(response)
 }
 
 // ============================================
@@ -44,9 +45,9 @@ export function errorResponse(
 export class AppError extends Error {
   public statusCode: number
   public code: string
-  public details?: any
+  public details?: unknown
 
-  constructor(message: string, statusCode = 500, code = 'INTERNAL_ERROR', details?: any) {
+  constructor(message: string, statusCode = 500, code = 'INTERNAL_ERROR', details?: unknown) {
     super(message)
     this.name = 'AppError'
     this.statusCode = statusCode
@@ -66,7 +67,7 @@ export const Errors = {
     new AppError(message, 401, 'UNAUTHORIZED'),
   forbidden: (message = 'Not authorized') =>
     new AppError(message, 403, 'FORBIDDEN'),
-  badRequest: (message: string, details?: any) =>
+  badRequest: (message: string, details?: unknown) =>
     new AppError(message, 400, 'BAD_REQUEST', details),
   conflict: (message: string) =>
     new AppError(message, 409, 'CONFLICT'),
@@ -109,18 +110,19 @@ export function apiHandler(handlers: RouteHandlers): ApiHandler {
       await handlers[method]!(req, res)
       const duration = Date.now() - startTime
       console.log(`[API] ${endpoint} - ${res.statusCode} (${duration}ms)`)
-    } catch (error: any) {
+    } catch (error: unknown) {
       const duration = Date.now() - startTime
-      console.error(`[API ERROR] ${endpoint} (${duration}ms):`, error.message)
+      const err = error instanceof Error ? error : new Error(String(error))
+      console.error(`[API ERROR] ${endpoint} (${duration}ms):`, err.message)
 
       if (error instanceof AppError) {
         return errorResponse(res, error.message, error.statusCode, error.code, error.details)
       }
 
-      if (error.code === 'P2002') {
+      if (err && 'code' in err && err.code === 'P2002') {
         return errorResponse(res, 'A record with this data already exists', 409, 'UNIQUE_VIOLATION')
       }
-      if (error.code === 'P2025') {
+      if (err && 'code' in err && err.code === 'P2025') {
         return errorResponse(res, 'Record not found', 404, 'NOT_FOUND')
       }
 

@@ -3,9 +3,9 @@ import { NextRequest, NextResponse } from 'next/server'
 export class ApiError extends Error {
   public statusCode: number
   public code: string
-  public details?: any
+  public details?: unknown
 
-  constructor(message: string, statusCode: number = 500, code?: string, details?: any) {
+  constructor(message: string, statusCode: number = 500, code?: string, details?: unknown) {
     super(message)
     this.name = 'ApiError'
     this.statusCode = statusCode
@@ -19,15 +19,16 @@ export class ApiError extends Error {
   }
 }
 
-export function logApiError(error: any, context: {
+export function logApiError(error: unknown, context: {
   endpoint: string
   method: string
   userId?: string
   requestId?: string
-  body?: any
+  body?: unknown
 }) {
   const timestamp = new Date().toISOString()
   const { endpoint, method, userId, requestId, body } = context
+  const err = error instanceof Error ? error : new Error(String(error))
   
   console.error(`\n=== API ERROR LOG ===`)
   console.error(`Timestamp: ${timestamp}`)
@@ -44,20 +45,20 @@ export function logApiError(error: any, context: {
       console.error(`Details:`, error.details)
     }
   } else {
-    console.error(`Error Type: ${error.constructor.name}`)
-    console.error(`Message: ${error.message}`)
+    console.error(`Error Type: ${err.constructor.name}`)
+    console.error(`Message: ${err.message}`)
   }
   
-  if (body && Object.keys(body).length > 0) {
+  if (body && typeof body === 'object' && Object.keys(body).length > 0) {
     console.error(`Request Body:`, JSON.stringify(body, null, 2))
   }
   
-  console.error(`Stack Trace:\n${error.stack}`)
+  console.error(`Stack Trace:\n${err.stack}`)
   console.error(`=== END ERROR LOG ===\n`)
 }
 
-export function createApiResponse(success: boolean, data?: any, error?: string, statusCode: number = 200) {
-  const response: any = { success }
+export function createApiResponse(success: boolean, data?: unknown, error?: string, statusCode: number = 200) {
+  const response: { success: boolean; data?: unknown; error?: string; statusCode?: number } = { success }
   
   if (success && data !== undefined) {
     response.data = data
@@ -71,8 +72,8 @@ export function createApiResponse(success: boolean, data?: any, error?: string, 
   return response
 }
 
-export function handleApiRoute(handler: (req: Request, context?: any) => Promise<any>) {
-  return async (req: Request, context?: any) => {
+export function handleApiRoute(handler: (req: Request, context?: unknown) => Promise<unknown>) {
+  return async (req: Request, context?: unknown) => {
     const startTime = Date.now()
     const requestId = req.headers.get('x-request-id') || 'unknown'
     const url = new URL(req.url)
@@ -90,8 +91,9 @@ export function handleApiRoute(handler: (req: Request, context?: any) => Promise
       console.log(`[${new Date().toISOString()}] Success: ${endpoint} (${duration}ms)`)
       
       return result
-    } catch (error: any) {
+    } catch (error: unknown) {
       const duration = Date.now() - startTime
+      const err = error instanceof Error ? error : new Error(String(error))
       
       // Log error with full context
       logApiError(error, {
@@ -110,7 +112,7 @@ export function handleApiRoute(handler: (req: Request, context?: any) => Promise
       }
       
       // Handle Prisma errors
-      if (error.name === 'PrismaClientKnownRequestError') {
+      if (err.name === 'PrismaClientKnownRequestError') {
         return NextResponse.json(
           createApiResponse(false, undefined, 'Database operation failed', 500),
           { status: 500 }
@@ -118,7 +120,7 @@ export function handleApiRoute(handler: (req: Request, context?: any) => Promise
       }
       
       // Handle validation errors
-      if (error.name === 'ZodError') {
+      if (err.name === 'ZodError') {
         return NextResponse.json(
           createApiResponse(false, undefined, 'Invalid input data', 400),
           { status: 400 }
@@ -134,7 +136,7 @@ export function handleApiRoute(handler: (req: Request, context?: any) => Promise
   }
 }
 
-async function safeCloneJson(req: Request): Promise<any> {
+async function safeCloneJson(req: Request): Promise<unknown> {
   try {
     const clone = req.clone()
     return await clone.json()

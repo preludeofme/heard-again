@@ -447,9 +447,187 @@ Stories and media will grow quickly.
 
 ---
 
-# 9. Observability Requirements
+# 9. Containerization & Deployment Portability Requirements
 
-## 9.1 Logging
+This section exists to ensure the application is easy to deploy locally, easy to run in cloud infrastructure, and easy to scale without major packaging changes.
+
+## 9.1 Container-First Packaging Strategy
+The application should be packaged so that the same core services can run:
+- locally for self-hosted users
+- in staging
+- in production cloud environments
+- in worker-only environments
+
+### Requirements
+- each major service should have its own container image
+- images should be environment-configurable via env vars or mounted config
+- no environment-specific code branches baked into images
+- images should be reproducible and versioned
+- health checks should be defined for each container
+
+### Review Questions
+- Can the API run the same way locally and in production?
+- Are the worker images identical between staging and production except for configuration?
+- Can a self-hosted user deploy from published images rather than rebuilding source?
+
+## 9.2 Separate Containers by Responsibility
+Avoid one huge container trying to do everything.
+
+### Recommended service containers
+- web frontend
+- API/application service
+- worker service(s)
+- tunnel/instance agent
+- optional transcription worker
+- optional GPU inference worker
+
+### Requirements
+- stateless services separated from stateful dependencies
+- database not bundled into app container
+- object storage not bundled into app container
+- queue/broker not bundled into app container for production
+- containers should be replaceable independently
+
+### Review Questions
+- Can API containers scale independently from workers?
+- Can GPU workers scale independently from CPU workers?
+- Can the tunnel agent be upgraded separately from the main app?
+
+## 9.3 Local Self-Hosted Distribution
+Self-hosting should be easy enough that users do not need to understand the entire architecture.
+
+### Requirements
+- provide a Docker Compose based deployment for self-hosted users
+- clearly separate required services from optional services
+- provide profiles or variants for:
+  - local-only
+  - connected/tunneled
+  - hybrid cloud compute
+- local data volumes must be explicit and durable
+- secrets must be externalized, not hardcoded into compose files
+
+### Review Questions
+- Can a self-hosted user start with one command or a small number of steps?
+- Are persistent volumes documented?
+- Can a user run without GPU services if they want cloud compute only?
+- Can a user disable cloud integrations entirely?
+
+## 9.4 Cloud Deployment Strategy
+Containers should support a future move to orchestrated environments.
+
+### Requirements
+- services should be runnable in Kubernetes, Nomad, ECS, or similar later
+- no dependency on local docker networking assumptions in app logic
+- readiness and liveness checks should exist
+- graceful shutdown handling should exist
+- workers should stop accepting new work before shutdown
+
+### Review Questions
+- Can these services be scheduled across multiple nodes later?
+- Do containers assume stable local hostnames that will break in orchestration?
+- Do workers flush state or update jobs properly during shutdown?
+
+## 9.5 GPU Containerization
+GPU-powered workloads need special attention.
+
+### Requirements
+- GPU worker images should be separate from general API images
+- model dependencies should not bloat every application container
+- CUDA/runtime compatibility should be pinned and documented
+- startup scripts should validate GPU availability where required
+- CPU fallback behavior should be explicit, not accidental
+
+### Review Questions
+- Are GPU images isolated from non-GPU services?
+- Can the platform scale GPU workers separately from everything else?
+- Can self-hosted users choose between GPU-enabled and non-GPU deployment variants?
+- Is the NVIDIA runtime requirement documented clearly?
+
+## 9.6 Configuration & Secrets Management
+Containerized deployments fail at scale when secrets/config are ad hoc.
+
+### Requirements
+- all configuration should come from env vars, secret mounts, or config files
+- secrets must not be baked into images
+- cloud and self-host modes should use the same config keys where possible
+- default values should be safe for local development but not insecure for production
+
+### Review Questions
+- Can all services be configured without rebuilding images?
+- Are JWT keys, API keys, tunnel tokens, and DB credentials externalized?
+- Are config differences between cloud and self-host documented?
+
+## 9.7 Storage & Volume Strategy for Containers
+Containerization should not hide storage assumptions.
+
+### Requirements
+- persistent data directories must be explicit
+- media storage paths must be mountable
+- temporary processing directories should be configurable
+- logs should not rely solely on local container disk
+- ephemeral containers must not be the only copy of important artifacts
+
+### Review Questions
+- If a container restarts, what data is lost?
+- Are user uploads and generated files stored on durable volumes or object storage?
+- Can self-hosted users back up their mounted volumes easily?
+
+## 9.8 Image Size and Build Efficiency
+Large, inefficient images hurt local adoption and cloud deployment speed.
+
+### Requirements
+- use multi-stage builds where possible
+- keep runtime images smaller than build images
+- separate optional model/data downloads from app boot when practical
+- avoid shipping development tooling in production images
+
+### Review Questions
+- Are images unnecessarily large?
+- Are frontend, API, and worker images trimmed for runtime?
+- Can model assets be mounted or downloaded separately instead of baked into every image?
+
+## 9.9 Versioning & Upgrade Strategy
+Containerized systems need clean upgrade behavior.
+
+### Requirements
+- all images should use explicit version tags
+- migrations should be coordinated and safe
+- rollback strategy should be documented
+- self-hosted users should know how to upgrade without losing data
+- instance version reporting should be available to the control plane
+
+### Review Questions
+- Can a self-hosted user upgrade safely?
+- Are schema migrations backward/forward compatibility concerns documented?
+- Can the control plane detect unsupported old versions?
+
+## 9.10 Recommended Packaging Deliverables
+The implementation should eventually provide:
+
+### For self-hosted users
+- `docker-compose.yml` for minimum local install
+- optional `docker-compose.connected.yml` or profiles for tunnel mode
+- optional `docker-compose.gpu.yml` for local inference
+- `.env.example`
+- upgrade notes
+- backup/restore instructions
+
+### For cloud/infrastructure
+- Dockerfiles per service
+- worker-specific Dockerfiles where needed
+- health checks
+- deployment manifests/templates later if needed
+
+### Review Questions
+- Is the containerization strategy helping both local hosting and scale?
+- Does it reduce setup friction for self-hosted users?
+- Does it keep production services independently scalable?
+
+---
+
+# 10. Observability Requirements
+
+## 10.1 Logging
 The system must produce structured logs.
 
 ### Required fields
@@ -467,7 +645,7 @@ The system must produce structured logs.
 - Are secrets redacted from logs?
 - Are tenant-sensitive payloads avoided?
 
-## 9.2 Metrics
+## 10.2 Metrics
 Track metrics from day one.
 
 ### Minimum metrics
@@ -487,7 +665,7 @@ Track metrics from day one.
 - Can the team separate API slowdown from worker backlog?
 - Can the team track cost-driving usage?
 
-## 9.3 Tracing
+## 10.3 Tracing
 Distributed tracing is strongly recommended.
 
 ### Review Questions
@@ -496,7 +674,7 @@ Distributed tracing is strongly recommended.
 
 ---
 
-# 10. Performance Review Checklist
+# 11. Performance Review Checklist
 
 The implementation agent should explicitly verify the following.
 
@@ -546,9 +724,17 @@ The implementation agent should explicitly verify the following.
 - Cloud compute retention policy defined
 - Consent and voice usage checks enforced
 
+## Containerization
+- Services split into appropriate containers
+- Self-hosted deployment artifacts exist
+- GPU services isolated from general app services
+- Persistent volumes are explicit
+- Images are versioned and reproducible
+- Services can scale independently in production
+
 ---
 
-# 11. Migration & Portability Requirements
+# 12. Migration & Portability Requirements
 
 The system should support movement between deployment modes.
 
@@ -565,7 +751,7 @@ The system should support movement between deployment modes.
 
 ---
 
-# 12. Cost-Aware Architecture Requirements
+# 13. Cost-Aware Architecture Requirements
 
 The architecture must protect margins as users grow.
 
@@ -583,7 +769,7 @@ The architecture must protect margins as users grow.
 
 ---
 
-# 13. Recommended Service Boundaries
+# 14. Recommended Service Boundaries
 
 A clean scalable shape would look like this:
 
@@ -615,7 +801,7 @@ A clean scalable shape would look like this:
 
 ---
 
-# 14. Anti-Patterns to Avoid
+# 15. Anti-Patterns to Avoid
 
 The implementation agent should flag any of the following:
 
@@ -632,10 +818,14 @@ The implementation agent should flag any of the following:
 - storing sensitive raw voice assets in cloud without explicit policy
 - no cleanup of temporary processing artifacts
 - no observability for queues and workers
+- one giant all-in-one container as the only deployment unit
+- bundling GPU dependencies into every service image
+- hiding persistent storage inside container filesystems
+- requiring self-hosted users to rebuild images just to configure the app
 
 ---
 
-# 15. Required Final Review Output from the Implementation Agent
+# 16. Required Final Review Output from the Implementation Agent
 
 The implementation agent should produce a written review covering:
 
@@ -647,16 +837,17 @@ The implementation agent should produce a written review covering:
 6. Self-hosted tunnel architecture assessment
 7. Database and storage scalability assessment
 8. GPU compute scaling assessment
-9. Observability gaps
-10. Security gaps
-11. Cost-risk areas
-12. Migration/portability gaps
-13. Recommended refactors before launch
-14. Recommended refactors that can wait until after launch
+9. Containerization and deployment portability assessment
+10. Observability gaps
+11. Security gaps
+12. Cost-risk areas
+13. Migration/portability gaps
+14. Recommended refactors before launch
+15. Recommended refactors that can wait until after launch
 
 ---
 
-# 16. Final Instruction to the Implementation Agent
+# 17. Final Instruction to the Implementation Agent
 
 Do not review this application only as a normal SaaS app.
 
@@ -669,3 +860,5 @@ Review it as a system that must support:
 - future growth in media volume, family graph size, and generation volume
 
 The architecture should be considered successful only if it can scale technically and operationally across all of those modes without requiring a major redesign.
+
+Containerization should be evaluated as a first-class part of that design, not as an afterthought.

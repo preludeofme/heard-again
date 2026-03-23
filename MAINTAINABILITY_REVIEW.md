@@ -424,3 +424,54 @@ export function useVoiceLab() {
   return { ...profiles, ...training, ...documents };
 }
 ```
+
+---
+
+## Checklist: Items to Complete
+
+Based on the March 2026 maintainability review, the following items need to be completed:
+
+### Phase 1: Type Safety (Priority: HIGH)
+- [ ] Replace `any` in `/src/lib/api-helpers.ts` (ApiSuccessResponse, ApiErrorResponse details)
+- [ ] Replace `any` in `/src/lib/validation.ts` (12 instances)
+- [ ] Replace `any` in `/src/lib/api-logger.ts` (10 instances)
+- [ ] Type remaining controller files (useVoiceLabController.ts if legacy remains)
+- [ ] Add strict typing to error details in apiHandler wrapper
+
+### Phase 2: Service Layer Completion (Priority: HIGH)
+- [ ] Migrate `/src/pages/api/voice/synthesize.ts` to use VoiceService
+- [ ] Migrate `/src/pages/api/search/index.ts` to use SearchService
+- [ ] Migrate `/src/pages/api/search/suggestions.ts` to use SearchService
+- [ ] Migrate `/src/pages/api/people/[id]/relationships.ts` to use RelationshipService
+- [ ] Migrate `/src/pages/api/instance/tunnel.ts` to use InstanceService
+- [ ] Ensure all API routes are < 40 lines and delegate to services
+
+### Phase 3: Error Handling Standardization (Priority: MEDIUM)
+- [ ] Standardize controller error handling to use AppError patterns
+- [ ] Remove `error: any` patterns from all controllers
+- [ ] Implement typed error classification (NETWORK_ERROR, VALIDATION_ERROR, etc.)
+
+### Phase 4: Cleanup (Priority: MEDIUM)
+- [ ] Address TODO/FIXME in `/src/components/pages/FamilyTreePage.tsx` (3 items)
+- [ ] Address TODO/FIXME in `/src/controllers/useDocumentUpload.ts` (3 items)
+- [ ] Address TODO/FIXME in `/src/mappers/documentMapper.ts` (3 items)
+- [ ] Consolidate duplicate modal components (`AddPersonModal` vs `AddEditPersonModal`)
+- [ ] Remove hardcoded values scattered across codebase
+
+### Phase 5: Legacy Removal (Priority: LOW)
+- [ ] Remove legacy controller files once decomposition is stable
+- [ ] Remove global type declarations from `/src/types/voice.ts` if still present
+- [ ] Clean up unused imports across codebase
+
+### Completion Criteria
+- [ ] Zero `any` usage in `/src/lib/` and `/src/controllers/`
+- [ ] All API routes use service layer exclusively
+- [ ] All controllers under 150 lines with single responsibility
+- [ ] All tests passing
+- [ ] Score target: 80+/100
+
+---
+
+**Last Updated:** March 23, 2026  
+**Current Score:** 72/100  
+**Target Score:** 80+/100
