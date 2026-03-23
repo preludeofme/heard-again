@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react'
 import { MemoryWallItem } from '@/types'
+import { ApiError } from '@/lib/errors'
 
 interface DashboardStats {
   people: number
@@ -63,12 +64,13 @@ export function useDashboardController(): DashboardControllerState & DashboardCo
         familyMembers: data.data.familyMembers || [],
         isLoading: false,
       }))
-    } catch (error: any) {
+    } catch (error) {
+      const apiError = ApiError.fromError(error)
       setState(prev => ({
         ...prev,
         isLoading: false,
         hasError: true,
-        errorMessage: error.message || 'Failed to load dashboard',
+        errorMessage: apiError.message,
       }))
     }
   }, [])

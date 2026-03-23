@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react'
 import { DocumentArtifact } from '@/types'
+import { ApiError } from '@/lib/errors'
 
 interface DocumentsControllerState {
   documents: DocumentArtifact[]
@@ -23,6 +24,14 @@ interface DocumentsControllerActions {
   deleteDocument: (id: string) => Promise<void>
   refreshDocuments: () => Promise<void>
   closeShareDialog: () => void
+}
+
+interface AssetApiResponse {
+  id: string
+  originalName: string
+  filename: string
+  mimeType: string
+  createdAt: string
 }
 
 function mapAssetType(mimeType: string): DocumentArtifact['type'] {
@@ -55,7 +64,7 @@ export function useDocumentsController(): DocumentsControllerState & DocumentsCo
         throw new Error(data.error || 'Failed to load documents')
       }
 
-      const documents: DocumentArtifact[] = (data.data.assets || []).map((a: any) => ({
+      const documents: DocumentArtifact[] = (data.data.assets || []).map((a: AssetApiResponse) => ({
         id: a.id,
         title: a.originalName || a.filename,
         type: mapAssetType(a.mimeType),
@@ -64,12 +73,13 @@ export function useDocumentsController(): DocumentsControllerState & DocumentsCo
       }))
 
       setState(prev => ({ ...prev, documents, isLoading: false }))
-    } catch (error: any) {
+    } catch (error) {
+      const apiError = ApiError.fromError(error)
       setState(prev => ({
         ...prev,
         isLoading: false,
         hasError: true,
-        errorMessage: error.message || 'Failed to load documents',
+        errorMessage: apiError.message,
       }))
     }
   }, [])
@@ -178,12 +188,13 @@ export function useDocumentsController(): DocumentsControllerState & DocumentsCo
         selectedDocuments: prev.selectedDocuments.filter(docId => docId !== id),
         isLoading: false,
       }))
-    } catch (error: any) {
+    } catch (error) {
+      const apiError = ApiError.fromError(error)
       setState(prev => ({
         ...prev,
         isLoading: false,
         hasError: true,
-        errorMessage: error.message || 'Failed to delete document',
+        errorMessage: apiError.message,
       }))
     }
   }, [])

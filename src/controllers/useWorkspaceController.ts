@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react'
+import { ApiError } from '@/lib/errors'
 
 export interface Workspace {
   id: string
@@ -82,12 +83,13 @@ export function useWorkspaceController(): WorkspaceControllerState & WorkspaceCo
         workspaces: data.data || [],
         isLoading: false,
       }))
-    } catch (error: any) {
+    } catch (error) {
+      const apiError = ApiError.fromError(error)
       setState(prev => ({
         ...prev,
         isLoading: false,
         hasError: true,
-        errorMessage: error.message || 'Failed to load workspaces',
+        errorMessage: apiError.message,
       }))
     }
   }, [])
@@ -108,12 +110,13 @@ export function useWorkspaceController(): WorkspaceControllerState & WorkspaceCo
         currentWorkspace: data.data,
         isLoading: false,
       }))
-    } catch (error: any) {
+    } catch (error) {
+      const apiError = ApiError.fromError(error)
       setState(prev => ({
         ...prev,
         isLoading: false,
         hasError: true,
-        errorMessage: error.message || 'Failed to load workspace details',
+        errorMessage: apiError.message,
       }))
     }
   }, [])
@@ -142,12 +145,13 @@ export function useWorkspaceController(): WorkspaceControllerState & WorkspaceCo
       }))
 
       return newWorkspace
-    } catch (error: any) {
+    } catch (error) {
+      const apiError = ApiError.fromError(error)
       setState(prev => ({
         ...prev,
         isCreating: false,
         hasError: true,
-        errorMessage: error.message || 'Failed to create workspace',
+        errorMessage: apiError.message,
       }))
       return null
     }
@@ -180,12 +184,13 @@ export function useWorkspaceController(): WorkspaceControllerState & WorkspaceCo
       }))
 
       return true
-    } catch (error: any) {
+    } catch (error) {
+      const apiError = ApiError.fromError(error)
       setState(prev => ({
         ...prev,
         isUpdating: false,
         hasError: true,
-        errorMessage: error.message || 'Failed to update workspace',
+        errorMessage: apiError.message,
       }))
       return false
     }
@@ -212,12 +217,13 @@ export function useWorkspaceController(): WorkspaceControllerState & WorkspaceCo
       }))
 
       return true
-    } catch (error: any) {
+    } catch (error) {
+      const apiError = ApiError.fromError(error)
       setState(prev => ({
         ...prev,
         isDeleting: false,
         hasError: true,
-        errorMessage: error.message || 'Failed to delete workspace',
+        errorMessage: apiError.message,
       }))
       return false
     }
@@ -243,11 +249,12 @@ export function useWorkspaceController(): WorkspaceControllerState & WorkspaceCo
       }))
 
       return true
-    } catch (error: any) {
+    } catch (error) {
+      const apiError = ApiError.fromError(error)
       setState(prev => ({
         ...prev,
         hasError: true,
-        errorMessage: error.message || 'Failed to switch workspace',
+        errorMessage: apiError.message,
       }))
       return false
     }

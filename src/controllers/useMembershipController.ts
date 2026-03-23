@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import { ApiError } from '@/lib/errors'
 
 export interface WorkspaceMember {
   id: string
@@ -78,12 +79,13 @@ export function useMembershipController(): MembershipControllerState & Membershi
         members: data.data || [],
         isLoadingMembers: false,
       }))
-    } catch (error: any) {
+    } catch (error) {
+      const apiError = ApiError.fromError(error)
       setState(prev => ({
         ...prev,
         isLoadingMembers: false,
         hasError: true,
-        errorMessage: error.message || 'Failed to load members',
+        errorMessage: apiError.message,
       }))
     }
   }, [])
@@ -104,12 +106,13 @@ export function useMembershipController(): MembershipControllerState & Membershi
         invites: data.data || [],
         isLoadingInvites: false,
       }))
-    } catch (error: any) {
+    } catch (error) {
+      const apiError = ApiError.fromError(error)
       setState(prev => ({
         ...prev,
         isLoadingInvites: false,
         hasError: true,
-        errorMessage: error.message || 'Failed to load invites',
+        errorMessage: apiError.message,
       }))
     }
   }, [])
@@ -136,12 +139,13 @@ export function useMembershipController(): MembershipControllerState & Membershi
       }))
 
       return true
-    } catch (error: any) {
+    } catch (error) {
+      const apiError = ApiError.fromError(error)
       setState(prev => ({
         ...prev,
         isInviting: false,
         hasError: true,
-        errorMessage: error.message || 'Failed to send invite',
+        errorMessage: apiError.message,
       }))
       return false
     }
@@ -171,12 +175,13 @@ export function useMembershipController(): MembershipControllerState & Membershi
       }))
 
       return true
-    } catch (error: any) {
+    } catch (error) {
+      const apiError = ApiError.fromError(error)
       setState(prev => ({
         ...prev,
         isUpdatingMember: false,
         hasError: true,
-        errorMessage: error.message || 'Failed to update member role',
+        errorMessage: apiError.message,
       }))
       return false
     }
@@ -202,12 +207,13 @@ export function useMembershipController(): MembershipControllerState & Membershi
       }))
 
       return true
-    } catch (error: any) {
+    } catch (error) {
+      const apiError = ApiError.fromError(error)
       setState(prev => ({
         ...prev,
         isRemovingMember: false,
         hasError: true,
-        errorMessage: error.message || 'Failed to remove member',
+        errorMessage: apiError.message,
       }))
       return false
     }
@@ -232,11 +238,12 @@ export function useMembershipController(): MembershipControllerState & Membershi
       }))
 
       return true
-    } catch (error: any) {
+    } catch (error) {
+      const apiError = ApiError.fromError(error)
       setState(prev => ({
         ...prev,
         hasError: true,
-        errorMessage: error.message || 'Failed to cancel invite',
+        errorMessage: apiError.message,
       }))
       return false
     }
@@ -254,11 +261,12 @@ export function useMembershipController(): MembershipControllerState & Membershi
       }
 
       return true
-    } catch (error: any) {
+    } catch (error) {
+      const apiError = ApiError.fromError(error)
       setState(prev => ({
         ...prev,
         hasError: true,
-        errorMessage: error.message || 'Failed to accept invite',
+        errorMessage: apiError.message,
       }))
       return false
     }
@@ -276,11 +284,12 @@ export function useMembershipController(): MembershipControllerState & Membershi
       }
 
       return true
-    } catch (error: any) {
+    } catch (error) {
+      const apiError = ApiError.fromError(error)
       setState(prev => ({
         ...prev,
         hasError: true,
-        errorMessage: error.message || 'Failed to decline invite',
+        errorMessage: apiError.message,
       }))
       return false
     }
