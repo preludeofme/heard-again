@@ -104,6 +104,7 @@ model Workspace {
   importJobs  ImportJob[]
   exportJobs  ExportJob[]
   voiceConsents VoiceConsent[]
+  familyUnits FamilyUnit[]
   defaultForUsers User[] @relation("UserDefaultWorkspace")
   
   @@index([ownerId])
@@ -211,6 +212,159 @@ enum ConsentType {
   SELF
   FAMILY_ATTESTATION
   ESTATE_REPRESENTATIVE
+  OTHER
+}
+
+model PersonName {
+  id        String   @id @default(uuid())
+
+  personId  String
+  person    Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  nameType  PersonNameType @default(BIRTH)
+  givenName String
+  surname   String?
+  prefix    String?
+  suffix    String?
+  nickname  String?
+  isPrimary Boolean @default(false)
+
+  startDate DateTime?
+  endDate   DateTime?
+
+  gedcomXref String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([personId, isPrimary])
+  @@unique([personId, gedcomXref])
+}
+
+enum PersonNameType {
+  BIRTH
+  MARRIED
+  AKA
+  RELIGIOUS
+  OTHER
+}
+
+model PersonEvent {
+  id        String   @id @default(uuid())
+
+  personId  String
+  person    Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  eventType PersonEventType
+  eventDate DateTime?
+  place     String?
+  description String?
+  sourceCitation String?
+  isPrimary Boolean @default(false)
+
+  gedcomXref String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([personId, eventType, eventDate])
+  @@unique([personId, gedcomXref])
+}
+
+enum PersonEventType {
+  BIRTH
+  BAPTISM
+  DEATH
+  BURIAL
+  CREMATION
+  MARRIAGE
+  DIVORCE
+  RESIDENCE
+  OCCUPATION
+  EDUCATION
+  CUSTOM
+}
+
+model FamilyUnit {
+  id          String   @id @default(uuid())
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  gedcomXref  String?
+
+  husbandId   String?
+  husband     Person?  @relation("FamilyHusband", fields: [husbandId], references: [id], onDelete: SetNull)
+
+  wifeId      String?
+  wife        Person?  @relation("FamilyWife", fields: [wifeId], references: [id], onDelete: SetNull)
+
+  children    FamilyChild[]
+
+  marriageDate DateTime?
+  marriagePlace String?
+  divorceDate DateTime?
+  notes       String?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([workspaceId])
+  @@index([husbandId])
+  @@index([wifeId])
+  @@unique([workspaceId, gedcomXref])
+}
+
+model FamilyChild {
+  id         String   @id @default(uuid())
+
+  familyId   String
+  family     FamilyUnit @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  childId    String
+  child      Person   @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  relationshipType ChildRelationshipType @default(BIOLOGICAL)
+  sortOrder  Int @default(0)
+
+  createdAt  DateTime @default(now())
+
+  @@unique([familyId, childId])
+  @@index([childId])
+}
+
+enum ChildRelationshipType {
+  BIOLOGICAL
+  ADOPTED
+  STEP
+  FOSTER
+  GUARDIAN
+}
+
+model PersonExternalRef {
+  id          String   @id @default(uuid())
+
+  personId    String
+  person      Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  system      ExternalRefSystem
+  externalId  String
+  metadata    Json?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([personId])
+  @@unique([personId, system, externalId])
+}
+
+enum ExternalRefSystem {
+  GEDCOM
+  GRAMPS
+  ROOTSMAGIC
+  FAMILYSEARCH
+  ANCESTRY
+  MYHERITAGE
   OTHER
 }
 
@@ -387,6 +541,8 @@ model Person {
   firstName   String
   lastName    String?
   displayName String?  // Override for how they appear in stories
+  gedcomXref  String?  // Original GEDCOM @I...@ identifier for round-trip imports/exports
+  sex         GedcomSex?
   
   // Dates
   birthDate   DateTime?
@@ -421,10 +577,24 @@ model Person {
   relationshipsAsSource PersonRelationship[] @relation("RelationshipSource")
   relationshipsAsTarget PersonRelationship[] @relation("RelationshipTarget")
   voiceConsents    VoiceConsent[]
+  names            PersonName[]
+  events           PersonEvent[]
+  externalRefs     PersonExternalRef[]
+  husbandInFamilies FamilyUnit[] @relation("FamilyHusband")
+  wifeInFamilies    FamilyUnit[] @relation("FamilyWife")
+  familyChildLinks  FamilyChild[]
   
   @@index([workspaceId])
   @@index([firstName, lastName])
   @@index([maidenName])
+  @@unique([workspaceId, gedcomXref])
+}
+
+enum GedcomSex {
+  M
+  F
+  U
+  X
 }
 
 model PersonRelationship {

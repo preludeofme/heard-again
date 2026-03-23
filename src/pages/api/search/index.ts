@@ -6,14 +6,12 @@ export default apiHandler({
   // GET /api/search?q=... - Global search across stories, people, and assets
   GET: async (req, res) => {
     const user = await getAuthUserWithWorkspace(req, res)
-    const query = (req.query.q as string || '').trim()
-    const limit = Math.min(parseInt(req.query.limit as string) || 10, 50)
+    const query = ((req.query.q as string) || '').trim()
+    const limit = Math.min(parseInt(req.query.limit as string, 10) || 10, 50)
 
     if (!query) {
       return successResponse(res, { stories: [], people: [], assets: [] })
     }
-
-    const searchPattern = `%${query}%`
 
     const [stories, people, assets] = await Promise.all([
       prisma.story.findMany({

@@ -1,0 +1,491 @@
+import fs from 'fs/promises'
+import path from 'path'
+import formidable from 'formidable'
+import type { NextApiRequest, NextApiResponse } from 'next'
+import { v4 as uuidv4 } from 'uuid'
+import { prisma } from '@/lib/prisma'
+import { errorResponse, successResponse } from '@/lib/api-helpers'
+import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
+
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+}
+
+const IMPORT_DIR = path.join(process.cwd(), 'imports')
+
+interface ParsedIndividual {
+  xref: string
+  firstName: string
+  lastName: string | null
+  fullName: string
+  nickname: string | null
+  sex: 'M' | 'F' | 'U' | 'X' | null
+  birthDate: Date | null
+  birthPlace: string | null
+  deathDate: Date | null
+  deathPlace: string | null
+  note: string | null
+}
+
+interface ParsedFamily {
+  xref: string
+  husbandXref: string | null
+  wifeXref: string | null
+  childXrefs: string[]
+  marriageDate: Date | null
+  marriagePlace: string | null
+  divorceDate: Date | null
+}
+
+function parseGedcomDate(value: string | null | undefined): Date | null {
+  if (!value) return null
+  const input = value.trim().toUpperCase()
+  const months: Record<string, number> = {
+    JAN: 0,
+    FEB: 1,
+    MAR: 2,
+    APR: 3,
+    MAY: 4,
+    JUN: 5,
+    JUL: 6,
+    AUG: 7,
+    SEP: 8,
+    OCT: 9,
+    NOV: 10,
+    DEC: 11,
+  }
+
+  const dayMonthYear = input.match(/^(\d{1,2})\s+([A-Z]{3})\s+(\d{4})$/)
+  if (dayMonthYear) {
+    const day = Number(dayMonthYear[1])
+    const month = months[dayMonthYear[2]]
+    const year = Number(dayMonthYear[3])
+    if (Number.isInteger(month)) return new Date(Date.UTC(year, month, day))
+  }
+
+  const monthYear = input.match(/^([A-Z]{3})\s+(\d{4})$/)
+  if (monthYear) {
+    const month = months[monthYear[1]]
+    const year = Number(monthYear[2])
+    if (Number.isInteger(month)) return new Date(Date.UTC(year, month, 1))
+  }
+
+  const yearOnly = input.match(/^(\d{4})$/)
+  if (yearOnly) {
+    return new Date(Date.UTC(Number(yearOnly[1]), 0, 1))
+  }
+
+  return null
+}
+
+function parseNameValue(raw: string): { firstName: string; lastName: string | null; fullName: string } {
+  const normalized = raw.trim()
+  const match = normalized.match(/^(.*?)\s*\/(.*?)\//)
+
+  if (match) {
+    const firstName = match[1].trim() || 'Unknown'
+    const lastName = match[2].trim() || null
+    const fullName = [firstName, lastName].filter(Boolean).join(' ')
+    return { firstName, lastName, fullName }
+  }
+
+  const parts = normalized.split(/\s+/).filter(Boolean)
+  if (parts.length === 0) {
+    return { firstName: 'Unknown', lastName: null, fullName: 'Unknown' }
+  }
+
+  if (parts.length === 1) {
+    return { firstName: parts[0], lastName: null, fullName: parts[0] }
+  }
+
+  return {
+    firstName: parts.slice(0, -1).join(' '),
+    lastName: parts[parts.length - 1],
+    fullName: parts.join(' '),
+  }
+}
+
+function parseGedcom(content: string): { individuals: ParsedIndividual[]; families: ParsedFamily[] } {
+  const lines = content.split(/\r?\n/)
+  const individuals: ParsedIndividual[] = []
+  const families: ParsedFamily[] = []
+
+  let index = 0
+  while (index < lines.length) {
+    const line = lines[index].trim()
+    const level0 = line.match(/^0\s+(@[^@]+@)\s+(INDI|FAM)$/)
+    if (!level0) {
+      index += 1
+      continue
+    }
+
+    const xref = level0[1]
+    const recordType = level0[2]
+    const block: string[] = []
+    index += 1
+
+    while (index < lines.length && !/^0\s+/.test(lines[index].trim())) {
+      block.push(lines[index].trim())
+      index += 1
+    }
+
+    if (recordType === 'INDI') {
+      let firstName = 'Unknown'
+      let lastName: string | null = null
+      let fullName = 'Unknown'
+      let nickname: string | null = null
+      let sex: 'M' | 'F' | 'U' | 'X' | null = null
+      let birthDate: Date | null = null
+      let birthPlace: string | null = null
+      let deathDate: Date | null = null
+      let deathPlace: string | null = null
+      const notes: string[] = []
+
+      for (let i = 0; i < block.length; i += 1) {
+        const entry = block[i]
+        const nameMatch = entry.match(/^1\s+NAME\s+(.+)$/)
+        if (nameMatch && fullName === 'Unknown') {
+          const parsed = parseNameValue(nameMatch[1])
+          firstName = parsed.firstName
+          lastName = parsed.lastName
+          fullName = parsed.fullName
+        }
+
+        const nickMatch = entry.match(/^1\s+NICK\s+(.+)$/)
+        if (nickMatch) {
+          nickname = nickMatch[1].trim()
+        }
+
+        const sexMatch = entry.match(/^1\s+SEX\s+([MFXU])$/)
+        if (sexMatch) {
+          sex = sexMatch[1] as 'M' | 'F' | 'U' | 'X'
+        }
+
+        if (/^1\s+BIRT$/.test(entry)) {
+          for (let j = i + 1; j < block.length; j += 1) {
+            if (/^1\s+/.test(block[j])) break
+            const dateMatch = block[j].match(/^2\s+DATE\s+(.+)$/)
+            const placeMatch = block[j].match(/^2\s+PLAC\s+(.+)$/)
+            if (dateMatch) birthDate = parseGedcomDate(dateMatch[1])
+            if (placeMatch) birthPlace = placeMatch[1].trim()
+          }
+        }
+
+        if (/^1\s+DEAT/.test(entry)) {
+          for (let j = i + 1; j < block.length; j += 1) {
+            if (/^1\s+/.test(block[j])) break
+            const dateMatch = block[j].match(/^2\s+DATE\s+(.+)$/)
+            const placeMatch = block[j].match(/^2\s+PLAC\s+(.+)$/)
+            if (dateMatch) deathDate = parseGedcomDate(dateMatch[1])
+            if (placeMatch) deathPlace = placeMatch[1].trim()
+          }
+        }
+
+        const noteMatch = entry.match(/^1\s+NOTE\s+(.+)$/)
+        if (noteMatch) {
+          notes.push(noteMatch[1].trim())
+        }
+      }
+
+      individuals.push({
+        xref,
+        firstName,
+        lastName,
+        fullName,
+        nickname,
+        sex,
+        birthDate,
+        birthPlace,
+        deathDate,
+        deathPlace,
+        note: notes.length > 0 ? notes.join('\n') : null,
+      })
+      continue
+    }
+
+    let husbandXref: string | null = null
+    let wifeXref: string | null = null
+    const childXrefs: string[] = []
+    let marriageDate: Date | null = null
+    let marriagePlace: string | null = null
+    let divorceDate: Date | null = null
+
+    for (let i = 0; i < block.length; i += 1) {
+      const entry = block[i]
+      const husbMatch = entry.match(/^1\s+HUSB\s+(@[^@]+@)$/)
+      if (husbMatch) husbandXref = husbMatch[1]
+
+      const wifeMatch = entry.match(/^1\s+WIFE\s+(@[^@]+@)$/)
+      if (wifeMatch) wifeXref = wifeMatch[1]
+
+      const childMatch = entry.match(/^1\s+CHIL\s+(@[^@]+@)$/)
+      if (childMatch) childXrefs.push(childMatch[1])
+
+      if (/^1\s+MARR$/.test(entry)) {
+        for (let j = i + 1; j < block.length; j += 1) {
+          if (/^1\s+/.test(block[j])) break
+          const dateMatch = block[j].match(/^2\s+DATE\s+(.+)$/)
+          const placeMatch = block[j].match(/^2\s+PLAC\s+(.+)$/)
+          if (dateMatch) marriageDate = parseGedcomDate(dateMatch[1])
+          if (placeMatch) marriagePlace = placeMatch[1].trim()
+        }
+      }
+
+      if (/^1\s+DIV/.test(entry)) {
+        for (let j = i + 1; j < block.length; j += 1) {
+          if (/^1\s+/.test(block[j])) break
+          const dateMatch = block[j].match(/^2\s+DATE\s+(.+)$/)
+          if (dateMatch) divorceDate = parseGedcomDate(dateMatch[1])
+        }
+      }
+    }
+
+    families.push({
+      xref,
+      husbandXref,
+      wifeXref,
+      childXrefs,
+      marriageDate,
+      marriagePlace,
+      divorceDate,
+    })
+  }
+
+  return { individuals, families }
+}
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method !== 'POST') {
+    return errorResponse(res, 'Method not allowed', 405)
+  }
+
+  try {
+    const user = await getAuthUserWithWorkspace(req, res)
+    await requireWorkspaceRole(user.id, user.workspaceId, 'EDITOR')
+
+    const workspaceDir = path.join(IMPORT_DIR, user.workspaceId, 'gedcom')
+    await fs.mkdir(workspaceDir, { recursive: true })
+
+    const form = formidable({
+      uploadDir: workspaceDir,
+      keepExtensions: true,
+      maxFileSize: 100 * 1024 * 1024,
+      filename: (_name, ext) => `${uuidv4()}${ext || '.ged'}`,
+    })
+
+    const [, files] = await form.parse(req)
+    const fileArray = files.file
+
+    if (!fileArray || fileArray.length === 0) {
+      return errorResponse(res, 'No GEDCOM file provided', 400)
+    }
+
+    const file = fileArray[0]
+    const content = await fs.readFile(file.filepath, 'utf-8')
+    const { individuals, families } = parseGedcom(content)
+    const relativePath = path.relative(process.cwd(), file.filepath)
+
+    if (individuals.length === 0) {
+      return errorResponse(res, 'No GEDCOM individuals found in file', 400)
+    }
+
+    const [asset, importJob] = await prisma.$transaction(async (tx) => {
+      const createdAsset = await tx.asset.create({
+        data: {
+          workspaceId: user.workspaceId,
+          filename: path.basename(file.filepath),
+          originalName: file.originalFilename || 'import.ged',
+          mimeType: file.mimetype || 'application/octet-stream',
+          sizeBytes: BigInt(file.size),
+          storageType: 'LOCAL',
+          storagePath: relativePath,
+          assetType: 'DOCUMENT',
+          processingStatus: 'COMPLETED',
+          uploadedById: user.id,
+          metadata: {
+            importType: 'GEDCOM',
+          },
+        },
+      })
+
+      const importedPersonIds: Record<string, string> = {}
+
+      for (const individual of individuals) {
+        const person = await tx.person.upsert({
+          where: {
+            workspaceId_gedcomXref: {
+              workspaceId: user.workspaceId,
+              gedcomXref: individual.xref,
+            },
+          },
+          update: {
+            firstName: individual.firstName,
+            lastName: individual.lastName,
+            displayName: individual.fullName,
+            nickname: individual.nickname,
+            sex: individual.sex || 'U',
+            birthDate: individual.birthDate,
+            deathDate: individual.deathDate,
+            isDeceased: Boolean(individual.deathDate),
+            bio: individual.note,
+          },
+          create: {
+            workspaceId: user.workspaceId,
+            firstName: individual.firstName,
+            lastName: individual.lastName,
+            displayName: individual.fullName,
+            nickname: individual.nickname,
+            gedcomXref: individual.xref,
+            sex: individual.sex || 'U',
+            birthDate: individual.birthDate,
+            deathDate: individual.deathDate,
+            isDeceased: Boolean(individual.deathDate),
+            bio: individual.note,
+            tags: [],
+            createdById: user.id,
+          },
+        })
+
+        importedPersonIds[individual.xref] = person.id
+
+        await tx.personName.deleteMany({ where: { personId: person.id } })
+        await tx.personEvent.deleteMany({ where: { personId: person.id } })
+
+        await tx.personName.create({
+          data: {
+            personId: person.id,
+            nameType: 'BIRTH',
+            givenName: individual.firstName,
+            surname: individual.lastName,
+            nickname: individual.nickname,
+            isPrimary: true,
+            gedcomXref: `${individual.xref}:NAME:1`,
+          },
+        })
+
+        if (individual.birthDate || individual.birthPlace) {
+          await tx.personEvent.create({
+            data: {
+              personId: person.id,
+              eventType: 'BIRTH',
+              eventDate: individual.birthDate,
+              place: individual.birthPlace,
+              isPrimary: true,
+              gedcomXref: `${individual.xref}:BIRT:1`,
+            },
+          })
+        }
+
+        if (individual.deathDate || individual.deathPlace) {
+          await tx.personEvent.create({
+            data: {
+              personId: person.id,
+              eventType: 'DEATH',
+              eventDate: individual.deathDate,
+              place: individual.deathPlace,
+              isPrimary: true,
+              gedcomXref: `${individual.xref}:DEAT:1`,
+            },
+          })
+        }
+
+        await tx.personExternalRef.upsert({
+          where: {
+            personId_system_externalId: {
+              personId: person.id,
+              system: 'GEDCOM',
+              externalId: individual.xref,
+            },
+          },
+          update: {
+            metadata: {
+              importSourceAssetId: createdAsset.id,
+            },
+          },
+          create: {
+            personId: person.id,
+            system: 'GEDCOM',
+            externalId: individual.xref,
+            metadata: {
+              importSourceAssetId: createdAsset.id,
+            },
+          },
+        })
+      }
+
+      for (const family of families) {
+        const familyUnit = await tx.familyUnit.upsert({
+          where: {
+            workspaceId_gedcomXref: {
+              workspaceId: user.workspaceId,
+              gedcomXref: family.xref,
+            },
+          },
+          update: {
+            husbandId: family.husbandXref ? importedPersonIds[family.husbandXref] || null : null,
+            wifeId: family.wifeXref ? importedPersonIds[family.wifeXref] || null : null,
+            marriageDate: family.marriageDate,
+            marriagePlace: family.marriagePlace,
+            divorceDate: family.divorceDate,
+          },
+          create: {
+            workspaceId: user.workspaceId,
+            gedcomXref: family.xref,
+            husbandId: family.husbandXref ? importedPersonIds[family.husbandXref] || null : null,
+            wifeId: family.wifeXref ? importedPersonIds[family.wifeXref] || null : null,
+            marriageDate: family.marriageDate,
+            marriagePlace: family.marriagePlace,
+            divorceDate: family.divorceDate,
+          },
+        })
+
+        await tx.familyChild.deleteMany({ where: { familyId: familyUnit.id } })
+
+        const childRows = family.childXrefs
+          .map((childXref, order) => ({
+            familyId: familyUnit.id,
+            childId: importedPersonIds[childXref],
+            relationshipType: 'BIOLOGICAL' as const,
+            sortOrder: order,
+          }))
+          .filter((row) => Boolean(row.childId))
+
+        if (childRows.length > 0) {
+          await tx.familyChild.createMany({ data: childRows })
+        }
+      }
+
+      const createdJob = await tx.importJob.create({
+        data: {
+          workspaceId: user.workspaceId,
+          sourceType: 'GEDCOM',
+          sourceAssetId: createdAsset.id,
+          status: 'COMPLETED',
+          importedById: user.id,
+          startedAt: new Date(),
+          completedAt: new Date(),
+          resultSummary: {
+            importedIndividuals: individuals.length,
+            importedFamilies: families.length,
+            importedLinks: families.reduce((acc, family) => acc + family.childXrefs.length, 0),
+          },
+        },
+      })
+
+      return [createdAsset, createdJob]
+    })
+
+    return successResponse(res, {
+      jobId: importJob.id,
+      status: importJob.status,
+      sourceType: importJob.sourceType,
+      sourceAssetId: asset.id,
+      fileName: asset.originalName,
+      resultSummary: importJob.resultSummary,
+    }, 201)
+  } catch (error: any) {
+    return errorResponse(res, error.message || 'GEDCOM import failed', error.statusCode || 500)
+  }
+}

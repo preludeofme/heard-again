@@ -4,20 +4,44 @@ import { useDashboardController } from '@/controllers/useDashboardController'
 import { Box, CircularProgress, Typography, Button } from '@mui/material'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/router'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 
 export default function DashboardPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const controller = useDashboardController()
+  const [isCheckingOnboarding, setIsCheckingOnboarding] = useState(true)
 
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.replace('/login')
+      return
+    }
+
+    // Check onboarding status for authenticated users
+    if (status === 'authenticated') {
+      checkOnboardingStatus()
     }
   }, [status, router])
 
-  if (status === 'loading' || controller.isLoading) {
+  const checkOnboardingStatus = async () => {
+    try {
+      const response = await fetch('/api/auth/onboarding-status')
+      const data = await response.json()
+
+      if (!data.onboardingComplete) {
+        // Redirect to onboarding if not complete
+        router.replace('/onboarding')
+        return
+      }
+    } catch (error) {
+      console.error('Failed to check onboarding status:', error)
+    } finally {
+      setIsCheckingOnboarding(false)
+    }
+  }
+
+  if (status === 'loading' || isCheckingOnboarding || controller.isLoading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
         <CircularProgress />

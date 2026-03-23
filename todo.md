@@ -40,13 +40,13 @@
 ## Phase 2: Authentication & User Management (NextAuth.js)
 
 ### New User Flow
-- [ ] User auth stored in database
-- [ ] workflow created
-- [ ] user profile created
-- [ ] user role assigned
-- [ ] when login/create account then the user needs to be prompted on family name
-  - [ ] user created with family name
-  - [ ] Family tree should show self and then add family member when first starting
+- [x] User auth stored in database (might already be set with setup of nextauth)
+- [x] workflow created
+- [x] user profile created
+- [x] user role assigned
+- [x] when login/create account then the user needs to be prompted on family name
+  - [x] user created with family name
+  - [x] Family tree should show self and then add family member when first starting
  
 ### Core NextAuth Setup
 - [x] Install NextAuth.js v4: `npm install next-auth@4`
@@ -61,7 +61,7 @@
   - [x] Password hashing with bcrypt
   - [x] User lookup in database
   - [x] Invalid credentials handling
-- [ ] Google OAuth provider
+- [~] Google OAuth provider
   - [ ] Google Console app setup
   - [ ] Client ID/Secret in env
   - [ ] Account linking for existing users
@@ -72,28 +72,28 @@
 - [x] Session model for database sessions (verify in schema)
 - [x] VerificationToken for password reset
 - [x] VerificationToken model exists in schema
-- [ ] Add password reset token table if not present
+- [x] Add password reset token table if not present
 
 ### Password Reset Flow (Custom)
-- [ ] `POST /api/auth/reset-password` - Generate reset token
-- [ ] `POST /api/auth/reset-password/verify` - Verify token validity
-- [ ] `POST /api/auth/reset-password/update` - Update password
+- [x] `POST /api/auth/reset-password` - Generate reset token
+- [x] `POST /api/auth/reset-password/verify` - Verify token validity
+- [x] `POST /api/auth/reset-password/update` - Update password
 - [ ] Email service integration (Resend/SendGrid/AWS SES)
 
 ### Protected Routes & Middleware
 - [x] Create `middleware.ts` for route protection
 - [x] Configure public vs protected routes
 - [x] Middleware passes all `/api/*` routes through (API routes handle own auth)
-- [ ] Auth guard component for client-side protection
+- [x] Auth guard component for client-side protection
 - [x] Redirect unauthenticated users to login
 
 ### UI - Auth Integration
 - [~] Update CreateAccountPage.tsx to use NextAuth signUp
 - [x] Build Login page with NextAuth signIn
 - [x] Signup API creates user + workspace + membership + subscription in transaction
-- [ ] Password reset request page
-- [ ] Password reset confirm page
-- [ ] Update navigation with auth state (sign in/out)
+- [x] Password reset request page
+- [x] Password reset confirm page
+- [x] Update navigation with auth state (sign in/out)
 
 ---
 
@@ -127,10 +127,10 @@
 - [x] Post-login redirect → `/dashboard`
 
 ### UI - Workspace
-- [ ] Workspace switcher component
-- [ ] Workspace settings page
-- [ ] Member management modal
-- [ ] Invite acceptance flow
+- [x] Workspace switcher component
+- [x] Workspace settings page
+- [x] Member management modal
+- [x] Invite acceptance flow
 
 ---
 
@@ -245,9 +245,9 @@
 - [x] VoiceLabPage.tsx - Training UI complete, controller wired to real APIs
 - [x] VoiceTrainingModal.tsx - 3-step flow complete
 - [x] TalkPage.tsx - Chat UI wired to real voice profiles + people API
-- [ ] Voice profile selector component
-- [ ] Voice consent modal
-- [ ] Generated audio player with controls
+- [x] Voice profile selector component
+- [x] Voice consent modal
+- [x] Generated audio player with controls
 
 ---
 
@@ -272,32 +272,38 @@
 
 ### UI - Assets
 - [x] DocumentsPage.tsx - Wired to useDocumentsController (real API)
-- [ ] Asset upload component
-- [ ] Asset gallery/grid view
-- [ ] Audio player with transcript display
+- [x] Asset upload component
+- [x] Asset gallery/grid view
+- [x] Audio player with transcript display
 
 ---
 
 ## Phase 8: Import/Export
 
+### GEDCOM Refactor (Interoperability)
+- [x] Replace legacy GEDCOM-mapping approach with GEDCOM-first normalized schema
+- [x] Add and apply migration for `PersonName`, `PersonEvent`, `FamilyUnit`, `FamilyChild`, and `PersonExternalRef`
+- [x] Rebuild `POST /api/import/gedcom` to persist normalized GEDCOM entities with stable `gedcomXref` IDs
+- [x] Rebuild `POST /api/export/gedcom` to generate GEDCOM from normalized entities for round-trip fidelity
+
 ### API Routes - Import
-- [ ] `POST /api/import/gedcom` - Import GEDCOM file
-- [ ] `POST /api/import/json` - Import JSON backup
-- [ ] `POST /api/import/bulk-audio` - Bulk audio import
-- [ ] `GET /api/import/jobs` - List import jobs
-- [ ] `GET /api/import/jobs/[id]` - Get import status
+- [x] `POST /api/import/gedcom` - Import GEDCOM file
+- [x] `POST /api/import/json` - Import JSON backup
+- [x] `POST /api/import/bulk-audio` - Bulk audio import
+- [x] `GET /api/import/jobs` - List import jobs
+- [x] `GET /api/import/jobs/[id]` - Get import status
 
 ### API Routes - Export
-- [ ] `POST /api/export/json` - Export workspace data
-- [ ] `POST /api/export/pdf` - Generate PDF stories
-- [ ] `POST /api/export/gedcom` - Export GEDCOM
-- [ ] `GET /api/export/jobs` - List export jobs
-- [ ] `GET /api/export/jobs/[id]/download` - Download export
+- [x] `POST /api/export/json` - Export workspace data
+- [x] `POST /api/export/pdf` - Generate PDF stories
+- [x] `POST /api/export/gedcom` - Export GEDCOM
+- [x] `GET /api/export/jobs` - List export jobs
+- [x] `GET /api/export/jobs/[id]/download` - Download export
 
 ### UI - Import/Export
-- [ ] Import wizard (GEDCOM, JSON, bulk audio)
-- [ ] Export options page
-- [ ] Job status tracking UI
+- [x] Import wizard (GEDCOM, JSON, bulk audio)
+- [x] Export options page
+- [x] Job status tracking UI
 
 ---
 
@@ -350,31 +356,31 @@
 
 ### API Routes - Search
 - [x] `GET /api/search?q=...` - Global search (stories, people, assets)
-- [~] `GET /api/search/people?q=...` - Search people (subset of global)
-- [~] `GET /api/search/stories?q=...` - Search stories (subset of global)
-- [ ] `GET /api/search/suggestions?q=...` - Autocomplete
+- [x] `GET /api/search/people?q=...` - Search people (subset of global)
+- [x] `GET /api/search/stories?q=...` - Search stories (subset of global)
+- [x] `GET /api/search/suggestions?q=...` - Autocomplete
 
 ### UI - Search
 - [x] Global search page (`/search`) with debounced input
 - [x] Search results grouped by type (stories, people, assets)
-- [~] Advanced filters
-- [ ] Recent/favorites quick access
+- [x] Advanced filters
+- [x] Recent/favorites quick access
 
 ---
 
 ## Phase 12: Trust, Consent & Safety
 
 ### API Implementation
-- [ ] Voice consent recording system
-- [ ] AI-generated audio watermarking/labeling
-- [ ] Data retention policies
-- [ ] Permanent deletion (GDPR compliance)
+- [x] Voice consent recording system
+- [x] AI-generated audio watermarking/labeling
+- [x] Data retention policies
+- [x] Permanent deletion (GDPR compliance)
 
 ### UI - Safety
-- [ ] Consent recording modal
-- [ ] AI disclosure notices
-- [ ] Data export/deletion tools
-- [ ] Privacy settings
+- [x] Consent recording modal
+- [x] AI disclosure notices
+- [x] Data export/deletion tools
+- [x] Privacy settings
 
 ---
 
