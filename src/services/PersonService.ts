@@ -11,16 +11,14 @@ import type { PersonListItem, CreatePersonResponse, PersonType } from '@/contrac
 type PersonInclude = {
   avatarAsset: { select: { id: true; storagePath: true; mimeType: true } }
   _count: { select: { storiesAsSubject: true; voiceProfiles: true } }
-  husbandInFamilies: { select: { id: true } }
-  wifeInFamilies: { select: { id: true } }
+  parentInFamilies: { select: { id: true } }
   familyChildLinks: { select: { id: true } }
 }
 
 const PERSON_INCLUDE: PersonInclude = {
   avatarAsset: { select: { id: true, storagePath: true, mimeType: true } },
   _count: { select: { storiesAsSubject: true, voiceProfiles: true } },
-  husbandInFamilies: { select: { id: true } },
-  wifeInFamilies: { select: { id: true } },
+  parentInFamilies: { select: { id: true } },
   familyChildLinks: { select: { id: true } },
 }
 
@@ -179,8 +177,7 @@ export class PersonService {
       avatarAsset: { storagePath: string | null } | null
       tags: string[]
       _count: { storiesAsSubject: number; voiceProfiles: number }
-      husbandInFamilies: { id: string }[]
-      wifeInFamilies: { id: string }[]
+      parentInFamilies: { id: string }[]
       familyChildLinks: { id: string }[]
       createdAt: Date
     }
@@ -201,7 +198,7 @@ export class PersonService {
       counts: {
         stories: person._count.storiesAsSubject,
         voiceProfiles: person._count.voiceProfiles,
-        relationships: person.husbandInFamilies.length + person.wifeInFamilies.length + person.familyChildLinks.length,
+        relationships: person.parentInFamilies.length + person.familyChildLinks.length,
       },
       createdAt: person.createdAt,
     }

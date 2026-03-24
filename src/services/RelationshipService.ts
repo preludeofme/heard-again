@@ -65,17 +65,18 @@ export class RelationshipService {
       where: {
         workspaceId,
         OR: [
-          { husbandId: personId },
-          { wifeId: personId },
+          { parents: { some: { parentId: personId } } },
           { children: { some: { childId: personId } } },
         ],
       },
       include: {
-        husband: {
-          select: { id: true, firstName: true, lastName: true, nickname: true, avatarAssetId: true },
-        },
-        wife: {
-          select: { id: true, firstName: true, lastName: true, nickname: true, avatarAssetId: true },
+        parents: {
+          include: {
+            parent: {
+              select: { id: true, firstName: true, lastName: true, nickname: true, avatarAssetId: true },
+            },
+          },
+          orderBy: { sortOrder: 'asc' },
         },
         children: {
           include: {
@@ -91,31 +92,26 @@ export class RelationshipService {
     const relationships: Relationship[] = []
 
     for (const family of familyUnits) {
-      // Spouse relationships
-      if (family.husbandId === personId && family.wife) {
-        relationships.push({
-          id: `fam:${family.id}:spouse:${family.wife.id}`,
-          type: 'SPOUSE',
-          direction: 'outgoing',
-          isBiological: true,
-          notes: family.notes,
-          relatedPerson: family.wife,
-        })
-      }
+      const isParent = family.parents.some((p) => p.parentId === personId)
+      const isChild = family.children.some((c) => c.childId === personId)
 
-      if (family.wifeId === personId && family.husband) {
-        relationships.push({
-          id: `fam:${family.id}:spouse:${family.husband.id}`,
-          type: 'SPOUSE',
-          direction: 'outgoing',
-          isBiological: true,
-          notes: family.notes,
-          relatedPerson: family.husband,
-        })
+      // Parent -> Spouse relationships (other parents in same family)
+      if (isParent) {
+        for (const parentLink of family.parents) {
+          if (parentLink.parentId !== personId) {
+            relationships.push({
+              id: `fam:${family.id}:spouse:${parentLink.parent.id}`,
+              type: 'SPOUSE',
+              direction: 'outgoing',
+              isBiological: parentLink.relationshipType === 'BIOLOGICAL',
+              notes: family.notes,
+              relatedPerson: parentLink.parent,
+            })
+          }
+        }
       }
 
       // Parent -> Child relationships
-      const isParent = family.husbandId === personId || family.wifeId === personId
       if (isParent) {
         for (const childLink of family.children) {
           relationships.push({
@@ -130,26 +126,15 @@ export class RelationshipService {
       }
 
       // Child -> Parent relationships
-      const isChild = family.children.some((c) => c.childId === personId)
       if (isChild) {
-        if (family.husband && family.husband.id !== personId) {
+        for (const parentLink of family.parents) {
           relationships.push({
-            id: `fc:${family.id}:${personId}:parent:${family.husband.id}`,
+            id: `fc:${family.id}:${personId}:parent:${parentLink.parent.id}`,
             type: 'PARENT',
             direction: 'incoming',
-            isBiological: true,
+            isBiological: parentLink.relationshipType === 'BIOLOGICAL',
             notes: family.notes,
-            relatedPerson: family.husband,
-          })
-        }
-        if (family.wife && family.wife.id !== personId) {
-          relationships.push({
-            id: `fc:${family.id}:${personId}:parent:${family.wife.id}`,
-            type: 'PARENT',
-            direction: 'incoming',
-            isBiological: true,
-            notes: family.notes,
-            relatedPerson: family.wife,
+            relatedPerson: parentLink.parent,
           })
         }
       }
@@ -227,23 +212,31 @@ export class RelationshipService {
     const existing = await this.prisma.familyUnit.findFirst({
       where: {
         workspaceId,
-        OR: [
-          { husbandId: sourceId, wifeId: targetId },
-          { husbandId: targetId, wifeId: sourceId },
+        AND: [
+          { parents: { some: { parentId: sourceId } } },
+          { parents: { some: { parentId: targetId } } },
         ],
       },
     })
 
-    const family =
-      existing ||
-      (await this.prisma.familyUnit.create({
+    let family
+    if (existing) {
+      family = existing
+    } else {
+      // Create new family with both parents
+      family = await this.prisma.familyUnit.create({
         data: {
           workspaceId,
-          husbandId: sourceId,
-          wifeId: targetId,
           notes: notes || null,
+          parents: {
+            create: [
+              { parentId: sourceId, relationshipType: 'BIOLOGICAL', sortOrder: 0 },
+              { parentId: targetId, relationshipType: 'BIOLOGICAL', sortOrder: 1 },
+            ],
+          },
         },
-      }))
+      })
+    }
 
     return {
       id: `fam:${family.id}:spouse:${target.id}`,
@@ -278,7 +271,7 @@ export class RelationshipService {
         childId,
         family: {
           workspaceId,
-          OR: [{ husbandId: parentId }, { wifeId: parentId }],
+          parents: { some: { parentId } },
         },
       },
       include: { family: { select: { id: true } } },
@@ -301,7 +294,7 @@ export class RelationshipService {
     let family = await this.prisma.familyUnit.findFirst({
       where: {
         workspaceId,
-        OR: [{ husbandId: parentId }, { wifeId: parentId }],
+        parents: { some: { parentId } },
       },
       orderBy: { createdAt: 'asc' },
     })
@@ -310,14 +303,25 @@ export class RelationshipService {
       family = await this.prisma.familyUnit.create({
         data: {
           workspaceId,
-          husbandId: parentId,
-          wifeId: null,
           notes: notes || null,
+          parents: {
+            create: {
+              parentId,
+              relationshipType: 'BIOLOGICAL',
+              sortOrder: 0,
+            },
+          },
         },
       })
     }
 
     // Create or update child link
+    console.log('Creating child link with data:', {
+      familyId: family.id,
+      childId,
+      relationshipType: isBiological ? 'BIOLOGICAL' : 'ADOPTED',
+    })
+
     const childLink = await this.prisma.familyChild.upsert({
       where: {
         familyId_childId: {
@@ -337,6 +341,8 @@ export class RelationshipService {
         child: { select: { id: true, firstName: true, lastName: true } },
       },
     })
+
+    console.log('Child link created/updated:', childLink)
 
     return {
       id: `fc:${family.id}:${childLink.childId}:child`,

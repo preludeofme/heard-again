@@ -133,6 +133,7 @@ export interface ListStoriesResponse {
 export const PersonType = {
   FAMILY: 'FAMILY',
   FRIEND: 'FRIEND',
+  MENTOR: 'MENTOR',
   COLLEAGUE: 'COLLEAGUE',
   OTHER: 'OTHER',
 } as const

@@ -33,6 +33,15 @@ export default apiHandler({
 
     const { targetPersonId, relationshipType, isBiological = true, notes } = req.body
 
+    console.log('Creating relationship:', {
+      workspaceId: user.workspaceId,
+      sourcePersonId: personId,
+      targetPersonId,
+      relationshipType,
+      isBiological,
+      notes,
+    })
+
     try {
       const result = await relationshipService.createRelationship({
         workspaceId: user.workspaceId,
@@ -43,8 +52,10 @@ export default apiHandler({
         notes,
       })
 
+      console.log('Relationship created successfully:', result)
       return successResponse(res, result, 201)
     } catch (error) {
+      console.error('Relationship creation failed:', error)
       if (error instanceof AppError) {
         throw error
       }

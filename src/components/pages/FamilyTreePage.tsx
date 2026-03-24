@@ -118,7 +118,7 @@ export function FamilyTreePage({ people, onPersonClick, onAddPerson, onEditRelat
   const handleAddPerson = () => {
     setSelectedPersonId(null)
     setAddEditMode('create')
-    setAddEditModalOpen(true)
+    // Only call parent function - don't open duplicate modal
     onAddPerson?.()
   }
 
@@ -895,25 +895,26 @@ export function FamilyTreePage({ people, onPersonClick, onAddPerson, onEditRelat
         onStoryClick={handleStoryClick}
       />
 
-      {/* Add/Edit Person Modal */}
-      <AddEditPersonModal
-        open={addEditModalOpen}
-        onClose={() => setAddEditModalOpen(false)}
-        mode={addEditMode}
-        person={addEditMode === 'edit' && personDetail ? {
-          firstName: personDetail.firstName,
-          lastName: personDetail.lastName,
-          displayName: personDetail.displayName,
-          birthDate: personDetail.birthDate?.split('T')[0],
-          deathDate: personDetail.deathDate?.split('T')[0],
-          bio: personDetail.bio,
-          personType: personDetail.personType,
-          role: personDetail.role,
-          avatarUrl: personDetail.avatarUrl,
-        } : undefined}
-        onSubmit={handleSubmitPerson}
-        isSubmitting={isSubmitting}
-      />
+      {/* Add/Edit Person Modal - Only for editing existing people */}
+      {addEditMode === 'edit' && (
+        <AddEditPersonModal
+          open={addEditModalOpen}
+          onClose={() => setAddEditModalOpen(false)}
+          mode={addEditMode}
+          person={addEditMode === 'edit' && personDetail ? {
+            firstName: personDetail.firstName,
+            lastName: personDetail.lastName,
+            displayName: personDetail.displayName,
+            birthDate: personDetail.birthDate?.split('T')[0],
+            deathDate: personDetail.deathDate?.split('T')[0],
+            bio: personDetail.bio,
+            personType: personDetail.personType,
+            avatarUrl: personDetail.avatarUrl,
+          } : undefined}
+          onSubmit={handleSubmitPerson}
+          isSubmitting={isSubmitting}
+        />
+      )}
     </Box>
   )
 }

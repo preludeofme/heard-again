@@ -69,8 +69,8 @@ export function CreateAccountPage() {
         throw new Error('Account created but failed to sign in')
       }
 
-      // Redirect to dashboard on success
-      router.push('/dashboard')
+      // Redirect to onboarding on success (middleware will verify completion)
+      router.push('/onboarding')
     } catch (err: any) {
       setError(err.message || 'An error occurred')
     } finally {
@@ -79,7 +79,7 @@ export function CreateAccountPage() {
   }
 
   const handleGoogleSignUp = () => {
-    signIn('google', { callbackUrl: '/dashboard' })
+    signIn('google', { callbackUrl: '/onboarding' })
   }
 
   return (

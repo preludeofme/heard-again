@@ -293,12 +293,8 @@ model FamilyUnit {
 
   gedcomXref  String?
 
-  husbandId   String?
-  husband     Person?  @relation("FamilyHusband", fields: [husbandId], references: [id], onDelete: SetNull)
-
-  wifeId      String?
-  wife        Person?  @relation("FamilyWife", fields: [wifeId], references: [id], onDelete: SetNull)
-
+  // Normalized parent relationships (replaces husbandId/wifeId)
+  parents     FamilyParent[]
   children    FamilyChild[]
 
   marriageDate DateTime?
@@ -310,9 +306,38 @@ model FamilyUnit {
   updatedAt   DateTime @updatedAt
 
   @@index([workspaceId])
-  @@index([husbandId])
-  @@index([wifeId])
   @@unique([workspaceId, gedcomXref])
+}
+
+model FamilyParent {
+  id       String   @id @default(uuid())
+
+  familyId String
+  family   FamilyUnit @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  parentId String
+  parent   Person     @relation(fields: [parentId], references: [id], onDelete: Cascade)
+
+  // Relationship type to this family (biological, adoptive, step, etc.)
+  relationshipType ParentRelationshipType @default(BIOLOGICAL)
+
+  // Display order in the family
+  sortOrder Int @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@unique([familyId, parentId])
+  @@index([parentId])
+}
+
+enum ParentRelationshipType {
+  BIOLOGICAL
+  ADOPTIVE
+  STEP
+  FOSTER
+  GUARDIAN
+  PARTNER        // Non-married partner
+  OTHER
 }
 
 model FamilyChild {
@@ -578,8 +603,7 @@ model Person {
   names            PersonName[]
   events           PersonEvent[]
   externalRefs     PersonExternalRef[]
-  husbandInFamilies FamilyUnit[] @relation("FamilyHusband")
-  wifeInFamilies    FamilyUnit[] @relation("FamilyWife")
+  parentInFamilies FamilyParent[]
   familyChildLinks  FamilyChild[]
   
   @@index([workspaceId])

@@ -2,6 +2,7 @@ import Head from 'next/head'
 import { FamilyTreePage } from '@/components/pages/FamilyTreePage'
 import { PersonModal } from '@/components/modals/PersonModal'
 import { AddEditPersonModal, PersonFormData } from '@/components/modals/AddEditPersonModal'
+import { SuccessModal } from '@/components/modals/SuccessModal'
 import { useEffect, useState, useCallback } from 'react'
 import { Box, CircularProgress } from '@mui/material'
 
@@ -101,6 +102,7 @@ export default function FamilyTree() {
   const [isPersonModalOpen, setIsPersonModalOpen] = useState(false)
   const [isAddPersonModalOpen, setIsAddPersonModalOpen] = useState(false)
   const [personModalInitialTab, setPersonModalInitialTab] = useState<'overview' | 'relationships'>('overview')
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false)
 
   const fetchPeople = useCallback(async () => {
     try {
@@ -151,10 +153,27 @@ export default function FamilyTree() {
 
   const handleAddPerson = async (personData: PersonFormData) => {
     try {
+      // Filter out relationship fields for person creation
+      const { relationshipTo: relationshipTargetId, relationshipType: relationshipTypeValue, ...personCreateData } = personData
+      
+      // Clean up empty strings for optional fields
+      const cleanedData = {
+        ...personCreateData,
+        displayName: personCreateData.displayName || undefined,
+        nickname: personCreateData.nickname || undefined,
+        maidenName: personCreateData.maidenName || undefined,
+        suffix: personCreateData.suffix || undefined,
+        middleName: personCreateData.middleName || undefined,
+        birthDate: personCreateData.birthDate || undefined,
+        deathDate: personCreateData.deathDate || undefined,
+        bio: personCreateData.bio || undefined,
+        tags: personCreateData.tags || undefined,
+      }
+      
       const res = await fetch('/api/people', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(personData),
+        body: JSON.stringify(cleanedData),
       })
 
       const created = await res.json()
@@ -163,30 +182,42 @@ export default function FamilyTree() {
       }
 
       const createdPersonId: string | undefined = created.data?.id
-      const relationshipType = personData.relationshipType
-      const relationshipTargetId = personData.relationshipTo
       const supportedRelationshipTypes = new Set(['PARENT', 'CHILD', 'SPOUSE'])
 
       if (
         createdPersonId
         && relationshipTargetId
-        && relationshipType
-        && supportedRelationshipTypes.has(relationshipType)
+        && relationshipTypeValue
+        && supportedRelationshipTypes.has(relationshipTypeValue)
       ) {
-        await fetch(`/api/people/${createdPersonId}/relationships`, {
+        const relationshipRes = await fetch(`/api/people/${createdPersonId}/relationships`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             targetPersonId: relationshipTargetId,
-            relationshipType,
+            relationshipType: relationshipTypeValue,
           }),
         })
+        
+        if (!relationshipRes.ok) {
+          const relationshipError = await relationshipRes.json()
+          console.error('Failed to create relationship:', relationshipError)
+          // Don't throw error - person was created successfully, just log relationship issue
+        }
       }
 
+      // Close modal on success
+      setIsAddPersonModalOpen(false)
+      
+      // Show success modal
+      setIsSuccessModalOpen(true)
+      
       // Refresh the tree
       fetchPeople()
-    } catch {
-      // Handle error
+    } catch (error) {
+      console.error('Failed to create person:', error)
+      // Show error to user but don't re-throw to allow modal to handle properly
+      throw error
     }
   }
 
@@ -230,6 +261,13 @@ export default function FamilyTree() {
         mode="create"
         onSubmit={handleAddPerson}
         existingPeople={people.map(p => ({ id: p.id, firstName: p.firstName, lastName: p.lastName }))}
+      />
+      
+      <SuccessModal
+        open={isSuccessModalOpen}
+        onClose={() => setIsSuccessModalOpen(false)}
+        title="Person Created Successfully!"
+        message="The new family member has been added to your family tree."
       />
     </>
   )

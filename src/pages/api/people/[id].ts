@@ -42,17 +42,18 @@ export default apiHandler({
       where: {
         workspaceId: user.workspaceId,
         OR: [
-          { husbandId: personId },
-          { wifeId: personId },
+          { parents: { some: { parentId: personId } } },
           { children: { some: { childId: personId } } },
         ],
       },
       include: {
-        husband: {
-          select: { id: true, firstName: true, lastName: true, avatarAssetId: true },
-        },
-        wife: {
-          select: { id: true, firstName: true, lastName: true, avatarAssetId: true },
+        parents: {
+          include: {
+            parent: {
+              select: { id: true, firstName: true, lastName: true, avatarAssetId: true },
+            },
+          },
+          orderBy: { sortOrder: 'asc' },
         },
         children: {
           include: {
@@ -79,27 +80,25 @@ export default apiHandler({
     }> = []
 
     for (const family of familyUnits) {
-      if (family.husbandId === personId && family.wife) {
-        relationships.push({
-          id: `fam:${family.id}:spouse:${family.wife.id}`,
-          type: 'SPOUSE',
-          direction: 'outgoing',
-          isBiological: true,
-          person: family.wife,
-        })
+      const isParent = family.parents.some((p) => p.parentId === personId)
+      const isChild = family.children.some((c) => c.childId === personId)
+
+      // Parent -> Spouse relationships (other parents in same family)
+      if (isParent) {
+        for (const parentLink of family.parents) {
+          if (parentLink.parentId !== personId) {
+            relationships.push({
+              id: `fam:${family.id}:spouse:${parentLink.parent.id}`,
+              type: 'SPOUSE',
+              direction: 'outgoing',
+              isBiological: parentLink.relationshipType === 'BIOLOGICAL',
+              person: parentLink.parent,
+            })
+          }
+        }
       }
 
-      if (family.wifeId === personId && family.husband) {
-        relationships.push({
-          id: `fam:${family.id}:spouse:${family.husband.id}`,
-          type: 'SPOUSE',
-          direction: 'outgoing',
-          isBiological: true,
-          person: family.husband,
-        })
-      }
-
-      const isParent = family.husbandId === personId || family.wifeId === personId
+      // Parent -> Child relationships
       if (isParent) {
         for (const childLink of family.children) {
           relationships.push({
@@ -112,30 +111,15 @@ export default apiHandler({
         }
       }
 
-      let isChild = false
-      for (const child of family.children) {
-        if (child.childId === personId) {
-          isChild = true
-          break
-        }
-      }
+      // Child -> Parent relationships
       if (isChild) {
-        if (family.husband && family.husband.id !== personId) {
+        for (const parentLink of family.parents) {
           relationships.push({
-            id: `fc:${family.id}:${personId}:parent:${family.husband.id}`,
+            id: `fc:${family.id}:${personId}:parent:${parentLink.parent.id}`,
             type: 'PARENT',
             direction: 'incoming',
-            isBiological: true,
-            person: family.husband,
-          })
-        }
-        if (family.wife && family.wife.id !== personId) {
-          relationships.push({
-            id: `fc:${family.id}:${personId}:parent:${family.wife.id}`,
-            type: 'PARENT',
-            direction: 'incoming',
-            isBiological: true,
-            person: family.wife,
+            isBiological: parentLink.relationshipType === 'BIOLOGICAL',
+            person: parentLink.parent,
           })
         }
       }

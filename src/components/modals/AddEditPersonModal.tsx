@@ -31,18 +31,23 @@ import {
   ChevronLeft as BackIcon,
   Check as CheckIcon,
 } from '@mui/icons-material'
+import { PersonType } from '@/contracts'
 
 export interface PersonFormData {
   firstName: string
   lastName: string
   displayName?: string
+  nickname?: string
+  maidenName?: string
+  suffix?: string
+  middleName?: string
   birthDate?: string
   deathDate?: string
+  isDeceased?: boolean
   bio?: string
-  personType: 'PRIMARY' | 'ANCESTOR' | 'DESCENDANT' | 'RELATED'
-  role?: string
-  avatarUrl?: string
-  // Optional relationship fields for create flow
+  personType: PersonType
+  tags?: string[]
+  // Optional relationship fields for create flow (handled separately)
   relationshipTo?: string
   relationshipType?: 'PARENT' | 'CHILD' | 'SPOUSE'
 }
@@ -65,10 +70,11 @@ interface AddEditPersonModalProps {
 }
 
 const PERSON_TYPES = [
-  { value: 'PRIMARY', label: 'Primary Subject', description: 'The main person this archive is about' },
-  { value: 'ANCESTOR', label: 'Ancestor', description: 'Parents, grandparents, or older relatives' },
-  { value: 'DESCENDANT', label: 'Descendant', description: 'Children, grandchildren, or younger relatives' },
-  { value: 'RELATED', label: 'Related', description: 'Spouses, siblings, cousins, or friends' },
+  { value: PersonType.FAMILY, label: 'Family', description: 'Family member - parents, grandparents, children, siblings' },
+  { value: PersonType.FRIEND, label: 'Friend', description: 'Close friend or companion' },
+  { value: PersonType.MENTOR, label: 'Mentor', description: 'Teacher, mentor, or guide' },
+  { value: PersonType.COLLEAGUE, label: 'Colleague', description: 'Work colleague or professional connection' },
+  { value: PersonType.OTHER, label: 'Other', description: 'Caregiver, or other significant person' },
 ]
 
 const COMMON_ROLES = [
@@ -111,12 +117,16 @@ export function AddEditPersonModal({
     firstName: '',
     lastName: '',
     displayName: '',
+    nickname: '',
+    maidenName: '',
+    suffix: '',
+    middleName: '',
     birthDate: '',
     deathDate: '',
+    isDeceased: false,
     bio: '',
-    personType: 'ANCESTOR',
-    role: '',
-    avatarUrl: '',
+    personType: PersonType.FAMILY,
+    tags: [],
   })
   const [errors, setErrors] = useState<Partial<Record<keyof PersonFormData, string>>>({})
   const [touched, setTouched] = useState<Partial<Record<keyof PersonFormData, boolean>>>({})
@@ -128,24 +138,32 @@ export function AddEditPersonModal({
         firstName: person.firstName || '',
         lastName: person.lastName || '',
         displayName: person.displayName || '',
+        nickname: person.nickname || '',
+        maidenName: person.maidenName || '',
+        suffix: person.suffix || '',
+        middleName: person.middleName || '',
         birthDate: person.birthDate || '',
         deathDate: person.deathDate || '',
+        isDeceased: person.isDeceased || false,
         bio: person.bio || '',
-        personType: person.personType || 'ANCESTOR',
-        role: person.role || '',
-        avatarUrl: person.avatarUrl || '',
+        personType: person.personType || PersonType.FAMILY,
+        tags: person.tags || [],
       })
     } else {
       setFormData({
         firstName: '',
         lastName: '',
         displayName: '',
+        nickname: '',
+        maidenName: '',
+        suffix: '',
+        middleName: '',
         birthDate: '',
         deathDate: '',
+        isDeceased: false,
         bio: '',
-        personType: 'ANCESTOR',
-        role: '',
-        avatarUrl: '',
+        personType: PersonType.FAMILY,
+        tags: [],
       })
     }
     setActiveStep(0)
@@ -153,8 +171,20 @@ export function AddEditPersonModal({
     setTouched({})
   }, [person, mode, open])
 
-  const handleChange = (field: keyof PersonFormData, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
+  const handleChange = (field: keyof PersonFormData, value: string | boolean) => {
+    // Auto-set isDeceased when death date is provided
+    if (field === 'deathDate') {
+      const deathDateValue = value as string
+      const hasDeathDate = Boolean(deathDateValue)
+      setFormData((prev) => ({ 
+        ...prev, 
+        [field]: deathDateValue,
+        isDeceased: hasDeathDate 
+      }))
+    } else {
+      setFormData((prev) => ({ ...prev, [field]: value }))
+    }
+    
     setTouched((prev) => ({ ...prev, [field]: true }))
     // Clear error when field is modified
     if (errors[field]) {
@@ -205,7 +235,14 @@ export function AddEditPersonModal({
 
   const handleSubmit = async () => {
     if (validateStep(activeStep)) {
-      await onSubmit(formData)
+      try {
+        await onSubmit(formData)
+        // Modal will be closed by the parent component on success
+      } catch (error) {
+        console.error('Failed to save person:', error)
+        // Show error to user - you could add a toast/snackbar here
+        alert(`Error: ${error instanceof Error ? error.message : 'Failed to save person'}`)
+      }
     }
   }
 
@@ -372,39 +409,64 @@ export function AddEditPersonModal({
         </Grid>
       </Grid>
 
-      <Box>
-        <Typography variant="subtitle2" sx={{ color: '#16334a', mb: 1, fontWeight: 500 }}>
-          Role / Relationship
-        </Typography>
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-          {COMMON_ROLES.map((role) => (
-            <Chip
-              key={role}
-              label={role}
-              onClick={() => handleChange('role', role)}
-              sx={{
-                backgroundColor: formData.role === role ? '#16334a' : '#f6f3ee',
-                color: formData.role === role ? 'white' : '#546669',
-                cursor: 'pointer',
-                '&:hover': {
-                  backgroundColor: formData.role === role ? '#2e4a62' : '#e8e3dc',
-                },
-              }}
-            />
-          ))}
-        </Box>
-        <TextField
-          fullWidth
-          placeholder="Or enter a custom role..."
-          value={formData.role}
-          onChange={(e) => handleChange('role', e.target.value)}
-          sx={{
-            '& .MuiOutlinedInput-root': {
-              borderRadius: 2,
-            },
-          }}
-        />
-      </Box>
+      <Grid container spacing={2}>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <TextField
+            fullWidth
+            label="Middle Name"
+            value={formData.middleName}
+            onChange={(e) => handleChange('middleName', e.target.value)}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: 2,
+              },
+            }}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <TextField
+            fullWidth
+            label="Nickname"
+            value={formData.nickname}
+            onChange={(e) => handleChange('nickname', e.target.value)}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: 2,
+              },
+            }}
+          />
+        </Grid>
+      </Grid>
+
+      <Grid container spacing={2}>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <TextField
+            fullWidth
+            label="Maiden Name"
+            value={formData.maidenName}
+            onChange={(e) => handleChange('maidenName', e.target.value)}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: 2,
+              },
+            }}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <TextField
+            fullWidth
+            label="Suffix"
+            value={formData.suffix}
+            onChange={(e) => handleChange('suffix', e.target.value)}
+            placeholder="e.g., Jr, Sr, III"
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: 2,
+              },
+            }}
+          />
+        </Grid>
+      </Grid>
 
       <TextField
         fullWidth
@@ -414,8 +476,8 @@ export function AddEditPersonModal({
         value={formData.bio}
         onChange={(e) => handleChange('bio', e.target.value)}
         placeholder="Share a brief biography, key memories, or what made this person special..."
-        helperText={`${formData.bio?.length || 0}/500 characters`}
-        inputProps={{ maxLength: 500 }}
+        helperText={`${formData.bio?.length || 0}/5000 characters`}
+        inputProps={{ maxLength: 5000 }}
         sx={{
           '& .MuiOutlinedInput-root': {
             borderRadius: 2,
@@ -460,17 +522,6 @@ export function AddEditPersonModal({
                   fontSize: '0.7rem',
                 }}
               />
-              {formData.role && (
-                <Chip
-                  label={formData.role}
-                  size="small"
-                  sx={{
-                    backgroundColor: '#d0e3e6',
-                    color: '#16334a',
-                    fontSize: '0.7rem',
-                  }}
-                />
-              )}
             </Box>
           </Box>
         </Box>

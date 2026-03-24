@@ -11,9 +11,9 @@
 
 ## Phase 1: User Testing Feedback
 
-- [ ] When a user signs up and finishes the steps of onboarding, it routes them back to onboarding (might be an issue with the data not saving properly)
 - [ ] If user is logged in and navigates to roote / then it shoud route to the dashboard
-- [ ] 
+- [ ] left Nav needs to be unified with the rest of the app
+- [ ] Left nav needs to be added to all pages (except home page/auth pages)
 
 
 ## Phase 2: Authentication (Remaining)

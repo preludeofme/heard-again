@@ -442,8 +442,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             },
           },
           update: {
-            husbandId: family.husbandXref ? importedPersonIds[family.husbandXref] || null : null,
-            wifeId: family.wifeXref ? importedPersonIds[family.wifeXref] || null : null,
             marriageDate: family.marriageDate,
             marriagePlace: family.marriagePlace,
             divorceDate: family.divorceDate,
@@ -451,8 +449,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           create: {
             workspaceId: user.workspaceId,
             gedcomXref: family.xref,
-            husbandId: family.husbandXref ? importedPersonIds[family.husbandXref] || null : null,
-            wifeId: family.wifeXref ? importedPersonIds[family.wifeXref] || null : null,
             marriageDate: family.marriageDate,
             marriagePlace: family.marriagePlace,
             divorceDate: family.divorceDate,
@@ -460,7 +456,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         })
         importStats.familyUpserts += 1
 
+        // Delete existing parent/child links for this family
+        await tx.familyParent.deleteMany({ where: { familyId: familyUnit.id } })
         await tx.familyChild.deleteMany({ where: { familyId: familyUnit.id } })
+
+        // Create parent links - GEDCOM HUSB/WIFE become parents with BIOLOGICAL relationship
+        const parentLinks = []
+        if (family.husbandXref && importedPersonIds[family.husbandXref]) {
+          parentLinks.push({
+            familyId: familyUnit.id,
+            parentId: importedPersonIds[family.husbandXref],
+            relationshipType: 'BIOLOGICAL' as const,
+            sortOrder: 0,
+          })
+        }
+        if (family.wifeXref && importedPersonIds[family.wifeXref]) {
+          parentLinks.push({
+            familyId: familyUnit.id,
+            parentId: importedPersonIds[family.wifeXref],
+            relationshipType: 'BIOLOGICAL' as const,
+            sortOrder: 1,
+          })
+        }
+
+        if (parentLinks.length > 0) {
+          await tx.familyParent.createMany({ data: parentLinks })
+        }
 
         const childRows = family.childXrefs
           .map((childXref, order) => ({

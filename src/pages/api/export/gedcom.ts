@@ -52,6 +52,10 @@ export default apiHandler({
       prisma.familyUnit.findMany({
         where: { workspaceId: user.workspaceId },
         include: {
+          parents: {
+            include: { parent: true },
+            orderBy: { sortOrder: 'asc' },
+          },
           children: {
             orderBy: { sortOrder: 'asc' },
           },
@@ -96,11 +100,8 @@ export default apiHandler({
 
     for (const family of families) {
       const famXref = familyXrefById.get(family.id)!
-      if (family.husbandId) {
-        ensureFamilyRefs(family.husbandId).spouse.push(famXref)
-      }
-      if (family.wifeId) {
-        ensureFamilyRefs(family.wifeId).spouse.push(famXref)
+      for (const parentLink of family.parents) {
+        ensureFamilyRefs(parentLink.parentId).spouse.push(famXref)
       }
       for (const child of family.children) {
         ensureFamilyRefs(child.childId).child.push(famXref)
@@ -187,11 +188,14 @@ export default apiHandler({
       const familyId = familyXrefById.get(family.id) || familyGedcomId(family.id, index)
       lines.push(`0 ${familyId} FAM`)
 
-      if (family.husbandId) {
-        lines.push(`1 HUSB ${personXrefById.get(family.husbandId) || personGedcomId(family.husbandId)}`)
+      // Export parents - GEDCOM 5.5.1 only supports 2 parents (HUSB/WIFE)
+      // Export first parent as HUSB, second as WIFE for compatibility
+      const parents = family.parents || []
+      if (parents[0]) {
+        lines.push(`1 HUSB ${personXrefById.get(parents[0].parentId) || personGedcomId(parents[0].parentId)}`)
       }
-      if (family.wifeId) {
-        lines.push(`1 WIFE ${personXrefById.get(family.wifeId) || personGedcomId(family.wifeId)}`)
+      if (parents[1]) {
+        lines.push(`1 WIFE ${personXrefById.get(parents[1].parentId) || personGedcomId(parents[1].parentId)}`)
       }
 
       const marriageDate = formatGedcomDate(family.marriageDate)

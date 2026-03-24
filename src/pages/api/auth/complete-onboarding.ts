@@ -43,9 +43,7 @@ export default apiHandler({
       // Update workspace with family name
       const updatedWorkspace = await tx.workspace.update({
         where: { id: workspace.id },
-        data: {
-          name: familyName,
-        },
+        data: { name: familyName },
       })
 
       // Create person record for the user
@@ -59,6 +57,10 @@ export default apiHandler({
           createdById: user.id,
         },
       })
+
+      // Note: FamilyUnit is not auto-created - user builds family tree manually
+      // This allows children, parents, or any family role to sign up without
+      // incorrect assumptions about their position in the family structure
 
       return { updatedWorkspace, person }
     })

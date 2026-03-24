@@ -15,7 +15,7 @@ export const authOptions: NextAuthOptions = {
     signIn: '/login',
     signOut: '/',
     error: '/login',
-    newUser: '/dashboard',
+    newUser: '/onboarding',
   },
   providers: [
     // Email/Password Credentials Provider
@@ -84,11 +84,11 @@ export const authOptions: NextAuthOptions = {
       return session
     },
     async redirect({ url, baseUrl }) {
-      // After login, default to dashboard instead of landing page
-      if (url === baseUrl || url === `${baseUrl}/`) return `${baseUrl}/dashboard`
+      // Let middleware handle the actual destination based on onboarding state
+      if (url === baseUrl || url === `${baseUrl}/`) return `${baseUrl}/onboarding`
       if (url.startsWith('/')) return `${baseUrl}${url}`
       else if (new URL(url).origin === baseUrl) return url
-      return `${baseUrl}/dashboard`
+      return `${baseUrl}/onboarding`
     },
   },
   events: {

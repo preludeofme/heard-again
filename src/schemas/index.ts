@@ -76,7 +76,8 @@ export type ListStoriesQuery = z.infer<typeof listStoriesQuerySchema>
 
 export const personTypeSchema = z.nativeEnum(PersonType)
 
-export const createPersonSchema = z.object({
+// Base schema without refinements - used for both create and update
+const basePersonSchema = z.object({
   firstName: z.string().min(1).max(100),
   lastName: z.string().max(100).optional(),
   displayName: z.string().max(200).optional(),
@@ -90,37 +91,49 @@ export const createPersonSchema = z.object({
   bio: z.string().max(5000).optional(),
   personType: personTypeSchema.optional(),
   tags: z.array(z.string().max(50)).max(20).optional(),
-}).refine(
-  (data) => {
+})
+
+const personRefinements = [
+  (data: any) => {
     // If death date is provided, person should be marked deceased
     if (data.deathDate && !data.isDeceased) {
       return false
     }
     return true
   },
-  {
-    message: 'Person with death date must be marked as deceased',
-    path: ['isDeceased'],
-  }
-).refine(
-  (data) => {
+  (data: any) => {
     // Birth date should not be after death date
     if (data.birthDate && data.deathDate) {
       return new Date(data.birthDate) <= new Date(data.deathDate)
     }
     return true
   },
+]
+
+const personRefinementMessages = [
+  {
+    message: 'Person with death date must be marked as deceased',
+    path: ['isDeceased'],
+  },
   {
     message: 'Birth date cannot be after death date',
     path: ['birthDate'],
-  }
-)
+  },
+]
+
+export const createPersonSchema = basePersonSchema
+  .refine(personRefinements[0], personRefinementMessages[0])
+  .refine(personRefinements[1], personRefinementMessages[1])
 
 export type CreatePersonInput = z.infer<typeof createPersonSchema>
 
-export const updatePersonSchema = createPersonSchema.partial().extend({
-  id: uuidSchema,
-})
+export const updatePersonSchema = basePersonSchema
+  .partial()
+  .extend({
+    id: uuidSchema,
+  })
+  .refine(personRefinements[0], personRefinementMessages[0])
+  .refine(personRefinements[1], personRefinementMessages[1])
 
 export type UpdatePersonInput = z.infer<typeof updatePersonSchema>
 
