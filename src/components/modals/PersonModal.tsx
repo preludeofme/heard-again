@@ -75,9 +75,15 @@ const PERSON_TYPES = [
 ]
 
 const RELATIONSHIP_TYPES = [
-  { value: 'PARENT', label: 'Parent' },
-  { value: 'CHILD', label: 'Child' },
-  { value: 'SPOUSE', label: 'Spouse/Partner' },
+  { value: 'PARENT', label: 'Is parent of selected person' },
+  { value: 'CHILD', label: 'Is child of selected person' },
+  { value: 'SPOUSE', label: 'Is spouse/partner of selected person' },
+]
+
+const RELATIONSHIP_KINDS = [
+  { value: 'BIOLOGICAL', label: 'Biological' },
+  { value: 'ADOPTED', label: 'Adopted' },
+  { value: 'STEP', label: 'Step' },
 ]
 
 export function PersonModal({ open, personId, initialTab = 'overview', onClose, onSave, onDelete }: PersonModalProps) {
@@ -90,6 +96,7 @@ export function PersonModal({ open, personId, initialTab = 'overview', onClose, 
   const [availablePeople, setAvailablePeople] = useState<Array<{ id: string; firstName: string; lastName?: string }>>([])
   const [relationshipTargetId, setRelationshipTargetId] = useState('')
   const [relationshipType, setRelationshipType] = useState('PARENT')
+  const [relationshipKind, setRelationshipKind] = useState<'BIOLOGICAL' | 'ADOPTED' | 'STEP'>('BIOLOGICAL')
   const [isMutatingRelationship, setIsMutatingRelationship] = useState(false)
 
   // Edit form state
@@ -146,6 +153,8 @@ export function PersonModal({ open, personId, initialTab = 'overview', onClose, 
         body: JSON.stringify({
           targetPersonId: relationshipTargetId,
           relationshipType,
+          relationshipKind: relationshipType === 'SPOUSE' ? undefined : relationshipKind,
+          isBiological: relationshipType === 'SPOUSE' ? true : relationshipKind === 'BIOLOGICAL',
         }),
       })
       const data = await res.json()
@@ -508,6 +517,20 @@ export function PersonModal({ open, personId, initialTab = 'overview', onClose, 
                   <MenuItem key={r.value} value={r.value}>{r.label}</MenuItem>
                 ))}
               </TextField>
+              {(relationshipType === 'PARENT' || relationshipType === 'CHILD') && (
+                <TextField
+                  select
+                  size="small"
+                  label="Kind"
+                  value={relationshipKind}
+                  onChange={(e) => setRelationshipKind(e.target.value as 'BIOLOGICAL' | 'ADOPTED' | 'STEP')}
+                  sx={{ minWidth: 160 }}
+                >
+                  {RELATIONSHIP_KINDS.map((kind) => (
+                    <MenuItem key={kind.value} value={kind.value}>{kind.label}</MenuItem>
+                  ))}
+                </TextField>
+              )}
               <Button
                 variant="contained"
                 onClick={handleCreateRelationship}

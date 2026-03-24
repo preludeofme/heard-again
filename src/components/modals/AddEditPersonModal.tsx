@@ -50,6 +50,7 @@ export interface PersonFormData {
   // Optional relationship fields for create flow (handled separately)
   relationshipTo?: string
   relationshipType?: 'PARENT' | 'CHILD' | 'SPOUSE'
+  relationshipKind?: 'BIOLOGICAL' | 'ADOPTED' | 'STEP'
 }
 
 export interface ExistingPerson {
@@ -97,9 +98,15 @@ const STEPS_CREATE = ['Basic Info', 'Dates & Details', 'Relationships', 'Review'
 const STEPS_EDIT = ['Basic Info', 'Dates & Details', 'Review']
 
 const RELATIONSHIP_TYPES = [
-  { value: 'PARENT', label: 'Parent' },
-  { value: 'CHILD', label: 'Child' },
-  { value: 'SPOUSE', label: 'Spouse/Partner' },
+  { value: 'PARENT', label: 'Is parent of selected person' },
+  { value: 'CHILD', label: 'Is child of selected person' },
+  { value: 'SPOUSE', label: 'Is spouse/partner of selected person' },
+]
+
+const RELATIONSHIP_KINDS = [
+  { value: 'BIOLOGICAL', label: 'Biological' },
+  { value: 'ADOPTED', label: 'Adopted' },
+  { value: 'STEP', label: 'Step' },
 ]
 
 export function AddEditPersonModal({
@@ -573,13 +580,16 @@ export function AddEditPersonModal({
   )
 
   // Step 3: Relationships (only shown in create mode with existing people)
-  const renderRelationships = () => (
+  const renderRelationships = () => {
+    const selectedPerson = existingPeople?.find((p) => p.id === formData.relationshipTo)
+
+    return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
       <Typography variant="subtitle1" sx={{ color: '#16334a', fontWeight: 600 }}>
         Link to Existing Person (Optional)
       </Typography>
       <Typography variant="body2" sx={{ color: '#666' }}>
-        You can connect this new person to someone already in your family tree
+        Define how this new person relates to someone already in your family tree.
       </Typography>
 
       <FormControl fullWidth>
@@ -602,37 +612,60 @@ export function AddEditPersonModal({
       </FormControl>
 
       {formData.relationshipTo && (
-        <FormControl fullWidth>
-          <InputLabel>Relationship Type *</InputLabel>
-          <Select
-            value={formData.relationshipType || ''}
-            label="Relationship Type *"
-            onChange={(e) => handleChange('relationshipType', e.target.value)}
-            error={!!errors.relationshipType}
-            sx={{ borderRadius: 2 }}
-          >
-            <MenuItem value="">
-              <em>Select relationship...</em>
-            </MenuItem>
-            {RELATIONSHIP_TYPES.map((type) => (
-              <MenuItem key={type.value} value={type.value}>
-                {type.label}
+        <>
+          <FormControl fullWidth>
+            <InputLabel>Relationship Type *</InputLabel>
+            <Select
+              value={formData.relationshipType || ''}
+              label="Relationship Type *"
+              onChange={(e) => handleChange('relationshipType', e.target.value)}
+              error={!!errors.relationshipType}
+              sx={{ borderRadius: 2 }}
+            >
+              <MenuItem value="">
+                <em>Select relationship...</em>
               </MenuItem>
-            ))}
-          </Select>
-          {errors.relationshipType && (
-            <FormHelperText error>{errors.relationshipType}</FormHelperText>
+              {RELATIONSHIP_TYPES.map((type) => (
+                <MenuItem key={type.value} value={type.value}>
+                  {type.label}
+                </MenuItem>
+              ))}
+            </Select>
+            {errors.relationshipType && (
+              <FormHelperText error>{errors.relationshipType}</FormHelperText>
+            )}
+          </FormControl>
+
+          {(formData.relationshipType === 'PARENT' || formData.relationshipType === 'CHILD') && (
+            <FormControl fullWidth>
+              <InputLabel>Relationship Kind</InputLabel>
+              <Select
+                value={formData.relationshipKind || 'BIOLOGICAL'}
+                label="Relationship Kind"
+                onChange={(e) => handleChange('relationshipKind', e.target.value)}
+                sx={{ borderRadius: 2 }}
+              >
+                {RELATIONSHIP_KINDS.map((kind) => (
+                  <MenuItem key={kind.value} value={kind.value}>
+                    {kind.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           )}
-        </FormControl>
+        </>
       )}
 
       <Box sx={{ mt: 2, p: 2, backgroundColor: '#f6f3ee', borderRadius: 2 }}>
         <Typography variant="caption" sx={{ color: '#666' }}>
-          Example: If you&apos;re adding your grandmother, you might link her to your father as &quot;Parent&quot;
+          {selectedPerson
+            ? `Example: If this new person is ${selectedPerson.firstName}'s child, choose “Is child of selected person”.`
+            : 'Choose a person first, then set the exact relationship direction.'}
         </Typography>
       </Box>
     </Box>
-  )
+    )
+  }
 
   const renderStepContent = () => {
     switch (activeStep) {

@@ -3,6 +3,7 @@ import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpe
 import { validate, rules } from '@/lib/validation'
 import { relationshipService } from '@/services'
 import { AppError } from '@/lib/api-helpers'
+import { Prisma } from '@prisma/client'
 
 export default apiHandler({
   // GET /api/people/[id]/relationships - Get person's relationships
@@ -27,17 +28,26 @@ export default apiHandler({
     const { valid, errors } = validate(req.body, {
       targetPersonId: [rules.required, rules.uuid],
       relationshipType: [rules.required, rules.oneOf(['PARENT', 'CHILD', 'SPOUSE'])],
+      relationshipKind: [rules.oneOf(['BIOLOGICAL', 'ADOPTED', 'STEP'])],
+      isBiological: [rules.boolean],
     })
 
     if (!valid) throw Errors.badRequest('Validation failed', errors)
 
-    const { targetPersonId, relationshipType, isBiological = true, notes } = req.body
+    const {
+      targetPersonId,
+      relationshipType,
+      relationshipKind,
+      isBiological = true,
+      notes,
+    } = req.body
 
     console.log('Creating relationship:', {
       workspaceId: user.workspaceId,
       sourcePersonId: personId,
       targetPersonId,
       relationshipType,
+      relationshipKind,
       isBiological,
       notes,
     })
@@ -48,6 +58,7 @@ export default apiHandler({
         sourcePersonId: personId,
         targetPersonId,
         relationshipType,
+        relationshipKind,
         isBiological,
         notes,
       })
@@ -58,6 +69,15 @@ export default apiHandler({
       console.error('Relationship creation failed:', error)
       if (error instanceof AppError) {
         throw error
+      }
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        throw Errors.badRequest(error.message, {
+          prismaCode: error.code,
+          meta: error.meta,
+        })
+      }
+      if (error instanceof Error) {
+        throw Errors.internal(error.message)
       }
       throw Errors.internal('Failed to create relationship')
     }
