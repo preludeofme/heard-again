@@ -24,6 +24,7 @@ import {
   ExpandLess,
   Fullscreen,
   FullscreenExit,
+  Search,
 } from '@mui/icons-material'
 import { PersonDetailModal } from '@/components/modals/PersonDetailModal'
 import { AddEditPersonModal, PersonFormData } from '@/components/modals/AddEditPersonModal'
@@ -55,6 +56,13 @@ interface FamilyTreeData {
   relationshipEdges: FamilyTreeRelationshipEdge[]
 }
 
+interface SearchableFamilyMember {
+  id: string
+  name: string
+  relationship: string
+  avatar: string
+}
+
 interface FamilyTreePageProps {
   people?: FamilyTreeData
   onPersonClick?: (personId: string) => void
@@ -62,6 +70,8 @@ interface FamilyTreePageProps {
   onEditRelationships?: (personId: string) => void
   isFullscreen?: boolean
   onToggleFullscreen?: () => void
+  initialSearchExpanded?: boolean
+  initialSearchQuery?: string
 }
 
 const defaultFamilyData: FamilyTreeData = {
@@ -251,14 +261,23 @@ function FamilyMemberCard({
             >
               Add
             </Button>
+            </Box>
           </Box>
-        </Box>
       )}
     </Card>
   )
 }
 
-export function FamilyTreePage({ people, onPersonClick, onAddPerson, onEditRelationships, isFullscreen = false, onToggleFullscreen }: FamilyTreePageProps) {
+export function FamilyTreePage({
+  people,
+  onPersonClick,
+  onAddPerson,
+  onEditRelationships,
+  isFullscreen = false,
+  onToggleFullscreen,
+  initialSearchExpanded = false,
+  initialSearchQuery = '',
+}: FamilyTreePageProps) {
   const theme = useTheme()
   const familyData = people && (people.grandparents.length > 0 || people.parents.length > 0 || people.children.length > 0)
     ? people
@@ -305,6 +324,10 @@ export function FamilyTreePage({ people, onPersonClick, onAddPerson, onEditRelat
   const [toolMode, setToolMode] = useState<'pointer' | 'hand'>('pointer')
   const [legendCollapsed, setLegendCollapsed] = useState(false)
   const [insightCollapsed, setInsightCollapsed] = useState(false)
+  const [isSearchExpanded, setIsSearchExpanded] = useState(initialSearchExpanded)
+  const [searchQuery, setSearchQuery] = useState(initialSearchQuery)
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(initialSearchQuery)
+  const [selectedSearchMemberId, setSelectedSearchMemberId] = useState<string | null>(null)
 
   // Canvas drag state
   const isDragging = useRef(false)
@@ -316,6 +339,54 @@ export function FamilyTreePage({ people, onPersonClick, onAddPerson, onEditRelat
   const [personStories, setPersonStories] = useState<any[]>([])
   const [isLoadingDetail, setIsLoadingDetail] = useState(false)
   const [detailError, setDetailError] = useState<string | null>(null)
+
+  const searchableMembers = useMemo<SearchableFamilyMember[]>(() => {
+    const normalize = (person: TreePerson): SearchableFamilyMember => ({
+      id: String(person.id),
+      name: person.name,
+      relationship: person.role,
+      avatar: person.avatar,
+    })
+
+    return [
+      ...familyData.grandparents.map(normalize),
+      ...familyData.parents.map(normalize),
+      ...familyData.children.map(normalize),
+    ]
+  }, [familyData.grandparents, familyData.parents, familyData.children])
+
+  const filteredSearchResults = useMemo(() => {
+    const query = debouncedSearchQuery.trim().toLowerCase()
+    if (!query) return []
+
+    return searchableMembers
+      .filter((member) => {
+        return member.name.toLowerCase().includes(query) || member.relationship.toLowerCase().includes(query)
+      })
+      .slice(0, 8)
+  }, [debouncedSearchQuery, searchableMembers])
+
+  const selectedSearchMember = useMemo(
+    () => searchableMembers.find((member) => member.id === selectedSearchMemberId) || null,
+    [searchableMembers, selectedSearchMemberId]
+  )
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery)
+    }, 250)
+
+    return () => clearTimeout(timeout)
+  }, [searchQuery])
+
+  useEffect(() => {
+    setIsSearchExpanded(initialSearchExpanded)
+  }, [initialSearchExpanded])
+
+  useEffect(() => {
+    setSearchQuery(initialSearchQuery)
+    setDebouncedSearchQuery(initialSearchQuery)
+  }, [initialSearchQuery])
 
   // Handlers
   const handlePersonClick = async (personId: string) => {
@@ -521,6 +592,19 @@ export function FamilyTreePage({ people, onPersonClick, onAddPerson, onEditRelat
       ...buildRow(familyData.children, 'child', CHILD_ROW_Y, CHILD_CARD_WIDTH, CHILD_GAP, CHILD_CARD_HEIGHT),
     ]
   }, [familyData.grandparents, familyData.parents, familyData.children, treeCanvasWidth])
+
+  useEffect(() => {
+    if (!selectedSearchMemberId) return
+
+    const card = cardPositions.find((c) => c.id === selectedSearchMemberId)
+    if (!card) return
+
+    const containerPadding = 160
+    const targetX = treeCanvasWidth / 2 - (card.x + card.width / 2)
+    const targetY = containerPadding - (card.y + card.estimatedHeight / 2)
+
+    setPanOffset({ x: targetX, y: targetY })
+  }, [selectedSearchMemberId, cardPositions, treeCanvasWidth])
 
   // Center on self card when entering fullscreen
   useEffect(() => {
@@ -743,30 +827,155 @@ export function FamilyTreePage({ people, onPersonClick, onAddPerson, onEditRelat
         }),
       }}
     >
-        {/* Control Bar */}
         <Box
           sx={{
-            maxWidth: 1200,
-            mx: 'auto',
-            mb: 2,
-            display: 'flex',
-            justifyContent: 'center',
+            position: 'sticky',
+            top: isFullscreen ? 8 : { xs: 72, md: 84 },
+            zIndex: 25,
+            pt: 0.5,
+            pb: 1.5,
+            mb: 1,
+            background: 'linear-gradient(to bottom, rgba(246,243,238,0.95), rgba(246,243,238,0.65), rgba(246,243,238,0))',
+            backdropFilter: 'blur(6px)',
           }}
         >
+          {/* Search Panel */}
+          <Box sx={{ maxWidth: 1200, mx: 'auto', mb: 2 }}>
+            <Card
+              sx={{
+                p: 2,
+                borderRadius: 4,
+                bgcolor: 'rgba(255, 255, 255, 0.82)',
+                backdropFilter: 'blur(20px)',
+                boxShadow: '0 10px 40px rgba(28, 28, 25, 0.06)',
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
+                  <Search sx={{ color: 'primary.main' }} />
+                  <Typography sx={{ color: 'primary.main', fontWeight: 600 }}>
+                    Family Member Search
+                  </Typography>
+                </Box>
+                <Button
+                  size="small"
+                  variant="text"
+                  onClick={() => setIsSearchExpanded((prev) => !prev)}
+                  endIcon={isSearchExpanded ? <ExpandLess /> : <ExpandMore />}
+                  sx={{ textTransform: 'none', color: 'secondary.main' }}
+                >
+                  {isSearchExpanded ? 'Collapse' : 'Expand'}
+                </Button>
+              </Box>
+
+              {isSearchExpanded && (
+                <Box sx={{ mt: 2.5 }}>
+                  <Box
+                    component="input"
+                    value={searchQuery}
+                    onChange={(event: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(event.target.value)}
+                    placeholder="Search by name or relationship"
+                    sx={{
+                      width: '100%',
+                      border: 0,
+                      outline: 0,
+                      bgcolor: '#ebe8e3',
+                      borderRadius: 2,
+                      px: 2,
+                      py: 1.5,
+                      fontSize: '0.95rem',
+                      color: '#1c1c19',
+                      transition: 'all 0.2s ease',
+                      '&:focus': {
+                        bgcolor: '#ffffff',
+                        boxShadow: '0 0 0 1px rgba(22, 51, 74, 0.2)',
+                      },
+                    }}
+                  />
+
+                  {selectedSearchMember && (
+                    <Box sx={{ mt: 1.5 }}>
+                      <Button
+                        size="small"
+                        variant="contained"
+                        onClick={() => setSelectedSearchMemberId(null)}
+                        sx={{
+                          textTransform: 'none',
+                          borderRadius: 99,
+                          px: 2,
+                        }}
+                      >
+                        Selected: {selectedSearchMember.name} ({selectedSearchMember.relationship})
+                      </Button>
+                    </Box>
+                  )}
+
+                  {debouncedSearchQuery.trim() && (
+                    <Box sx={{ mt: 2, maxHeight: 280, overflowY: 'auto', pr: 0.5 }}>
+                      {filteredSearchResults.length === 0 ? (
+                        <Typography variant="body2" sx={{ color: 'secondary.main' }}>
+                          No matching family members found.
+                        </Typography>
+                      ) : (
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                          {filteredSearchResults.map((member) => (
+                            <Button
+                              key={member.id}
+                              variant="text"
+                              onClick={() => setSelectedSearchMemberId(member.id)}
+                              sx={{
+                                justifyContent: 'flex-start',
+                                textTransform: 'none',
+                                borderRadius: 2,
+                                p: 1,
+                                color: 'inherit',
+                                bgcolor: selectedSearchMemberId === member.id ? 'rgba(22, 51, 74, 0.08)' : 'transparent',
+                                '&:hover': { bgcolor: 'rgba(22, 51, 74, 0.06)' },
+                              }}
+                            >
+                              <Avatar src={member.avatar} sx={{ width: 36, height: 36, mr: 1.5 }} />
+                              <Box sx={{ textAlign: 'left' }}>
+                                <Typography variant="body2" sx={{ color: 'primary.main', fontWeight: 600 }}>
+                                  {member.name}
+                                </Typography>
+                                <Typography variant="caption" sx={{ color: 'secondary.main' }}>
+                                  {member.relationship}
+                                </Typography>
+                              </Box>
+                            </Button>
+                          ))}
+                        </Box>
+                      )}
+                    </Box>
+                  )}
+                </Box>
+              )}
+            </Card>
+          </Box>
+
+          {/* Control Bar */}
           <Box
             sx={{
+              maxWidth: 1200,
+              mx: 'auto',
               display: 'flex',
-              alignItems: 'center',
-              gap: 0.5,
-              bgcolor: 'background.paper',
-              px: 1,
-              py: 0.5,
-              borderRadius: 8,
-              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-              border: '1px solid',
-              borderColor: 'rgba(208, 227, 230, 0.5)',
+              justifyContent: 'center',
             }}
           >
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 0.5,
+                bgcolor: 'background.paper',
+                px: 1,
+                py: 0.5,
+                borderRadius: 8,
+                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                border: '1px solid',
+                borderColor: 'rgba(208, 227, 230, 0.5)',
+              }}
+            >
             <IconButton
               size="small"
               onClick={() => setToolMode('pointer')}
@@ -830,6 +1039,7 @@ export function FamilyTreePage({ people, onPersonClick, onAddPerson, onEditRelat
             )}
           </Box>
         </Box>
+      </Box>
 
         {/* Family Tree Visualization */}
         <Box
@@ -839,18 +1049,22 @@ export function FamilyTreePage({ people, onPersonClick, onAddPerson, onEditRelat
           onMouseLeave={handleCanvasMouseUp}
           sx={{
             position: 'relative',
-            minHeight: 700,
+            minHeight: isFullscreen ? 'calc(100vh - 140px)' : 700,
             width: '100%',
             bgcolor: 'rgba(208, 227, 230, 0.3)',
             borderRadius: 6,
-            p: 6,
-            overflow: 'auto',
+            p: 0,
+            overflow: 'hidden',
             display: 'flex',
             flexDirection: 'column',
-            alignItems: 'center',
+            alignItems: 'stretch',
             cursor: toolMode === 'hand' ? 'grab' : 'default',
             '&:active': toolMode === 'hand' ? { cursor: 'grabbing' } : {},
             userSelect: toolMode === 'hand' ? 'none' : 'auto',
+            backgroundImage: `
+              radial-gradient(circle, rgba(22, 51, 74, 0.06) 1px, transparent 1px)
+            `,
+            backgroundSize: '24px 24px',
           }}
         >
           <Box
@@ -858,22 +1072,15 @@ export function FamilyTreePage({ people, onPersonClick, onAddPerson, onEditRelat
               transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel})`,
               transformOrigin: 'center center',
               transition: isDragging.current ? 'none' : 'transform 0.2s ease',
-              width: '100%',
-              minWidth: treeCanvasWidth,
+              width: `max(${treeCanvasWidth + 80}px, 100%)`,
+              minHeight: TREE_FLOW_HEIGHT,
             }}
           >
             <Box
               sx={{
                 position: 'relative',
-                width: treeCanvasWidth + 80,
+                width: '100%',
                 height: TREE_FLOW_HEIGHT,
-                borderRadius: 4,
-                border: '1px solid rgba(22, 51, 74, 0.06)',
-                bgcolor: 'rgba(255,255,255,0.15)',
-                backgroundImage: `
-                  radial-gradient(circle, rgba(22, 51, 74, 0.06) 1px, transparent 1px)
-                `,
-                backgroundSize: '24px 24px',
               }}
             >
               {/* SVG connector overlay */}
@@ -1166,7 +1373,6 @@ export function FamilyTreePage({ people, onPersonClick, onAddPerson, onEditRelat
             deathDate: personDetail.deathDate?.split('T')[0],
             bio: personDetail.bio,
             personType: personDetail.personType,
-            avatarUrl: personDetail.avatarUrl,
           } : undefined}
           onSubmit={handleSubmitPerson}
           isSubmitting={isSubmitting}

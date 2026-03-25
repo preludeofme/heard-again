@@ -19,14 +19,14 @@ import type { VoiceModel } from '@/types'
 
 export type { VoiceModel }
 
-export function useVoiceLabController() {
+export function useVoiceLabController(subjectId?: string) {
   // UI-level state (modal visibility, playback, recording)
   const [showRecordingModal, setShowRecordingModal] = useState(false)
   const [isPlaying, setIsPlaying] = useState<string | null>(null)
   const [isRecording, setIsRecording] = useState(false)
 
   // Delegated to focused hooks
-  const profiles = useVoiceProfiles()
+  const profiles = useVoiceProfiles(subjectId)
   const training = useVoiceTraining()
   const synthesis = useVoiceSynthesis()
 

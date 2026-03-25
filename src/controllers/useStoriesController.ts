@@ -14,6 +14,7 @@ interface CreateStoryInput {
   title: string
   content: string
   storyType: 'MEMORY' | 'AUDIO_RECORDING'
+  subjectId?: string
 }
 
 interface StoriesControllerActions {
@@ -22,7 +23,7 @@ interface StoriesControllerActions {
   refreshStories: () => Promise<void>
 }
 
-export function useStoriesController(): StoriesControllerState & StoriesControllerActions {
+export function useStoriesController(subjectId?: string): StoriesControllerState & StoriesControllerActions {
   const [state, setState] = useState<StoriesControllerState>({
     stories: [],
     isSubmitting: false,
@@ -61,7 +62,8 @@ const fetchStories = useCallback(async () => {
     setState(prev => ({ ...prev, isLoading: true, hasError: false, errorMessage: null }))
 
     try {
-      const response = await fetch('/api/stories')
+      const query = subjectId ? `?subjectId=${encodeURIComponent(subjectId)}` : ''
+      const response = await fetch(`/api/stories${query}`)
 
       const data = await handleApiResponse<{ stories: StoryApiResponse[] }>(response)
       const stories = (data?.stories || []).map(mapStoryToContribution)
@@ -76,7 +78,7 @@ const fetchStories = useCallback(async () => {
         errorMessage: apiError.message,
       }))
     }
-  }, [])
+  }, [subjectId])
 
   // Load on mount
   useEffect(() => {

@@ -6,6 +6,7 @@ import { SuccessModal } from '@/components/modals/SuccessModal'
 import { Layout } from '@/components/layout/Layout'
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { Box, CircularProgress } from '@mui/material'
+import { useRouter } from 'next/router'
 
 interface ApiPerson {
   id: string
@@ -67,7 +68,7 @@ interface FamilyTreeData {
   relationshipEdges: FamilyTreeRelationshipEdge[]
 }
 
-function mapPeopleToTree(people: ApiPersonWithEdges[]): FamilyTreeData {
+function mapPeopleToTree(people: ApiPersonWithEdges[], activePersonId?: string): FamilyTreeData {
   const grandparents: FamilyTreePerson[] = []
   const parents: FamilyTreePerson[] = []
   const children: FamilyTreePerson[] = []
@@ -158,8 +159,12 @@ function mapPeopleToTree(people: ApiPersonWithEdges[]): FamilyTreeData {
     return centered
   }
 
-  // Find the subject (person with most relationships - likely the central person)
-  const subject = people.reduce((prev, current) =>
+  const selectedPerson = activePersonId
+    ? people.find((person) => person.id === activePersonId)
+    : undefined
+
+  // Find the subject (explicit selected person first, otherwise person with most relationships)
+  const subject = selectedPerson || people.reduce((prev, current) =>
     (prev.relationshipEdges.length > current.relationshipEdges.length) ? prev : current
   )
 
@@ -340,8 +345,10 @@ function mapPeopleToTree(people: ApiPersonWithEdges[]): FamilyTreeData {
     const nextPersonId = orderedIds[index + 1]
     const spouseWithNext = !!nextPersonId && areSpouses(personId, nextPersonId)
     const generation = generationByPersonId.get(p.id)
+    const isSelected = p.id === subject.id
     const entry: FamilyTreePerson = {
       ...entryBase,
+      selected: isSelected,
       spouseWithNext,
       upperGenerationLinkType: generation === 0
         ? (upperGenerationLinkTypeByParentId.get(personId) || 'none')
@@ -350,7 +357,7 @@ function mapPeopleToTree(people: ApiPersonWithEdges[]): FamilyTreeData {
 
     // SUBJECT always goes in parents generation (center level)
     if (p.id === subject?.id) {
-      parents.push({ ...entry, selected: true })
+      parents.push(entry)
       continue
     }
 
@@ -365,7 +372,7 @@ function mapPeopleToTree(people: ApiPersonWithEdges[]): FamilyTreeData {
         continue
       }
 
-      parents.push({ ...entry, selected: false })
+      parents.push(entry)
       continue
     }
 
@@ -455,6 +462,12 @@ function mapPeopleToTree(people: ApiPersonWithEdges[]): FamilyTreeData {
 }
 
 export default function FamilyTree() {
+  const router = useRouter()
+  const selectedPersonIdFromQuery = typeof router.query.personId === 'string' ? router.query.personId : undefined
+  const initialSearchExpanded =
+    router.query.expandSearch === '1'
+    || router.query.expandSearch === 'true'
+  const initialSearchQuery = typeof router.query.search === 'string' ? router.query.search : ''
   const [treeData, setTreeData] = useState<FamilyTreeData | null>(null)
   const [people, setPeople] = useState<ApiPerson[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -488,23 +501,21 @@ export default function FamilyTree() {
         }))
 
         setPeople(basePeople)
-        setTreeData(mapPeopleToTree(peopleWithEdges))
+        setTreeData(mapPeopleToTree(peopleWithEdges, selectedPersonIdFromQuery))
       }
     } catch {
       // Fall through to render with empty data
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [selectedPersonIdFromQuery])
 
   useEffect(() => {
     fetchPeople()
   }, [fetchPeople])
 
   const handlePersonClick = (personId: string) => {
-    setPersonModalInitialTab('overview')
-    setSelectedPersonId(personId)
-    setIsPersonModalOpen(true)
+    router.push(`/profile/${personId}`)
   }
 
   const handleEditRelationships = (personId: string) => {
@@ -610,6 +621,8 @@ export default function FamilyTree() {
       onEditRelationships={handleEditRelationships}
       isFullscreen={isFullscreen}
       onToggleFullscreen={() => setIsFullscreen((prev) => !prev)}
+      initialSearchExpanded={initialSearchExpanded}
+      initialSearchQuery={initialSearchQuery}
     />
   )
 

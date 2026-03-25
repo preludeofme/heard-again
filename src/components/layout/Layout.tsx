@@ -54,7 +54,7 @@ interface LayoutProps {
 }
 
 const navItems = [
-  { label: 'Home', href: '/', icon: 'home' },
+  { label: 'Profile', href: '/profile', icon: 'person' },
   { label: 'Voice Lab', href: '/voice-lab', icon: 'settings_voice' },
   { label: 'Documents', href: '/documents', icon: 'description' },
   { label: 'Stories', href: '/stories', icon: 'auto_stories' },
@@ -143,10 +143,13 @@ export function Layout({ children }: LayoutProps) {
   const [mobileNavValue, setMobileNavValue] = useState(0)
 
   const currentPath = router.pathname
+  const showAdvancedSearchButton = currentPath !== '/family-tree'
 
   const getMobileNavValue = () => {
     switch (currentPath) {
       case '/': return 0
+      case '/profile': return 0
+      case '/profile/[id]': return 0
       case '/voice-lab': return 1
       case '/stories': return 3
       case '/talk': return 2
@@ -174,6 +177,17 @@ export function Layout({ children }: LayoutProps) {
                 </Typography>
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, marginLeft: 'auto' }}>
+                {showAdvancedSearchButton && (
+                  <Button
+                    component={Link}
+                    href="/family-tree?expandSearch=1"
+                    size="small"
+                    variant="outlined"
+                    sx={{ textTransform: 'none', borderRadius: 2 }}
+                  >
+                    Advanced Search
+                  </Button>
+                )}
                 <IconButton size="large">
                   <SearchIcon />
                 </IconButton>
@@ -194,7 +208,7 @@ export function Layout({ children }: LayoutProps) {
           <BottomNavigation
             value={getMobileNavValue()}
             onChange={(event, newValue) => {
-              const routes = ['/', '/voice-lab', '/talk', '/stories']
+              const routes = ['/profile', '/voice-lab', '/talk', '/stories']
               router.push(routes[newValue])
             }}
             sx={{
@@ -249,7 +263,10 @@ export function Layout({ children }: LayoutProps) {
             {/* Navigation Items */}
             <Box sx={{ flexGrow: 1, px: 2 }}>
               {navItems.map((item) => {
-                const isActive = currentPath === item.href
+                const isActive =
+                  currentPath === item.href
+                  || (item.href === '/profile' && currentPath.startsWith('/profile'))
+                  || (item.href === '/stories' && currentPath.startsWith('/stories'))
                 
                 return (
                   <Link key={item.href} href={item.href} passHref legacyBehavior>
@@ -357,9 +374,9 @@ export function Layout({ children }: LayoutProps) {
                     Heard Again
                   </Typography>
                   <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 3 }}>
-                    <Link href="/" passHref legacyBehavior>
+                    <Link href="/profile" passHref legacyBehavior>
                       <Typography component="a" sx={{ color: '#16334a', fontWeight: 'bold', cursor: 'pointer', '&:hover': { color: '#2e4a62' } }}>
-                        Home
+                        Profile
                       </Typography>
                     </Link>
                     <Link href="/voice-lab" passHref legacyBehavior>
@@ -388,6 +405,17 @@ export function Layout({ children }: LayoutProps) {
                       }}
                     />
                   </Box>
+                  {showAdvancedSearchButton && (
+                    <Button
+                      component={Link}
+                      href="/family-tree?expandSearch=1"
+                      variant="outlined"
+                      size="small"
+                      sx={{ textTransform: 'none', borderRadius: 2 }}
+                    >
+                      Advanced Search
+                    </Button>
+                  )}
                   <IconButton size="large" sx={{ color: '#16334a' }}>
                     <NotificationsIcon />
                   </IconButton>

@@ -15,13 +15,29 @@ import {
 } from '@mui/icons-material'
 import { useState, useEffect, useRef } from 'react'
 import { VoiceTrainingModal } from '@/components/audio/VoiceTrainingModal'
-import { useVoiceLabController } from '@/controllers'
+import type { VoiceModel } from '@/types'
 
-interface VoiceLabPageProps {}
+interface VoiceLabPageProps {
+  voiceModels: VoiceModel[]
+  controller: {
+    isUploading: boolean
+    showRecordingModal: boolean
+    trainingJob: any
+    isTraining: boolean
+    trainingSamples: any[]
+    toggleRecordingModal: () => void
+    uploadTrainingSample: (file: File) => Promise<void>
+    removeTrainingSample: (index: number) => void
+    startVoiceTraining: (modelName: string, language: string, styleInstruct?: string) => Promise<void>
+    synthesizeSpeech: (voiceId: string, text: string) => Promise<string>
+    loadVoiceModels: () => Promise<void>
+    deleteVoiceProfile: (profileId: string) => Promise<void>
+    refreshData: () => Promise<void>
+  }
+}
 
-export function VoiceLabPage({}: VoiceLabPageProps) {
+export function VoiceLabPage({ voiceModels, controller }: VoiceLabPageProps) {
   const {
-    voiceModels,
     isUploading,
     showRecordingModal,
     trainingJob,
@@ -34,8 +50,8 @@ export function VoiceLabPage({}: VoiceLabPageProps) {
     synthesizeSpeech,
     loadVoiceModels,
     deleteVoiceProfile,
-    refreshData, // Get the refresh function
-  } = useVoiceLabController()
+    refreshData,
+  } = controller
 
   // ── Local state ──
   const [selectedVoiceId, setSelectedVoiceId] = useState<string | null>(null)
@@ -54,11 +70,6 @@ export function VoiceLabPage({}: VoiceLabPageProps) {
 
   // Delete confirmation
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
-
-  // Load voices on mount
-  useEffect(() => {
-    loadVoiceModels()
-  }, [loadVoiceModels])
 
   // Auto-select first voice if none selected
   useEffect(() => {
@@ -322,7 +333,7 @@ export function VoiceLabPage({}: VoiceLabPageProps) {
               </Box>
             ) : (
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                {voiceModels.map((model) => {
+                {voiceModels.map((model: VoiceModel) => {
                   const isSelected = selectedVoiceId === model.id
                   const isDeleting = deleteConfirmId === model.id
 
@@ -478,7 +489,7 @@ export function VoiceLabPage({}: VoiceLabPageProps) {
                 label="Voice A"
                 onChange={(e) => setCompareA(e.target.value)}
               >
-                {voiceModels.map((m) => (
+                {voiceModels.map((m: VoiceModel) => (
                   <MenuItem key={m.id} value={m.id}>{m.displayName || m.name}</MenuItem>
                 ))}
               </Select>
@@ -490,7 +501,7 @@ export function VoiceLabPage({}: VoiceLabPageProps) {
                 label="Voice B"
                 onChange={(e) => setCompareB(e.target.value)}
               >
-                {voiceModels.map((m) => (
+                {voiceModels.map((m: VoiceModel) => (
                   <MenuItem key={m.id} value={m.id}>{m.displayName || m.name}</MenuItem>
                 ))}
               </Select>

@@ -22,7 +22,7 @@ interface VoiceProfilesActions {
   deleteVoiceProfile: (profileId: string) => Promise<void>
 }
 
-export function useVoiceProfiles(): VoiceProfilesState & VoiceProfilesActions {
+export function useVoiceProfiles(subjectId?: string): VoiceProfilesState & VoiceProfilesActions {
   const [state, setState] = useState<VoiceProfilesState>({
     voiceModels: [],
     isLoading: true,
@@ -36,7 +36,8 @@ export function useVoiceProfiles(): VoiceProfilesState & VoiceProfilesActions {
     setState(prev => ({ ...prev, isLoading: true, hasError: false, errorMessage: null }))
 
     try {
-      const response = await fetch('/api/voice/profiles')
+      const url = subjectId ? `/api/voice/profiles?personId=${encodeURIComponent(subjectId)}` : '/api/voice/profiles'
+      const response = await fetch(url)
       if (!response.ok) throw new Error('Failed to fetch profiles')
 
       const data = await response.json()
@@ -56,7 +57,7 @@ export function useVoiceProfiles(): VoiceProfilesState & VoiceProfilesActions {
         errorMessage: message,
       }))
     }
-  }, [])
+  }, [subjectId])
 
   // Alias for semantic clarity
   const loadVoiceModels = useCallback(async () => {
