@@ -20,14 +20,14 @@ import {
   PersonAdd,
   PanTool,
   NearMe,
-  ExpandMore,
-  ExpandLess,
   Fullscreen,
   FullscreenExit,
-  Search,
+  ExpandMore,
+  ExpandLess,
 } from '@mui/icons-material'
 import { PersonDetailModal } from '@/components/modals/PersonDetailModal'
 import { AddEditPersonModal, PersonFormData } from '@/components/modals/AddEditPersonModal'
+import { FamilyMemberSearch, SearchableFamilyMember } from '@/components/search'
 
 interface TreePerson {
   id: string | number
@@ -56,16 +56,9 @@ interface FamilyTreeData {
   relationshipEdges: FamilyTreeRelationshipEdge[]
 }
 
-interface SearchableFamilyMember {
-  id: string
-  name: string
-  relationship: string
-  avatar: string
-}
-
 interface FamilyTreePageProps {
   people?: FamilyTreeData
-  onPersonClick?: (personId: string) => void
+  onPersonClick?: (person: TreePerson) => void
   onAddPerson?: () => void
   onEditRelationships?: (personId: string) => void
   isFullscreen?: boolean
@@ -133,7 +126,7 @@ function FamilyMemberCard({
   person: TreePerson
   level: TreeNodeLevel
   isSelf?: boolean
-  onPersonClick: (personId: string) => void
+  onPersonClick: (person: TreePerson) => void
   onAddPerson: () => void
 }) {
   const isParentLevel = level === 'parent'
@@ -144,7 +137,7 @@ function FamilyMemberCard({
 
   return (
     <Card
-      onClick={() => onPersonClick(String(person.id))}
+      onClick={() => onPersonClick(person)}
       sx={
         isParentLevel
           ? {
@@ -228,7 +221,7 @@ function FamilyMemberCard({
               startIcon={<Edit />}
               onClick={(event) => {
                 event.stopPropagation()
-                onPersonClick(String(person.id))
+                onPersonClick(person)
               }}
               sx={{
                 flex: 1,
@@ -324,9 +317,6 @@ export function FamilyTreePage({
   const [toolMode, setToolMode] = useState<'pointer' | 'hand'>('pointer')
   const [legendCollapsed, setLegendCollapsed] = useState(false)
   const [insightCollapsed, setInsightCollapsed] = useState(false)
-  const [isSearchExpanded, setIsSearchExpanded] = useState(initialSearchExpanded)
-  const [searchQuery, setSearchQuery] = useState(initialSearchQuery)
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(initialSearchQuery)
   const [selectedSearchMemberId, setSelectedSearchMemberId] = useState<string | null>(null)
 
   // Canvas drag state
@@ -355,55 +345,22 @@ export function FamilyTreePage({
     ]
   }, [familyData.grandparents, familyData.parents, familyData.children])
 
-  const filteredSearchResults = useMemo(() => {
-    const query = debouncedSearchQuery.trim().toLowerCase()
-    if (!query) return []
-
-    return searchableMembers
-      .filter((member) => {
-        return member.name.toLowerCase().includes(query) || member.relationship.toLowerCase().includes(query)
-      })
-      .slice(0, 8)
-  }, [debouncedSearchQuery, searchableMembers])
-
-  const selectedSearchMember = useMemo(
-    () => searchableMembers.find((member) => member.id === selectedSearchMemberId) || null,
-    [searchableMembers, selectedSearchMemberId]
-  )
-
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      setDebouncedSearchQuery(searchQuery)
-    }, 250)
-
-    return () => clearTimeout(timeout)
-  }, [searchQuery])
-
-  useEffect(() => {
-    setIsSearchExpanded(initialSearchExpanded)
-  }, [initialSearchExpanded])
-
-  useEffect(() => {
-    setSearchQuery(initialSearchQuery)
-    setDebouncedSearchQuery(initialSearchQuery)
-  }, [initialSearchQuery])
-
   // Handlers
-  const handlePersonClick = async (personId: string) => {
-    setSelectedPersonId(personId)
+  const handlePersonClick = async (person: TreePerson) => {
+    setSelectedPersonId(String(person.id))
     setDetailModalOpen(true)
-    onPersonClick?.(personId)
+    onPersonClick?.(person)
     
     // Fetch person details
     setIsLoadingDetail(true)
     setDetailError(null)
     try {
-      const res = await fetch(`/api/people/${personId}`)
+      const res = await fetch(`/api/people/${person.id}`)
       const data = await res.json()
       if (data.success) {
         setPersonDetail(data.data)
         // Also fetch stories for this person
-        const storiesRes = await fetch(`/api/stories?personId=${personId}&limit=20`)
+        const storiesRes = await fetch(`/api/stories?personId=${person.id}&limit=20`)
         const storiesData = await storiesRes.json()
         setPersonStories(storiesData.data?.stories || [])
       } else {
@@ -841,116 +798,16 @@ export function FamilyTreePage({
         >
           {/* Search Panel */}
           <Box sx={{ maxWidth: 1200, mx: 'auto', mb: 2 }}>
-            <Card
-              sx={{
-                p: 2,
-                borderRadius: 4,
-                bgcolor: 'rgba(255, 255, 255, 0.82)',
-                backdropFilter: 'blur(20px)',
-                boxShadow: '0 10px 40px rgba(28, 28, 25, 0.06)',
-              }}
-            >
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
-                  <Search sx={{ color: 'primary.main' }} />
-                  <Typography sx={{ color: 'primary.main', fontWeight: 600 }}>
-                    Family Member Search
-                  </Typography>
-                </Box>
-                <Button
-                  size="small"
-                  variant="text"
-                  onClick={() => setIsSearchExpanded((prev) => !prev)}
-                  endIcon={isSearchExpanded ? <ExpandLess /> : <ExpandMore />}
-                  sx={{ textTransform: 'none', color: 'secondary.main' }}
-                >
-                  {isSearchExpanded ? 'Collapse' : 'Expand'}
-                </Button>
-              </Box>
-
-              {isSearchExpanded && (
-                <Box sx={{ mt: 2.5 }}>
-                  <Box
-                    component="input"
-                    value={searchQuery}
-                    onChange={(event: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(event.target.value)}
-                    placeholder="Search by name or relationship"
-                    sx={{
-                      width: '100%',
-                      border: 0,
-                      outline: 0,
-                      bgcolor: '#ebe8e3',
-                      borderRadius: 2,
-                      px: 2,
-                      py: 1.5,
-                      fontSize: '0.95rem',
-                      color: '#1c1c19',
-                      transition: 'all 0.2s ease',
-                      '&:focus': {
-                        bgcolor: '#ffffff',
-                        boxShadow: '0 0 0 1px rgba(22, 51, 74, 0.2)',
-                      },
-                    }}
-                  />
-
-                  {selectedSearchMember && (
-                    <Box sx={{ mt: 1.5 }}>
-                      <Button
-                        size="small"
-                        variant="contained"
-                        onClick={() => setSelectedSearchMemberId(null)}
-                        sx={{
-                          textTransform: 'none',
-                          borderRadius: 99,
-                          px: 2,
-                        }}
-                      >
-                        Selected: {selectedSearchMember.name} ({selectedSearchMember.relationship})
-                      </Button>
-                    </Box>
-                  )}
-
-                  {debouncedSearchQuery.trim() && (
-                    <Box sx={{ mt: 2, maxHeight: 280, overflowY: 'auto', pr: 0.5 }}>
-                      {filteredSearchResults.length === 0 ? (
-                        <Typography variant="body2" sx={{ color: 'secondary.main' }}>
-                          No matching family members found.
-                        </Typography>
-                      ) : (
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                          {filteredSearchResults.map((member) => (
-                            <Button
-                              key={member.id}
-                              variant="text"
-                              onClick={() => setSelectedSearchMemberId(member.id)}
-                              sx={{
-                                justifyContent: 'flex-start',
-                                textTransform: 'none',
-                                borderRadius: 2,
-                                p: 1,
-                                color: 'inherit',
-                                bgcolor: selectedSearchMemberId === member.id ? 'rgba(22, 51, 74, 0.08)' : 'transparent',
-                                '&:hover': { bgcolor: 'rgba(22, 51, 74, 0.06)' },
-                              }}
-                            >
-                              <Avatar src={member.avatar} sx={{ width: 36, height: 36, mr: 1.5 }} />
-                              <Box sx={{ textAlign: 'left' }}>
-                                <Typography variant="body2" sx={{ color: 'primary.main', fontWeight: 600 }}>
-                                  {member.name}
-                                </Typography>
-                                <Typography variant="caption" sx={{ color: 'secondary.main' }}>
-                                  {member.relationship}
-                                </Typography>
-                              </Box>
-                            </Button>
-                          ))}
-                        </Box>
-                      )}
-                    </Box>
-                  )}
-                </Box>
-              )}
-            </Card>
+            <FamilyMemberSearch
+              members={searchableMembers}
+              selectedId={selectedSearchMemberId}
+              onSelect={(member) => setSelectedSearchMemberId(member?.id || null)}
+              defaultExpanded={initialSearchExpanded}
+              placeholder="Search by name or relationship"
+              title="Family Member Search"
+              showSelectedChip={true}
+              allowClear={true}
+            />
           </Box>
 
           {/* Control Bar */}

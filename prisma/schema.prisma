@@ -47,6 +47,7 @@ model User {
   voiceConsents     VoiceConsent[]
   favorites         UserStoryFavorite[]
   invitedWorkspaceInvites WorkspaceInvite[]
+  createdDocuments  Document[]
   
   // NextAuth relations
   accounts  Account[]
@@ -105,6 +106,7 @@ model Workspace {
   exportJobs  ExportJob[]
   voiceConsents VoiceConsent[]
   familyUnits FamilyUnit[]
+  documents   Document[]
   defaultForUsers User[] @relation("UserDefaultWorkspace")
   
   @@index([ownerId])
@@ -605,6 +607,7 @@ model Person {
   externalRefs     PersonExternalRef[]
   parentInFamilies FamilyParent[]
   familyChildLinks  FamilyChild[]
+  documentLinks    DocumentPerson[]
   
   @@index([workspaceId])
   @@index([firstName, lastName])
@@ -772,10 +775,91 @@ model Asset {
   importSources ImportJob[] @relation("ImportSourceAsset")
   exportOutputs ExportJob[] @relation("ExportOutputAsset")
   modelArtifactFor VoiceProfile[]
+  document Document?
   
   @@index([workspaceId])
   @@index([assetType])
   @@index([processingStatus])
+}
+
+// ============================================
+// DOCUMENT MODELS
+// ============================================
+
+model Document {
+  id          String   @id @default(uuid())
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  // Link to the actual file asset
+  assetId     String   @unique
+  asset       Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  // Document metadata
+  title       String
+  description String?
+  documentType DocumentType @default(OTHER)
+
+  // Dates
+  dateOccurred DateTime?  // When the document event/content happened
+  dateOccurredPrecision DatePrecision @default(EXACT)
+
+  // Soft delete
+  isDeleted   Boolean @default(false)
+  deletedAt   DateTime?
+  deletedById String?
+
+  // People involved in this document
+  people      DocumentPerson[]
+
+  // AI-generated metadata
+  aiSummary   String?    // Auto-generated summary
+  aiSuggestedPeople Json? // Array of suggested person IDs
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String
+  createdBy   User   @relation(fields: [createdById], references: [id])
+
+  @@index([workspaceId])
+  @@index([documentType])
+  @@index([isDeleted])
+  @@index([dateOccurred])
+}
+
+enum DocumentType {
+  PDF
+  LETTER
+  PHOTO
+  HANDWRITTEN
+  CERTIFICATE
+  RECORDING
+  OTHER
+}
+
+// Junction table: Documents <-> People
+model DocumentPerson {
+  id         String   @id @default(uuid())
+
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  personId   String
+  person     Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  // How this person is related to the document
+  role       String?  // e.g., "author", "recipient", "subject", "mentioned"
+
+  // AI confidence if this was auto-suggested
+  aiSuggested Boolean @default(false)
+  aiConfidence Float?  // 0-1 confidence score
+
+  createdAt  DateTime @default(now())
+
+  @@unique([documentId, personId])
+  @@index([documentId])
+  @@index([personId])
 }
 
 // ============================================

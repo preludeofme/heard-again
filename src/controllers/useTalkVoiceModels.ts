@@ -17,6 +17,7 @@ interface UseTalkVoiceModelsOptions {
 }
 
 export function useTalkVoiceModels(
+  subjectId?: string,
   options: UseTalkVoiceModelsOptions = {}
 ): TalkVoiceModelsState & TalkVoiceModelsActions {
   const { onError } = options
@@ -28,7 +29,8 @@ export function useTalkVoiceModels(
 
   const loadVoiceModels = useCallback(async () => {
     try {
-      const response = await fetch('/api/voice/profiles')
+      const url = subjectId ? `/api/voice/profiles?personId=${encodeURIComponent(subjectId)}` : '/api/voice/profiles'
+      const response = await fetch(url)
       const data = await response.json()
 
       if (!data.success) {
@@ -69,7 +71,7 @@ export function useTalkVoiceModels(
       onError?.('Failed to load voice models')
       await logger.logError('Failed to load voice models', { error: message })
     }
-  }, [onError])
+  }, [subjectId, onError])
 
   const selectVoiceModel = useCallback((model: VoiceModel) => {
     setState(prev => ({

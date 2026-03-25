@@ -14,13 +14,16 @@
 
 - [x] need to have the / root page redirect to the dashboard if the user is logged in
 - [x] Need to add a search component to the family tree that is collapsible and can be expanded to show the search results
-  - [ ] Should be reusable across application, but start with family tree
+  - [x] Should be reusable across application, but start with family tree
   - [x] search and debounced type ahead
   - [x] display results with profile picture, name, and relationship
   - [x] allow selection of a family member
   - [x] show selected family member in a chip or badge
   - [x] if active page is not family tree, then there should be an Advanced search button that should take them to the family tree page with the the search component active/expanded
-- [-] the application was originally built around a single person's profile but now we need to support multiple people and families
+- [x] the application was originally built around a single person's profile but now we need to support multiple people and families
+  - [x] The app needs to be also built around the idea that a user can select a family member and navigate around the application with that selected profile.
+    - [x] use case: User goes to family_tree, user selects Ryan, user clicks on voice-lab (voice lab will be filtered down to Ryan's voices), user selects documents and navigates to documents where all the documents filtered for ryan are. 
+    - [x] Add a component to the header that will display the selected family member that will persist through navigations throughout the app
   - [x] Need to have a profile page where the user can view specific family members profiles and can switch between them
     - [x] Profile picture (i like the one from the stories page where it's tilted and has a little animation) 
     - [x] Need to have details of the person such as name, bio, birth date, death date, etc.
@@ -35,28 +38,28 @@
     - [x] with a specific family member selected, it should highlight that person on the family tree to show which person is currently active/selected
   - [x] The stories page should show stories for the currently selected family member or if no family member is selected it shows a random selection from the family archive of stories (like story of the day type component) and then have a way to select a specific profile
   - [x] The voice lab page should show voices for the currently selected family member or if no family member is selected it shows a random selection from the family archive of voices (like voice of the day type component) and then have a way to select a specific profile
-  - [ ] The talk page should show the talk interface for the currently selected family member or if no family member is selected it shows a random selection from the family archive of talks (like talk of the day type component) and then have a way to select a specific profile  
-    - [ ] Navigation should maybe be like a chat application where the sidebar shows the family members the user has chatted with (active conversations)
-    - [ ] Needs to be able to create new conversation and use the family member search/selection component
-  - [ ] Family documents page needs to be updated to have search component included
-    - [ ] should have option to filter by family member
-    - [ ] should have filter based on type of document
-    - [ ] should have filter based on date range
-    - [ ] should have filter based on search term
-    - [ ] should have option to upload new document
-    - [ ] should have option to download document
-    - [ ] should have option to delete document (this should be a soft delete and can be recovered from the trash and potentially have a system in the future for voting or notifying family admins of the deletion allowing them to override or save it)
-- [ ] On document upload and stories creation there needs to be some meta data that is optional to attach to the documents and stories 
-  - [ ] Date added
-  - [ ] Date occurred
-  - [ ] Family members involved
-    - [ ] Potential enhancement is to add some AI review of the document or story that will auto-suggest family members it knows about based on name, nicknames, etc. 
-- [ ] Create a family timeline page that shows events in the family's history (births, deaths, marriages, stories, documents)
-  - [ ] Should be dynamic and filterable by person but by default show entire family
-  - [ ] Should have ability to add/edit/delete events
-  - [ ] Should use chips/badges with avatars to show who the event was about
-  - [ ] Needs to be performant and potentially have infinite scrolling methods for loading events 
-  - [ ] Needs to have a way to view events in a calendar format
+  - [x] The talk page should show the talk interface for the currently selected family member or if no family member is selected it shows a random selection from the family archive of talks (like talk of the day type component) and then have a way to select a specific profile  
+    - [x] Navigation should maybe be like a chat application where the sidebar shows the family members the user has chatted with (active conversations)
+    - [x] Needs to be able to create new conversation and use the family member search/selection component
+  - [x] Family documents page needs to be updated to have search component included
+    - [x] should have option to filter by family member
+    - [x] should have filter based on type of document
+    - [x] should have filter based on date range
+    - [x] should have filter based on search term
+    - [x] should have option to upload new document
+    - [x] should have option to download document
+    - [x] should have option to delete document (this should be a soft delete and can be recovered from the trash and potentially have a system in the future for voting or notifying family admins of the deletion allowing them to override or save it)
+- [x] On document upload and stories creation there needs to be some meta data that is optional to attach to the documents and stories 
+  - [x] Date added (auto-generated)
+  - [x] Date occurred (user-specified when content/event happened)
+  - [x] Family members involved (DocumentPerson junction table with role)
+  - [x] AI review enhancement framework (aiSuggestedPeople, aiSummary, aiConfidence fields)
+- [x] Create a family timeline page that shows events in the family's history (births, deaths, marriages, stories, documents)
+  - [x] Dynamic and filterable by person, shows entire family by default
+  - [x] Uses existing PersonEvent for add/edit/delete (via /api/timeline POST)
+  - [x] Chips/badges with avatars showing who events are about
+  - [x] Performant with pagination (50 events per page, load more button)
+  - [~] View events in calendar format (basic list view for now, calendar view can be added later)
 
 ## Phase 1.2
 - [x] on Family Tree, need to have the canvas be the entire container, it does not need a parent container

@@ -1,11 +1,5 @@
-/**
- * useVoiceSynthesis Hook
- * Finding 5.4: Split useVoiceLabController - Focused hook for voice synthesis
- * Responsibility: Text-to-speech synthesis with caching
- */
-
 import { useState, useCallback } from 'react'
-import { useToast } from '@/components/feedback/ToastProvider'
+import { useSnackbar } from 'notistack'
 
 interface SynthesisCache {
   [key: string]: {
@@ -39,7 +33,7 @@ export function useVoiceSynthesis(): VoiceSynthesisState & VoiceSynthesisActions
     synthesisCache: {},
   })
 
-  const { showError } = useToast()
+  const { enqueueSnackbar } = useSnackbar()
 
   const getCachedAudio = useCallback((modelId: string, text: string): string | undefined => {
     const cacheKey = getSynthesisCacheKey(modelId, text)
@@ -103,10 +97,10 @@ export function useVoiceSynthesis(): VoiceSynthesisState & VoiceSynthesisActions
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Speech synthesis failed'
       setState(prev => ({ ...prev, isSynthesizing: false }))
-      showError(message)
+      enqueueSnackbar(message, { variant: 'error' })
       throw error
     }
-  }, [getCachedAudio, showError])
+  }, [getCachedAudio, enqueueSnackbar])
 
   const clearSynthesisCache = useCallback(() => {
     setState(prev => ({ ...prev, synthesisCache: {} }))

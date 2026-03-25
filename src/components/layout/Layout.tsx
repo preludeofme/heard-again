@@ -31,7 +31,7 @@ import {
 } from '@mui/icons-material'
 import Link from 'next/link'
 import { useState } from 'react'
-import { ToastProvider } from '@/components/feedback/ToastProvider'
+import { SelectedFamilyMemberChip } from './SelectedFamilyMemberChip'
 
 // Material Symbols Outlined icons matching the mockup
 const MaterialSymbolsIcon = ({ children, sx }: { children: string; sx?: any }) => (
@@ -58,6 +58,7 @@ const navItems = [
   { label: 'Voice Lab', href: '/voice-lab', icon: 'settings_voice' },
   { label: 'Documents', href: '/documents', icon: 'description' },
   { label: 'Stories', href: '/stories', icon: 'auto_stories' },
+  { label: 'Timeline', href: '/timeline', icon: 'timeline' },
   { label: 'Favorites', href: '/favorites', icon: 'favorite' },
   { label: 'Family Tree', href: '/family-tree', icon: 'account_tree' },
   { label: 'Talk', href: '/talk', icon: 'forum' },
@@ -158,7 +159,7 @@ export function Layout({ children }: LayoutProps) {
   }
 
   return (
-    <ToastProvider>
+    <>
       {isMobile ? (
         <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
           <AppBar
@@ -191,6 +192,7 @@ export function Layout({ children }: LayoutProps) {
                 <IconButton size="large">
                   <SearchIcon />
                 </IconButton>
+                <SelectedFamilyMemberChip />
                 <IconButton size="large">
                   <Badge badgeContent={3} color="primary">
                     <NotificationsIcon />
@@ -389,10 +391,16 @@ export function Layout({ children }: LayoutProps) {
                         Stories
                       </Typography>
                     </Link>
+                    <Link href="/timeline" passHref legacyBehavior>
+                      <Typography component="a" sx={{ color: '#73777d', fontWeight: 500, cursor: 'pointer', '&:hover': { color: '#2e4a62' } }}>
+                        Timeline
+                      </Typography>
+                    </Link>
                   </Box>
                 </Box>
 
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <SelectedFamilyMemberChip />
                   <Box sx={{ display: { xs: 'none', sm: 'flex' }, alignItems: 'center', backgroundColor: '#f0ede8', borderRadius: 3, px: 2, py: 1 }}>
                     <SearchIcon sx={{ color: '#73777d', fontSize: 20, mr: 1 }} />
                     <InputBase
@@ -434,6 +442,6 @@ export function Layout({ children }: LayoutProps) {
           </Box>
         </Box>
       )}
-    </ToastProvider>
+    </>
   )
 }

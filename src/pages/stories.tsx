@@ -6,6 +6,7 @@ import { Box, CircularProgress, Typography, Button, Card, FormControl, InputLabe
 import { useRouter } from 'next/router'
 import { useEffect, useMemo, useState } from 'react'
 import { StoryContribution } from '@/types'
+import { useSelectedFamilyMember } from '@/contexts/SelectedFamilyMemberContext'
 
 interface PersonOption {
   id: string
@@ -20,7 +21,8 @@ const personName = (person: PersonOption) => {
 
 export default function Stories() {
   const router = useRouter()
-  const selectedSubjectId = typeof router.query.subjectId === 'string' ? router.query.subjectId : undefined
+  const { selectedFamilyMember, setSelectedFamilyMember, clearSelectedFamilyMember } = useSelectedFamilyMember()
+  const selectedSubjectId = selectedFamilyMember?.id
   const controller = useStoriesController(selectedSubjectId)
   const [people, setPeople] = useState<PersonOption[]>([])
 
@@ -59,11 +61,19 @@ export default function Stories() {
 
   const handleSubjectChange = async (value: string) => {
     if (!value) {
-      await router.push('/stories')
+      clearSelectedFamilyMember()
       return
     }
 
-    await router.push(`/stories?subjectId=${encodeURIComponent(value)}`)
+    const selectedPerson = people.find((person) => person.id === value)
+    if (selectedPerson) {
+      setSelectedFamilyMember({
+        id: selectedPerson.id,
+        firstName: selectedPerson.firstName,
+        lastName: selectedPerson.lastName,
+        displayName: selectedPerson.displayName,
+      })
+    }
   }
 
   return (

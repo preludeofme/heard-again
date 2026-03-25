@@ -40,7 +40,7 @@ function mapAssetType(mimeType: string): DocumentArtifact['type'] {
   return 'Letter'
 }
 
-export function useDocumentsController(): DocumentsControllerState & DocumentsControllerActions {
+export function useDocumentsController(personId?: string): DocumentsControllerState & DocumentsControllerActions {
   const [state, setState] = useState<DocumentsControllerState>({
     documents: [],
     selectedFilter: 'All',
@@ -57,7 +57,8 @@ export function useDocumentsController(): DocumentsControllerState & DocumentsCo
     setState(prev => ({ ...prev, isLoading: true, hasError: false, errorMessage: null }))
 
     try {
-      const response = await fetch('/api/assets')
+      const url = personId ? `/api/assets?personId=${encodeURIComponent(personId)}` : '/api/assets'
+      const response = await fetch(url)
       const data = await response.json()
 
       if (!response.ok || !data.success) {
@@ -82,12 +83,12 @@ export function useDocumentsController(): DocumentsControllerState & DocumentsCo
         errorMessage: apiError.message,
       }))
     }
-  }, [])
+  }, [personId])
 
-  // Load on mount
+  // Load on mount or when personId changes
   useEffect(() => {
     fetchDocuments()
-  }, [fetchDocuments])
+  }, [fetchDocuments, personId])
 
   const setSelectedFilter = useCallback((filter: string) => {
     setState(prev => ({ ...prev, selectedFilter: filter }))

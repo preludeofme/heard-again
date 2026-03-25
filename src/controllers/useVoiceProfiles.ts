@@ -1,13 +1,7 @@
-/**
- * useVoiceProfiles Hook
- * Finding 5.4: Split useVoiceLabController - Focused hook for voice profile CRUD
- * Responsibility: Fetch, cache, and manage voice profiles list
- */
-
 import { useState, useCallback, useEffect } from 'react'
+import { useSnackbar } from 'notistack'
 import type { VoiceModel } from '@/types'
 import { toVoiceModelArray } from '@/mappers'
-import { useToast } from '@/components/feedback/ToastProvider'
 
 interface VoiceProfilesState {
   voiceModels: VoiceModel[]
@@ -30,7 +24,7 @@ export function useVoiceProfiles(subjectId?: string): VoiceProfilesState & Voice
     errorMessage: null,
   })
 
-  const { showSuccess, showError } = useToast()
+  const { enqueueSnackbar } = useSnackbar()
 
   const refreshProfiles = useCallback(async () => {
     setState(prev => ({ ...prev, isLoading: true, hasError: false, errorMessage: null }))
@@ -80,14 +74,14 @@ export function useVoiceProfiles(subjectId?: string): VoiceProfilesState & Voice
         voiceModels: prev.voiceModels.filter(m => m.id !== profileId),
       }))
 
-      showSuccess('Voice profile deleted')
+      enqueueSnackbar('Voice profile deleted', { variant: 'success' })
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to delete voice profile'
       console.error('Failed to delete voice profile:', error)
-      showError(message)
+      enqueueSnackbar(message, { variant: 'error' })
       throw error
     }
-  }, [showSuccess, showError])
+  }, [enqueueSnackbar])
 
   // Load profiles on mount
   useEffect(() => {

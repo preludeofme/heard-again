@@ -5,6 +5,7 @@ import { useVoiceLabController } from '@/controllers'
 import { Box, CircularProgress, Typography, Button, Card, FormControl, InputLabel, MenuItem, Select } from '@mui/material'
 import { useRouter } from 'next/router'
 import { useEffect, useMemo, useState } from 'react'
+import { useSelectedFamilyMember } from '@/contexts/SelectedFamilyMemberContext'
 
 interface PersonOption {
   id: string
@@ -19,7 +20,8 @@ const personName = (person: PersonOption) => {
 
 export default function VoiceLab() {
   const router = useRouter()
-  const selectedSubjectId = typeof router.query.subjectId === 'string' ? router.query.subjectId : undefined
+  const { selectedFamilyMember, setSelectedFamilyMember, clearSelectedFamilyMember } = useSelectedFamilyMember()
+  const selectedSubjectId = selectedFamilyMember?.id
   const controller = useVoiceLabController(selectedSubjectId)
   const [people, setPeople] = useState<PersonOption[]>([])
 
@@ -59,11 +61,19 @@ export default function VoiceLab() {
 
   const handleSubjectChange = async (value: string) => {
     if (!value) {
-      await router.push('/voice-lab')
+      clearSelectedFamilyMember()
       return
     }
 
-    await router.push(`/voice-lab?subjectId=${encodeURIComponent(value)}`)
+    const selectedPerson = people.find((person) => person.id === value)
+    if (selectedPerson) {
+      setSelectedFamilyMember({
+        id: selectedPerson.id,
+        firstName: selectedPerson.firstName,
+        lastName: selectedPerson.lastName,
+        displayName: selectedPerson.displayName,
+      })
+    }
   }
 
   return (

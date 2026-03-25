@@ -1,13 +1,7 @@
-/**
- * useDocumentUpload Hook
- * Finding 5.4: Split useVoiceLabController - Focused hook for document uploads
- * Responsibility: File upload with progress tracking
- */
-
 import { useState, useCallback } from 'react'
+import { useSnackbar } from 'notistack'
 import type { DocumentArtifact } from '@/types'
 import { toDocumentArtifact } from '@/mappers'
-import { useToast } from '@/components/feedback/ToastProvider'
 
 interface DocumentUploadState {
   documents: DocumentArtifact[]
@@ -28,7 +22,7 @@ export function useDocumentUpload(): DocumentUploadState & DocumentUploadActions
     uploadProgress: 0,
   })
 
-  const { showSuccess, showError } = useToast()
+  const { enqueueSnackbar } = useSnackbar()
 
   const uploadDocument = useCallback(async (file: File) => {
     setState(prev => ({ ...prev, isUploading: true, uploadProgress: 0 }))
@@ -72,13 +66,13 @@ export function useDocumentUpload(): DocumentUploadState & DocumentUploadActions
         uploadProgress: 100,
       }))
 
-      showSuccess('Document uploaded successfully')
+      enqueueSnackbar('Document uploaded successfully', { variant: 'success' })
     } catch (error) {
       setState(prev => ({ ...prev, isUploading: false, uploadProgress: 0 }))
-      showError('Failed to upload document')
+      enqueueSnackbar('Failed to upload document', { variant: 'error' })
       throw error
     }
-  }, [showSuccess, showError])
+  }, [enqueueSnackbar])
 
   const shareDocument = useCallback((id: string) => {
     const doc = state.documents.find(d => d.id === id)

@@ -1,26 +1,32 @@
 import { Box, Typography, Card, CardContent, Button, IconButton, TextField, Avatar, Chip, Select, MenuItem, FormControl, InputLabel, Slider, Dialog, DialogTitle, DialogContent, DialogActions, CircularProgress } from '@mui/material'
-import { ArrowBack as BackIcon, Mic as MicIcon, MicOff as MuteIcon, Send as SendIcon, AddPhotoAlternate as PhotoIcon, VolumeUp as SpeakerIcon, Settings as SettingsIcon, Compare as CompareIcon, Close as CloseIcon } from '@mui/icons-material'
+import { ArrowBack as BackIcon, Mic as MicIcon, MicOff as MuteIcon, Send as SendIcon, AddPhotoAlternate as PhotoIcon, VolumeUp as SpeakerIcon, Settings as SettingsIcon, Compare as CompareIcon, Close as CloseIcon, Add as AddIcon } from '@mui/icons-material'
 import { ConversationMessage, LegacySubject, VoiceModel } from '@/types'
 import { useState, useRef, useEffect } from 'react'
 import { formatDistanceToNow } from 'date-fns'
 import { useTalkController } from '@/controllers/useTalkController'
+import { FamilyMemberSearch, SearchableFamilyMember } from '@/components/search'
+import { useRouter } from 'next/router'
 
 interface TalkPageProps {
   legacySubject: LegacySubject
+  subjectId?: string
+  availablePeople?: SearchableFamilyMember[]
 }
 
-export function TalkPage({ legacySubject }: TalkPageProps) {
+export function TalkPage({ legacySubject, subjectId, availablePeople = [] }: TalkPageProps) {
+  const router = useRouter()
   const [isMuted, setIsMuted] = useState(false)
   const [isListening, setIsListening] = useState(false)
   const [isTyping, setIsTyping] = useState(false)
   const [showVoiceSettings, setShowVoiceSettings] = useState(false)
   const [showComparisonDialog, setShowComparisonDialog] = useState(false)
+  const [showNewConversationDialog, setShowNewConversationDialog] = useState(false)
   const [comparisonText, setComparisonText] = useState('')
   const [comparisonResults, setComparisonResults] = useState<{ audioA: string | null; audioB: string | null } | null>(null)
   const [isComparing, setIsComparing] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   
-  const controller = useTalkController()
+  const controller = useTalkController(subjectId)
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -52,17 +58,47 @@ export function TalkPage({ legacySubject }: TalkPageProps) {
   }
 
   return (
-    <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#fcf9f4' }}>
-      {/* Header */}
+    <Box sx={{ height: '100vh', display: 'flex', backgroundColor: '#fcf9f4' }}>
+      {/* Simple Sidebar */}
       <Box sx={{ 
+        width: 300, 
         backgroundColor: '#ffffff', 
-        px: { xs: 2, md: 4 }, 
-        py: 2, 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: 2,
-        borderBottom: '1px solid #f0ece4'
+        borderRight: '1px solid #f0ece4',
+        p: 3,
+        display: 'flex',
+        flexDirection: 'column'
       }}>
+        <Typography variant="h6" sx={{ color: '#16334a', fontWeight: 600, mb: 2 }}>
+          Conversations
+        </Typography>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={() => setShowNewConversationDialog(true)}
+          sx={{
+            background: 'linear-gradient(135deg, #16334a 0%, #2e4a62 100%)',
+            fontWeight: 600,
+          }}
+        >
+          New Conversation
+        </Button>
+        <Typography variant="body2" sx={{ color: '#546669', mt: 3, textAlign: 'center' }}>
+          Start conversations from the family tree to see them here.
+        </Typography>
+      </Box>
+      
+      {/* Main Content */}
+      <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+        {/* Header */}
+        <Box sx={{ 
+          backgroundColor: '#ffffff', 
+          px: { xs: 2, md: 4 }, 
+          py: 2, 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: 2,
+          borderBottom: '1px solid #f0ece4'
+        }}>
         <IconButton 
           sx={{ color: '#546669' }}
           aria-label="Go back"
@@ -607,6 +643,47 @@ export function TalkPage({ legacySubject }: TalkPageProps) {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* New Conversation Dialog */}
+      <Dialog
+        open={showNewConversationDialog}
+        onClose={() => setShowNewConversationDialog(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            Start New Conversation
+            <IconButton onClick={() => setShowNewConversationDialog(false)}>
+              <CloseIcon />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ mb: 2, color: '#546669' }}>
+            Search for and select a family member to start a conversation with.
+          </Typography>
+          <FamilyMemberSearch
+            members={availablePeople}
+            onSelect={(member) => {
+              if (member) {
+                router.push(`/talk?subjectId=${encodeURIComponent(member.id)}`)
+                setShowNewConversationDialog(false)
+              }
+            }}
+            placeholder="Search by name..."
+            title="Select Family Member"
+            defaultExpanded={true}
+            showExpandButton={false}
+            showSelectedChip={false}
+            allowClear={false}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowNewConversationDialog(false)}>Cancel</Button>
+        </DialogActions>
+      </Dialog>
+      </Box>
       
       <style jsx>{`
         @keyframes pulse {

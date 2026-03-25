@@ -1,11 +1,5 @@
-/**
- * useVoiceTraining Hook
- * Finding 5.4: Split useVoiceLabController - Focused hook for voice training state machine
- * Responsibility: Manage voice profile creation flow including sample uploads and training
- */
-
 import { useState, useCallback } from 'react'
-import { useToast } from '@/components/feedback/ToastProvider'
+import { useSnackbar } from 'notistack'
 
 interface TrainingSample {
   file: File
@@ -60,7 +54,7 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
     estimatedStartTime: null,
   })
 
-  const { showSuccess, showError } = useToast()
+  const { enqueueSnackbar } = useSnackbar()
 
   const uploadTrainingSample = useCallback(async (file: File) => {
     setState(prev => ({ ...prev, isUploading: true }))
@@ -92,13 +86,13 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
         isUploading: false,
       }))
 
-      showSuccess('Sample uploaded successfully')
+      enqueueSnackbar('Sample uploaded successfully', { variant: 'success' })
     } catch (error) {
       setState(prev => ({ ...prev, isUploading: false }))
-      showError('Failed to upload sample')
+      enqueueSnackbar('Failed to upload sample', { variant: 'error' })
       throw error
     }
-  }, [showSuccess, showError])
+  }, [enqueueSnackbar])
 
   const removeTrainingSample = useCallback((index: number) => {
     setState(prev => ({
@@ -113,7 +107,7 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
     styleInstruct?: string
   ) => {
     if (state.trainingSamples.length === 0) {
-      showError('Please upload at least one audio sample')
+      enqueueSnackbar('Please upload at least one audio sample', { variant: 'error' })
       return
     }
 
@@ -123,7 +117,7 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
       const sampleFileIds = state.trainingSamples.map(s => s.fileId).filter(Boolean)
 
       if (sampleFileIds.length === 0) {
-        showError('No valid audio samples found. Please re-upload your audio files.')
+        enqueueSnackbar('No valid audio samples found. Please re-upload your audio files.', { variant: 'error' })
         setState(prev => ({ ...prev, isTraining: false }))
         return
       }
@@ -164,17 +158,17 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
         trainingSamples: [],
       }))
 
-      showSuccess('Voice profile created! You can now use it in Talk.')
+      enqueueSnackbar('Voice profile created! You can now use it in Talk.', { variant: 'success' })
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to create voice profile'
       setState(prev => ({
         ...prev,
         isTraining: false,
       }))
-      showError(message)
+      enqueueSnackbar(message, { variant: 'error' })
       throw error
     }
-  }, [state.trainingSamples, showSuccess, showError])
+  }, [state.trainingSamples, enqueueSnackbar])
 
   const checkTrainingStatus = useCallback(async (jobId: string) => {
     try {
@@ -206,12 +200,12 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
         estimatedStartTime: null,
       }))
 
-      showSuccess('Training job cancelled')
+      enqueueSnackbar('Training job cancelled')
     } catch (error) {
-      showError('Failed to cancel training job')
+      enqueueSnackbar('Failed to cancel training job')
       throw error
     }
-  }, [showSuccess, showError])
+  }, [enqueueSnackbar])
 
   const preprocessSamples = useCallback(async (options: {
     noiseReduction: boolean
@@ -244,13 +238,13 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
         preprocessingProgress: 100,
       }))
 
-      showSuccess('Audio preprocessing completed')
+      enqueueSnackbar('Audio preprocessing completed')
     } catch (error) {
       setState(prev => ({ ...prev, preprocessingStatus: 'failed' }))
-      showError('Failed to preprocess audio')
+      enqueueSnackbar('Failed to preprocess audio')
       throw error
     }
-  }, [state.trainingJob, showSuccess, showError])
+  }, [state.trainingJob, enqueueSnackbar])
 
   const runASR = useCallback(async (language: string) => {
     if (!state.trainingJob) return
@@ -276,13 +270,13 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
       if (!response.ok) throw new Error('ASR failed')
 
       setState(prev => ({ ...prev, asrStatus: 'completed' }))
-      showSuccess('Speech-to-text completed')
+      enqueueSnackbar('Speech-to-text completed')
     } catch (error) {
       setState(prev => ({ ...prev, asrStatus: 'failed' }))
-      showError('Failed to process speech-to-text')
+      enqueueSnackbar('Failed to process speech-to-text')
       throw error
     }
-  }, [state.trainingJob, showSuccess, showError])
+  }, [state.trainingJob, enqueueSnackbar])
 
   const designAndCloneVoice = useCallback(async (
     profileName: string,
@@ -320,14 +314,14 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
         isTraining: false,
       }))
 
-      showSuccess(`Voice "${profileName}" designed and saved!`)
+      enqueueSnackbar(`Voice "${profileName}" designed and saved!`)
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to design voice'
       setState(prev => ({ ...prev, isTraining: false }))
-      showError(message)
+      enqueueSnackbar(message, { variant: 'error' })
       throw error
     }
-  }, [showSuccess, showError])
+  }, [enqueueSnackbar])
 
   return {
     ...state,

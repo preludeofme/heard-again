@@ -7,6 +7,7 @@ import { Layout } from '@/components/layout/Layout'
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { Box, CircularProgress } from '@mui/material'
 import { useRouter } from 'next/router'
+import { useSelectedFamilyMember } from '@/contexts/SelectedFamilyMemberContext'
 
 interface ApiPerson {
   id: string
@@ -463,6 +464,7 @@ function mapPeopleToTree(people: ApiPersonWithEdges[], activePersonId?: string):
 
 export default function FamilyTree() {
   const router = useRouter()
+  const { setSelectedFamilyMember } = useSelectedFamilyMember()
   const selectedPersonIdFromQuery = typeof router.query.personId === 'string' ? router.query.personId : undefined
   const initialSearchExpanded =
     router.query.expandSearch === '1'
@@ -514,8 +516,21 @@ export default function FamilyTree() {
     fetchPeople()
   }, [fetchPeople])
 
-  const handlePersonClick = (personId: string) => {
-    router.push(`/profile/${personId}`)
+  const handlePersonClick = (person: { id: string | number; name: string; avatar: string }) => {
+    // Parse name into first and last name
+    const nameParts = person.name.split(' ')
+    const firstName = nameParts[0] || ''
+    const lastName = nameParts.slice(1).join(' ') || undefined
+    
+    // Set the selected family member in context for app-wide filtering
+    setSelectedFamilyMember({
+      id: String(person.id),
+      firstName,
+      lastName,
+      displayName: person.name,
+      avatarUrl: person.avatar || undefined,
+    })
+    router.push(`/profile/${person.id}`)
   }
 
   const handleEditRelationships = (personId: string) => {

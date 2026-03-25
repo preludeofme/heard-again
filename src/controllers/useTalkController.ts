@@ -11,7 +11,7 @@ interface TalkControllerErrorState {
   errorMessage: string | null
 }
 
-export function useTalkController() {
+export function useTalkController(subjectId?: string) {
   const selectedVoiceModelRef = useRef<VoiceModel | null>(null)
   const synthesizeSpeechRef = useRef<(text: string, modelId?: string) => Promise<string | null>>(async () => null)
   const playAudioRef = useRef<(audioUrl: string) => void>(() => {})
@@ -30,8 +30,8 @@ export function useTalkController() {
     accentIcon: 'heart',
   }
 
-  const voiceModels = useTalkVoiceModels({
-    onError: (message) => {
+  const voiceModels = useTalkVoiceModels(subjectId, {
+    onError: (message: string) => {
       setErrorState({ hasError: true, errorMessage: message })
     },
   })

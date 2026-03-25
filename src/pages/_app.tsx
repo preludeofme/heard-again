@@ -5,6 +5,8 @@ import theme from '@/styles/theme'
 import { Manrope, Newsreader } from 'next/font/google'
 import { useEffect } from 'react'
 import { AuthProvider } from '@/components/auth/AuthProvider'
+import { SnackbarProvider } from 'notistack'
+import { SelectedFamilyMemberProvider } from '@/contexts/SelectedFamilyMemberContext'
 import type { AppProps } from 'next/app'
 import type { Session } from 'next-auth'
 
@@ -50,10 +52,14 @@ export default function App({ Component, pageProps }: CustomAppProps) {
   return (
     <div className={`${manrope.variable} ${newsreader.variable}`}>
       <AuthProvider session={session}>
-        <ThemeProvider theme={theme}>
-          <CssBaseline />
-          <Component {...restPageProps} />
-        </ThemeProvider>
+        <SelectedFamilyMemberProvider>
+          <SnackbarProvider maxSnack={3} anchorOrigin={{ vertical: 'top', horizontal: 'right' }}>
+            <ThemeProvider theme={theme}>
+              <CssBaseline />
+              <Component {...restPageProps} />
+            </ThemeProvider>
+          </SnackbarProvider>
+        </SelectedFamilyMemberProvider>
       </AuthProvider>
     </div>
   )
