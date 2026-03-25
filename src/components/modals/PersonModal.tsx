@@ -541,6 +541,23 @@ export function PersonModal({ open, personId, initialTab = 'overview', onClose, 
               </Button>
             </Box>
 
+            {/* Relationship description preview */}
+            {relationshipTargetId && (
+              <Box sx={{ mb: 2, p: 1.5, backgroundColor: '#e8f4e8', borderRadius: 2, border: '1px solid #c3e6c3' }}>
+                <Typography variant="body2" sx={{ color: '#2e7d32', fontWeight: 500 }}>
+                  {(() => {
+                    const targetPerson = availablePeople.find((p) => p.id === relationshipTargetId)
+                    const targetName = targetPerson ? `${targetPerson.firstName}${targetPerson.lastName ? ` ${targetPerson.lastName}` : ''}` : '...'
+                    const subjectName = person.displayName || person.firstName
+                    if (relationshipType === 'PARENT') return `${subjectName} is a parent of ${targetName}`
+                    if (relationshipType === 'CHILD') return `${subjectName} is a child of ${targetName}`
+                    if (relationshipType === 'SPOUSE') return `${subjectName} is spouse/partner of ${targetName}`
+                    return ''
+                  })()}
+                </Typography>
+              </Box>
+            )}
+
             {person.relationships.length === 0 ? (
               <EmptyTabState icon={<FamilyRestroom />} message="No relationships added yet" />
             ) : (

@@ -79,7 +79,7 @@ export function CreateAccountPage() {
   }
 
   const handleGoogleSignUp = () => {
-    signIn('google', { callbackUrl: '/onboarding' })
+    signIn('google', { callbackUrl: '/dashboard' })
   }
 
   return (

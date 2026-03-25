@@ -656,13 +656,29 @@ export function AddEditPersonModal({
         </>
       )}
 
-      <Box sx={{ mt: 2, p: 2, backgroundColor: '#f6f3ee', borderRadius: 2 }}>
-        <Typography variant="caption" sx={{ color: '#666' }}>
-          {selectedPerson
-            ? `Example: If this new person is ${selectedPerson.firstName}'s child, choose “Is child of selected person”.`
-            : 'Choose a person first, then set the exact relationship direction.'}
-        </Typography>
-      </Box>
+      {/* Relationship description preview */}
+      {selectedPerson && formData.relationshipType ? (
+        <Box sx={{ mt: 2, p: 2, backgroundColor: '#e8f4e8', borderRadius: 2, border: '1px solid #c3e6c3' }}>
+          <Typography variant="body2" sx={{ color: '#2e7d32', fontWeight: 500 }}>
+            {(() => {
+              const newName = formData.firstName ? `${formData.firstName}${formData.lastName ? ` ${formData.lastName}` : ''}` : 'This new person'
+              const targetName = `${selectedPerson.firstName}${selectedPerson.lastName ? ` ${selectedPerson.lastName}` : ''}`
+              if (formData.relationshipType === 'PARENT') return `${newName} is a parent of ${targetName}`
+              if (formData.relationshipType === 'CHILD') return `${newName} is a child of ${targetName}`
+              if (formData.relationshipType === 'SPOUSE') return `${newName} is spouse/partner of ${targetName}`
+              return ''
+            })()}
+          </Typography>
+        </Box>
+      ) : (
+        <Box sx={{ mt: 2, p: 2, backgroundColor: '#f6f3ee', borderRadius: 2 }}>
+          <Typography variant="caption" sx={{ color: '#666' }}>
+            {selectedPerson
+              ? `Choose a relationship type to see a preview of what will be created.`
+              : 'Choose a person first, then set the exact relationship direction.'}
+          </Typography>
+        </Box>
+      )}
     </Box>
     )
   }

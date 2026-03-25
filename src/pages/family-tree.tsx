@@ -3,7 +3,8 @@ import { FamilyTreePage } from '@/components/pages/FamilyTreePage'
 import { PersonModal } from '@/components/modals/PersonModal'
 import { AddEditPersonModal, PersonFormData } from '@/components/modals/AddEditPersonModal'
 import { SuccessModal } from '@/components/modals/SuccessModal'
-import { useEffect, useState, useCallback } from 'react'
+import { Layout } from '@/components/layout/Layout'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { Box, CircularProgress } from '@mui/material'
 
 interface ApiPerson {
@@ -589,13 +590,28 @@ export default function FamilyTree() {
     }
   }
 
+  const [isFullscreen, setIsFullscreen] = useState(false)
+
   if (isLoading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
-        <CircularProgress />
-      </Box>
+      <Layout>
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
+          <CircularProgress />
+        </Box>
+      </Layout>
     )
   }
+
+  const treeContent = (
+    <FamilyTreePage 
+      people={treeData ?? undefined} 
+      onPersonClick={handlePersonClick}
+      onAddPerson={() => setIsAddPersonModalOpen(true)}
+      onEditRelationships={handleEditRelationships}
+      isFullscreen={isFullscreen}
+      onToggleFullscreen={() => setIsFullscreen((prev) => !prev)}
+    />
+  )
 
   return (
     <>
@@ -603,12 +619,7 @@ export default function FamilyTree() {
         <title>Family Tree | Heard Again</title>
         <meta name="description" content="Chart your family legacy across generations." />
       </Head>
-      <FamilyTreePage 
-        people={treeData ?? undefined} 
-        onPersonClick={handlePersonClick}
-        onAddPerson={() => setIsAddPersonModalOpen(true)}
-        onEditRelationships={handleEditRelationships}
-      />
+      {isFullscreen ? treeContent : <Layout>{treeContent}</Layout>}
       
       <PersonModal
         open={isPersonModalOpen}

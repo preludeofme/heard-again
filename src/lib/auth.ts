@@ -84,11 +84,11 @@ export const authOptions: NextAuthOptions = {
       return session
     },
     async redirect({ url, baseUrl }) {
-      // Let middleware handle the actual destination based on onboarding state
-      if (url === baseUrl || url === `${baseUrl}/`) return `${baseUrl}/onboarding`
+      // Send to dashboard by default; middleware will redirect to /onboarding if needed
+      if (url === baseUrl || url === `${baseUrl}/`) return `${baseUrl}/dashboard`
       if (url.startsWith('/')) return `${baseUrl}${url}`
       else if (new URL(url).origin === baseUrl) return url
-      return `${baseUrl}/onboarding`
+      return `${baseUrl}/dashboard`
     },
   },
   events: {
