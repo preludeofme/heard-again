@@ -438,9 +438,13 @@ model Instance {
   
   // Tunnel config (for CONNECTED/HYBRID modes)
   tunnelEnabled   Boolean @default(false)
+  tunnelId        String?  // Cloudflare tunnel ID (for named tunnels)
+  tunnelName      String?  // Cloudflare tunnel name
   tunnelSubdomain String?
-  tunnelToken     String? // For secure tunnel authentication
-  tunnelTokenExpiresAt DateTime?
+  tunnelToken     String? // For tunnel authentication (quick or named)
+  tunnelCredentials String? // JSON string with AccountTag, TunnelSecret, TunnelID
+  tunnelDnsRecordId String? // Cloudflare DNS record ID
+  tunnelTokenExpiresAt DateTime? // For quick tunnels only
   lastAuthenticatedAt  DateTime?
   
   // Health/status tracking

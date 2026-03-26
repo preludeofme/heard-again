@@ -55,8 +55,13 @@ export default apiHandler({
       },
       tunnel: instance.tunnelEnabled ? {
         enabled: true,
+        type: instance.tunnelId ? 'named' : 'quick',
+        id: instance.tunnelId,
+        name: instance.tunnelName,
         subdomain: instance.tunnelSubdomain,
-        publicUrl: `https://${instance.tunnelSubdomain}.heardagain.com`,
+        publicUrl: instance.tunnelId 
+          ? `https://${instance.tunnelSubdomain}` 
+          : `https://${instance.tunnelSubdomain}.heardagain.com`,
         tokenExpired,
         tokenExpiresAt: instance.tunnelTokenExpiresAt,
         lastAuthenticatedAt: instance.lastAuthenticatedAt,

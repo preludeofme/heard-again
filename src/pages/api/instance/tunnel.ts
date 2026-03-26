@@ -29,9 +29,25 @@ export default apiHandler({
 
     const { action } = req.body
 
-    const instance = await prisma.instance.findFirst({
+    let instance = await prisma.instance.findFirst({
       where: { workspaceId: user.workspaceId },
     })
+
+    // Auto-create instance if enabling tunnel and none exists
+    if (!instance && action === 'enable') {
+      instance = await prisma.instance.create({
+        data: {
+          workspaceId: user.workspaceId,
+          type: 'LOCAL',
+          status: 'ACTIVE',
+          version: '1.0.0',
+          computeMode: 'LOCAL',
+          dataMode: 'LOCAL',
+          tunnelEnabled: false,
+          registeredAt: new Date(),
+        },
+      })
+    }
 
     if (!instance) {
       throw Errors.notFound('Instance')

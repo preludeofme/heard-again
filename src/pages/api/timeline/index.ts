@@ -247,9 +247,9 @@ async function getTimelineEvents(req: NextApiRequest, res: NextApiResponse, work
         people: [{
           id: person.id,
           firstName: person.firstName,
-          lastName: person.lastName,
-          displayName: person.displayName,
-          avatarAssetId: person.avatarAssetId,
+          lastName: person.lastName ?? undefined,
+          displayName: person.displayName ?? undefined,
+          avatarAssetId: person.avatarAssetId ?? undefined,
           role: 'subject',
         }],
         sourceId: person.id,
@@ -270,9 +270,9 @@ async function getTimelineEvents(req: NextApiRequest, res: NextApiResponse, work
         people: [{
           id: person.id,
           firstName: person.firstName,
-          lastName: person.lastName,
-          displayName: person.displayName,
-          avatarAssetId: person.avatarAssetId,
+          lastName: person.lastName ?? undefined,
+          displayName: person.displayName ?? undefined,
+          avatarAssetId: person.avatarAssetId ?? undefined,
           role: 'subject',
         }],
         sourceId: person.id,
@@ -287,9 +287,9 @@ async function getTimelineEvents(req: NextApiRequest, res: NextApiResponse, work
       const people = family.parents.map(p => ({
         id: p.parent.id,
         firstName: p.parent.firstName,
-        lastName: p.parent.lastName,
-        displayName: p.parent.displayName,
-        avatarAssetId: p.parent.avatarAssetId,
+        lastName: p.parent.lastName ?? undefined,
+        displayName: p.parent.displayName ?? undefined,
+        avatarAssetId: p.parent.avatarAssetId ?? undefined,
         role: 'spouse',
       }))
 
@@ -299,7 +299,7 @@ async function getTimelineEvents(req: NextApiRequest, res: NextApiResponse, work
         date: family.marriageDate,
         datePrecision: 'EXACT',
         title: `Marriage${family.marriagePlace ? ` in ${family.marriagePlace}` : ''}`,
-        description: family.marriagePlace,
+        description: family.marriagePlace ?? undefined,
         people,
         sourceId: family.id,
         sourceType: 'family',
@@ -315,9 +315,9 @@ async function getTimelineEvents(req: NextApiRequest, res: NextApiResponse, work
         people.push({
           id: story.subject.id,
           firstName: story.subject.firstName,
-          lastName: story.subject.lastName,
-          displayName: story.subject.displayName,
-          avatarAssetId: story.subject.avatarAssetId,
+          lastName: story.subject.lastName ?? undefined,
+          displayName: story.subject.displayName ?? undefined,
+          avatarAssetId: story.subject.avatarAssetId ?? undefined,
           role: 'subject',
         })
       }
@@ -325,9 +325,9 @@ async function getTimelineEvents(req: NextApiRequest, res: NextApiResponse, work
         people.push({
           id: story.speaker.id,
           firstName: story.speaker.firstName,
-          lastName: story.speaker.lastName,
-          displayName: story.speaker.displayName,
-          avatarAssetId: story.speaker.avatarAssetId,
+          lastName: story.speaker.lastName ?? undefined,
+          displayName: story.speaker.displayName ?? undefined,
+          avatarAssetId: story.speaker.avatarAssetId ?? undefined,
           role: 'speaker',
         })
       }
@@ -338,7 +338,7 @@ async function getTimelineEvents(req: NextApiRequest, res: NextApiResponse, work
         date: story.storyDate,
         datePrecision: story.storyDatePrecision,
         title: story.title,
-        description: story.excerpt,
+        description: story.excerpt ?? undefined,
         people,
         sourceId: story.id,
         sourceType: 'story',
@@ -355,7 +355,7 @@ async function getTimelineEvents(req: NextApiRequest, res: NextApiResponse, work
         date: doc.dateOccurred,
         datePrecision: doc.dateOccurredPrecision,
         title: doc.title,
-        description: doc.description,
+        description: doc.description ?? undefined,
         people: doc.people.map(dp => ({
           id: dp.person.id,
           firstName: dp.person.firstName,
@@ -501,9 +501,9 @@ async function createTimelineEvent(
       people: [{
         id: event.person.id,
         firstName: event.person.firstName,
-        lastName: event.person.lastName,
-        displayName: event.person.displayName,
-        avatarAssetId: event.person.avatarAssetId,
+        lastName: event.person.lastName ?? undefined,
+        displayName: event.person.displayName ?? undefined,
+        avatarAssetId: event.person.avatarAssetId ?? undefined,
         role: 'subject',
       }],
       sourceId: event.id,
