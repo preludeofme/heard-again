@@ -10,6 +10,7 @@ import { StorageService } from './StorageService'
 import { RelationshipService } from './RelationshipService'
 import { SearchService } from './SearchService'
 import { VoiceService } from './VoiceService'
+import { ImageProcessingService } from './ImageProcessingService'
 
 // Singleton instances for server-side usage
 export const storyService = new StoryService(prisma)
@@ -30,6 +31,7 @@ export { StorageService } from './StorageService'
 export { RelationshipService } from './RelationshipService'
 export { SearchService } from './SearchService'
 export { VoiceService } from './VoiceService'
+export { ImageProcessingService } from './ImageProcessingService'
 
 // Factory for creating fresh instances with custom dependencies
 export function createServices(client = prisma) {

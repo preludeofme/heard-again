@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+  # Main Next.js application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3002:3000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/heard_again
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-change-this-in-production}
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3002}
+      - TTS_SERVICE_URL=${TTS_SERVICE_URL:-http://tts:8100}
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - uploads:/app/uploads
+      - generated:/app/generated
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/instance/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # PostgreSQL database
+  db:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=heard_again
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # TTS Service (optional - requires GPU)
+  tts:
+    build:
+      context: ./tts-service
+      dockerfile: Dockerfile
+    ports:
+      - "8100:8100"
+    environment:
+      - PORT=8100
+      - MODEL_DEVICE=cuda
+    volumes:
+      - tts_models:/app/models
+      - generated:/app/generated
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+    profiles:
+      - with-tts
+
+volumes:
+  postgres_data:
+  uploads:
+  generated:
+  tts_models:

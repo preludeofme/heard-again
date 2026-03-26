@@ -48,6 +48,7 @@ model User {
   favorites         UserStoryFavorite[]
   invitedWorkspaceInvites WorkspaceInvite[]
   createdDocuments  Document[]
+  mergeProposals    FamilyMergeProposal[]
   
   // NextAuth relations
   accounts  Account[]
@@ -104,6 +105,8 @@ model Workspace {
   invites     WorkspaceInvite[]
   importJobs  ImportJob[]
   exportJobs  ExportJob[]
+  mergeProposalsAsTarget FamilyMergeProposal[] @relation("MergeTargetWorkspace")
+  mergeProposalsAsSource FamilyMergeProposal[] @relation("MergeSourceWorkspace")
   voiceConsents VoiceConsent[]
   familyUnits FamilyUnit[]
   documents   Document[]
@@ -607,6 +610,8 @@ model Person {
   externalRefs     PersonExternalRef[]
   parentInFamilies FamilyParent[]
   familyChildLinks  FamilyChild[]
+  mergeTargets     FamilyMergePersonMatch[] @relation("MergeTargetPerson")
+  mergeSources     FamilyMergePersonMatch[] @relation("MergeSourcePerson")
   documentLinks    DocumentPerson[]
   
   @@index([workspaceId])
@@ -1185,6 +1190,115 @@ model ExportJob {
   updatedAt     DateTime  @updatedAt
 
   @@index([workspaceId])
+  @@index([status])
+}
+
+// ============================================
+// FAMILY MERGE MODELS
+// ============================================
+
+enum MergeStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CONFLICT
+  MERGED
+  FAILED
+}
+
+model FamilyMergeProposal {
+  id          String   @id @default(uuid())
+
+  // Target workspace (where people will be merged INTO)
+  targetWorkspaceId String
+  targetWorkspace   Workspace @relation("MergeTargetWorkspace", fields: [targetWorkspaceId], references: [id], onDelete: Cascade)
+
+  // Source workspace (where people will be merged FROM)
+  sourceWorkspaceId String
+  sourceWorkspace   Workspace @relation("MergeSourceWorkspace", fields: [sourceWorkspaceId], references: [id], onDelete: Cascade)
+
+  // Who initiated the merge proposal
+  proposedById  String
+  proposedBy    User      @relation(fields: [proposedById], references: [id])
+
+  status        MergeStatus @default(PENDING)
+
+  // Matching score summary (0-1, higher = better match)
+  overallMatchScore Float?
+
+  // Number of people that matched
+  matchedPeopleCount Int @default(0)
+
+  // Total people in source workspace
+  totalSourcePeople Int @default(0)
+
+  // Conflict details if status is CONFLICT
+  conflictDetails   Json?
+
+  // When the proposal was reviewed
+  reviewedAt      DateTime?
+  reviewedById    String?
+
+  // When the merge was executed
+  executedAt      DateTime?
+  executedById    String?
+
+  errorMessage    String?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Individual person matches in this proposal
+  personMatches   FamilyMergePersonMatch[]
+
+  @@index([targetWorkspaceId])
+  @@index([sourceWorkspaceId])
+  @@index([status])
+  @@index([proposedById])
+}
+
+model FamilyMergePersonMatch {
+  id          String   @id @default(uuid())
+
+  proposalId  String
+  proposal    FamilyMergeProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+
+  // Person in target workspace (the one we keep)
+  targetPersonId  String
+  targetPerson    Person   @relation("MergeTargetPerson", fields: [targetPersonId], references: [id], onDelete: Cascade)
+
+  // Person in source workspace (the one we merge/discard)
+  sourcePersonId  String
+  sourcePerson    Person   @relation("MergeSourcePerson", fields: [sourcePersonId], references: [id], onDelete: Cascade)
+
+  // Match score (0-1, based on name, dates, parents match)
+  matchScore      Float
+
+  // How we matched them
+  matchReason     String   // e.g., "name+birthdate", "name+parents", "manual"
+
+  // Whether to include this match in the merge
+  isIncluded      Boolean @default(true)
+
+  // User override: force match or force skip
+  userOverride    Boolean @default(false)
+
+  // Status of this specific match
+  status          MergeStatus @default(PENDING)
+
+  // When this specific match was merged (if applicable)
+  mergedAt        DateTime?
+
+  // Error message if merge failed for this person
+  errorMessage    String?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([proposalId, targetPersonId, sourcePersonId])
+  @@index([proposalId])
+  @@index([targetPersonId])
+  @@index([sourcePersonId])
   @@index([status])
 }
 
