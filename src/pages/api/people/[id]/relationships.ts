@@ -30,6 +30,8 @@ export default apiHandler({
       relationshipType: [rules.required, rules.oneOf(['PARENT', 'CHILD', 'SPOUSE'])],
       relationshipKind: [rules.oneOf(['BIOLOGICAL', 'ADOPTED', 'STEP'])],
       isBiological: [rules.boolean],
+      marriageDate: [rules.date],
+      marriagePlace: [rules.string],
     })
 
     if (!valid) throw Errors.badRequest('Validation failed', errors)
@@ -40,6 +42,8 @@ export default apiHandler({
       relationshipKind,
       isBiological = true,
       notes,
+      marriageDate,
+      marriagePlace,
     } = req.body
 
     console.log('Creating relationship:', {
@@ -50,6 +54,8 @@ export default apiHandler({
       relationshipKind,
       isBiological,
       notes,
+      marriageDate,
+      marriagePlace,
     })
 
     try {
@@ -61,6 +67,8 @@ export default apiHandler({
         relationshipKind,
         isBiological,
         notes,
+        marriageDate,
+        marriagePlace,
       })
 
       console.log('Relationship created successfully:', result)

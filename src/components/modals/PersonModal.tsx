@@ -97,6 +97,8 @@ export function PersonModal({ open, personId, initialTab = 'overview', onClose, 
   const [relationshipTargetId, setRelationshipTargetId] = useState('')
   const [relationshipType, setRelationshipType] = useState('PARENT')
   const [relationshipKind, setRelationshipKind] = useState<'BIOLOGICAL' | 'ADOPTED' | 'STEP'>('BIOLOGICAL')
+  const [marriageDate, setMarriageDate] = useState('')
+  const [marriagePlace, setMarriagePlace] = useState('')
   const [isMutatingRelationship, setIsMutatingRelationship] = useState(false)
 
   // Edit form state
@@ -147,19 +149,26 @@ export function PersonModal({ open, personId, initialTab = 'overview', onClose, 
     setIsMutatingRelationship(true)
     setError(null)
     try {
+      const payload: any = {
+        targetPersonId: relationshipTargetId,
+        relationshipType,
+        relationshipKind: relationshipType === 'SPOUSE' ? undefined : relationshipKind,
+        isBiological: relationshipType === 'SPOUSE' ? true : relationshipKind === 'BIOLOGICAL',
+      }
+      if (relationshipType === 'SPOUSE') {
+        if (marriageDate) payload.marriageDate = marriageDate
+        if (marriagePlace) payload.marriagePlace = marriagePlace
+      }
       const res = await fetch(`/api/people/${personId}/relationships`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          targetPersonId: relationshipTargetId,
-          relationshipType,
-          relationshipKind: relationshipType === 'SPOUSE' ? undefined : relationshipKind,
-          isBiological: relationshipType === 'SPOUSE' ? true : relationshipKind === 'BIOLOGICAL',
-        }),
+        body: JSON.stringify(payload),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to create relationship')
       setRelationshipTargetId('')
+      setMarriageDate('')
+      setMarriagePlace('')
       await fetchPerson()
     } catch (err: any) {
       setError(err.message)
@@ -530,6 +539,27 @@ export function PersonModal({ open, personId, initialTab = 'overview', onClose, 
                     <MenuItem key={kind.value} value={kind.value}>{kind.label}</MenuItem>
                   ))}
                 </TextField>
+              )}
+              {relationshipType === 'SPOUSE' && (
+                <>
+                  <TextField
+                    size="small"
+                    type="date"
+                    label="Marriage Date"
+                    value={marriageDate}
+                    onChange={(e) => setMarriageDate(e.target.value)}
+                    sx={{ minWidth: 160 }}
+                    InputLabelProps={{ shrink: true }}
+                  />
+                  <TextField
+                    size="small"
+                    label="Marriage Place"
+                    value={marriagePlace}
+                    onChange={(e) => setMarriagePlace(e.target.value)}
+                    placeholder="City, State"
+                    sx={{ minWidth: 180 }}
+                  />
+                </>
               )}
               <Button
                 variant="contained"

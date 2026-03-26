@@ -68,7 +68,7 @@ async function getTimelineEvents(req: NextApiRequest, res: NextApiResponse, work
   const personFilter = personId ? { id: personId as string } : undefined
 
   // Fetch all event types in parallel
-  const [birthEvents, deathEvents, marriageEvents, storyEvents, documentEvents] = await Promise.all([
+  const [birthEvents, deathEvents, marriageEvents, storyEvents, documentEvents, personEvents] = await Promise.all([
     // Birth events from Person.birthDate
     prisma.person.findMany({
       where: {
@@ -210,6 +210,26 @@ async function getTimelineEvents(req: NextApiRequest, res: NextApiResponse, work
         },
       },
     }),
+
+    // PersonEvent records (custom events from Add Event form)
+    prisma.personEvent.findMany({
+      where: {
+        person: { workspaceId },
+        eventDate: { not: null },
+        ...(personFilter && { personId: personFilter.id }),
+      },
+      include: {
+        person: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            displayName: true,
+            avatarAssetId: true,
+          },
+        },
+      },
+    }),
   ])
 
   // Transform all events into a unified format
@@ -339,14 +359,38 @@ async function getTimelineEvents(req: NextApiRequest, res: NextApiResponse, work
         people: doc.people.map(dp => ({
           id: dp.person.id,
           firstName: dp.person.firstName,
-          lastName: dp.person.lastName,
-          displayName: dp.person.displayName,
-          avatarAssetId: dp.person.avatarAssetId,
-          role: dp.role,
+          lastName: dp.person.lastName ?? undefined,
+          displayName: dp.person.displayName ?? undefined,
+          avatarAssetId: dp.person.avatarAssetId ?? undefined,
+          role: dp.role ?? undefined,
         })),
         metadata: { documentType: doc.documentType },
         sourceId: doc.id,
         sourceType: 'document',
+      })
+    }
+  })
+
+  // Add person events (custom events)
+  personEvents.forEach(event => {
+    if (event.eventDate) {
+      allEvents.push({
+        id: `event-${event.id}`,
+        type: 'custom',
+        date: event.eventDate,
+        datePrecision: 'EXACT',
+        title: event.description?.split(':')[0] || `${event.eventType}: ${event.person.displayName || event.person.firstName}`,
+        description: event.description?.includes(':') ? event.description.split(':').slice(1).join(':').trim() : undefined,
+        people: [{
+          id: event.person.id,
+          firstName: event.person.firstName,
+          lastName: event.person.lastName ?? undefined,
+          displayName: event.person.displayName ?? undefined,
+          avatarAssetId: event.person.avatarAssetId ?? undefined,
+          role: 'subject',
+        }],
+        sourceId: event.id,
+        sourceType: 'personEvent',
       })
     }
   })
@@ -398,12 +442,12 @@ async function createTimelineEvent(
 ) {
   // For now, custom timeline events can be created as PersonEvent records
   // This could be extended to a separate TimelineEvent model in the future
-  const { personId, eventType, eventDate, place, description } = req.body
+  const { personId, eventType, eventDate, title, description, place } = req.body
 
-  if (!personId || !eventType) {
+  if (!personId || !eventType || !eventDate) {
     return res.status(400).json({
       success: false,
-      error: 'personId and eventType are required',
+      error: 'personId, eventType, and eventDate are required',
     })
   }
 
@@ -419,13 +463,18 @@ async function createTimelineEvent(
     })
   }
 
+  // Combine title and description for storage
+  const fullDescription = title && description 
+    ? `${title}: ${description}` 
+    : title || description || ''
+
   const event = await prisma.personEvent.create({
     data: {
       personId,
       eventType,
-      eventDate: eventDate ? new Date(eventDate) : null,
+      eventDate: new Date(eventDate),
       place,
-      description,
+      description: fullDescription,
     },
     include: {
       person: {
@@ -447,8 +496,8 @@ async function createTimelineEvent(
       type: 'custom',
       date: event.eventDate,
       datePrecision: 'EXACT',
-      title: `${event.eventType}: ${event.person.displayName || event.person.firstName}`,
-      description: event.description,
+      title: title || `${event.eventType}: ${event.person.displayName || event.person.firstName}`,
+      description: description || event.description,
       people: [{
         id: event.person.id,
         firstName: event.person.firstName,

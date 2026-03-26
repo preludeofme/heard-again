@@ -31,6 +31,8 @@ export interface CreateRelationshipInput {
   relationshipKind?: 'BIOLOGICAL' | 'ADOPTED' | 'STEP'
   isBiological: boolean
   notes?: string
+  marriageDate?: string
+  marriagePlace?: string
 }
 
 export interface RelationshipResult {
@@ -158,6 +160,8 @@ export class RelationshipService {
       relationshipKind,
       isBiological,
       notes,
+      marriageDate,
+      marriagePlace,
     } = input
 
     // Validate not self-referencing
@@ -185,7 +189,9 @@ export class RelationshipService {
         sourcePersonId,
         targetPersonId,
         target,
-        notes
+        notes,
+        marriageDate,
+        marriagePlace
       )
     }
 
@@ -210,7 +216,9 @@ export class RelationshipService {
     sourceId: string,
     targetId: string,
     target: { id: string; firstName: string; lastName: string | null },
-    notes?: string
+    notes?: string,
+    marriageDate?: string,
+    marriagePlace?: string
   ): Promise<RelationshipResult> {
     const existing = await this.prisma.familyUnit.findFirst({
       where: {
@@ -227,7 +235,19 @@ export class RelationshipService {
 
     let family
     if (existing) {
-      family = existing
+      // Update existing family with marriage date/place if provided
+      if (marriageDate || marriagePlace) {
+        family = await this.prisma.familyUnit.update({
+          where: { id: existing.id },
+          data: {
+            marriageDate: marriageDate ? new Date(marriageDate) : existing.marriageDate,
+            marriagePlace: marriagePlace || existing.marriagePlace,
+          },
+          include: { parents: true },
+        })
+      } else {
+        family = existing
+      }
     } else {
       const candidateFamilies = await this.prisma.familyUnit.findMany({
         where: {
@@ -280,13 +300,27 @@ export class RelationshipService {
           })
         }
 
-        family = bestCandidate
+        // Update marriage date/place if provided
+        if (marriageDate || marriagePlace) {
+          family = await this.prisma.familyUnit.update({
+            where: { id: bestCandidate.id },
+            data: {
+              marriageDate: marriageDate ? new Date(marriageDate) : undefined,
+              marriagePlace: marriagePlace || undefined,
+            },
+            include: { parents: true },
+          })
+        } else {
+          family = bestCandidate
+        }
       } else {
         // Create new family with both parents
         family = await this.prisma.familyUnit.create({
           data: {
             workspaceId,
             notes: notes || null,
+            marriageDate: marriageDate ? new Date(marriageDate) : undefined,
+            marriagePlace: marriagePlace || undefined,
             parents: {
               create: [
                 { parentId: sourceId, relationshipType: 'BIOLOGICAL', sortOrder: 0 },

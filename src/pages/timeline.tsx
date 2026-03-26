@@ -25,9 +25,17 @@ interface TimelineEvent {
   sourceType: string
 }
 
+interface PersonOption {
+  id: string
+  firstName: string
+  lastName?: string
+  displayName?: string
+}
+
 export default function TimelinePage() {
   const { selectedFamilyMember } = useSelectedFamilyMember()
   const [events, setEvents] = useState<TimelineEvent[]>([])
+  const [people, setPeople] = useState<PersonOption[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [hasError, setHasError] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
@@ -64,12 +72,24 @@ export default function TimelinePage() {
     }
   }, [selectedFamilyMember?.id])
 
+  const fetchPeople = useCallback(async () => {
+    try {
+      const res = await fetch('/api/people')
+      const data = await res.json()
+      if (data.success) {
+        setPeople(data.data || [])
+      }
+    } catch {
+      setPeople([])
+    }
+  }, [])
+
   useEffect(() => {
     setIsLoading(true)
     setHasError(false)
     setPage(1)
-    fetchEvents(1, false).finally(() => setIsLoading(false))
-  }, [fetchEvents])
+    Promise.all([fetchEvents(1, false), fetchPeople()]).finally(() => setIsLoading(false))
+  }, [fetchEvents, fetchPeople])
 
   const handleLoadMore = useCallback(async () => {
     if (isLoadingMore) return
@@ -79,6 +99,11 @@ export default function TimelinePage() {
     setPage(nextPage)
     setIsLoadingMore(false)
   }, [fetchEvents, isLoadingMore, page])
+
+  const handleEventCreated = useCallback(() => {
+    setPage(1)
+    fetchEvents(1, false)
+  }, [fetchEvents])
 
   return (
     <>
@@ -111,6 +136,8 @@ export default function TimelinePage() {
             isLoading={isLoadingMore}
             hasMore={hasMore}
             onLoadMore={handleLoadMore}
+            onEventCreated={handleEventCreated}
+            people={people}
           />
         )}
       </Layout>
