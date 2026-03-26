@@ -546,6 +546,8 @@ export default function FamilyTree() {
         relationshipTo: relationshipTargetId,
         relationshipType: relationshipTypeValue,
         relationshipKind: relationshipKindValue,
+        marriageDate,
+        marriagePlace,
         ...personCreateData
       } = personData
       
@@ -583,15 +585,23 @@ export default function FamilyTree() {
         && relationshipTypeValue
         && supportedRelationshipTypes.has(relationshipTypeValue)
       ) {
+        const relationshipPayload: any = {
+          targetPersonId: relationshipTargetId,
+          relationshipType: relationshipTypeValue,
+          relationshipKind: relationshipKindValue || 'BIOLOGICAL',
+          isBiological: relationshipKindValue ? relationshipKindValue === 'BIOLOGICAL' : true,
+        }
+        
+        // Add marriage date/place for spouse relationships
+        if (relationshipTypeValue === 'SPOUSE') {
+          if (marriageDate) relationshipPayload.marriageDate = marriageDate
+          if (marriagePlace) relationshipPayload.marriagePlace = marriagePlace
+        }
+        
         const relationshipRes = await fetch(`/api/people/${createdPersonId}/relationships`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            targetPersonId: relationshipTargetId,
-            relationshipType: relationshipTypeValue,
-            relationshipKind: relationshipKindValue || 'BIOLOGICAL',
-            isBiological: relationshipKindValue ? relationshipKindValue === 'BIOLOGICAL' : true,
-          }),
+          body: JSON.stringify(relationshipPayload),
         })
         
         if (!relationshipRes.ok) {

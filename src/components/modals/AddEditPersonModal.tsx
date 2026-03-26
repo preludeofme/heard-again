@@ -51,6 +51,8 @@ export interface PersonFormData {
   relationshipTo?: string
   relationshipType?: 'PARENT' | 'CHILD' | 'SPOUSE'
   relationshipKind?: 'BIOLOGICAL' | 'ADOPTED' | 'STEP'
+  marriageDate?: string
+  marriagePlace?: string
 }
 
 export interface ExistingPerson {
@@ -652,6 +654,28 @@ export function AddEditPersonModal({
                 ))}
               </Select>
             </FormControl>
+          )}
+
+          {formData.relationshipType === 'SPOUSE' && (
+            <>
+              <TextField
+                fullWidth
+                type="date"
+                label="Marriage Date"
+                value={formData.marriageDate || ''}
+                onChange={(e) => handleChange('marriageDate', e.target.value)}
+                InputLabelProps={{ shrink: true }}
+                sx={{ borderRadius: 2 }}
+              />
+              <TextField
+                fullWidth
+                label="Marriage Place"
+                value={formData.marriagePlace || ''}
+                onChange={(e) => handleChange('marriagePlace', e.target.value)}
+                placeholder="City, State, Country"
+                sx={{ borderRadius: 2 }}
+              />
+            </>
           )}
         </>
       )}
