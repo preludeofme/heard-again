@@ -128,6 +128,7 @@ export default function Stories() {
         ) : (
           <StoriesPage
             stories={visibleStories}
+            selectedFamilyMember={selectedFamilyMember}
             onSubmitStory={async (title, content) => {
               await controller.submitStory({
                 title,

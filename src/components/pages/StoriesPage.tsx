@@ -1,5 +1,5 @@
 import { Box, Typography, Card, CardContent, Button, Grid, TextField, IconButton, Avatar, Chip, Dialog } from '@mui/material'
-import { Mic as MicIcon, AutoStories as AutoStoriesIcon, AttachFile as AttachFileIcon, AddPhotoAlternate as AddPhotoIcon, PlayArrow as PlayIcon, Schedule as ScheduleIcon, ArrowForward as ArrowForwardIcon, Close as CloseIcon } from '@mui/icons-material'
+import { Mic as MicIcon, AutoStories as AutoStoriesIcon, AttachFile as AttachFileIcon, AddPhotoAlternate as AddPhotoIcon, PlayArrow as PlayIcon, Schedule as ScheduleIcon, ArrowForward as ArrowForwardIcon, Close as CloseIcon, KeyboardArrowDown as ArrowDownIcon } from '@mui/icons-material'
 import { StoryContribution } from '@/types'
 import { formatDistanceToNow } from 'date-fns'
 import { useState } from 'react'
@@ -9,11 +9,22 @@ import { AudioRecorder } from '@/components/audio/AudioRecorder'
 
 interface StoriesPageProps {
   stories: StoryContribution[]
+  selectedFamilyMember?: {
+    id: string
+    firstName: string
+    lastName?: string
+    displayName?: string
+  }
   onSubmitStory?: (title: string, content: string) => Promise<void>
   onSubmitAudio?: (audioBlob: Blob, duration: number) => Promise<void>
 }
 
-export function StoriesPage({ stories, onSubmitStory, onSubmitAudio }: StoriesPageProps) {
+const getDisplayName = (member: StoriesPageProps['selectedFamilyMember']) => {
+  if (!member) return 'their'
+  return member.displayName || `${member.firstName}${member.lastName ? ` ${member.lastName}` : ''}`
+}
+
+export function StoriesPage({ stories, selectedFamilyMember, onSubmitStory, onSubmitAudio }: StoriesPageProps) {
   const [storyTitle, setStoryTitle] = useState('')
   const [storyContent, setStoryContent] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -47,7 +58,7 @@ export function StoriesPage({ stories, onSubmitStory, onSubmitAudio }: StoriesPa
   return (
     <Box sx={{ minHeight: '100vh', backgroundColor: '#fcf9f4' }}>
       {/* Hero Section */}
-      <Box sx={{ px: { xs: 3, md: 8 }, py: { xs: 8, md: 16 } }}>
+      <Box sx={{ px: { xs: 3, md: 8 }, py: { xs: 4, md: 8 }, minHeight: 'calc(100vh - 290px)', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
         <Grid container spacing={4} alignItems="center">
           <Grid size={{ xs: 12, lg: 7 }}>
             <Typography 
@@ -62,7 +73,7 @@ export function StoriesPage({ stories, onSubmitStory, onSubmitAudio }: StoriesPa
                 fontStyle: 'italic'
               }}
             >
-              Help us tell Arthur's story.
+              Help us tell {getDisplayName(selectedFamilyMember)}'s story.
             </Typography>
             <Typography 
               variant="h6" 
@@ -72,7 +83,7 @@ export function StoriesPage({ stories, onSubmitStory, onSubmitAudio }: StoriesPa
                 lineHeight: 1.6
               }}
             >
-              We are building a living archive of Arthur's life. Your memories, voice, and stories are the threads that keep his legacy vibrant for the generations to come.
+              We are building a living archive of {getDisplayName(selectedFamilyMember)}'s life. Your memories, voice, and stories are the threads that keep {selectedFamilyMember ? 'their' : 'his'} legacy vibrant for the generations to come.
             </Typography>
           </Grid>
           <Grid size={{ xs: 12, lg: 5 }} sx={{ position: 'relative' }}>
@@ -84,6 +95,7 @@ export function StoriesPage({ stories, onSubmitStory, onSubmitAudio }: StoriesPa
                 boxShadow: 4,
                 transform: 'rotate(2deg)',
                 transition: 'transform 0.7s',
+                maxHeight: { xs: '400px', md: '500px' },
                 '&:hover': {
                   transform: 'rotate(0deg)',
                 },
@@ -112,7 +124,7 @@ export function StoriesPage({ stories, onSubmitStory, onSubmitAudio }: StoriesPa
                 p: 3,
                 borderRadius: 3,
                 boxShadow: 4,
-                maxWidth: 300,
+                maxWidth: 240,
                 display: { xs: 'none', md: 'block' }
               }}
             >
@@ -133,10 +145,56 @@ export function StoriesPage({ stories, onSubmitStory, onSubmitAudio }: StoriesPa
             </Box>
           </Grid>
         </Grid>
+
+        {/* Scroll Indicator */}
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            mt: { xs: 2, md: 4 },
+            mb: 2,
+            animation: 'bounce 2s infinite',
+            '@keyframes bounce': {
+              '0%, 20%, 50%, 80%, 100%': { transform: 'translateY(0)' },
+              '40%': { transform: 'translateY(-10px)' },
+              '60%': { transform: 'translateY(-5px)' },
+            },
+          }}
+        >
+          <Typography 
+            variant="body2" 
+            sx={{ 
+              color: '#546669', 
+              mb: 1,
+              fontSize: '0.875rem',
+              textTransform: 'uppercase',
+              letterSpacing: 1,
+              opacity: 0.7
+            }}
+          >
+            Scroll to explore
+          </Typography>
+          <IconButton
+            sx={{
+              color: '#16334a',
+              backgroundColor: 'rgba(22, 51, 74, 0.1)',
+              '&:hover': {
+                backgroundColor: 'rgba(22, 51, 74, 0.2)',
+              },
+            }}
+            onClick={() => {
+              const element = document.getElementById('contribution-hub')
+              element?.scrollIntoView({ behavior: 'smooth' })
+            }}
+          >
+            <ArrowDownIcon />
+          </IconButton>
+        </Box>
       </Box>
 
       {/* Contribution Hub */}
-      <Box sx={{ px: { xs: 3, md: 8 }, mb: 8 }}>
+      <Box id="contribution-hub" sx={{ px: { xs: 3, md: 8 }, mb: 8 }}>
         <Box sx={{ backgroundColor: '#f6f3ee', borderRadius: 4, p: { xs: 4, md: 6 } }}>
           <Grid container spacing={4}>
             {/* Record a Memory */}
@@ -151,7 +209,7 @@ export function StoriesPage({ stories, onSubmitStory, onSubmitAudio }: StoriesPa
                   </Typography>
                 </Box>
                 <Typography variant="body1" sx={{ color: '#546669', mb: 4, lineHeight: 1.6 }}>
-                  Speak from the heart. Share a favorite anecdote, a piece of advice he gave, or just a simple greeting.
+                  Speak from the heart. Share a favorite anecdote about {getDisplayName(selectedFamilyMember)}, a piece of advice {selectedFamilyMember ? 'they' : 'he'} gave, or just a simple greeting.
                 </Typography>
                 {/* Waveform Placeholder */}
                 <Box sx={{ 
@@ -231,7 +289,7 @@ export function StoriesPage({ stories, onSubmitStory, onSubmitAudio }: StoriesPa
                     fullWidth
                     multiline
                     rows={4}
-                    placeholder="Share your memory here..."
+                    placeholder={`Share your favorite memory of ${getDisplayName(selectedFamilyMember)}...`}
                     value={storyContent}
                     onChange={(e) => setStoryContent(e.target.value)}
                     sx={{

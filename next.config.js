@@ -3,6 +3,7 @@ const nextConfig = {
   reactStrictMode: true,
   // Add empty Turbopack config to avoid webpack conflict
   turbopack: {},
+   allowedDevOrigins: ['100.75.138.91'],
   images: {
     remotePatterns: [
       {

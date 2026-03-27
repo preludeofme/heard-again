@@ -146,6 +146,7 @@ export function Layout({ children }: LayoutProps) {
   const currentPath = router.pathname
   const showAdvancedSearchButton = currentPath !== '/family-tree'
 
+
   const getMobileNavValue = () => {
     switch (currentPath) {
       case '/': return 0
@@ -303,28 +304,6 @@ export function Layout({ children }: LayoutProps) {
               })}
             </Box>
 
-            {/* Start Recording CTA */}
-            <Box sx={{ px: 3, pb: 2 }}>
-              <Box
-                sx={{
-                  background: 'linear-gradient(135deg, #16334a 0%, #2e4a62 100%)',
-                  borderRadius: 3,
-                  p: 2,
-                  textAlign: 'center',
-                  cursor: 'pointer',
-                  transition: 'opacity 0.2s',
-                  '&:hover': {
-                    opacity: 0.9,
-                  },
-                }}
-              >
-                <MicIcon sx={{ color: 'white', fontSize: 32, mb: 1 }} />
-                <Typography variant="body2" sx={{ color: 'white', fontWeight: 600 }}>
-                  Start Recording
-                </Typography>
-              </Box>
-            </Box>
-
             {/* Footer Links */}
             <Box sx={{ px: 2, pb: 3 }}>
               {footerNavItems.map((item) => (
@@ -359,81 +338,7 @@ export function Layout({ children }: LayoutProps) {
           </Box>
 
           {/* Main Content Area */}
-          <Box sx={{ flexGrow: 1, ml: '256px', display: 'flex', flexDirection: 'column' }}>
-            {/* Top App Bar */}
-            <AppBar
-              position="sticky"
-              elevation={0}
-              sx={{
-                backgroundColor: theme.palette.background.default,
-                color: theme.palette.text.primary,
-                borderBottom: 'none',
-              }}
-            >
-              <Toolbar sx={{ justifyContent: 'space-between' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <Typography variant="h6" component="div" sx={{ fontFamily: "'Newsreader', serif", color: '#16334a', fontWeight: 'bold' }}>
-                    Heard Again
-                  </Typography>
-                  <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 3 }}>
-                    <Link href="/profile" passHref legacyBehavior>
-                      <Typography component="a" sx={{ color: '#16334a', fontWeight: 'bold', cursor: 'pointer', '&:hover': { color: '#2e4a62' } }}>
-                        Profile
-                      </Typography>
-                    </Link>
-                    <Link href="/voice-lab" passHref legacyBehavior>
-                      <Typography component="a" sx={{ color: '#73777d', fontWeight: 500, cursor: 'pointer', '&:hover': { color: '#2e4a62' } }}>
-                        Voice Lab
-                      </Typography>
-                    </Link>
-                    <Link href="/stories" passHref legacyBehavior>
-                      <Typography component="a" sx={{ color: '#73777d', fontWeight: 500, cursor: 'pointer', '&:hover': { color: '#2e4a62' } }}>
-                        Stories
-                      </Typography>
-                    </Link>
-                    <Link href="/timeline" passHref legacyBehavior>
-                      <Typography component="a" sx={{ color: '#73777d', fontWeight: 500, cursor: 'pointer', '&:hover': { color: '#2e4a62' } }}>
-                        Timeline
-                      </Typography>
-                    </Link>
-                  </Box>
-                </Box>
-
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <SelectedFamilyMemberChip />
-                  <Box sx={{ display: { xs: 'none', sm: 'flex' }, alignItems: 'center', backgroundColor: '#f0ede8', borderRadius: 3, px: 2, py: 1 }}>
-                    <SearchIcon sx={{ color: '#73777d', fontSize: 20, mr: 1 }} />
-                    <InputBase
-                      placeholder="Search memories..."
-                      sx={{
-                        fontSize: '0.875rem',
-                        '& input::placeholder': {
-                          opacity: 0.7,
-                        },
-                      }}
-                    />
-                  </Box>
-                  {showAdvancedSearchButton && (
-                    <Button
-                      component={Link}
-                      href="/family-tree?expandSearch=1"
-                      variant="outlined"
-                      size="small"
-                      sx={{ textTransform: 'none', borderRadius: 2 }}
-                    >
-                      Advanced Search
-                    </Button>
-                  )}
-                  <IconButton size="large" sx={{ color: '#16334a' }}>
-                    <NotificationsIcon />
-                  </IconButton>
-                  <IconButton size="large" sx={{ color: '#16334a' }}>
-                    <SettingsIcon />
-                  </IconButton>
-                  <UserMenu />
-                </Box>
-              </Toolbar>
-            </AppBar>
+          <Box sx={{ flexGrow: 1, ml: '256px' }}>
 
             {/* Page Content */}
             <Box component="main" sx={{ flexGrow: 1, backgroundColor: theme.palette.background.default }}>
