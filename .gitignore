@@ -11,3 +11,4 @@ TTS/__pycache__/
 TTS/app/__pycache__/
 *.pyc
 venv/
+.env

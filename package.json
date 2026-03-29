@@ -4,7 +4,7 @@
   "private": true,
   "description": "Heard Again - Family Story Preservation Platform",
   "scripts": {
-    "dev": "cd UI && npm run dev",
+    "dev": "./Scripts/start-dev.sh --live",
     "build": "cd UI && npm run build",
     "start": "cd UI && npm run start",
     "test": "cd UI && npm test",
