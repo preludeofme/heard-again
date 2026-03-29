@@ -358,22 +358,21 @@ export function FamilyTreePage({
     setIsLoadingDetail(true)
     setDetailError(null)
     try {
-      const [personRes, storiesRes, voiceProfilesRes, relationshipsRes] = await Promise.all([
+      const [personRes, storiesRes, relationshipsRes] = await Promise.all([
         fetch(`/api/people/${person.id}`, { credentials: 'include' }),
         fetch(`/api/stories?personId=${person.id}&limit=20`, { credentials: 'include' }),
-        fetch(`/api/voice-profiles?personId=${person.id}`, { credentials: 'include' }),
-        fetch(`/api/relationships?personId=${person.id}`, { credentials: 'include' }),
+        fetch(`/api/people/${person.id}/relationships`, { credentials: 'include' }),
       ])
 
       const personData = await personRes.json()
       const storiesData = await storiesRes.json()
-      const voiceProfilesData = await voiceProfilesRes.json()
       const relationshipsData = await relationshipsRes.json()
 
       if (personData.success) {
         setPersonDetail(personData.data)
         setPersonStories(storiesData.data?.stories || [])
-        setPersonVoiceProfiles(voiceProfilesData.data || [])
+        // Voice profiles are already included in personData.data.voiceProfiles
+        setPersonVoiceProfiles(personData.data.voiceProfiles || [])
         setPersonRelationships(relationshipsData.data || [])
       } else {
         setDetailError(personData.error || 'Failed to load person details')

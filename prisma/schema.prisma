@@ -115,6 +115,7 @@ model Workspace {
   voiceConsents VoiceConsent[]
   familyUnits FamilyUnit[]
   documents   Document[]
+  personaProfiles PersonaProfile[]
   defaultForUsers User[] @relation("UserDefaultWorkspace")
   
   @@index([ownerId])
@@ -622,11 +623,61 @@ model Person {
   mergeTargets     FamilyMergePersonMatch[] @relation("MergeTargetPerson")
   mergeSources     FamilyMergePersonMatch[] @relation("MergeSourcePerson")
   documentLinks    DocumentPerson[]
+  personaProfiles  PersonaProfile[]
   
   @@index([workspaceId])
   @@index([firstName, lastName])
   @@index([maidenName])
   @@unique([workspaceId, gedcomXref])
+}
+
+// AI Persona Profile for modeling family member personalities
+model PersonaProfile {
+  id          String   @id @default(uuid())
+  
+  personId    String
+  person      Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
+  
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  
+  version     Int      @default(1)
+  status      String   @default("draft") // draft | active | archived
+  
+  // Writing style analysis
+  vocabulary           String[] @default([])
+  sentencePatterns     String[] @default([])
+  tone                 Json?     // ToneAnalysis as JSON
+  formality            String   @default("neutral") // very_informal | informal | neutral | formal | very_formal
+  averageSentenceLength Float   @default(15.0)
+  commonPhrases        String[] @default([])
+  emotionIndicators    Json[]   @default([]) // EmotionIndicator[] as JSON
+  
+  // Known facts and relationships
+  knownFacts           Json[]   @default([]) // PersonaFact[] as JSON
+  relationships         Json[]   @default([]) // Relationship[] as JSON
+  
+  // Prompt configuration
+  systemPrompt         String   @default("")
+  responseGuidelines   String[] @default([])
+  
+  // Custom user instructions
+  relationshipInstructions Json   @default("{}") // Map of relationshipId -> instruction
+  behaviorInstructions     String[] @default([])
+  topicInstructions        Json     @default("{}") // Map of topic -> instruction
+  contextInstructions      Json     @default("{}") // Map of context -> instruction
+  styleOverrides           Json     @default("{}") // Style overrides as JSON
+  
+  // Metadata
+  documentSampleCount  Int      @default(0)
+  confidenceScore      Float    @default(0.0)
+  lastUpdated          DateTime @default(now())
+  createdAt            DateTime @default(now())
+  
+  @@index([personId])
+  @@index([workspaceId])
+  @@index([status])
+  @@unique([personId, workspaceId, version])
 }
 
 enum GedcomSex {

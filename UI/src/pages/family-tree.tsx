@@ -483,25 +483,16 @@ export default function FamilyTree() {
 
   const fetchPeople = useCallback(async () => {
     try {
-      const res = await fetch('/api/people', { credentials: 'include' })
+      // Use the optimized endpoint that returns all people with relationships in one call
+      const res = await fetch('/api/people/family-tree', { credentials: 'include' })
       const data = await res.json()
+      
       if (data.success && data.data) {
-        const basePeople = data.data as ApiPerson[]
-        const peopleWithEdges = await Promise.all(basePeople.map(async (person): Promise<ApiPersonWithEdges> => {
-          try {
-            const relationshipsRes = await fetch(`/api/people/${person.id}/relationships`, { credentials: 'include' })
-            const relationshipsData = await relationshipsRes.json()
-            return {
-              ...person,
-              relationshipEdges: relationshipsRes.ok && relationshipsData.success
-                ? (relationshipsData.data as RelationshipEdge[])
-                : [],
-            }
-          } catch {
-            return { ...person, relationshipEdges: [] }
-          }
-        }))
-
+        const peopleWithEdges = data.data as ApiPersonWithEdges[]
+        
+        // Extract base people without relationships for other uses
+        const basePeople = peopleWithEdges.map(({ relationshipEdges, ...person }) => person)
+        
         setPeople(basePeople)
         setTreeData(mapPeopleToTree(peopleWithEdges, selectedPersonIdFromQuery))
       }
