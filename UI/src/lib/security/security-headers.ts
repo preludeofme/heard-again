@@ -144,11 +144,11 @@ export const developmentSecurityConfig: SecurityHeadersConfig = {
   contentSecurityPolicy: {
     directives: {
       'default-src': ["'self'"],
-      'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'", 'localhost:3002'], // Development needs
-      'style-src': ["'self'", "'unsafe-inline'", 'localhost:3002'],
-      'img-src': ["'self'", 'data:', 'https:', 'localhost:3002'],
-      'font-src': ["'self'", 'data:', 'localhost:3002'],
-      'connect-src': ["'self'", 'https://localhost:3002', 'https://localhost:8100', 'ws://localhost:3002', 'ws://localhost:8100'],
+      'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'", 'localhost:4777'], // Development needs
+      'style-src': ["'self'", "'unsafe-inline'", 'localhost:4777'],
+      'img-src': ["'self'", 'data:', 'https:', 'localhost:4777'],
+      'font-src': ["'self'", 'data:', 'localhost:4777'],
+      'connect-src': ["'self'", 'https://localhost:4777', 'https://localhost:4778', 'https://localhost:4779', 'ws://localhost:4777', 'ws://localhost:4778', 'ws://localhost:4779'],
       'frame-ancestors': ["'none'"],
       'base-uri': ["'self'"],
       'form-action': ["'self'"],

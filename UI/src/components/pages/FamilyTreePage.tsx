@@ -328,6 +328,8 @@ export function FamilyTreePage({
   // Data states
   const [personDetail, setPersonDetail] = useState<any>(null)
   const [personStories, setPersonStories] = useState<any[]>([])
+  const [personVoiceProfiles, setPersonVoiceProfiles] = useState<any[]>([])
+  const [personRelationships, setPersonRelationships] = useState<any[]>([])
   const [isLoadingDetail, setIsLoadingDetail] = useState(false)
   const [detailError, setDetailError] = useState<string | null>(null)
 
@@ -351,23 +353,33 @@ export function FamilyTreePage({
     setSelectedPersonId(String(person.id))
     setDetailModalOpen(true)
     onPersonClick?.(person)
-    
+
     // Fetch person details
     setIsLoadingDetail(true)
     setDetailError(null)
     try {
-      const res = await fetch(`/api/people/${person.id}`)
-      const data = await res.json()
-      if (data.success) {
-        setPersonDetail(data.data)
-        // Also fetch stories for this person
-        const storiesRes = await fetch(`/api/stories?personId=${person.id}&limit=20`)
-        const storiesData = await storiesRes.json()
+      const [personRes, storiesRes, voiceProfilesRes, relationshipsRes] = await Promise.all([
+        fetch(`/api/people/${person.id}`, { credentials: 'include' }),
+        fetch(`/api/stories?personId=${person.id}&limit=20`, { credentials: 'include' }),
+        fetch(`/api/voice-profiles?personId=${person.id}`, { credentials: 'include' }),
+        fetch(`/api/relationships?personId=${person.id}`, { credentials: 'include' }),
+      ])
+
+      const personData = await personRes.json()
+      const storiesData = await storiesRes.json()
+      const voiceProfilesData = await voiceProfilesRes.json()
+      const relationshipsData = await relationshipsRes.json()
+
+      if (personData.success) {
+        setPersonDetail(personData.data)
         setPersonStories(storiesData.data?.stories || [])
+        setPersonVoiceProfiles(voiceProfilesData.data || [])
+        setPersonRelationships(relationshipsData.data || [])
       } else {
-        setDetailError(data.error || 'Failed to load person details')
+        setDetailError(personData.error || 'Failed to load person details')
       }
     } catch (err) {
+      console.error('Error fetching person details:', err)
       setDetailError('Failed to load person details')
     } finally {
       setIsLoadingDetail(false)
@@ -1215,6 +1227,8 @@ export function FamilyTreePage({
         onClose={() => setDetailModalOpen(false)}
         person={personDetail}
         stories={personStories}
+        voiceProfiles={personVoiceProfiles}
+        relationships={personRelationships}
         isLoading={isLoadingDetail}
         error={detailError}
         onEdit={handleEditPerson}

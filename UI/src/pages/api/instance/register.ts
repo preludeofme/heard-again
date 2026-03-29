@@ -117,7 +117,7 @@ export default apiHandler({
         expiresAt: instance.tunnelTokenExpiresAt,
         instructions: [
           'Install cloudflared on your server: https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation/',
-          `Run: cloudflared tunnel --url http://localhost:3002 --hostname ${instance.tunnelSubdomain}.heardagain.com`,
+          `Run: cloudflared tunnel --url http://localhost:4777 --hostname ${instance.tunnelSubdomain}.heardagain.com`,
           'Or use Docker: docker run cloudflare/cloudflared:latest tunnel --no-autoupdate run --token YOUR_TOKEN',
         ],
       } : null,

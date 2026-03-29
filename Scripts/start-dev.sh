@@ -13,9 +13,9 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Ports configuration
-MAIN_APP_PORT=3002
-CHAT_SYSTEM_PORT=3001
-TTS_SERVICE_PORT=8101
+MAIN_APP_PORT=4777
+CHAT_SYSTEM_PORT=4778
+TTS_SERVICE_PORT=4779
 REDIS_PORT=6379
 
 # Logging mode: "file" (default) or "live" (show in terminal)
@@ -107,7 +107,7 @@ fi
 NODE_VERSION=$(node --version)
 echo -e "  ${GREEN}✓ Node.js${NC} $NODE_VERSION"
 
-# Check npmuseTalkSynthesis.ts:89  POST http://trubuck-design-ai-beast.stern-mulley.ts.net:3002/api/voice/synthesize 503 (Serv
+# Check npm
 if ! command -v npm &> /dev/null; then
     echo -e "${RED}✗ npm is not installed${NC}"
     exit 1
@@ -173,7 +173,7 @@ fi
 if [ $PORT_CONFLICTS -gt 0 ]; then
     echo ""
     echo -e "${RED}Port conflicts detected. Please stop the conflicting services first.${NC}"
-    echo "Run: lsof -ti:3001,3002 | xargs kill -9"
+    echo "Run: lsof -ti:$CHAT_SYSTEM_PORT,$MAIN_APP_PORT,$TTS_SERVICE_PORT | xargs kill -9"
     exit 1
 fi
 

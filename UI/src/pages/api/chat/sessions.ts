@@ -2,7 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next'
 
 // Proxy to chat system API
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const chatSystemUrl = process.env.CHAT_SYSTEM_URL || 'http://localhost:3001'
+  const chatSystemUrl = process.env.CHAT_SYSTEM_URL || 'http://localhost:4778'
   
   try {
     const response = await fetch(`${chatSystemUrl}/api/chat/sessions`, {

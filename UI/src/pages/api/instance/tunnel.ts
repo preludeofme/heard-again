@@ -162,7 +162,7 @@ export default apiHandler({
         expiresAt: updatedInstance.tunnelTokenExpiresAt,
         instructions: [
           'Install cloudflared: https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation/',
-          `Run: cloudflared tunnel --url http://localhost:3002 --hostname ${updatedInstance.tunnelSubdomain}.heardagain.com`,
+          `Run: cloudflared tunnel --url http://localhost:4777 --hostname ${updatedInstance.tunnelSubdomain}.heardagain.com`,
           'For persistent tunnel, save credentials and run as a service.',
         ],
       } : {

@@ -75,7 +75,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // TTS Service health check
     try {
-      const ttsResponse = await fetch(`${process.env.TTS_SERVICE_URL || 'http://localhost:8101'}/api/tts/health`)
+      const ttsResponse = await fetch(`${process.env.TTS_SERVICE_URL || 'http://localhost:4779'}/api/tts/health`)
       if (ttsResponse.ok) {
         healthStatus.services.tts = 'healthy'
       } else {

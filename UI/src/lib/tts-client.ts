@@ -2,7 +2,7 @@
  * Client for communicating with the Qwen3-TTS Python backend service.
  */
 
-const TTS_SERVICE_URL = process.env.TTS_SERVICE_URL || 'http://localhost:8101'
+const TTS_SERVICE_URL = process.env.TTS_SERVICE_URL || 'http://localhost:4779'
 
 interface TTSRequestOptions {
   method?: string

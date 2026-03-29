@@ -19,6 +19,7 @@ import {
   ListItemAvatar,
   ListItemText,
   Tooltip,
+  CircularProgress,
 } from '@mui/material'
 import {
   Close as CloseIcon,
@@ -203,6 +204,8 @@ export function PersonDetailModal({
   stories = mockStories,
   voiceProfiles = mockVoiceProfiles,
   relationships = mockRelationships,
+  isLoading,
+  error,
   onEdit,
   onDelete,
   onAddStory,
@@ -219,7 +222,7 @@ export function PersonDetailModal({
   const getLifespanText = () => {
     if (!person?.birthDate) return 'Living'
     const birthYear = new Date(person.birthDate).getFullYear()
-    if (person.deathDate) {
+    if (person?.deathDate) {
       const deathYear = new Date(person.deathDate).getFullYear()
       return `${birthYear} — ${deathYear}`
     }
@@ -245,6 +248,91 @@ export function PersonDetailModal({
 
   const fullName = `${person?.firstName || ''} ${person?.lastName || ''}`.trim()
   const displayName = person?.displayName || fullName
+
+  // Show loading state while person data is being fetched
+  if (isLoading) {
+    return (
+      <Dialog
+        open={open}
+        onClose={onClose}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 4,
+            maxHeight: '90vh',
+            overflow: 'hidden',
+          },
+        }}
+      >
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 8 }}>
+          <CircularProgress />
+        </Box>
+      </Dialog>
+    )
+  }
+
+  // Show error state if API call failed
+  if (error && !person) {
+    return (
+      <Dialog
+        open={open}
+        onClose={onClose}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 4,
+            maxHeight: '90vh',
+            overflow: 'hidden',
+          },
+        }}
+      >
+        <Box sx={{ p: 4, textAlign: 'center' }}>
+          <Typography variant="h6" color="error" gutterBottom>
+            Error Loading Person Details
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {error}
+          </Typography>
+          <Button onClick={onClose} sx={{ mt: 2 }}>
+            Close
+          </Button>
+        </Box>
+      </Dialog>
+    )
+  }
+
+  // Show empty state if person is null (shouldn't happen with proper error handling)
+  if (!person) {
+    return (
+      <Dialog
+        open={open}
+        onClose={onClose}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 4,
+            maxHeight: '90vh',
+            overflow: 'hidden',
+          },
+        }}
+      >
+        <Box sx={{ p: 4, textAlign: 'center' }}>
+          <Typography variant="h6" gutterBottom>
+            Person Not Found
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            The requested person could not be loaded.
+          </Typography>
+          <Button onClick={onClose} sx={{ mt: 2 }}>
+            Close
+          </Button>
+        </Box>
+      </Dialog>
+    )
+  }
 
   return (
     <Dialog
@@ -688,7 +776,7 @@ export function PersonDetailModal({
             variant="outlined"
             color="error"
             startIcon={<DeleteIcon />}
-            onClick={() => onDelete?.(person!.id)}
+            onClick={() => person && person.id && onDelete?.(person.id)}
             sx={{
               textTransform: 'none',
               borderRadius: 2,
@@ -703,7 +791,7 @@ export function PersonDetailModal({
             <Button
               variant="contained"
               startIcon={<AddIcon />}
-              onClick={() => onAddStory?.(person!.id)}
+              onClick={() => person && person.id && onAddStory?.(person.id)}
               sx={{
                 backgroundColor: '#16334a',
                 textTransform: 'none',
@@ -718,7 +806,7 @@ export function PersonDetailModal({
             <Button
               variant="contained"
               startIcon={<AddIcon />}
-              onClick={() => onAddVoiceProfile?.(person!.id)}
+              onClick={() => person && person.id && onAddVoiceProfile?.(person.id)}
               sx={{
                 backgroundColor: '#16334a',
                 textTransform: 'none',
@@ -733,7 +821,7 @@ export function PersonDetailModal({
             <Button
               variant="contained"
               startIcon={<AddIcon />}
-              onClick={() => onAddRelationship?.(person!.id)}
+              onClick={() => person && person.id && onAddRelationship?.(person.id)}
               sx={{
                 backgroundColor: '#16334a',
                 textTransform: 'none',

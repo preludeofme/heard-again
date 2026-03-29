@@ -97,7 +97,7 @@ export default apiHandler({
       },
     })
 
-    const resetUrl = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/reset-password?token=${token}`
+    const resetUrl = `${process.env.NEXTAUTH_URL || 'http://localhost:4777'}/reset-password?token=${token}`
 
     try {
       await sendPasswordResetEmail({

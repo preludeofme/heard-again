@@ -483,13 +483,13 @@ export default function FamilyTree() {
 
   const fetchPeople = useCallback(async () => {
     try {
-      const res = await fetch('/api/people')
+      const res = await fetch('/api/people', { credentials: 'include' })
       const data = await res.json()
       if (data.success && data.data) {
         const basePeople = data.data as ApiPerson[]
         const peopleWithEdges = await Promise.all(basePeople.map(async (person): Promise<ApiPersonWithEdges> => {
           try {
-            const relationshipsRes = await fetch(`/api/people/${person.id}/relationships`)
+            const relationshipsRes = await fetch(`/api/people/${person.id}/relationships`, { credentials: 'include' })
             const relationshipsData = await relationshipsRes.json()
             return {
               ...person,
@@ -569,6 +569,7 @@ export default function FamilyTree() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(cleanedData),
+        credentials: 'include',
       })
 
       const created = await res.json()
@@ -602,6 +603,7 @@ export default function FamilyTree() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(relationshipPayload),
+          credentials: 'include',
         })
         
         if (!relationshipRes.ok) {

@@ -127,7 +127,7 @@ export default apiHandler({
 
           // Configure tunnel with ingress rules
           await cloudflareService.updateTunnelConfig(tunnel.id, [
-            { hostname, service: 'http://localhost:3002' },
+            { hostname, service: 'http://localhost:4777' },
           ])
 
           // Update instance with tunnel info
@@ -280,7 +280,7 @@ export default apiHandler({
         // Generate all configuration files
         const configFiles = {
           'cloudflared-config.yml': cloudflareService.generateConfigFile(tunnelToken, [
-            { hostname: instance.tunnelSubdomain!, service: 'http://localhost:3002' },
+            { hostname: instance.tunnelSubdomain!, service: 'http://localhost:4777' },
           ]),
           'credentials.json': cloudflareService.generateCredentialsFile({
             AccountTag: credentials.AccountTag,
@@ -342,7 +342,7 @@ export default apiHandler({
             expiresAt: updatedInstance.tunnelTokenExpiresAt,
             instructions: [
               'Install cloudflared: https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation/',
-              `Run: cloudflared tunnel --url http://localhost:3002 --hostname ${updatedInstance.tunnelSubdomain}.${process.env.CLOUDFLARE_TUNNEL_DOMAIN || 'heardagain.com'}`,
+              `Run: cloudflared tunnel --url http://localhost:4777 --hostname ${updatedInstance.tunnelSubdomain}.${process.env.CLOUDFLARE_TUNNEL_DOMAIN || 'heardagain.com'}`,
             ],
           },
           message: 'Quick tunnel enabled successfully',
@@ -457,7 +457,7 @@ cloudflared tunnel run --token ${tunnelToken.substring(0, 20)}...
 
 - Check tunnel status: \`sudo systemctl status cloudflared\`
 - View logs: \`sudo journalctl -u cloudflared -f\`
-- Test locally: \`curl http://localhost:3002\`
+- Test locally: \`curl http://localhost:4777\`
 
 ## Security Notes
 

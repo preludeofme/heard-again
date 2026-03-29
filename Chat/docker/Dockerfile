@@ -52,9 +52,9 @@ RUN chown -R nextjs:nodejs /app/uploads /app/logs
 
 USER nextjs
 
-EXPOSE 3002
+EXPOSE 4778
 
 ENV NODE_ENV=production
-ENV PORT=3002
+ENV PORT=4778
 
 CMD ["npm", "start"]

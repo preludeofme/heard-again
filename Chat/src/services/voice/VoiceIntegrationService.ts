@@ -67,7 +67,7 @@ export class VoiceIntegrationServiceImpl implements VoiceIntegrationService {
   private voiceProfiles: Map<string, VoiceProfile> = new Map()
 
   constructor() {
-    this.ttsBaseUrl = process.env.TTS_SERVICE_URL || 'http://localhost:8101'
+    this.ttsBaseUrl = process.env.TTS_SERVICE_URL || 'http://localhost:4779'
     this.initializeDefaultProfiles()
   }
 

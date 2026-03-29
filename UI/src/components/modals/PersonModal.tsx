@@ -110,7 +110,7 @@ export function PersonModal({ open, personId, initialTab = 'overview', onClose, 
     setIsLoading(true)
     setError(null)
     try {
-      const res = await fetch(`/api/people/${personId}`)
+      const res = await fetch(`/api/people/${personId}`, { credentials: 'include' })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to load person')
       setPerson(data.data)
@@ -125,7 +125,7 @@ export function PersonModal({ open, personId, initialTab = 'overview', onClose, 
   const loadAvailablePeople = useCallback(async () => {
     if (!personId) return
     try {
-      const res = await fetch('/api/people')
+      const res = await fetch('/api/people', { credentials: 'include' })
       const data = await res.json()
       if (res.ok && data.success) {
         const people = (data.data || []).filter((p: any) => p.id !== personId)

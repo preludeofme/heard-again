@@ -4,9 +4,9 @@
   "description": "Phase 1 Family-History Conversational AI System",
   "main": "dist/index.js",
   "scripts": {
-    "dev": "next dev -p 3001",
+    "dev": "next dev -p 4778",
     "build": "next build",
-    "start": "next start -p 3001",
+    "start": "next start -p 4778",
     "lint": "next lint",
     "test": "jest",
     "test:watch": "jest --watch",

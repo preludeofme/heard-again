@@ -3,8 +3,8 @@ import type { NextRequest } from 'next/server'
 
 // Define allowed origins - add your Tailscale domain here
 const ALLOWED_ORIGINS = [
-  'https://trubuck-design-ai-beast.stern-mulley.ts.net:3002',
-  'http://trubuck-design-ai-beast.stern-mulley.ts.net:3002',
+  'https://trubuck-design-ai-beast.stern-mulley.ts.net:4777',
+  'http://trubuck-design-ai-beast.stern-mulley.ts.net:4777',
 ]
 
 // Helper to add CORS headers

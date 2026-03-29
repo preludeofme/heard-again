@@ -50,9 +50,9 @@ export default function PersonProfilePage() {
       setIsLoading(true)
       try {
         const [personRes, peopleRes, storiesRes] = await Promise.all([
-          fetch(`/api/people/${personId}`),
-          fetch('/api/people'),
-          fetch(`/api/stories?subjectId=${personId}&limit=3`),
+          fetch(`/api/people/${personId}`, { credentials: 'include' }),
+          fetch('/api/people', { credentials: 'include' }),
+          fetch(`/api/stories?subjectId=${personId}&limit=3`, { credentials: 'include' }),
         ])
         const [personData, peopleData, storiesData] = await Promise.all([personRes.json(), peopleRes.json(), storiesRes.json()])
         if (!active) return
@@ -94,14 +94,18 @@ export default function PersonProfilePage() {
                 </Typography>
                 <Typography variant="body1" sx={{ mt: 1.5, color: '#1c1c19' }}>{person?.bio || 'No biography yet.'}</Typography>
               </Box>
-              <Select
-                size="small"
-                value={personId}
-                onChange={(event) => router.push(`/profile/${event.target.value}`)}
-                sx={{ minWidth: 220, bgcolor: '#fff', borderRadius: 2 }}
-              >
-                {people.map((member) => <MenuItem key={member.id} value={member.id}>{fullName(member)}</MenuItem>)}
-              </Select>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                {people.length > 0 && (
+                  <Select
+                    size="small"
+                    value={personId}
+                    onChange={(event) => router.push(`/profile/${event.target.value}`)}
+                    sx={{ minWidth: 220, bgcolor: '#fff', borderRadius: 2 }}
+                  >
+                    {people.map((member) => <MenuItem key={member.id} value={member.id}>{fullName(member)}</MenuItem>)}
+                  </Select>
+                )}
+              </Box>
             </Stack>
           </Card>
 

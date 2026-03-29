@@ -7,15 +7,15 @@ services:
       context: ./Chat
       dockerfile: docker/Dockerfile
     ports:
-      - "3001:3002"
+      - "4778:4778"
     environment:
       - NODE_ENV=production
-      - PORT=3002
+      - PORT=4778
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/heard_again
       - REDIS_URL=redis://redis:6379
       - CHROMA_URL=http://chromadb:8000
       - OLLAMA_URL=http://ollama:11434
-      - TTS_SERVICE_URL=http://tts:8100
+      - TTS_SERVICE_URL=http://tts:4779
     depends_on:
       db:
         condition: service_healthy
@@ -57,13 +57,13 @@ services:
       context: .
       dockerfile: UI/Dockerfile
     ports:
-      - "3002:3000"
+      - "4777:4777"
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/heard_again
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-change-this-in-production}
-      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3002}
-      - TTS_SERVICE_URL=${TTS_SERVICE_URL:-http://tts:8100}
-      - CHAT_SYSTEM_URL=${CHAT_SYSTEM_URL:-http://chat-system:3001}
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:4777}
+      - TTS_SERVICE_URL=${TTS_SERVICE_URL:-http://tts:4779}
+      - CHAT_SYSTEM_URL=${CHAT_SYSTEM_URL:-http://chat:4778}
       - REDIS_URL=redis://redis:6379
       - CLAMAV_HOST=clamav
       - CLAMAV_PORT=3310
@@ -94,7 +94,7 @@ services:
       - /tmp:noexec,nosuid,size=100m
       - /app/tmp:noexec,nosuid,size=100m
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/api/instance/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:4777/api/instance/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -156,9 +156,9 @@ services:
       context: ./TTS
       dockerfile: Dockerfile
     ports:
-      - "8101:8100"
+      - "4779:4779"
     environment:
-      - PORT=8100
+      - PORT=4779
       - MODEL_DEVICE=cuda
       - ENVIRONMENT=${ENVIRONMENT:-production}
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
