@@ -14,6 +14,7 @@ export interface SynthesizeRequest {
   modelId: string
   text: string
   language?: string
+  authToken: string
 }
 
 export interface SynthesisResult {
@@ -273,23 +274,30 @@ export class VoiceService {
       // Mark as processing
       await this.markJobProcessing(jobId, language, resolvedLanguage)
 
-      // Call TTS service - use profile name as identifier for now
+      // Call TTS service - use profile name as identifier
       const ttsData = await ttsRequest<{
         audioId: string
         duration?: number
         synthesisTime?: number
       }>('/api/tts/synthesize', {
         method: 'POST',
+        authToken: request.authToken,
         body: {
           profileId: profile.name,
           text,
           language: resolvedLanguage,
+          workspaceId,  // Explicit workspace for tenant isolation
         },
       })
 
-      // Fetch audio
+      // Fetch audio with auth token
       const audioResponse = await fetch(
-        `${TTS_SERVICE_URL}/api/tts/audio/${ttsData.audioId}`
+        `${TTS_SERVICE_URL}/api/tts/audio/${ttsData.audioId}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${request.authToken}`,
+          },
+        }
       )
       if (!audioResponse.ok) {
         throw new AppError('Synthesized audio retrieval failed', 503, 'TTS_AUDIO_FETCH_FAILED')

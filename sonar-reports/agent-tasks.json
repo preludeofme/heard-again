@@ -1,0 +1,3382 @@
+{
+  "total_tasks": 790,
+  "tasks": [
+    {
+      "priority": "high",
+      "task_id": "819941df-eeda-4118-b4ed-d2e215a29e22",
+      "file_path": "src/pages/api/family-merge/analyze.ts",
+      "line": 34,
+      "rule_id": "typescript:S3776",
+      "description": "Refactor this function to reduce its Cognitive Complexity from 20 to the 15 allowed.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "10min",
+      "quick_fix_available": false,
+      "tags": [
+        "brain-overload"
+      ]
+    },
+    {
+      "priority": "high",
+      "task_id": "92d8093e-84a6-44cf-830f-12dfd378ab4f",
+      "file_path": "src/components/pages/VoiceLabPage.tsx",
+      "line": 39,
+      "rule_id": "typescript:S3776",
+      "description": "Refactor this function to reduce its Cognitive Complexity from 20 to the 15 allowed.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "10min",
+      "quick_fix_available": false,
+      "tags": [
+        "brain-overload"
+      ]
+    },
+    {
+      "priority": "high",
+      "task_id": "1c52d187-7e7f-4f21-b6ec-1a9ec11d8832",
+      "file_path": "src/pages/family-tree.tsx",
+      "line": 406,
+      "rule_id": "typescript:S2871",
+      "description": "Provide a compare function that depends on \"String.localeCompare\", to reliably sort elements alphabetically.",
+      "type": "BUG",
+      "estimated_effort": "10min",
+      "quick_fix_available": true,
+      "tags": [
+        "type-dependent",
+        "bad-practice"
+      ]
+    },
+    {
+      "priority": "high",
+      "task_id": "09f91dec-00db-412d-949b-6a00101eb934",
+      "file_path": "src/components/pages/TalkPage.tsx",
+      "line": 16,
+      "rule_id": "typescript:S3776",
+      "description": "Refactor this function to reduce its Cognitive Complexity from 21 to the 15 allowed.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "11min",
+      "quick_fix_available": false,
+      "tags": [
+        "brain-overload"
+      ]
+    },
+    {
+      "priority": "high",
+      "task_id": "01193448-089d-4d54-96ba-097a2a1b2601",
+      "file_path": "src/services/RelationshipService.ts",
+      "line": 55,
+      "rule_id": "typescript:S3776",
+      "description": "Refactor this function to reduce its Cognitive Complexity from 21 to the 15 allowed.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "11min",
+      "quick_fix_available": false,
+      "tags": [
+        "brain-overload"
+      ]
+    },
+    {
+      "priority": "high",
+      "task_id": "19a5e0d3-ffbd-4260-9e0d-c57ec10c6ee2",
+      "file_path": "src/components/pages/FamilyTreePage.tsx",
+      "line": 120,
+      "rule_id": "typescript:S3776",
+      "description": "Refactor this function to reduce its Cognitive Complexity from 22 to the 15 allowed.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "12min",
+      "quick_fix_available": false,
+      "tags": [
+        "brain-overload"
+      ]
+    },
+    {
+      "priority": "high",
+      "task_id": "cb0108f5-8450-407d-8556-7a51a8baf025",
+      "file_path": "src/pages/tunnel-setup.tsx",
+      "line": 62,
+      "rule_id": "typescript:S3776",
+      "description": "Refactor this function to reduce its Cognitive Complexity from 22 to the 15 allowed.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "12min",
+      "quick_fix_available": false,
+      "tags": [
+        "brain-overload"
+      ]
+    },
+    {
+      "priority": "high",
+      "task_id": "90d2b153-e3b1-48dc-9846-e5ccdb78c99a",
+      "file_path": "src/pages/api/people/[id].ts",
+      "line": 8,
+      "rule_id": "typescript:S3776",
+      "description": "Refactor this function to reduce its Cognitive Complexity from 23 to the 15 allowed.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "13min",
+      "quick_fix_available": false,
+      "tags": [
+        "brain-overload"
+      ]
+    },
+    {
+      "priority": "high",
+      "task_id": "8d8d83c6-5bfd-498b-8966-d84deca5477c",
+      "file_path": "src/pages/api/assets/upload.ts",
+      "line": 24,
+      "rule_id": "typescript:S3776",
+      "description": "Refactor this function to reduce its Cognitive Complexity from 26 to the 15 allowed.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "16min",
+      "quick_fix_available": false,
+      "tags": [
+        "brain-overload"
+      ]
+    },
+    {
+      "priority": "high",
+      "task_id": "a6a49e47-2f09-43b7-b4b8-0598924e0071",
+      "file_path": "src/components/pages/FamilyTreePage.tsx",
+      "line": 265,
+      "rule_id": "typescript:S3776",
+      "description": "Refactor this function to reduce its Cognitive Complexity from 27 to the 15 allowed.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "17min",
+      "quick_fix_available": false,
+      "tags": [
+        "brain-overload"
+      ]
+    },
+    {
+      "priority": "high",
+      "task_id": "1af77ea4-cfaa-4752-822c-cbff4b3b6419",
+      "file_path": "src/pages/family-tree.tsx",
+      "line": 72,
+      "rule_id": "typescript:S3776",
+      "description": "Refactor this function to reduce its Cognitive Complexity from 120 to the 15 allowed.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "1h50min",
+      "quick_fix_available": false,
+      "tags": [
+        "brain-overload"
+      ]
+    },
+    {
+      "priority": "high",
+      "task_id": "270fee7b-d466-4674-b32a-e9992ed2ebcb",
+      "file_path": "src/components/assets/AssetUpload.tsx",
+      "line": 137,
+      "rule_id": "typescript:S2004",
+      "description": "Refactor this code to not nest functions more than 4 levels deep.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "20min",
+      "quick_fix_available": false,
+      "tags": [
+        "brain-overload"
+      ]
+    },
+    {
+      "priority": "high",
+      "task_id": "c9423c57-9143-440d-8f36-74fe9fb5ce83",
+      "file_path": "src/pages/api/assets/upload.ts",
+      "line": 43,
+      "rule_id": "typescript:S2598",
+      "description": "Restrict the extension of uploaded files.",
+      "type": "VULNERABILITY",
+      "estimated_effort": "20min",
+      "quick_fix_available": false,
+      "tags": [
+        "cwe",
+        "express.js"
+      ]
+    },
+    {
+      "priority": "high",
+      "task_id": "7e30fbf6-a14e-4bcf-8bd3-2a9d4aed3d94",
+      "file_path": "src/pages/api/family-merge/analyze.ts",
+      "line": 183,
+      "rule_id": "typescript:S3776",
+      "description": "Refactor this function to reduce its Cognitive Complexity from 30 to the 15 allowed.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "20min",
+      "quick_fix_available": false,
+      "tags": [
+        "brain-overload"
+      ]
+    },
+    {
+      "priority": "high",
+      "task_id": "d8e6a0c4-ccea-4ec6-9870-2216040f6b11",
+      "file_path": "src/controllers/useConversation.ts",
+      "line": 137,
+      "rule_id": "typescript:S2004",
+      "description": "Refactor this code to not nest functions more than 4 levels deep.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "20min",
+      "quick_fix_available": false,
+      "tags": [
+        "brain-overload"
+      ]
+    },
+    {
+      "priority": "high",
+      "task_id": "2e5c852c-c31d-41a5-a30c-f5a46f9e5739",
+      "file_path": "src/services/RelationshipService.ts",
+      "line": 214,
+      "rule_id": "typescript:S3776",
+      "description": "Refactor this function to reduce its Cognitive Complexity from 32 to the 15 allowed.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "22min",
+      "quick_fix_available": false,
+      "tags": [
+        "brain-overload"
+      ]
+    },
+    {
+      "priority": "high",
+      "task_id": "7a456218-138c-4240-9540-ad290d71d430",
+      "file_path": "src/pages/api/billing/webhook.ts",
+      "line": 40,
+      "rule_id": "typescript:S3776",
+      "description": "Refactor this function to reduce its Cognitive Complexity from 33 to the 15 allowed.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "23min",
+      "quick_fix_available": false,
+      "tags": [
+        "brain-overload"
+      ]
+    },
+    {
+      "priority": "high",
+      "task_id": "935af252-df5b-412b-ab4b-bb781e91a1b4",
+      "file_path": "src/pages/api/family-merge/execute.ts",
+      "line": 87,
+      "rule_id": "typescript:S3776",
+      "description": "Refactor this function to reduce its Cognitive Complexity from 36 to the 15 allowed.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "26min",
+      "quick_fix_available": false,
+      "tags": [
+        "brain-overload"
+      ]
+    },
+    {
+      "priority": "high",
+      "task_id": "70e619c7-c9c7-441d-bc79-99511ad348e9",
+      "file_path": "src/pages/api/instance/tunnel-v2.ts",
+      "line": 24,
+      "rule_id": "typescript:S3776",
+      "description": "Refactor this function to reduce its Cognitive Complexity from 48 to the 15 allowed.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "38min",
+      "quick_fix_available": false,
+      "tags": [
+        "brain-overload"
+      ]
+    },
+    {
+      "priority": "high",
+      "task_id": "1ee7bb7a-b3e9-414c-bdf3-f21b8248f9ca",
+      "file_path": "src/pages/api/export/gedcom.ts",
+      "line": 27,
+      "rule_id": "typescript:S3776",
+      "description": "Refactor this function to reduce its Cognitive Complexity from 53 to the 15 allowed.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "43min",
+      "quick_fix_available": false,
+      "tags": [
+        "brain-overload"
+      ]
+    },
+    {
+      "priority": "high",
+      "task_id": "045eb8dd-b9bd-4f20-b94a-4a744823ee09",
+      "file_path": "src/components/pages/FamilyTreePage.tsx",
+      "line": 574,
+      "rule_id": "typescript:S3776",
+      "description": "Refactor this function to reduce its Cognitive Complexity from 62 to the 15 allowed.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "52min",
+      "quick_fix_available": false,
+      "tags": [
+        "brain-overload"
+      ]
+    },
+    {
+      "priority": "high",
+      "task_id": "23856fac-57b1-4a59-8c30-9864186b8a63",
+      "file_path": "src/lib/security/malware-scanner.ts",
+      "line": 47,
+      "rule_id": "typescript:S7059",
+      "description": "Refactor this asynchronous operation outside of the constructor.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": []
+    },
+    {
+      "priority": "high",
+      "task_id": "bd67025c-d8a6-4dcd-b60d-b4a3987bcbbc",
+      "file_path": "src/lib/storage/providers/local-provider.ts",
+      "line": 18,
+      "rule_id": "typescript:S7059",
+      "description": "Refactor this asynchronous operation outside of the constructor.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": []
+    },
+    {
+      "priority": "high",
+      "task_id": "ac453935-a312-4bf9-b314-9495ad4f9c7c",
+      "file_path": "src/lib/security/malware-scanner.ts",
+      "line": 45,
+      "rule_id": "typescript:S7059",
+      "description": "Refactor this asynchronous operation outside of the constructor.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": []
+    },
+    {
+      "priority": "high",
+      "task_id": "bfcbde6c-0c08-404e-bc79-013e4b29173b",
+      "file_path": "src/lib/security/malware-scanner.ts",
+      "line": 250,
+      "rule_id": "typescript:S7059",
+      "description": "Refactor this asynchronous operation outside of the constructor.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": []
+    },
+    {
+      "priority": "high",
+      "task_id": "519f7ed4-15db-4246-8598-4ade6a3be264",
+      "file_path": "src/lib/storage/providers/local-provider.ts",
+      "line": 16,
+      "rule_id": "typescript:S7059",
+      "description": "Refactor this asynchronous operation outside of the constructor.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": []
+    },
+    {
+      "priority": "high",
+      "task_id": "1e78d717-98e7-4110-8809-26e4dd2827e7",
+      "file_path": "tts-service/app/main.py",
+      "line": 315,
+      "rule_id": "python:S1192",
+      "description": "Define a constant instead of duplicating this literal \"Reference audio not found\" 3 times.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "6min",
+      "quick_fix_available": false,
+      "tags": [
+        "design"
+      ]
+    },
+    {
+      "priority": "high",
+      "task_id": "95c0c0c3-ed9a-47c6-a074-622c591f74a9",
+      "file_path": "tts-service/app/main.py",
+      "line": 500,
+      "rule_id": "python:S1192",
+      "description": "Define a constant instead of duplicating this literal \"VoiceDesign model not loaded\" 3 times.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "6min",
+      "quick_fix_available": false,
+      "tags": [
+        "design"
+      ]
+    },
+    {
+      "priority": "high",
+      "task_id": "98c809fc-bf83-48a9-878d-73b8d9673ba6",
+      "file_path": "tts-service/app/main.py",
+      "line": 308,
+      "rule_id": "python:S1192",
+      "description": "Define a constant instead of duplicating this literal \"Model not loaded\" 3 times.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "6min",
+      "quick_fix_available": false,
+      "tags": [
+        "design"
+      ]
+    },
+    {
+      "priority": "high",
+      "task_id": "e2326247-f7d5-4608-8556-0d4a44b6dd92",
+      "file_path": "tts-service/app/main.py",
+      "line": 318,
+      "rule_id": "python:S1192",
+      "description": "Define a constant instead of duplicating this literal \".json\" 3 times.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "6min",
+      "quick_fix_available": false,
+      "tags": [
+        "design"
+      ]
+    },
+    {
+      "priority": "high",
+      "task_id": "b3758abe-4ea5-4b38-aedf-b63c943073d0",
+      "file_path": "tts-service/app/validators.py",
+      "line": 210,
+      "rule_id": "python:S3776",
+      "description": "Refactor this function to reduce its Cognitive Complexity from 16 to the 15 allowed.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "6min",
+      "quick_fix_available": false,
+      "tags": [
+        "brain-overload"
+      ]
+    },
+    {
+      "priority": "high",
+      "task_id": "9a5d56c2-67f8-4195-8282-f8c41656c785",
+      "file_path": "src/pages/api/instance/status.ts",
+      "line": 7,
+      "rule_id": "typescript:S3776",
+      "description": "Refactor this function to reduce its Cognitive Complexity from 16 to the 15 allowed.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "6min",
+      "quick_fix_available": false,
+      "tags": [
+        "brain-overload"
+      ]
+    },
+    {
+      "priority": "high",
+      "task_id": "1d414efc-bea9-4002-ba62-5fd49b9362b9",
+      "file_path": "src/pages/api/family-merge/analyze.ts",
+      "line": 89,
+      "rule_id": "typescript:S3776",
+      "description": "Refactor this function to reduce its Cognitive Complexity from 16 to the 15 allowed.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "6min",
+      "quick_fix_available": false,
+      "tags": [
+        "brain-overload"
+      ]
+    },
+    {
+      "priority": "high",
+      "task_id": "983c54e0-a046-4a4a-8352-63cf8163f37f",
+      "file_path": "src/pages/family-tree.tsx",
+      "line": 542,
+      "rule_id": "typescript:S3776",
+      "description": "Refactor this function to reduce its Cognitive Complexity from 16 to the 15 allowed.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "6min",
+      "quick_fix_available": false,
+      "tags": [
+        "brain-overload"
+      ]
+    },
+    {
+      "priority": "high",
+      "task_id": "5a74bb75-5ff0-4c35-bcf8-8037e0ca2f0e",
+      "file_path": "src/pages/api/import/gedcom.ts",
+      "line": 345,
+      "rule_id": "typescript:S3776",
+      "description": "Refactor this function to reduce its Cognitive Complexity from 16 to the 15 allowed.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "6min",
+      "quick_fix_available": false,
+      "tags": [
+        "brain-overload"
+      ]
+    },
+    {
+      "priority": "high",
+      "task_id": "81872bca-ea49-4801-9a8c-77d89838b78e",
+      "file_path": "src/components/modals/PersonModal.tsx",
+      "line": 90,
+      "rule_id": "typescript:S3776",
+      "description": "Refactor this function to reduce its Cognitive Complexity from 17 to the 15 allowed.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "7min",
+      "quick_fix_available": false,
+      "tags": [
+        "brain-overload"
+      ]
+    },
+    {
+      "priority": "high",
+      "task_id": "ce5cdb3b-401e-4980-b33a-1fb02812068b",
+      "file_path": "src/lib/security/security-headers.ts",
+      "line": 21,
+      "rule_id": "typescript:S3776",
+      "description": "Refactor this function to reduce its Cognitive Complexity from 17 to the 15 allowed.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "7min",
+      "quick_fix_available": false,
+      "tags": [
+        "brain-overload"
+      ]
+    },
+    {
+      "priority": "high",
+      "task_id": "0ff213c1-de96-4ead-a765-e6093b07d72b",
+      "file_path": "tts-service/app/main.py",
+      "line": 49,
+      "rule_id": "python:S1192",
+      "description": "Define a constant instead of duplicating this literal \"Reference audio not found\" 4 times.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "8min",
+      "quick_fix_available": false,
+      "tags": [
+        "design"
+      ]
+    },
+    {
+      "priority": "high",
+      "task_id": "438aec5a-ae5e-478e-a2ef-982bc832f9b9",
+      "file_path": "tts-service/app/main.py",
+      "line": 306,
+      "rule_id": "python:S3776",
+      "description": "Refactor this function to reduce its Cognitive Complexity from 18 to the 15 allowed.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "8min",
+      "quick_fix_available": false,
+      "tags": [
+        "brain-overload"
+      ]
+    },
+    {
+      "priority": "high",
+      "task_id": "7be88e72-2a24-4044-b681-3ba69ecdaad6",
+      "file_path": "src/pages/api/family-merge/analyze.ts",
+      "line": 132,
+      "rule_id": "typescript:S3776",
+      "description": "Refactor this function to reduce its Cognitive Complexity from 18 to the 15 allowed.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "8min",
+      "quick_fix_available": false,
+      "tags": [
+        "brain-overload"
+      ]
+    },
+    {
+      "priority": "high",
+      "task_id": "252476c9-cd33-42f0-a4db-4edebe728302",
+      "file_path": "src/services/PersonService.ts",
+      "line": 117,
+      "rule_id": "typescript:S3776",
+      "description": "Refactor this function to reduce its Cognitive Complexity from 18 to the 15 allowed.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "8min",
+      "quick_fix_available": false,
+      "tags": [
+        "brain-overload"
+      ]
+    },
+    {
+      "priority": "high",
+      "task_id": "ae0c98d2-09fe-4f84-be98-ecfe391be335",
+      "file_path": "src/pages/api/people/[id].ts",
+      "line": 154,
+      "rule_id": "typescript:S3776",
+      "description": "Refactor this function to reduce its Cognitive Complexity from 19 to the 15 allowed.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "9min",
+      "quick_fix_available": false,
+      "tags": [
+        "brain-overload"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "b93aa824-9c44-453f-8e1b-36e64fc253cb",
+      "file_path": "src/components/modals/PersonModal.tsx",
+      "line": 573,
+      "rule_id": "typescript:S4624",
+      "description": "Refactor this code to not use nested template literals.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "10min",
+      "quick_fix_available": false,
+      "tags": [
+        "brain-overload",
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "702db468-2728-4137-9d8d-4484721e2e91",
+      "file_path": "src/components/pages/StoriesPage.tsx",
+      "line": 24,
+      "rule_id": "typescript:S4624",
+      "description": "Refactor this code to not use nested template literals.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "10min",
+      "quick_fix_available": false,
+      "tags": [
+        "brain-overload",
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "4ccf4579-6ae1-431f-ba9b-2d3c873e143d",
+      "file_path": "src/pages/api/export/pdf.ts",
+      "line": 99,
+      "rule_id": "typescript:S4624",
+      "description": "Refactor this code to not use nested template literals.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "10min",
+      "quick_fix_available": false,
+      "tags": [
+        "brain-overload",
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "5fbd4d32-bb2e-4a87-a555-5b569d279b6b",
+      "file_path": "src/pages/api/workspaces/index.ts",
+      "line": 65,
+      "rule_id": "typescript:S5850",
+      "description": "Group parts of the regex together to make the intended operator precedence explicit.",
+      "type": "BUG",
+      "estimated_effort": "10min",
+      "quick_fix_available": false,
+      "tags": [
+        "regex",
+        "type-dependent"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "c8d3dca5-0539-4b5b-a4ee-51115d3109b3",
+      "file_path": "src/lib/file-optimizer/audio-optimizer.ts",
+      "line": 74,
+      "rule_id": "typescript:S1871",
+      "description": "This case's code block is the same as the block for the case on line 68.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "10min",
+      "quick_fix_available": false,
+      "tags": [
+        "design",
+        "suspicious"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "1a14934b-6025-44ee-9da5-cda36b3e77d9",
+      "file_path": "src/lib/file-optimizer/video-optimizer.ts",
+      "line": 52,
+      "rule_id": "typescript:S1871",
+      "description": "This case's code block is the same as the block for the case on line 46.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "10min",
+      "quick_fix_available": false,
+      "tags": [
+        "design",
+        "suspicious"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "ee36d9ba-9b7d-433a-af34-c877f2726776",
+      "file_path": "src/components/layout/SelectedFamilyMemberChip.tsx",
+      "line": 14,
+      "rule_id": "typescript:S4624",
+      "description": "Refactor this code to not use nested template literals.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "10min",
+      "quick_fix_available": false,
+      "tags": [
+        "brain-overload",
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "d324f52a-36ef-40fc-a320-03a1d96c4b75",
+      "file_path": "src/components/pages/TimelinePage.tsx",
+      "line": 238,
+      "rule_id": "typescript:S4624",
+      "description": "Refactor this code to not use nested template literals.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "10min",
+      "quick_fix_available": false,
+      "tags": [
+        "brain-overload",
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "953dee3e-edd5-4604-b801-99869f7a0d68",
+      "file_path": "src/pages/api/timeline/index.ts",
+      "line": 246,
+      "rule_id": "typescript:S4624",
+      "description": "Refactor this code to not use nested template literals.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "10min",
+      "quick_fix_available": false,
+      "tags": [
+        "brain-overload",
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "49d76b7f-7ab5-47af-b0aa-83ecfa9f0e89",
+      "file_path": "src/pages/api/timeline/index.ts",
+      "line": 269,
+      "rule_id": "typescript:S4624",
+      "description": "Refactor this code to not use nested template literals.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "10min",
+      "quick_fix_available": false,
+      "tags": [
+        "brain-overload",
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "6a13ad5f-aff2-420e-a999-efe7457683e0",
+      "file_path": "src/pages/api/timeline/index.ts",
+      "line": 301,
+      "rule_id": "typescript:S4624",
+      "description": "Refactor this code to not use nested template literals.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "10min",
+      "quick_fix_available": false,
+      "tags": [
+        "brain-overload",
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "cecdd145-f405-4a65-b016-f340df9c5ec9",
+      "file_path": "src/pages/documents.tsx",
+      "line": 17,
+      "rule_id": "typescript:S4624",
+      "description": "Refactor this code to not use nested template literals.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "10min",
+      "quick_fix_available": false,
+      "tags": [
+        "brain-overload",
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "e3e02522-5cab-4896-a3d7-27029635943e",
+      "file_path": "src/pages/talk.tsx",
+      "line": 19,
+      "rule_id": "typescript:S4624",
+      "description": "Refactor this code to not use nested template literals.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "10min",
+      "quick_fix_available": false,
+      "tags": [
+        "brain-overload",
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "bd1220a4-3139-4f2f-8502-79df3f78f3a4",
+      "file_path": "src/pages/profile/[id].tsx",
+      "line": 34,
+      "rule_id": "typescript:S4624",
+      "description": "Refactor this code to not use nested template literals.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "10min",
+      "quick_fix_available": false,
+      "tags": [
+        "brain-overload",
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "cfccadf8-138e-4fdd-adf4-931abee0e558",
+      "file_path": "src/pages/stories.tsx",
+      "line": 19,
+      "rule_id": "typescript:S4624",
+      "description": "Refactor this code to not use nested template literals.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "10min",
+      "quick_fix_available": false,
+      "tags": [
+        "brain-overload",
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "d7f78f55-a6e0-4f14-81fe-f920ebb569e7",
+      "file_path": "src/pages/voice-lab.tsx",
+      "line": 18,
+      "rule_id": "typescript:S4624",
+      "description": "Refactor this code to not use nested template literals.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "10min",
+      "quick_fix_available": false,
+      "tags": [
+        "brain-overload",
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "a0d23016-319a-43e9-9e5c-2f216eeac90b",
+      "file_path": "src/components/modals/AddEditPersonModal.tsx",
+      "line": 688,
+      "rule_id": "typescript:S4624",
+      "description": "Refactor this code to not use nested template literals.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "10min",
+      "quick_fix_available": false,
+      "tags": [
+        "brain-overload",
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "183305a6-41e0-4acd-a46e-8ed9c3e82a21",
+      "file_path": "src/components/modals/AddEditPersonModal.tsx",
+      "line": 689,
+      "rule_id": "typescript:S4624",
+      "description": "Refactor this code to not use nested template literals.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "10min",
+      "quick_fix_available": false,
+      "tags": [
+        "brain-overload",
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "1849973c-7ea0-4715-9fce-8947af6b9fd2",
+      "file_path": "src/components/pages/StoriesPage.tsx",
+      "line": 373,
+      "rule_id": "typescript:S3923",
+      "description": "This conditional operation returns the same value whether the condition is \"true\" or \"false\".",
+      "type": "BUG",
+      "estimated_effort": "15min",
+      "quick_fix_available": false,
+      "tags": []
+    },
+    {
+      "priority": "medium",
+      "task_id": "4904d674-9f38-4fd8-9d11-7eb7be532516",
+      "file_path": "src/lib/prisma.ts",
+      "line": 35,
+      "rule_id": "typescript:S3923",
+      "description": "This conditional operation returns the same value whether the condition is \"true\" or \"false\".",
+      "type": "BUG",
+      "estimated_effort": "15min",
+      "quick_fix_available": false,
+      "tags": []
+    },
+    {
+      "priority": "medium",
+      "task_id": "3fd1dbf2-01bf-44cd-b5db-f1ef40ba90ec",
+      "file_path": "src/components/viewers/DocumentViewer.tsx",
+      "line": 401,
+      "rule_id": "typescript:S4144",
+      "description": "Update this function so that its implementation is not identical to the one on line 43.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "15min",
+      "quick_fix_available": false,
+      "tags": [
+        "confusing",
+        "duplicate",
+        "suspicious"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "d752889c-3a35-4549-abf4-2749a699409b",
+      "file_path": "src/pages/family-tree.tsx",
+      "line": 228,
+      "rule_id": "typescript:S3923",
+      "description": "This conditional operation returns the same value whether the condition is \"true\" or \"false\".",
+      "type": "BUG",
+      "estimated_effort": "15min",
+      "quick_fix_available": false,
+      "tags": []
+    },
+    {
+      "priority": "medium",
+      "task_id": "1be91098-3039-4f58-a570-87b4aefcc856",
+      "file_path": "src/components/pages/FamilyTreePage.tsx",
+      "line": 275,
+      "rule_id": "typescript:S1854",
+      "description": "Remove this useless assignment to variable \"theme\".",
+      "type": "CODE_SMELL",
+      "estimated_effort": "1min",
+      "quick_fix_available": false,
+      "tags": [
+        "cwe",
+        "unused"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "41deaac9-eb20-439f-99ee-1ef1593ab3b0",
+      "file_path": "src/components/pages/FamilyTreePage.tsx",
+      "line": 467,
+      "rule_id": "typescript:S1854",
+      "description": "Remove this useless assignment to variable \"handlePan\".",
+      "type": "CODE_SMELL",
+      "estimated_effort": "1min",
+      "quick_fix_available": false,
+      "tags": [
+        "cwe",
+        "unused"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "a896b40b-3ef5-470f-8757-cf9e2923601f",
+      "file_path": "src/lib/security/file-validator.ts",
+      "line": 266,
+      "rule_id": "typescript:S1854",
+      "description": "Remove this useless assignment to variable \"maxReasonableSize\".",
+      "type": "CODE_SMELL",
+      "estimated_effort": "1min",
+      "quick_fix_available": false,
+      "tags": [
+        "cwe",
+        "unused"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "40b5f237-7cf9-4347-bb88-4a6f60079afc",
+      "file_path": "src/pages/api/assets/upload.ts",
+      "line": 52,
+      "rule_id": "typescript:S1854",
+      "description": "Remove this useless assignment to variable \"fields\".",
+      "type": "CODE_SMELL",
+      "estimated_effort": "1min",
+      "quick_fix_available": false,
+      "tags": [
+        "cwe",
+        "unused"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "a5d5dba7-78f2-4881-b8d3-6578fa339bb2",
+      "file_path": "tts-service/app/main.py",
+      "line": 205,
+      "rule_id": "python:S3457",
+      "description": "Add replacement fields or use a normal string instead of an f-string.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "1min",
+      "quick_fix_available": false,
+      "tags": [
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "917af55a-58ea-437b-9206-78ac66bffae8",
+      "file_path": "src/components/pages/DocumentsPage.tsx",
+      "line": 26,
+      "rule_id": "typescript:S1854",
+      "description": "Remove this useless assignment to variable \"uploadedFiles\".",
+      "type": "CODE_SMELL",
+      "estimated_effort": "1min",
+      "quick_fix_available": false,
+      "tags": [
+        "cwe",
+        "unused"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "8d1dfeda-0e75-4a99-b1f4-cf15b58ff823",
+      "file_path": "src/components/viewers/DocumentViewer.tsx",
+      "line": 41,
+      "rule_id": "typescript:S1854",
+      "description": "Remove this useless assignment to variable \"setTotalPages\".",
+      "type": "CODE_SMELL",
+      "estimated_effort": "1min",
+      "quick_fix_available": false,
+      "tags": [
+        "cwe",
+        "unused"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "1e8c06ef-63cb-492c-81db-4b44e1504e4c",
+      "file_path": "src/lib/file-optimizer/document-optimizer.ts",
+      "line": 27,
+      "rule_id": "typescript:S1854",
+      "description": "Remove this useless assignment to variable \"optimizationMethod\".",
+      "type": "CODE_SMELL",
+      "estimated_effort": "1min",
+      "quick_fix_available": false,
+      "tags": [
+        "cwe",
+        "unused"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "2cf7ce27-3e3c-4227-aeea-7b3dc860f12d",
+      "file_path": "src/lib/file-optimizer/video-optimizer.ts",
+      "line": 26,
+      "rule_id": "typescript:S1854",
+      "description": "Remove this useless assignment to variable \"optimizationMethod\".",
+      "type": "CODE_SMELL",
+      "estimated_effort": "1min",
+      "quick_fix_available": false,
+      "tags": [
+        "cwe",
+        "unused"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "9192ed72-1c89-475b-8d2b-d1dd00c3dbd6",
+      "file_path": "src/pages/api/instance/tunnel-v2.ts",
+      "line": 134,
+      "rule_id": "typescript:S1854",
+      "description": "Remove this useless assignment to variable \"updatedInstance\".",
+      "type": "CODE_SMELL",
+      "estimated_effort": "1min",
+      "quick_fix_available": false,
+      "tags": [
+        "cwe",
+        "unused"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "c816a6d9-12e2-421a-9153-5bb89462a347",
+      "file_path": "src/pages/api/instance/tunnel-v2.ts",
+      "line": 196,
+      "rule_id": "typescript:S1854",
+      "description": "Remove this useless assignment to variable \"updatedInstance\".",
+      "type": "CODE_SMELL",
+      "estimated_effort": "1min",
+      "quick_fix_available": false,
+      "tags": [
+        "cwe",
+        "unused"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "490facaf-2b68-46f4-9cdc-fa304cf649f5",
+      "file_path": "src/pages/api/instance/tunnel-v2.ts",
+      "line": 247,
+      "rule_id": "typescript:S1854",
+      "description": "Remove this useless assignment to variable \"updatedInstance\".",
+      "type": "CODE_SMELL",
+      "estimated_effort": "1min",
+      "quick_fix_available": false,
+      "tags": [
+        "cwe",
+        "unused"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "af4d760b-2a3f-4efa-b7c3-f0a2af4264ea",
+      "file_path": "src/pages/api/instance/tunnel-v2.ts",
+      "line": 365,
+      "rule_id": "typescript:S1854",
+      "description": "Remove this useless assignment to variable \"updatedInstance\".",
+      "type": "CODE_SMELL",
+      "estimated_effort": "1min",
+      "quick_fix_available": false,
+      "tags": [
+        "cwe",
+        "unused"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "2bc1e339-5268-4cf2-90d9-7deef6678c60",
+      "file_path": "src/pages/tunnel-setup.tsx",
+      "line": 200,
+      "rule_id": "typescript:S1854",
+      "description": "Remove this useless assignment to variable \"enableTunnel\".",
+      "type": "CODE_SMELL",
+      "estimated_effort": "1min",
+      "quick_fix_available": false,
+      "tags": [
+        "cwe",
+        "unused"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "6e96737d-fe93-41cb-b15a-4a2e70dec8f9",
+      "file_path": "src/pages/stories.tsx",
+      "line": 23,
+      "rule_id": "typescript:S1854",
+      "description": "Remove this useless assignment to variable \"router\".",
+      "type": "CODE_SMELL",
+      "estimated_effort": "1min",
+      "quick_fix_available": false,
+      "tags": [
+        "cwe",
+        "unused"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "9da4ddb7-8215-4f7b-8416-2593517a8155",
+      "file_path": "src/pages/voice-lab.tsx",
+      "line": 22,
+      "rule_id": "typescript:S1854",
+      "description": "Remove this useless assignment to variable \"router\".",
+      "type": "CODE_SMELL",
+      "estimated_effort": "1min",
+      "quick_fix_available": false,
+      "tags": [
+        "cwe",
+        "unused"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "ab8b5f29-a921-47fa-bd79-84c366f86cdd",
+      "file_path": "src/services/RelationshipService.ts",
+      "line": 350,
+      "rule_id": "typescript:S107",
+      "description": "Async method 'createParentChildRelationship' has too many parameters (8). Maximum allowed is 7.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "20min",
+      "quick_fix_available": false,
+      "tags": [
+        "brain-overload"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "64fa327a-7e65-4728-9f62-81ea37b91565",
+      "file_path": "src/services/VoiceService.ts",
+      "line": 167,
+      "rule_id": "typescript:S107",
+      "description": "Async method 'completeJob' has too many parameters (11). Maximum allowed is 7.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "20min",
+      "quick_fix_available": false,
+      "tags": [
+        "brain-overload"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "51c3f41f-a87b-4094-a8fc-816e53e148eb",
+      "file_path": "src/lib/file-optimizer/image-optimizer.ts",
+      "line": 5,
+      "rule_id": "typescript:S2933",
+      "description": "Member 'supportedMimeTypes' is never reassigned; mark it as `readonly`.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "2min",
+      "quick_fix_available": true,
+      "tags": [
+        "type-dependent",
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "4a3e65da-89da-443e-bf10-c3a93ad138c0",
+      "file_path": "src/lib/security/malware-scanner.ts",
+      "line": 30,
+      "rule_id": "typescript:S2933",
+      "description": "Member 'knownMaliciousHashes' is never reassigned; mark it as `readonly`.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "2min",
+      "quick_fix_available": true,
+      "tags": [
+        "type-dependent",
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "9ef6c558-da16-4294-8471-dc38dd5ab982",
+      "file_path": "src/lib/security/malware-scanner.ts",
+      "line": 31,
+      "rule_id": "typescript:S2933",
+      "description": "Member 'suspiciousPatterns' is never reassigned; mark it as `readonly`.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "2min",
+      "quick_fix_available": true,
+      "tags": [
+        "type-dependent",
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "05c66510-9b35-4610-a6b9-d06ef3cd7167",
+      "file_path": "src/lib/storage/providers/gcp-provider.ts",
+      "line": 12,
+      "rule_id": "typescript:S2933",
+      "description": "Member 'storage' is never reassigned; mark it as `readonly`.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "2min",
+      "quick_fix_available": true,
+      "tags": [
+        "type-dependent",
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "1ff49c1e-27f8-40f3-af82-026994a20f2f",
+      "file_path": "src/lib/storage/providers/gcp-provider.ts",
+      "line": 13,
+      "rule_id": "typescript:S2933",
+      "description": "Member 'bucketName' is never reassigned; mark it as `readonly`.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "2min",
+      "quick_fix_available": true,
+      "tags": [
+        "type-dependent",
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "87470b7b-fdda-4c1d-9777-e5fdf9a4de50",
+      "file_path": "src/lib/storage/providers/local-provider.ts",
+      "line": 12,
+      "rule_id": "typescript:S2933",
+      "description": "Member 'config' is never reassigned; mark it as `readonly`.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "2min",
+      "quick_fix_available": true,
+      "tags": [
+        "type-dependent",
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "45efa5a7-1243-454e-9488-ff34e48fd52f",
+      "file_path": "src/lib/storage/providers/s3-provider.ts",
+      "line": 16,
+      "rule_id": "typescript:S2933",
+      "description": "Member 'client' is never reassigned; mark it as `readonly`.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "2min",
+      "quick_fix_available": true,
+      "tags": [
+        "type-dependent",
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "7aa67582-5c61-43c2-aab7-0f38d9e87563",
+      "file_path": "src/lib/storage/providers/s3-provider.ts",
+      "line": 17,
+      "rule_id": "typescript:S2933",
+      "description": "Member 'bucket' is never reassigned; mark it as `readonly`.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "2min",
+      "quick_fix_available": true,
+      "tags": [
+        "type-dependent",
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "d70aa259-24c9-48e3-9557-f0bfdd72b5e7",
+      "file_path": "src/lib/storage/providers/s3-provider.ts",
+      "line": 18,
+      "rule_id": "typescript:S2933",
+      "description": "Member 'region' is never reassigned; mark it as `readonly`.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "2min",
+      "quick_fix_available": true,
+      "tags": [
+        "type-dependent",
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "361260ea-32d1-4f9d-810e-470f69819ebd",
+      "file_path": "src/lib/storage/providers/s3-provider.ts",
+      "line": 19,
+      "rule_id": "typescript:S2933",
+      "description": "Member 'publicUrlBase' is never reassigned; mark it as `readonly`.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "2min",
+      "quick_fix_available": true,
+      "tags": [
+        "type-dependent",
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "0fabe451-848f-482b-8975-5e4d06ca1de3",
+      "file_path": "src/components/viewers/DocumentViewer.tsx",
+      "line": 62,
+      "rule_id": "typescript:S7762",
+      "description": "Prefer `childNode.remove()` over `parentNode.removeChild(childNode)`.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "2min",
+      "quick_fix_available": true,
+      "tags": [
+        "dom",
+        "modernize",
+        "javascript"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "c69cf932-5556-4644-a750-362e5051c97b",
+      "file_path": "src/lib/file-optimizer/audio-optimizer.ts",
+      "line": 4,
+      "rule_id": "typescript:S2933",
+      "description": "Member 'supportedMimeTypes' is never reassigned; mark it as `readonly`.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "2min",
+      "quick_fix_available": true,
+      "tags": [
+        "type-dependent",
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "526633ee-53e5-4efc-b04c-466e170ebfda",
+      "file_path": "src/lib/file-optimizer/document-optimizer.ts",
+      "line": 4,
+      "rule_id": "typescript:S2933",
+      "description": "Member 'supportedMimeTypes' is never reassigned; mark it as `readonly`.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "2min",
+      "quick_fix_available": true,
+      "tags": [
+        "type-dependent",
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "23c23412-3c6f-455c-b289-fcbe01b8ad0b",
+      "file_path": "src/lib/file-optimizer/index.ts",
+      "line": 24,
+      "rule_id": "typescript:S2933",
+      "description": "Member 'imageOptimizer' is never reassigned; mark it as `readonly`.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "2min",
+      "quick_fix_available": true,
+      "tags": [
+        "type-dependent",
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "ded35925-220f-4eec-a60b-1a5d579ee997",
+      "file_path": "src/lib/file-optimizer/index.ts",
+      "line": 25,
+      "rule_id": "typescript:S2933",
+      "description": "Member 'audioOptimizer' is never reassigned; mark it as `readonly`.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "2min",
+      "quick_fix_available": true,
+      "tags": [
+        "type-dependent",
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "00c865c4-89a5-4603-bbb9-be5d1b8fdf8c",
+      "file_path": "src/lib/file-optimizer/index.ts",
+      "line": 26,
+      "rule_id": "typescript:S2933",
+      "description": "Member 'videoOptimizer' is never reassigned; mark it as `readonly`.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "2min",
+      "quick_fix_available": true,
+      "tags": [
+        "type-dependent",
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "02204929-fccd-4065-9aab-363c66199361",
+      "file_path": "src/lib/file-optimizer/index.ts",
+      "line": 27,
+      "rule_id": "typescript:S2933",
+      "description": "Member 'documentOptimizer' is never reassigned; mark it as `readonly`.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "2min",
+      "quick_fix_available": true,
+      "tags": [
+        "type-dependent",
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "d97078e9-aacd-43f7-b005-047d7daf1ac8",
+      "file_path": "src/lib/file-optimizer/video-optimizer.ts",
+      "line": 4,
+      "rule_id": "typescript:S2933",
+      "description": "Member 'supportedMimeTypes' is never reassigned; mark it as `readonly`.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "2min",
+      "quick_fix_available": true,
+      "tags": [
+        "type-dependent",
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "678d847f-400f-487d-951c-69f344c75a9a",
+      "file_path": "src/lib/storage/storage-service.ts",
+      "line": 40,
+      "rule_id": "typescript:S2933",
+      "description": "Member 'provider' is never reassigned; mark it as `readonly`.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "2min",
+      "quick_fix_available": true,
+      "tags": [
+        "type-dependent",
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "09bef314-98e5-4cd1-8054-00fa498a0190",
+      "file_path": "src/lib/storage/storage-service.ts",
+      "line": 41,
+      "rule_id": "typescript:S2933",
+      "description": "Member 'config' is never reassigned; mark it as `readonly`.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "2min",
+      "quick_fix_available": true,
+      "tags": [
+        "type-dependent",
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "92b657bf-ec83-46f8-a37e-38d806cbd7bd",
+      "file_path": "src/lib/cloudflare-tunnel.ts",
+      "line": 51,
+      "rule_id": "typescript:S2933",
+      "description": "Member 'apiToken' is never reassigned; mark it as `readonly`.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "2min",
+      "quick_fix_available": true,
+      "tags": [
+        "type-dependent",
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "c3e0bd5a-87a5-45b6-9915-d159b946fb08",
+      "file_path": "src/lib/cloudflare-tunnel.ts",
+      "line": 52,
+      "rule_id": "typescript:S2933",
+      "description": "Member 'accountId' is never reassigned; mark it as `readonly`.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "2min",
+      "quick_fix_available": true,
+      "tags": [
+        "type-dependent",
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "c3af6070-73e7-4253-8842-55e41db6b0e5",
+      "file_path": "src/lib/cloudflare-tunnel.ts",
+      "line": 53,
+      "rule_id": "typescript:S2933",
+      "description": "Member 'zoneId' is never reassigned; mark it as `readonly`.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "2min",
+      "quick_fix_available": true,
+      "tags": [
+        "type-dependent",
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "52096639-d969-4d25-99d8-d7cee6604887",
+      "file_path": "src/pages/tunnel-setup.tsx",
+      "line": 196,
+      "rule_id": "typescript:S7762",
+      "description": "Prefer `childNode.remove()` over `parentNode.removeChild(childNode)`.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "2min",
+      "quick_fix_available": true,
+      "tags": [
+        "dom",
+        "modernize",
+        "javascript"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "d523361c-f0dc-43b8-a800-11c863ce23cc",
+      "file_path": "src/services/ImageProcessingService.ts",
+      "line": 37,
+      "rule_id": "typescript:S2933",
+      "description": "Member 'storage' is never reassigned; mark it as `readonly`.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "2min",
+      "quick_fix_available": true,
+      "tags": [
+        "type-dependent",
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "7c5d79f8-ce35-47f1-af89-dbfde9df0270",
+      "file_path": "src/services/StorageService.ts",
+      "line": 31,
+      "rule_id": "typescript:S2933",
+      "description": "Member 's3Client' is never reassigned; mark it as `readonly`.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "2min",
+      "quick_fix_available": true,
+      "tags": [
+        "type-dependent",
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "71337dd5-cde6-46a7-a29e-837327b4525d",
+      "file_path": "src/pages/family-tree.tsx",
+      "line": 168,
+      "rule_id": "typescript:S6959",
+      "description": "Add an initial value to this \"reduce()\" call.",
+      "type": "BUG",
+      "estimated_effort": "2min",
+      "quick_fix_available": false,
+      "tags": [
+        "type-dependent"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "c5d9aa72-7905-4da2-8ba0-436112cf66fe",
+      "file_path": "src/services/RelationshipService.ts",
+      "line": 50,
+      "rule_id": "typescript:S2933",
+      "description": "Member 'prisma: PrismaClient' is never reassigned; mark it as `readonly`.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "2min",
+      "quick_fix_available": true,
+      "tags": [
+        "type-dependent",
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "05d22b8b-111c-4b33-a620-a4c5c0f0a949",
+      "file_path": "src/services/SearchService.ts",
+      "line": 58,
+      "rule_id": "typescript:S2933",
+      "description": "Member 'prisma: PrismaClient' is never reassigned; mark it as `readonly`.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "2min",
+      "quick_fix_available": true,
+      "tags": [
+        "type-dependent",
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "2fc97637-32b4-4f26-99c7-b3745ca8dd71",
+      "file_path": "src/services/VoiceService.ts",
+      "line": 54,
+      "rule_id": "typescript:S2933",
+      "description": "Member 'prisma: PrismaClient' is never reassigned; mark it as `readonly`.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "2min",
+      "quick_fix_available": true,
+      "tags": [
+        "type-dependent",
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "03404f0b-1706-4a92-9ffd-7f6cfb64cb2f",
+      "file_path": "src/services/PersonService.ts",
+      "line": 26,
+      "rule_id": "typescript:S2933",
+      "description": "Member 'prisma: PrismaClient' is never reassigned; mark it as `readonly`.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "2min",
+      "quick_fix_available": true,
+      "tags": [
+        "type-dependent",
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "13611931-fcac-4b86-a5ae-872768d81382",
+      "file_path": "src/services/StorageService.ts",
+      "line": 30,
+      "rule_id": "typescript:S2933",
+      "description": "Member 'config' is never reassigned; mark it as `readonly`.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "2min",
+      "quick_fix_available": true,
+      "tags": [
+        "type-dependent",
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "204d5a97-7f28-436e-8e2f-b129e43e4d80",
+      "file_path": "src/services/StoryService.ts",
+      "line": 43,
+      "rule_id": "typescript:S2933",
+      "description": "Member 'prisma: PrismaClient' is never reassigned; mark it as `readonly`.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "2min",
+      "quick_fix_available": true,
+      "tags": [
+        "type-dependent",
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "74a5bda4-0895-4b12-8590-55ac071f2df7",
+      "file_path": "tts-service/app/main.py",
+      "line": 314,
+      "rule_id": "python:S8415",
+      "description": "Document this HTTPException with status code 503 in the \"responses\" parameter.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "fastapi",
+        "openapi",
+        "documentation"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "6c8f14f0-8c88-41bc-ae22-f0092cd5ce34",
+      "file_path": "tts-service/app/main.py",
+      "line": 506,
+      "rule_id": "python:S8415",
+      "description": "Document this HTTPException with status code 503 in the \"responses\" parameter.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "fastapi",
+        "openapi",
+        "documentation"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "02ed9063-dc64-4939-822f-6af894cf4a7f",
+      "file_path": "tts-service/app/main.py",
+      "line": 583,
+      "rule_id": "python:S8415",
+      "description": "Document this HTTPException with status code 503 in the \"responses\" parameter.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "fastapi",
+        "openapi",
+        "documentation"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "30f9ddf4-5f68-48ad-9d47-de515d4726d7",
+      "file_path": "tts-service/app/main.py",
+      "line": 585,
+      "rule_id": "python:S8415",
+      "description": "Document this HTTPException with status code 503 in the \"responses\" parameter.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "fastapi",
+        "openapi",
+        "documentation"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "2648c23e-3e46-4d57-90b2-4e6ea12fcc35",
+      "file_path": "tts-service/app/main.py",
+      "line": 672,
+      "rule_id": "python:S8415",
+      "description": "Document this HTTPException with status code 503 in the \"responses\" parameter.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "fastapi",
+        "openapi",
+        "documentation"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "938ff49e-b082-4c0b-86da-f1f236c9d6ba",
+      "file_path": "tts-service/app/main.py",
+      "line": 674,
+      "rule_id": "python:S8415",
+      "description": "Document this HTTPException with status code 503 in the \"responses\" parameter.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "fastapi",
+        "openapi",
+        "documentation"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "f7e32ec7-78c1-4608-ae02-f6b9e29e5572",
+      "file_path": "tts-service/app/main.py",
+      "line": 776,
+      "rule_id": "python:S8415",
+      "description": "Document this HTTPException with status code 503 in the \"responses\" parameter.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "fastapi",
+        "openapi",
+        "documentation"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "bb54b54b-e91c-42a2-baa8-8299fe462a2f",
+      "file_path": "tts-service/app/main.py",
+      "line": 867,
+      "rule_id": "python:S8415",
+      "description": "Document this HTTPException with status code 503 in the \"responses\" parameter.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "fastapi",
+        "openapi",
+        "documentation"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "176ef820-0afc-4aae-8208-709393290de6",
+      "file_path": "src/components/assets/AssetUpload.tsx",
+      "line": 322,
+      "rule_id": "typescript:S3358",
+      "description": "Extract this nested ternary operation into an independent statement.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "46614b6f-98be-450b-a926-7a6e140c42e9",
+      "file_path": "src/components/assets/AssetUpload.tsx",
+      "line": 338,
+      "rule_id": "typescript:S3358",
+      "description": "Extract this nested ternary operation into an independent statement.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "7f4af3de-deb5-4ea6-b18c-22998f1c6b2b",
+      "file_path": "src/components/assets/AssetUpload.tsx",
+      "line": 356,
+      "rule_id": "typescript:S3358",
+      "description": "Extract this nested ternary operation into an independent statement.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "d067f293-4dcf-4f57-b35f-b6a1cc2ceffe",
+      "file_path": "src/components/modals/PersonModal.tsx",
+      "line": 573,
+      "rule_id": "typescript:S3358",
+      "description": "Extract this nested ternary operation into an independent statement.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "4db5656e-035c-4f5f-ba12-d9418d4df822",
+      "file_path": "src/components/pages/FamilyTreePage.tsx",
+      "line": 134,
+      "rule_id": "typescript:S3358",
+      "description": "Extract this nested ternary operation into an independent statement.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "8ad0fad1-a0c2-4a0e-8a9d-488473c0cba3",
+      "file_path": "src/components/pages/StoriesPage.tsx",
+      "line": 228,
+      "rule_id": "typescript:S6479",
+      "description": "Do not use Array index in keys",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "performance",
+        "react",
+        "jsx"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "c036f3d4-c235-49ae-a673-5733116bbe64",
+      "file_path": "src/lib/auth.ts",
+      "line": 39,
+      "rule_id": "typescript:S6582",
+      "description": "Prefer using an optional chain expression instead, as it's more concise and easier to read.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": true,
+      "tags": []
+    },
+    {
+      "priority": "medium",
+      "task_id": "6c944c9b-bf38-4917-8682-600ba36e977e",
+      "file_path": "src/lib/file-optimizer/image-optimizer.ts",
+      "line": 93,
+      "rule_id": "typescript:S6836",
+      "description": "Unexpected lexical declaration in case block.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": true,
+      "tags": []
+    },
+    {
+      "priority": "medium",
+      "task_id": "a4a1d752-76dd-4bfd-a068-e50e5fbc5d44",
+      "file_path": "src/lib/file-processor/sandbox-script.js",
+      "line": 55,
+      "rule_id": "javascript:S7785",
+      "description": "Prefer top-level await over using a promise chain.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "async",
+        "es2022",
+        "modernize"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "0de85c04-be6f-4a11-bfdd-286d32482680",
+      "file_path": "src/lib/security/file-validator.ts",
+      "line": 41,
+      "rule_id": "typescript:S6324",
+      "description": "Remove this control character.",
+      "type": "BUG",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "regex",
+        "type-dependent"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "3604750d-5901-40aa-9d87-c6bf5e31b759",
+      "file_path": "src/lib/security/file-validator.ts",
+      "line": 41,
+      "rule_id": "typescript:S6324",
+      "description": "Remove this control character.",
+      "type": "BUG",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "regex",
+        "type-dependent"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "68fc426f-109a-46ff-9789-964d02e480dc",
+      "file_path": "src/lib/security/file-validator.ts",
+      "line": 41,
+      "rule_id": "typescript:S6324",
+      "description": "Remove this control character.",
+      "type": "BUG",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "regex",
+        "type-dependent"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "c4655b9b-94de-462a-b6fd-ff01fa4e4387",
+      "file_path": "src/lib/security/file-validator.ts",
+      "line": 41,
+      "rule_id": "typescript:S6324",
+      "description": "Remove this control character.",
+      "type": "BUG",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "regex",
+        "type-dependent"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "39333b28-e3f4-492b-a107-39def84a6623",
+      "file_path": "src/lib/security/file-validator.ts",
+      "line": 47,
+      "rule_id": "typescript:S6324",
+      "description": "Remove this control character.",
+      "type": "BUG",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "regex",
+        "type-dependent"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "3b2bbe5f-411b-4257-bd5d-f0a026f3c197",
+      "file_path": "src/lib/security/file-validator.ts",
+      "line": 47,
+      "rule_id": "typescript:S6324",
+      "description": "Remove this control character.",
+      "type": "BUG",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "regex",
+        "type-dependent"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "53265d4f-4cd8-45f3-9af5-0acc2b351daf",
+      "file_path": "src/lib/security/file-validator.ts",
+      "line": 47,
+      "rule_id": "typescript:S6324",
+      "description": "Remove this control character.",
+      "type": "BUG",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "regex",
+        "type-dependent"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "8340a32c-d6d0-455a-87cb-9748fd8b4fa0",
+      "file_path": "src/lib/security/file-validator.ts",
+      "line": 47,
+      "rule_id": "typescript:S6324",
+      "description": "Remove this control character.",
+      "type": "BUG",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "regex",
+        "type-dependent"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "dc514ff9-cb5a-4a5a-9ae5-deef7fb85445",
+      "file_path": "src/lib/security/file-validator.ts",
+      "line": 47,
+      "rule_id": "typescript:S6324",
+      "description": "Remove this control character.",
+      "type": "BUG",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "regex",
+        "type-dependent"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "e32ab664-3056-4223-a23f-619a08792fad",
+      "file_path": "src/lib/security/file-validator.ts",
+      "line": 47,
+      "rule_id": "typescript:S6324",
+      "description": "Remove this control character.",
+      "type": "BUG",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "regex",
+        "type-dependent"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "44d00846-efa2-4476-9e96-d29ec545caa6",
+      "file_path": "src/lib/security/malware-scanner.ts",
+      "line": 209,
+      "rule_id": "typescript:S6582",
+      "description": "Prefer using an optional chain expression instead, as it's more concise and easier to read.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": true,
+      "tags": []
+    },
+    {
+      "priority": "medium",
+      "task_id": "6258d9f0-8ff3-4511-a18e-68bc03b20906",
+      "file_path": "src/lib/security/mfa-service.ts",
+      "line": 162,
+      "rule_id": "typescript:S6582",
+      "description": "Prefer using an optional chain expression instead, as it's more concise and easier to read.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": true,
+      "tags": []
+    },
+    {
+      "priority": "medium",
+      "task_id": "02351b25-653d-43ca-91e1-47ea0a457612",
+      "file_path": "src/lib/security/password-policy.ts",
+      "line": 33,
+      "rule_id": "typescript:S6535",
+      "description": "Unnecessary escape character: \\/.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": true,
+      "tags": []
+    },
+    {
+      "priority": "medium",
+      "task_id": "79224707-30ba-4833-a9bf-6dea2677941f",
+      "file_path": "src/lib/security/password-policy.ts",
+      "line": 33,
+      "rule_id": "typescript:S6535",
+      "description": "Unnecessary escape character: \\[.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": true,
+      "tags": []
+    },
+    {
+      "priority": "medium",
+      "task_id": "38173084-2542-4097-af36-7c8069db1b47",
+      "file_path": "src/lib/security/password-policy.ts",
+      "line": 94,
+      "rule_id": "typescript:S6535",
+      "description": "Unnecessary escape character: \\[.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": true,
+      "tags": []
+    },
+    {
+      "priority": "medium",
+      "task_id": "71422f59-08a8-4ce4-b5ac-fbb5897feaa6",
+      "file_path": "src/lib/security/password-policy.ts",
+      "line": 94,
+      "rule_id": "typescript:S6535",
+      "description": "Unnecessary escape character: \\/.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": true,
+      "tags": []
+    },
+    {
+      "priority": "medium",
+      "task_id": "33984d61-fcaf-42bf-957f-2b94911233e3",
+      "file_path": "src/lib/security/password-policy.ts",
+      "line": 132,
+      "rule_id": "typescript:S6535",
+      "description": "Unnecessary escape character: \\/.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": true,
+      "tags": []
+    },
+    {
+      "priority": "medium",
+      "task_id": "9c0a36ef-a30b-41bd-acc4-f4126c805ffa",
+      "file_path": "src/lib/security/password-policy.ts",
+      "line": 132,
+      "rule_id": "typescript:S6535",
+      "description": "Unnecessary escape character: \\[.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": true,
+      "tags": []
+    },
+    {
+      "priority": "medium",
+      "task_id": "c7351c84-c88e-4a04-81cd-9ee20f826983",
+      "file_path": "src/lib/security/password-policy.ts",
+      "line": 132,
+      "rule_id": "typescript:S6535",
+      "description": "Unnecessary escape character: \\/.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": true,
+      "tags": []
+    },
+    {
+      "priority": "medium",
+      "task_id": "f162ae9e-1a84-4c4e-bc48-38bf9fbe5918",
+      "file_path": "src/lib/security/password-policy.ts",
+      "line": 132,
+      "rule_id": "typescript:S6535",
+      "description": "Unnecessary escape character: \\[.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": true,
+      "tags": []
+    },
+    {
+      "priority": "medium",
+      "task_id": "234240ac-adf1-42db-8819-08b666a6e2df",
+      "file_path": "src/lib/storage/providers/local-provider.ts",
+      "line": 63,
+      "rule_id": "typescript:S6535",
+      "description": "Unnecessary escape character: \\/.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": true,
+      "tags": []
+    },
+    {
+      "priority": "medium",
+      "task_id": "5c477077-709c-478d-9f4d-c5e5b7565a0a",
+      "file_path": "src/pages/api/assets/serve/[id].ts",
+      "line": 108,
+      "rule_id": "typescript:S6535",
+      "description": "Unnecessary escape character: \\/.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": true,
+      "tags": []
+    },
+    {
+      "priority": "medium",
+      "task_id": "b1a958e6-eb71-4805-ae42-60cacbefccc8",
+      "file_path": "src/pages/api/export/pdf.ts",
+      "line": 99,
+      "rule_id": "typescript:S3358",
+      "description": "Extract this nested ternary operation into an independent statement.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "f8795841-bca7-4365-83ac-5efee68414be",
+      "file_path": "src/pages/api/user/password.ts",
+      "line": 44,
+      "rule_id": "typescript:S6582",
+      "description": "Prefer using an optional chain expression instead, as it's more concise and easier to read.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": true,
+      "tags": []
+    },
+    {
+      "priority": "medium",
+      "task_id": "5c8f0a08-c972-4352-b0f6-d8492bbb9f53",
+      "file_path": "tts-service/app/auth.py",
+      "line": 73,
+      "rule_id": "python:S7499",
+      "description": "Use an async HTTP client in this async function instead of a synchronous one.",
+      "type": "BUG",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "async",
+        "trio",
+        "asyncio",
+        "anyio",
+        "http"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "75591fb8-81f7-4c17-9e90-43b30aebc160",
+      "file_path": "tts-service/app/auth.py",
+      "line": 118,
+      "rule_id": "python:S7499",
+      "description": "Use an async HTTP client in this async function instead of a synchronous one.",
+      "type": "BUG",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "async",
+        "trio",
+        "asyncio",
+        "anyio",
+        "http"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "0d663c48-8c25-46b3-b667-122fe1961552",
+      "file_path": "tts-service/app/main.py",
+      "line": 666,
+      "rule_id": "python:S8415",
+      "description": "Document this HTTPException with status code 503 in the \"responses\" parameter.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "fastapi",
+        "openapi",
+        "documentation"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "20f0b66d-58bb-491b-90d0-de29b0b4b262",
+      "file_path": "tts-service/app/main.py",
+      "line": 500,
+      "rule_id": "python:S8415",
+      "description": "Document this HTTPException with status code 503 in the \"responses\" parameter.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "fastapi",
+        "openapi",
+        "documentation"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "3ec499fb-c0b7-420c-a09a-b22deccbad32",
+      "file_path": "tts-service/app/main.py",
+      "line": 577,
+      "rule_id": "python:S8415",
+      "description": "Document this HTTPException with status code 503 in the \"responses\" parameter.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "fastapi",
+        "openapi",
+        "documentation"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "44be0a51-bd09-4be3-8c66-6c6ceb113fe8",
+      "file_path": "tts-service/app/main.py",
+      "line": 579,
+      "rule_id": "python:S8415",
+      "description": "Document this HTTPException with status code 503 in the \"responses\" parameter.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "fastapi",
+        "openapi",
+        "documentation"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "524838b0-d63d-4316-9ca5-28be00bab59f",
+      "file_path": "tts-service/app/main.py",
+      "line": 770,
+      "rule_id": "python:S8415",
+      "description": "Document this HTTPException with status code 503 in the \"responses\" parameter.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "fastapi",
+        "openapi",
+        "documentation"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "8b5608e0-aad1-403d-96a6-d7b02d650f03",
+      "file_path": "tts-service/app/main.py",
+      "line": 861,
+      "rule_id": "python:S8415",
+      "description": "Document this HTTPException with status code 503 in the \"responses\" parameter.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "fastapi",
+        "openapi",
+        "documentation"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "a8643031-a78b-4601-aae7-7373fc98ccc6",
+      "file_path": "tts-service/app/main.py",
+      "line": 308,
+      "rule_id": "python:S8415",
+      "description": "Document this HTTPException with status code 503 in the \"responses\" parameter.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "fastapi",
+        "openapi",
+        "documentation"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "aa56bdd5-3b90-42ab-89e2-1e3e80c2052f",
+      "file_path": "tts-service/app/main.py",
+      "line": 668,
+      "rule_id": "python:S8415",
+      "description": "Document this HTTPException with status code 503 in the \"responses\" parameter.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "fastapi",
+        "openapi",
+        "documentation"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "c645c9a6-059f-408c-abaf-034639424e21",
+      "file_path": "tts-service/app/main.py",
+      "line": 180,
+      "rule_id": "python:S8415",
+      "description": "Document this HTTPException with status code 500 in the \"responses\" parameter.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "fastapi",
+        "openapi",
+        "documentation"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "9a06e759-b35a-4cdf-9cf9-dc9f36417e3f",
+      "file_path": "tts-service/app/main.py",
+      "line": 190,
+      "rule_id": "python:S8415",
+      "description": "Document this HTTPException with status code 500 in the \"responses\" parameter.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "fastapi",
+        "openapi",
+        "documentation"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "df8c0cf7-93cb-47fd-86b2-27cf3852fdd5",
+      "file_path": "tts-service/app/main.py",
+      "line": 211,
+      "rule_id": "python:S8415",
+      "description": "Document this HTTPException with status code 400 in the \"responses\" parameter.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "fastapi",
+        "openapi",
+        "documentation"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "48e4766b-4183-4c04-b732-a43670cf9bb5",
+      "file_path": "tts-service/app/main.py",
+      "line": 221,
+      "rule_id": "python:S8415",
+      "description": "Document this HTTPException with status code 413 in the \"responses\" parameter.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "fastapi",
+        "openapi",
+        "documentation"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "06a579e2-80b7-4959-a27b-5e990196536d",
+      "file_path": "tts-service/app/main.py",
+      "line": 283,
+      "rule_id": "python:S8415",
+      "description": "Document this HTTPException with status code 500 in the \"responses\" parameter.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "fastapi",
+        "openapi",
+        "documentation"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "e2843789-69f7-474c-9e47-6d5d9645b9c1",
+      "file_path": "tts-service/app/main.py",
+      "line": 321,
+      "rule_id": "python:S8415",
+      "description": "Document this HTTPException with status code 404 in the \"responses\" parameter.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "fastapi",
+        "openapi",
+        "documentation"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "e0df8a47-a737-4b40-85f3-54ff1c75739b",
+      "file_path": "tts-service/app/main.py",
+      "line": 333,
+      "rule_id": "python:S8415",
+      "description": "Document this HTTPException with status code 403 in the \"responses\" parameter.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "fastapi",
+        "openapi",
+        "documentation"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "0fbd0af5-7997-4a8d-a1cc-4aab3c45c5b6",
+      "file_path": "tts-service/app/main.py",
+      "line": 344,
+      "rule_id": "python:S8415",
+      "description": "Document this HTTPException with status code 400 in the \"responses\" parameter.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "fastapi",
+        "openapi",
+        "documentation"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "6b25c772-9883-404f-804c-8bd64db44568",
+      "file_path": "tts-service/app/main.py",
+      "line": 406,
+      "rule_id": "python:S8415",
+      "description": "Document this HTTPException with status code 500 in the \"responses\" parameter.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "fastapi",
+        "openapi",
+        "documentation"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "c7662bd4-5da6-4fc4-8173-a56609df0c3f",
+      "file_path": "tts-service/app/main.py",
+      "line": 461,
+      "rule_id": "python:S8415",
+      "description": "Document this HTTPException with status code 404 in the \"responses\" parameter.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "fastapi",
+        "openapi",
+        "documentation"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "b2a7a491-2ca5-4670-ae69-085d9751f4e3",
+      "file_path": "tts-service/app/main.py",
+      "line": 471,
+      "rule_id": "python:S8415",
+      "description": "Document this HTTPException with status code 403 in the \"responses\" parameter.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "fastapi",
+        "openapi",
+        "documentation"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "0d9cd242-d31b-434d-b9e1-e55384a5a96f",
+      "file_path": "tts-service/app/main.py",
+      "line": 484,
+      "rule_id": "python:S8415",
+      "description": "Document this HTTPException with status code 500 in the \"responses\" parameter.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "fastapi",
+        "openapi",
+        "documentation"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "1c0e501b-7174-4ae2-a21f-b8ff699f60d5",
+      "file_path": "tts-service/app/main.py",
+      "line": 559,
+      "rule_id": "python:S8415",
+      "description": "Document this HTTPException with status code 500 in the \"responses\" parameter.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "fastapi",
+        "openapi",
+        "documentation"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "86405c91-cfaf-4904-8a78-97ba75a1e5a0",
+      "file_path": "tts-service/app/main.py",
+      "line": 640,
+      "rule_id": "python:S8415",
+      "description": "Document this HTTPException with status code 500 in the \"responses\" parameter.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "fastapi",
+        "openapi",
+        "documentation"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "6038abb5-aa00-49a3-89e8-78225cbcd8cd",
+      "file_path": "tts-service/app/main.py",
+      "line": 680,
+      "rule_id": "python:S8415",
+      "description": "Document this HTTPException with status code 404 in the \"responses\" parameter.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "fastapi",
+        "openapi",
+        "documentation"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "a1848a59-6cde-4fa9-97f8-d7ce498fdb69",
+      "file_path": "tts-service/app/main.py",
+      "line": 692,
+      "rule_id": "python:S8415",
+      "description": "Document this HTTPException with status code 400 in the \"responses\" parameter.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "fastapi",
+        "openapi",
+        "documentation"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "bfaf15ab-3a05-4b7c-b5bd-6a66447b0182",
+      "file_path": "tts-service/app/main.py",
+      "line": 753,
+      "rule_id": "python:S8415",
+      "description": "Document this HTTPException with status code 500 in the \"responses\" parameter.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "fastapi",
+        "openapi",
+        "documentation"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "e003c76f-2a92-46f4-8840-78e978b409b8",
+      "file_path": "tts-service/app/main.py",
+      "line": 784,
+      "rule_id": "python:S8415",
+      "description": "Document this HTTPException with status code 404 in the \"responses\" parameter.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "fastapi",
+        "openapi",
+        "documentation"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "82a2f8b0-dde8-46c0-aa2e-9c7d712d32fc",
+      "file_path": "tts-service/app/main.py",
+      "line": 848,
+      "rule_id": "python:S8415",
+      "description": "Document this HTTPException with status code 500 in the \"responses\" parameter.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "fastapi",
+        "openapi",
+        "documentation"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "644d8d0f-0f27-46ec-9a61-6704912d29c4",
+      "file_path": "tts-service/app/main.py",
+      "line": 875,
+      "rule_id": "python:S8415",
+      "description": "Document this HTTPException with status code 404 in the \"responses\" parameter.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "fastapi",
+        "openapi",
+        "documentation"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "53a72693-e01e-482b-aa9e-a3a185a53b35",
+      "file_path": "tts-service/app/main.py",
+      "line": 930,
+      "rule_id": "python:S8415",
+      "description": "Document this HTTPException with status code 500 in the \"responses\" parameter.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "fastapi",
+        "openapi",
+        "documentation"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "4790c962-3122-415a-965e-8657fdd9381c",
+      "file_path": "tts-service/app/main.py",
+      "line": 952,
+      "rule_id": "python:S8415",
+      "description": "Document this HTTPException with status code 404 in the \"responses\" parameter.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "fastapi",
+        "openapi",
+        "documentation"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "ffbca67e-92a1-426e-8e88-5d77138aa449",
+      "file_path": "tts-service/app/main.py",
+      "line": 964,
+      "rule_id": "python:S8415",
+      "description": "Document this HTTPException with status code 404 in the \"responses\" parameter.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "fastapi",
+        "openapi",
+        "documentation"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "30efe2f7-3778-4b8f-b4a6-0e098bb22a31",
+      "file_path": "tts-service/app/rate_limiter.py",
+      "line": 227,
+      "rule_id": "python:S1172",
+      "description": "Remove the unused function parameter \"key_type\".",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "unused"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "90c6e8f9-dd2a-44d8-8576-9f935cf11a48",
+      "file_path": "tts-service/app/rate_limiter.py",
+      "line": 227,
+      "rule_id": "python:S1172",
+      "description": "Remove the unused function parameter \"window\".",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "unused"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "b6f50b37-fa10-4226-b2e0-f94030324e93",
+      "file_path": "tts-service/app/rate_limiter.py",
+      "line": 227,
+      "rule_id": "python:S1172",
+      "description": "Remove the unused function parameter \"limit\".",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "unused"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "076890ea-5e9f-422d-9b77-9e158e23ec35",
+      "file_path": "tts-service/app/validators.py",
+      "line": 29,
+      "rule_id": "python:S5869",
+      "description": "Remove duplicates in this character class.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "regex"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "755fb305-471a-43e8-959b-2ddcddd5df20",
+      "file_path": "tts-service/app/validators.py",
+      "line": 45,
+      "rule_id": "python:S5869",
+      "description": "Remove duplicates in this character class.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "regex"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "e326eae7-4c72-4054-b8b9-7cf56ca67b0c",
+      "file_path": "src/components/viewers/DocumentViewer.tsx",
+      "line": 172,
+      "rule_id": "typescript:S3358",
+      "description": "Extract this nested ternary operation into an independent statement.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "b042f071-beaf-41f4-9464-5b39140bb9b4",
+      "file_path": "src/lib/file-optimizer/audio-optimizer.ts",
+      "line": 71,
+      "rule_id": "typescript:S4165",
+      "description": "Review this redundant assignment: \"optimizationMethod\" already holds the assigned value along all execution paths.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "redundant"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "15c35e55-f9e3-4522-89cc-2f5283fbc69c",
+      "file_path": "src/lib/file-optimizer/audio-optimizer.ts",
+      "line": 76,
+      "rule_id": "typescript:S4165",
+      "description": "Review this redundant assignment: \"optimizationMethod\" already holds the assigned value along all execution paths.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "redundant"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "07072646-b6d6-40a2-99ed-5ee00828be6d",
+      "file_path": "src/lib/file-optimizer/document-optimizer.ts",
+      "line": 74,
+      "rule_id": "typescript:S4165",
+      "description": "Review this redundant assignment: \"optimizationMethod\" already holds the assigned value along all execution paths.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "redundant"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "87f1e93b-8a39-4f2f-ac22-d22ad7a7aded",
+      "file_path": "src/lib/file-optimizer/video-optimizer.ts",
+      "line": 49,
+      "rule_id": "typescript:S4165",
+      "description": "Review this redundant assignment: \"optimizationMethod\" already holds the assigned value along all execution paths.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "redundant"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "a3c7bcb4-833e-4767-a8e8-0fdcae0653ee",
+      "file_path": "src/lib/file-optimizer/video-optimizer.ts",
+      "line": 54,
+      "rule_id": "typescript:S4165",
+      "description": "Review this redundant assignment: \"optimizationMethod\" already holds the assigned value along all execution paths.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "redundant"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "2966ee78-ebeb-4be4-b7d1-a8f325766c77",
+      "file_path": "src/pages/stories.tsx",
+      "line": 123,
+      "rule_id": "typescript:S3358",
+      "description": "Extract this nested ternary operation into an independent statement.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "ed37c3ba-36b8-4acc-91dc-15067a25b3cf",
+      "file_path": "src/pages/account.tsx",
+      "line": 606,
+      "rule_id": "typescript:S3358",
+      "description": "Extract this nested ternary operation into an independent statement.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "85a47421-ab67-4f35-ba78-d4d1f5ebe3a6",
+      "file_path": "src/pages/api/instance/tunnel-v2.ts",
+      "line": 103,
+      "rule_id": "typescript:S6836",
+      "description": "Unexpected lexical declaration in case block.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": true,
+      "tags": []
+    },
+    {
+      "priority": "medium",
+      "task_id": "dc925f41-482a-4b3a-ae62-392e867be102",
+      "file_path": "src/pages/api/instance/tunnel-v2.ts",
+      "line": 108,
+      "rule_id": "typescript:S6836",
+      "description": "Unexpected lexical declaration in case block.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": true,
+      "tags": []
+    },
+    {
+      "priority": "medium",
+      "task_id": "a5939ad6-08c5-4a6c-97a2-a7d20680bd83",
+      "file_path": "src/pages/api/instance/tunnel-v2.ts",
+      "line": 109,
+      "rule_id": "typescript:S6836",
+      "description": "Unexpected lexical declaration in case block.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": true,
+      "tags": []
+    },
+    {
+      "priority": "medium",
+      "task_id": "c259c895-3af4-4a59-895a-41385f41bd7a",
+      "file_path": "src/pages/api/instance/tunnel-v2.ts",
+      "line": 110,
+      "rule_id": "typescript:S6836",
+      "description": "Unexpected lexical declaration in case block.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": true,
+      "tags": []
+    },
+    {
+      "priority": "medium",
+      "task_id": "a5b68536-b9d8-490c-bf2c-8d0848688ae2",
+      "file_path": "src/pages/api/instance/tunnel-v2.ts",
+      "line": 111,
+      "rule_id": "typescript:S6836",
+      "description": "Unexpected lexical declaration in case block.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": true,
+      "tags": []
+    },
+    {
+      "priority": "medium",
+      "task_id": "32960adf-fc71-4b53-8c33-773d3175feda",
+      "file_path": "src/pages/api/instance/tunnel-v2.ts",
+      "line": 273,
+      "rule_id": "typescript:S6836",
+      "description": "Unexpected lexical declaration in case block.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": true,
+      "tags": []
+    },
+    {
+      "priority": "medium",
+      "task_id": "1f9573f0-5862-4bc7-89c8-69e7a89fa06a",
+      "file_path": "src/pages/api/instance/tunnel-v2.ts",
+      "line": 274,
+      "rule_id": "typescript:S6836",
+      "description": "Unexpected lexical declaration in case block.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": true,
+      "tags": []
+    },
+    {
+      "priority": "medium",
+      "task_id": "842c4d51-b7e0-4fb8-91b9-ca82901a2efd",
+      "file_path": "src/pages/api/instance/tunnel-v2.ts",
+      "line": 281,
+      "rule_id": "typescript:S6836",
+      "description": "Unexpected lexical declaration in case block.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": true,
+      "tags": []
+    },
+    {
+      "priority": "medium",
+      "task_id": "5f6c8e36-c2e3-4bd8-9743-ab85ca8968c9",
+      "file_path": "src/pages/api/instance/tunnel-v2.ts",
+      "line": 312,
+      "rule_id": "typescript:S6836",
+      "description": "Unexpected lexical declaration in case block.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": true,
+      "tags": []
+    },
+    {
+      "priority": "medium",
+      "task_id": "a8b1f1be-eaf5-4749-8c4c-e91843ee97bf",
+      "file_path": "src/pages/api/instance/tunnel-v2.ts",
+      "line": 317,
+      "rule_id": "typescript:S6836",
+      "description": "Unexpected lexical declaration in case block.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": true,
+      "tags": []
+    },
+    {
+      "priority": "medium",
+      "task_id": "de9a5054-1c0f-4d5c-a65e-c74e4e1af4f1",
+      "file_path": "src/pages/api/instance/tunnel-v2.ts",
+      "line": 318,
+      "rule_id": "typescript:S6836",
+      "description": "Unexpected lexical declaration in case block.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": true,
+      "tags": []
+    },
+    {
+      "priority": "medium",
+      "task_id": "10ee3f0f-c9de-4c64-9a90-0eb02c427551",
+      "file_path": "src/pages/tunnel-setup.tsx",
+      "line": 457,
+      "rule_id": "typescript:S3358",
+      "description": "Extract this nested ternary operation into an independent statement.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "e3c0f6a6-e435-441d-a88c-4476012c107e",
+      "file_path": "src/pages/family-merge.tsx",
+      "line": 421,
+      "rule_id": "typescript:S3358",
+      "description": "Extract this nested ternary operation into an independent statement.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "22a199ca-341e-4560-a6d5-dc9223920ab4",
+      "file_path": "src/pages/family-merge.tsx",
+      "line": 597,
+      "rule_id": "typescript:S6479",
+      "description": "Do not use Array index in keys",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "performance",
+        "react",
+        "jsx"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "96ab90df-701e-4b81-aad7-eaa0d3a0efb8",
+      "file_path": "src/pages/setup-guide.tsx",
+      "line": 149,
+      "rule_id": "typescript:S6478",
+      "description": "Move this component definition out of the parent component and pass data as props.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "performance",
+        "react",
+        "jsx"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "0aa00e0c-e273-4648-bde5-533fcba1325f",
+      "file_path": "src/pages/setup-guide.tsx",
+      "line": 176,
+      "rule_id": "typescript:S6479",
+      "description": "Do not use Array index in keys",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "performance",
+        "react",
+        "jsx"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "579cfe87-b571-452b-aaca-2911107b033f",
+      "file_path": "src/pages/tunnel-setup.tsx",
+      "line": 466,
+      "rule_id": "typescript:S3358",
+      "description": "Extract this nested ternary operation into an independent statement.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "4a262f41-0379-46c2-8e09-bf61846f6415",
+      "file_path": "src/pages/timeline.tsx",
+      "line": 119,
+      "rule_id": "typescript:S3358",
+      "description": "Extract this nested ternary operation into an independent statement.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "83d490f3-7b6e-4a77-8a39-ad1b78e39810",
+      "file_path": "src/components/pages/TimelinePage.tsx",
+      "line": 238,
+      "rule_id": "typescript:S3358",
+      "description": "Extract this nested ternary operation into an independent statement.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "65dad0be-9908-48ff-a975-c8ea8a5cd11b",
+      "file_path": "src/components/search/FamilyMemberSearch.tsx",
+      "line": 283,
+      "rule_id": "typescript:S3358",
+      "description": "Extract this nested ternary operation into an independent statement.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "e44bafac-f41a-460e-933e-6c5fd5e0c64b",
+      "file_path": "src/contexts/SelectedFamilyMemberContext.tsx",
+      "line": 30,
+      "rule_id": "typescript:S6481",
+      "description": "The 'value' object passed as the value prop to the Context provider changes every render. To fix this consider wrapping it in a useMemo hook.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "performance",
+        "react",
+        "jsx"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "0691b0a0-d20f-4974-87ce-50e0487cc9ca",
+      "file_path": "src/components/modals/AddEditPersonModal.tsx",
+      "line": 688,
+      "rule_id": "typescript:S3358",
+      "description": "Extract this nested ternary operation into an independent statement.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "72624331-56bd-4122-8575-1fa0ac34fddd",
+      "file_path": "src/pages/family-tree.tsx",
+      "line": 300,
+      "rule_id": "typescript:S4043",
+      "description": "Move this array \"sort\" operation to a separate statement or replace it with \"toSorted\".",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": true,
+      "tags": [
+        "type-dependent"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "d37a9d5f-6c66-44b5-a6ba-4644e02107ec",
+      "file_path": "src/services/RelationshipService.ts",
+      "line": 270,
+      "rule_id": "typescript:S4043",
+      "description": "Move this array \"sort\" operation to a separate statement or replace it with \"toSorted\".",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": true,
+      "tags": [
+        "type-dependent"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "42b00485-2d8b-4e1a-8216-7a5436abbfb8",
+      "file_path": "src/services/RelationshipService.ts",
+      "line": 405,
+      "rule_id": "typescript:S4043",
+      "description": "Move this array \"sort\" operation to a separate statement or replace it with \"toSorted\".",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": true,
+      "tags": [
+        "type-dependent"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "28747952-785c-488b-a069-f5c083a633c1",
+      "file_path": "src/controllers/useVoiceLabController.ts",
+      "line": 106,
+      "rule_id": "typescript:S3358",
+      "description": "Extract this nested ternary operation into an independent statement.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "e50219c5-6bb6-4e19-8a64-87988ce7ecd1",
+      "file_path": "src/controllers/useVoiceLab.ts",
+      "line": 87,
+      "rule_id": "typescript:S3358",
+      "description": "Extract this nested ternary operation into an independent statement.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": false,
+      "tags": [
+        "confusing"
+      ]
+    },
+    {
+      "priority": "medium",
+      "task_id": "1e97dce9-1975-4f93-a6b9-94671976543c",
+      "file_path": "src/pages/api/instance/tunnel.ts",
+      "line": 75,
+      "rule_id": "typescript:S6836",
+      "description": "Unexpected lexical declaration in case block.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": true,
+      "tags": []
+    },
+    {
+      "priority": "medium",
+      "task_id": "6a72676a-c79c-45d1-8bab-e4b3d4e38d4b",
+      "file_path": "src/pages/api/instance/tunnel.ts",
+      "line": 80,
+      "rule_id": "typescript:S6836",
+      "description": "Unexpected lexical declaration in case block.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": true,
+      "tags": []
+    },
+    {
+      "priority": "medium",
+      "task_id": "a4060252-3163-46ee-a4be-3d2e8f7c8bbf",
+      "file_path": "src/pages/api/instance/tunnel.ts",
+      "line": 81,
+      "rule_id": "typescript:S6836",
+      "description": "Unexpected lexical declaration in case block.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": true,
+      "tags": []
+    },
+    {
+      "priority": "medium",
+      "task_id": "5aac84a6-77d8-4275-8431-a55df36dd8e4",
+      "file_path": "src/pages/api/instance/tunnel.ts",
+      "line": 124,
+      "rule_id": "typescript:S6836",
+      "description": "Unexpected lexical declaration in case block.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": true,
+      "tags": []
+    },
+    {
+      "priority": "medium",
+      "task_id": "a55d8c03-a025-4fad-9548-54d4de000784",
+      "file_path": "src/pages/api/instance/tunnel.ts",
+      "line": 129,
+      "rule_id": "typescript:S6836",
+      "description": "Unexpected lexical declaration in case block.",
+      "type": "CODE_SMELL",
+      "estimated_effort": "5min",
+      "quick_fix_available": true,
+      "tags": []
+    }
+  ]
+}

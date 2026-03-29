@@ -68,16 +68,13 @@ export class GCPStorageProvider implements StorageProvider {
       },
     })
 
-    // Make the file public (optional - remove if you want private files)
-    await fileObject.makePublic()
-
-    const publicUrl = `https://storage.googleapis.com/${this.bucketName}/${storagePath}`
+    // Files are private by default - no public access
 
     return {
       id,
       filename,
       storagePath,
-      publicUrl,
+      publicUrl: '', // No public URLs - use signed URLs instead
       sizeBytes,
     }
   }
@@ -94,7 +91,25 @@ export class GCPStorageProvider implements StorageProvider {
   }
 
   async getPublicUrl(storagePath: string): Promise<string> {
-    return `https://storage.googleapis.com/${this.bucketName}/${storagePath}`
+    throw new Error('Public URLs not supported. Use getSignedUrl instead.')
+  }
+
+  async getSignedUrl(storagePath: string, expiresIn: number = 15 * 60): Promise<string> {
+    try {
+      const bucket = this.storage.bucket(this.bucketName)
+      const fileObject = bucket.file(storagePath)
+      
+      const [signedUrl] = await fileObject.getSignedUrl({
+        version: 'v4',
+        action: 'read',
+        expires: Date.now() + expiresIn * 1000, // expiresIn is in seconds
+      })
+      
+      return signedUrl
+    } catch (error) {
+      console.error('Failed to generate signed URL:', error)
+      throw error
+    }
   }
 
   async getFile(storagePath: string): Promise<Buffer> {
@@ -132,9 +147,9 @@ export class GCPStorageProvider implements StorageProvider {
       const corsConfiguration = [
         {
           maxAgeSeconds: 3600,
-          method: ['GET', 'HEAD', 'PUT', 'POST', 'DELETE'],
-          origin: ['*'], // Configure this properly for production
-          responseHeader: ['Content-Type', 'Authorization'],
+          method: ['GET', 'HEAD'],
+          origin: [], // No cross-origin access for production
+          responseHeader: ['Content-Type'],
         },
       ]
 

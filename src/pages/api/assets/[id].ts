@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma'
-import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
+import { apiHandler, successResponse, Errors, sanitizeAssetResponse } from '@/lib/api-helpers'
 import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
+import { withCSRFProtection } from '@/lib/security/csrf'
 
 export default apiHandler({
   // GET /api/assets/[id] - Get asset details
@@ -24,14 +25,15 @@ export default apiHandler({
 
     if (!asset) throw Errors.notFound('Asset')
 
-    return successResponse(res, {
+    // Sanitize response to remove storage path information
+    const sanitizedAsset = sanitizeAssetResponse({
       id: asset.id,
       filename: asset.filename,
       originalName: asset.originalName,
       mimeType: asset.mimeType,
       sizeBytes: Number(asset.sizeBytes),
       assetType: asset.assetType,
-      storagePath: asset.storagePath,
+      storagePath: asset.storagePath, // Will be removed by sanitizer
       durationSeconds: asset.durationSeconds,
       width: asset.width,
       height: asset.height,
@@ -46,10 +48,13 @@ export default apiHandler({
       })),
       createdAt: asset.createdAt,
     })
+
+    return successResponse(res, sanitizedAsset)
   },
 
   // DELETE /api/assets/[id] - Delete asset
-  DELETE: async (req, res) => {
+  DELETE: withCSRFProtection(async (req, res) => {
+
     const user = await getAuthUserWithWorkspace(req, res)
     const assetId = req.query.id as string
     await requireWorkspaceRole(user.id, user.workspaceId, 'EDITOR')
@@ -62,5 +67,5 @@ export default apiHandler({
     await prisma.asset.delete({ where: { id: assetId } })
 
     return successResponse(res, { deleted: true })
-  },
+  }),
 })

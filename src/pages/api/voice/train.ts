@@ -2,8 +2,9 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { ttsRequest } from '@/lib/tts-client'
 import { prisma } from '@/lib/prisma'
 import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
+import { withMFAProtection, SENSITIVE_OPERATIONS } from '@/lib/security/mfa'
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function trainVoiceHandler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
@@ -81,3 +82,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
   }
 }
+
+// Export with MFA protection for voice training (sensitive operation)
+export default withMFAProtection(SENSITIVE_OPERATIONS.VOICE_TRAINING, trainVoiceHandler)

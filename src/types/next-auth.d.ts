@@ -11,6 +11,7 @@ declare module 'next-auth' {
       displayName?: string | null
       avatarUrl?: string | null
       defaultWorkspaceId?: string | null
+      role?: string | null
     }
   }
 
@@ -27,5 +28,6 @@ declare module 'next-auth/jwt' {
     displayName?: string | null
     avatarUrl?: string | null
     defaultWorkspaceId?: string | null
+    role?: string | null
   }
 }

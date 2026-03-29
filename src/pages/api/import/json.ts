@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { prisma } from '@/lib/prisma'
 import { errorResponse, successResponse } from '@/lib/api-helpers'
 import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
+import { validateFileContent, generateSecureFilename } from '@/lib/security/file-validator'
 
 export const config = {
   api: {
@@ -14,6 +15,13 @@ export const config = {
 }
 
 const IMPORT_DIR = path.join(process.cwd(), 'imports')
+
+// Allowed MIME types for JSON import
+const ALLOWED_JSON_MIME_TYPES = [
+  'application/json',
+  'text/plain',
+  'application/octet-stream',
+] as const
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -28,10 +36,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await fs.mkdir(workspaceDir, { recursive: true })
 
     const form = formidable({
-      uploadDir: workspaceDir,
-      keepExtensions: true,
+      keepExtensions: false, // Don't trust original extensions
       maxFileSize: 100 * 1024 * 1024,
-      filename: (_name, ext) => `${uuidv4()}${ext || '.json'}`,
+      uploadDir: workspaceDir, // Restrict to secure workspace directory
+      filename: () => `${uuidv4()}.tmp`, // Use temporary extension
     })
 
     const [, files] = await form.parse(req)
@@ -42,7 +50,51 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const file = fileArray[0]
-    const content = await fs.readFile(file.filepath, 'utf-8')
+
+    // Validate file content to prevent malicious uploads
+    const fileBuffer = await fs.readFile(file.filepath)
+    
+    const validationResult = await validateFileContent(
+      fileBuffer,
+      file.originalFilename || 'backup.json',
+      file.mimetype || undefined
+    )
+
+    if (!validationResult.isValid) {
+      console.error('JSON file validation failed:', {
+        filename: file.originalFilename,
+        error: validationResult.error,
+        securityRisk: validationResult.securityRisk,
+        detectedType: validationResult.detectedType
+      })
+      
+      // Clean up temporary file
+      await fs.unlink(file.filepath).catch(() => {})
+      
+      return errorResponse(
+        res,
+        validationResult.error || 'JSON file validation failed',
+        400
+      )
+    }
+
+    // Ensure file is an allowed type for JSON
+    if (!ALLOWED_JSON_MIME_TYPES.includes(validationResult.detectedType! as any)) {
+      await fs.unlink(file.filepath).catch(() => {})
+      return errorResponse(res, `File type '${validationResult.detectedType}' is not allowed for JSON import`, 400)
+    }
+
+    // Generate secure filename with .json extension
+    const secureFilename = generateSecureFilename(
+      file.originalFilename || 'backup.json',
+      'application/json' // Force JSON MIME
+    ).replace(/\.[^.]+$/, '.json') // Force .json extension
+
+    // Move to final location with secure name
+    const finalPath = path.join(workspaceDir, secureFilename)
+    await fs.rename(file.filepath, finalPath)
+
+    const content = await fs.readFile(finalPath, 'utf-8')
 
     let parsed: any = null
     try {
@@ -54,16 +106,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const peopleCount = Array.isArray(parsed?.data?.people) ? parsed.data.people.length : 0
     const storiesCount = Array.isArray(parsed?.data?.stories) ? parsed.data.stories.length : 0
     const assetsCount = Array.isArray(parsed?.data?.assets) ? parsed.data.assets.length : 0
-    const relativePath = path.relative(process.cwd(), file.filepath)
+    const relativePath = path.relative(process.cwd(), finalPath)
 
     const [asset, importJob] = await prisma.$transaction(async (tx) => {
       const createdAsset = await tx.asset.create({
         data: {
           workspaceId: user.workspaceId,
-          filename: path.basename(file.filepath),
+          filename: path.basename(finalPath),
           originalName: file.originalFilename || 'backup.json',
-          mimeType: file.mimetype || 'application/json',
-          sizeBytes: BigInt(file.size),
+          mimeType: 'application/json',
+          sizeBytes: BigInt(fileBuffer.length),
           storageType: 'LOCAL',
           storagePath: relativePath,
           assetType: 'DOCUMENT',
@@ -71,6 +123,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           uploadedById: user.id,
           metadata: {
             importType: 'JSON',
+            validatedType: 'application/json',
+            secureFilename: secureFilename,
           },
         },
       })

@@ -403,7 +403,7 @@ function mapPeopleToTree(people: ApiPersonWithEdges[], activePersonId?: string):
       }
 
       if (edge.type === 'SPOUSE') {
-        const [leftId, rightId] = [sourceCandidateId, relatedPersonId].sort()
+        const [leftId, rightId] = [sourceCandidateId, relatedPersonId].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
         const edgeKey = `SPOUSE:${leftId}:${rightId}`
         if (seenRelationshipEdgeKeys.has(edgeKey)) {
           continue

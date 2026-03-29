@@ -44,3 +44,55 @@ export function createServices(client = prisma) {
     storage: storageService,
   }
 }
+
+// Chat Service Factory for chat-system integration
+export class ServiceFactory {
+  // Basic chat service implementation for the main project
+  // This delegates to the chat-system services when needed
+  static getChatService() {
+    // For now, return a basic implementation
+    // In a full implementation, this would integrate with the chat-system
+    return {
+      createSession: async (request: any) => {
+        // Basic implementation
+        throw new Error('Chat service not fully implemented in main project')
+      },
+      sendMessage: async (request: any) => {
+        // Basic implementation  
+        throw new Error('Chat service not fully implemented in main project')
+      },
+      getHistory: async (sessionId: string, limit?: number, offset?: number) => {
+        // Basic implementation
+        throw new Error('Chat service not fully implemented in main project')
+      },
+      getSession: async (sessionId: string) => {
+        // Basic implementation
+        throw new Error('Chat service not fully implemented in main project')
+      },
+      updateSession: async (sessionId: string, updates: any) => {
+        // Basic implementation
+        throw new Error('Chat service not fully implemented in main project')
+      },
+      deleteSession: async (sessionId: string) => {
+        // Basic implementation
+        throw new Error('Chat service not fully implemented in main project')
+      },
+      listSessions: async (workspaceId: string, userId: string) => {
+        // Basic implementation
+        throw new Error('Chat service not fully implemented in main project')
+      },
+      storeUserMessage: async (sessionId: string, message: string) => {
+        // Basic implementation
+        throw new Error('Chat service not fully implemented in main project')
+      },
+      updateAssistantMessage: async (messageId: string, content: string, metadata?: any) => {
+        // Basic implementation
+        throw new Error('Chat service not fully implemented in main project')
+      },
+      streamResponse: async (request: any) => {
+        // Basic implementation
+        throw new Error('Chat service not fully implemented in main project')
+      }
+    }
+  }
+}

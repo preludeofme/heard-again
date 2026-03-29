@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
 import { getAuthUser, requireWorkspaceRole } from '@/lib/auth-helpers'
 import { validate, rules } from '@/lib/validation'
+import { withCSRFProtection } from '@/lib/security/csrf'
 
 export default apiHandler({
   // GET /api/workspaces/[id] - Get workspace details
@@ -58,7 +59,8 @@ export default apiHandler({
   },
 
   // PUT /api/workspaces/[id] - Update workspace
-  PUT: async (req, res) => {
+  PUT: withCSRFProtection(async (req, res) => {
+
     const user = await getAuthUser(req, res)
     const workspaceId = req.query.id as string
 
@@ -89,10 +91,11 @@ export default apiHandler({
     })
 
     return successResponse(res, workspace)
-  },
+  }),
 
   // DELETE /api/workspaces/[id] - Delete workspace
-  DELETE: async (req, res) => {
+  DELETE: withCSRFProtection(async (req, res) => {
+
     const user = await getAuthUser(req, res)
     const workspaceId = req.query.id as string
 
@@ -124,5 +127,5 @@ export default apiHandler({
     }
 
     return successResponse(res, { deleted: true })
-  },
+  }),
 })

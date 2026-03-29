@@ -19,6 +19,8 @@ export interface StorageProvider {
   
   getPublicUrl(storagePath: string): Promise<string>
   
+  getSignedUrl?(storagePath: string, expiresIn?: number): Promise<string>
+  
   getFile(storagePath: string): Promise<Buffer>
 }
 

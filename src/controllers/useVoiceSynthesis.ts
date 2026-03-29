@@ -76,6 +76,14 @@ export function useVoiceSynthesis(): VoiceSynthesisState & VoiceSynthesisActions
 
       const result = await response.json()
       
+      // Extract from { success: true, data: { audioUrl: ... } } structure
+      const audioUrl = result.data?.audioUrl || result.audioUrl
+      const duration = result.data?.duration || result.duration || 0
+      
+      if (!audioUrl) {
+        throw new Error('No audio URL in response')
+      }
+      
       // Cache the result
       const cacheKey = getSynthesisCacheKey(modelId, text)
       setState(prev => ({
@@ -84,16 +92,16 @@ export function useVoiceSynthesis(): VoiceSynthesisState & VoiceSynthesisActions
         synthesisCache: {
           ...prev.synthesisCache,
           [cacheKey]: {
-            audioUrl: result.audioUrl,
+            audioUrl,
             modelId,
             text,
             createdAt: new Date(),
-            duration: result.duration || 0,
+            duration,
           },
         },
       }))
 
-      return result.audioUrl
+      return audioUrl
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Speech synthesis failed'
       setState(prev => ({ ...prev, isSynthesizing: false }))

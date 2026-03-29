@@ -144,7 +144,7 @@ export default function SearchPage() {
   })
 
   const filteredTotal = filteredStories.length + filteredPeople.length + filteredAssets.length
-  const storyTypes = Array.from(new Set((results?.stories || []).map((story) => story.storyType))).sort()
+  const storyTypes = Array.from(new Set((results?.stories || []).map((story) => story.storyType))).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
 
   return (
     <>

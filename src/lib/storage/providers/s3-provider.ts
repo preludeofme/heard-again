@@ -81,7 +81,7 @@ export class S3StorageProvider implements StorageProvider {
 
     await this.client.send(command)
 
-    const publicUrl = this.getPublicUrl(storagePath)
+    const publicUrl = await this.getPublicUrl(storagePath)
 
     return {
       id,
@@ -171,5 +171,16 @@ export class S3StorageProvider implements StorageProvider {
     })
 
     return await getSignedUrl(this.client, command, { expiresIn })
+  }
+
+  // Get secure URL with short expiration for private content
+  async getSecureUrl(
+    storagePath: string,
+    expiresInSeconds: number = 900 // 15 minutes default
+  ): Promise<{ url: string; expiresAt: Date }> {
+    const url = await this.getPresignedDownloadUrl(storagePath, expiresInSeconds)
+    const expiresAt = new Date(Date.now() + expiresInSeconds * 1000)
+    
+    return { url, expiresAt }
   }
 }

@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { prisma } from '@/lib/prisma'
 import { errorResponse, successResponse } from '@/lib/api-helpers'
 import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
+import { validateFileContent, generateSecureFilename, ALLOWED_MIME_TYPES } from '@/lib/security/file-validator'
 
 export const config = {
   api: {
@@ -14,6 +15,17 @@ export const config = {
 }
 
 const IMPORT_DIR = path.join(process.cwd(), 'imports')
+
+// Allowed MIME types for bulk audio import
+const ALLOWED_AUDIO_MIME_TYPES = [
+  'audio/mpeg',
+  'audio/wav',
+  'audio/mp4',
+  'audio/ogg',
+  'audio/flac',
+  'audio/aac',
+  'audio/x-m4a',
+] as const
 
 function resolveAssetType(mimeType: string): 'AUDIO' | 'DOCUMENT' {
   if (mimeType.startsWith('audio/')) return 'AUDIO'
@@ -33,10 +45,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await fs.mkdir(workspaceDir, { recursive: true })
 
     const form = formidable({
-      uploadDir: workspaceDir,
-      keepExtensions: true,
+      keepExtensions: false, // Don't trust original extensions
       maxFileSize: 250 * 1024 * 1024,
-      filename: (_name, ext) => `${uuidv4()}${ext || ''}`,
+      uploadDir: workspaceDir, // Restrict to secure workspace directory
+      filename: () => `${uuidv4()}.tmp`, // Use temporary extension
       multiples: true,
     })
 
@@ -47,29 +59,89 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return errorResponse(res, 'No files provided', 400)
     }
 
-    const acceptedAudioFiles = fileArray.filter((file) => (file.mimetype || '').startsWith('audio/'))
-    if (acceptedAudioFiles.length === 0) {
-      return errorResponse(res, 'No audio files found in upload', 400)
+    const validatedAudioFiles: Array<formidable.File & { 
+      secureFilename: string;
+      mimetype: string;
+      originalFilename: string;
+    }> = []
+    
+    for (const file of fileArray) {
+      // Validate file content to prevent malicious uploads
+      const fileBuffer = await fs.readFile(file.filepath)
+      
+      const validationResult = await validateFileContent(
+        fileBuffer,
+        file.originalFilename || 'unknown',
+        file.mimetype || undefined
+      )
+
+      if (!validationResult.isValid) {
+        console.error('File validation failed:', {
+          filename: file.originalFilename,
+          error: validationResult.error,
+          securityRisk: validationResult.securityRisk,
+          detectedType: validationResult.detectedType
+        })
+        
+        // Clean up temporary file
+        await fs.unlink(file.filepath).catch(() => {})
+        
+        return errorResponse(
+          res,
+          validationResult.error || 'File validation failed',
+          400
+        )
+      }
+
+      // Ensure file is an allowed audio type
+      if (!ALLOWED_AUDIO_MIME_TYPES.includes(validationResult.detectedType! as any)) {
+        await fs.unlink(file.filepath).catch(() => {})
+        return errorResponse(res, `File type '${validationResult.detectedType}' is not allowed for audio import`, 400)
+      }
+
+      // Generate secure filename with proper extension
+      const secureFilename = generateSecureFilename(
+        file.originalFilename || 'audio-file',
+        validationResult.detectedType!
+      )
+
+      // Move to final location with secure name
+      const finalPath = path.join(workspaceDir, secureFilename)
+      await fs.rename(file.filepath, finalPath)
+
+      validatedAudioFiles.push({
+        ...file,
+        filepath: finalPath,
+        originalFilename: file.originalFilename || 'audio-file',
+        mimetype: validationResult.detectedType!,
+        secureFilename
+      })
+    }
+
+    if (validatedAudioFiles.length === 0) {
+      return errorResponse(res, 'No valid audio files found in upload', 400)
     }
 
     const createdAssets = await prisma.$transaction(async (tx) => {
       const results = []
-      for (const file of acceptedAudioFiles) {
+      for (const file of validatedAudioFiles) {
         const relativePath = path.relative(process.cwd(), file.filepath)
         const asset = await tx.asset.create({
           data: {
             workspaceId: user.workspaceId,
             filename: path.basename(file.filepath),
-            originalName: file.originalFilename || 'audio-file',
-            mimeType: file.mimetype || 'application/octet-stream',
+            originalName: file.originalFilename,
+            mimeType: file.mimetype,
             sizeBytes: BigInt(file.size),
             storageType: 'LOCAL',
             storagePath: relativePath,
-            assetType: resolveAssetType(file.mimetype || ''),
+            assetType: resolveAssetType(file.mimetype),
             processingStatus: 'COMPLETED',
             uploadedById: user.id,
             metadata: {
               importType: 'BULK_AUDIO',
+              validatedType: file.mimetype,
+              secureFilename: file.secureFilename,
             },
           },
         })

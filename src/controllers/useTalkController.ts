@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 import { LegacySubject, VoiceModel } from '@/types'
 import { useVoicePlayback } from './useVoicePlayback'
 import { useConversation } from './useConversation'
+import { useChatConversation } from './useChatConversation'
 import { useVoiceComparison } from './useVoiceComparison'
 import { useTalkSynthesis } from './useTalkSynthesis'
 import { useTalkVoiceModels } from './useTalkVoiceModels'
@@ -40,26 +41,49 @@ export function useTalkController(subjectId?: string) {
     setErrorState({ hasError: true, errorMessage: message })
   })
 
-  const conversation = useConversation({
-    onAssistantMessage: async (text: string) => {
-      const selectedModel = selectedVoiceModelRef.current
-      if (!selectedModel) {
-        return
-      }
+  // Use chat conversation for real subjects, fallback to mock for demo
+  const conversation = subjectId 
+    ? useChatConversation({
+        subjectId,
+        onAssistantMessage: async (text: string) => {
+          const selectedModel = selectedVoiceModelRef.current
+          if (!selectedModel) {
+            return
+          }
 
-      try {
-        const audioUrl = await synthesizeSpeechRef.current(text, selectedModel.id)
-        if (audioUrl) {
-          playAudioRef.current(audioUrl)
-        }
-      } catch (e) {
-        console.warn('[TALK] Voice synthesis for response failed (non-critical):', e)
-      }
-    },
-    onError: (message) => {
-      setErrorState({ hasError: true, errorMessage: message })
-    },
-  })
+          try {
+            const audioUrl = await synthesizeSpeechRef.current(text, selectedModel.id)
+            if (audioUrl) {
+              playAudioRef.current(audioUrl)
+            }
+          } catch (e) {
+            console.warn('[TALK] Voice synthesis for response failed (non-critical):', e)
+          }
+        },
+        onError: (message) => {
+          setErrorState({ hasError: true, errorMessage: message })
+        },
+      })
+    : useConversation({
+        onAssistantMessage: async (text: string) => {
+          const selectedModel = selectedVoiceModelRef.current
+          if (!selectedModel) {
+            return
+          }
+
+          try {
+            const audioUrl = await synthesizeSpeechRef.current(text, selectedModel.id)
+            if (audioUrl) {
+              playAudioRef.current(audioUrl)
+            }
+          } catch (e) {
+            console.warn('[TALK] Voice synthesis for response failed (non-critical):', e)
+          }
+        },
+        onError: (message) => {
+          setErrorState({ hasError: true, errorMessage: message })
+        },
+      })
 
   const synthesis = useTalkSynthesis({
     selectedVoiceModelId: voiceModels.selectedVoiceModel?.id,

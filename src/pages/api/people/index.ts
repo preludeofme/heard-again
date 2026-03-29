@@ -3,6 +3,7 @@ import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
 import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
 import { personService } from '@/services'
 import { validateBody, validateQuery, createPersonSchema, listPeopleQuerySchema, formatZodError } from '@/schemas'
+import { withCSRFProtection } from '@/lib/security/csrf'
 
 export default apiHandler({
   // GET /api/people - List people in workspace
@@ -20,7 +21,8 @@ export default apiHandler({
   },
 
   // POST /api/people - Create a person
-  POST: async (req, res) => {
+  POST: withCSRFProtection(async (req, res) => {
+
     const user = await getAuthUserWithWorkspace(req, res)
     await requireWorkspaceRole(user.id, user.workspaceId, 'EDITOR')
 
@@ -32,5 +34,5 @@ export default apiHandler({
 
     const result = await personService.createPerson(user.workspaceId, user.id, bodyValidation.data)
     return successResponse(res, result, 201)
-  },
+  }),
 })

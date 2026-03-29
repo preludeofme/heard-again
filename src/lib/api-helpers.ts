@@ -1,6 +1,69 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 
 // ============================================
+// Secure Response Transformers
+// ============================================
+
+/**
+ * Remove storagePath from asset objects to prevent information disclosure
+ */
+export function sanitizeAssetResponse(asset: any) {
+  if (!asset) return asset
+  
+  const { storagePath, ...sanitized } = asset
+  return sanitized
+}
+
+/**
+ * Remove storagePath from arrays of assets
+ */
+export function sanitizeAssetsResponse(assets: any[]) {
+  if (!Array.isArray(assets)) return assets
+  
+  return assets.map(asset => sanitizeAssetResponse(asset))
+}
+
+/**
+ * Remove storagePath from story responses (including nested assets)
+ */
+export function sanitizeStoryResponse(story: any) {
+  if (!story) return story
+  
+  const sanitized = { ...story }
+  
+  // Remove storagePath from generatedAudioAsset if present
+  if (sanitized.generatedAudio) {
+    sanitized.generatedAudio = sanitizeAssetResponse(sanitized.generatedAudio)
+  }
+  
+  // Remove storagePath from nested assets
+  if (sanitized.assets && Array.isArray(sanitized.assets)) {
+    sanitized.assets = sanitized.assets.map((storyAsset: any) => ({
+      ...storyAsset,
+      asset: sanitizeAssetResponse(storyAsset.asset)
+    }))
+  }
+  
+  return sanitized
+}
+
+/**
+ * Remove storagePath from document responses (including nested assets)
+ */
+export function sanitizeDocumentResponse(document: any) {
+  if (!document) return document
+  
+  const sanitized = { ...document }
+  
+  // Remove storagePath from asset if present
+  if (sanitized.asset) {
+    sanitized.asset = sanitizeAssetResponse(sanitized.asset)
+  }
+  
+  return sanitized
+}
+
+// ============================================
 // API Response Helpers (Pages Router)
 // ============================================
 

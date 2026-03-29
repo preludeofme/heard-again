@@ -26,6 +26,11 @@ model User {
   displayName String?
   avatarUrl String?
   
+  // MFA/Security
+  mfaEnabled    Boolean @default(false)
+  mfaSecret     String?  // Encrypted TOTP secret
+  mfaBackupCodes String? // JSON array of hashed backup codes
+  
   status    UserStatus @default(ACTIVE)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

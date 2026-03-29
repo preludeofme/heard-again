@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
 import { Box, Typography, Button, CircularProgress, Snackbar, Alert } from '@mui/material'
 import { CloudUpload as UploadIcon } from '@mui/icons-material'
+import { fetchWithCSRFAndFormData } from '@/lib/api-client'
 
 interface FileUploadProps {
   onUploadSuccess?: (result: any) => void
@@ -67,10 +68,7 @@ export function FileUpload({
     const formData = new FormData()
     formData.append('file', file)
 
-    const response = await fetch('/api/assets/upload', {
-      method: 'POST',
-      body: formData,
-    })
+    const response = await fetchWithCSRFAndFormData('/api/assets/upload', formData)
 
     if (!response.ok) {
       const error = await response.json()

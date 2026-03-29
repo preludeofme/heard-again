@@ -4,7 +4,7 @@ Local FastAPI service that wraps **Qwen3-TTS** for voice cloning and text-to-spe
 
 ## Prerequisites
 
-Complete the [Qwen3-TTS Setup Guide](../QWEN3_TTS_SETUP_GUIDE.md) first — you need:
+Complete the [Qwen3-TTS Setup Guide](../docs/QWEN3_TTS_SETUP_GUIDE.md) first — you need:
 - NVIDIA GPU with CUDA drivers
 - Python venv at `~/qwen3-tts/venv` with PyTorch + Qwen3-TTS installed
 - The Qwen3-TTS model downloaded via HuggingFace

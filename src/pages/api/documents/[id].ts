@@ -2,43 +2,58 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
+import { sanitizeDocumentResponse } from '@/lib/api-helpers'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const session = await getServerSession(req, res, authOptions)
-  if (!session?.user) {
-    return res.status(401).json({ success: false, error: 'Unauthorized' })
-  }
-
-  const { id } = req.query
-  const documentId = id as string
-
-  if (!documentId) {
-    return res.status(400).json({ success: false, error: 'Document ID required' })
-  }
-
-  const { method } = req
-
   try {
+    // Authenticate user and get workspace context
+    const user = await getAuthUserWithWorkspace(req, res)
+    
+    // Require EDITOR role for document operations
+    await requireWorkspaceRole(user.id, user.workspaceId, 'EDITOR')
+
+    const { id } = req.query
+    const documentId = id as string
+
+    if (!documentId) {
+      return res.status(400).json({ success: false, error: 'Document ID required' })
+    }
+
+    const { method } = req
+
     switch (method) {
       case 'GET':
-        return await getDocument(req, res, documentId)
+        return await getDocument(req, res, documentId, user.workspaceId)
       case 'PUT':
       case 'PATCH':
-        return await updateDocument(req, res, documentId, session.user.id)
+        return await updateDocument(req, res, documentId, user.id, user.workspaceId)
       case 'DELETE':
-        return await deleteDocument(req, res, documentId, session.user.id)
+        return await deleteDocument(req, res, documentId, user.id, user.workspaceId)
       default:
         return res.status(405).json({ success: false, error: 'Method not allowed' })
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Document API error:', error)
+    
+    // Handle authorization errors specifically
+    if (error.statusCode === 401 || error.statusCode === 403) {
+      return res.status(error.statusCode).json({ 
+        success: false, 
+        error: error.message || 'Access denied' 
+      })
+    }
+    
     return res.status(500).json({ success: false, error: 'Internal server error' })
   }
 }
 
-async function getDocument(req: NextApiRequest, res: NextApiResponse, documentId: string) {
-  const document = await prisma.document.findUnique({
-    where: { id: documentId },
+async function getDocument(req: NextApiRequest, res: NextApiResponse, documentId: string, workspaceId: string) {
+  const document = await prisma.document.findFirst({
+    where: { 
+      id: documentId,
+      workspaceId: workspaceId // ✅ Critical: Workspace-scoped query
+    },
     include: {
       asset: {
         select: {
@@ -47,7 +62,7 @@ async function getDocument(req: NextApiRequest, res: NextApiResponse, documentId
           originalName: true,
           mimeType: true,
           sizeBytes: true,
-          storagePath: true,
+          // storagePath: true, // ❌ Remove: Information disclosure
           metadata: true,
           width: true,
           height: true,
@@ -80,9 +95,12 @@ async function getDocument(req: NextApiRequest, res: NextApiResponse, documentId
     return res.status(404).json({ success: false, error: 'Document not found' })
   }
 
+  // ✅ Sanitize response to remove storage paths
+  const sanitizedDocument = sanitizeDocumentResponse(document)
+
   return res.status(200).json({
     success: true,
-    data: document,
+    data: sanitizedDocument,
   })
 }
 
@@ -90,7 +108,8 @@ async function updateDocument(
   req: NextApiRequest,
   res: NextApiResponse,
   documentId: string,
-  userId: string
+  userId: string,
+  workspaceId: string
 ) {
   const {
     title,
@@ -102,9 +121,12 @@ async function updateDocument(
     aiSummary,
   } = req.body
 
-  // Check document exists
-  const existingDoc = await prisma.document.findUnique({
-    where: { id: documentId },
+  // Check document exists and user has access to it
+  const existingDoc = await prisma.document.findFirst({
+    where: { 
+      id: documentId,
+      workspaceId: workspaceId // ✅ Critical: Workspace-scoped query
+    },
     include: { people: true },
   })
 
@@ -151,7 +173,7 @@ async function updateDocument(
           filename: true,
           mimeType: true,
           sizeBytes: true,
-          storagePath: true,
+          // storagePath: true, // ❌ Remove: Information disclosure
         },
       },
       people: {
@@ -169,9 +191,12 @@ async function updateDocument(
     },
   })
 
+  // ✅ Sanitize response to remove storage paths
+  const sanitizedDocument = sanitizeDocumentResponse(document)
+
   return res.status(200).json({
     success: true,
-    data: document,
+    data: sanitizedDocument,
   })
 }
 
@@ -179,12 +204,17 @@ async function deleteDocument(
   req: NextApiRequest,
   res: NextApiResponse,
   documentId: string,
-  userId: string
+  userId: string,
+  workspaceId: string
 ) {
   const { permanent } = req.query
 
-  const existingDoc = await prisma.document.findUnique({
-    where: { id: documentId },
+  // Verify document exists and user has access
+  const existingDoc = await prisma.document.findFirst({
+    where: { 
+      id: documentId,
+      workspaceId: workspaceId // ✅ Critical: Workspace-scoped query
+    },
   })
 
   if (!existingDoc) {

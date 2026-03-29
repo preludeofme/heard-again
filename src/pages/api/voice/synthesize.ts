@@ -14,12 +14,19 @@ export default apiHandler({
     }
 
     try {
+      // Get the raw JWT token from the request cookie for TTS service auth
+      const rawToken = req.cookies['next-auth.session-token']
+      if (!rawToken) {
+        return errorResponse(res, 'Authentication required', 401, 'AUTH_REQUIRED')
+      }
+
       const result = await voiceService.synthesize({
         workspaceId: user.workspaceId,
         userId: user.id,
         modelId,
         text,
         language,
+        authToken: rawToken,
       })
 
       return successResponse(res, result, 200)

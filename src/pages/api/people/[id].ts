@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma'
-import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
+import { apiHandler, successResponse, Errors, sanitizeAssetResponse } from '@/lib/api-helpers'
 import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
+import { withCSRFProtection } from '@/lib/security/csrf'
 
 export default apiHandler({
   // GET /api/people/[id] - Get person details
@@ -139,7 +140,7 @@ export default apiHandler({
       deathDate: person.deathDate,
       isDeceased: person.isDeceased,
       bio: person.bio,
-      avatarUrl: person.avatarAsset?.storagePath || null,
+      avatarUrl: person.avatarAsset ? `/api/assets/serve/${person.avatarAsset.id}` : null,
       tags: person.tags,
       voiceProfiles: person.voiceProfiles,
       relationships,
@@ -150,7 +151,8 @@ export default apiHandler({
   },
 
   // PUT /api/people/[id] - Update person
-  PUT: async (req, res) => {
+  PUT: withCSRFProtection(async (req, res) => {
+
     const user = await getAuthUserWithWorkspace(req, res)
     const personId = req.query.id as string
     await requireWorkspaceRole(user.id, user.workspaceId, 'EDITOR')
@@ -195,10 +197,11 @@ export default apiHandler({
       displayName: person.displayName || `${person.firstName}${person.lastName ? ' ' + person.lastName : ''}`,
       updatedAt: person.updatedAt,
     })
-  },
+  }),
 
   // DELETE /api/people/[id] - Delete person
-  DELETE: async (req, res) => {
+  DELETE: withCSRFProtection(async (req, res) => {
+
     const user = await getAuthUserWithWorkspace(req, res)
     const personId = req.query.id as string
     await requireWorkspaceRole(user.id, user.workspaceId, 'ADMIN')
@@ -213,5 +216,5 @@ export default apiHandler({
     await prisma.person.delete({ where: { id: personId } })
 
     return successResponse(res, { deleted: true })
-  },
+  }),
 })

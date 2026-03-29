@@ -28,6 +28,7 @@ import {
 import { PersonDetailModal } from '@/components/modals/PersonDetailModal'
 import { AddEditPersonModal, PersonFormData } from '@/components/modals/AddEditPersonModal'
 import { FamilyMemberSearch, SearchableFamilyMember } from '@/components/search'
+import { fetchWithCSRFAndJSON, fetchWithCSRF } from '@/lib/api-client'
 
 interface TreePerson {
   id: string | number
@@ -391,35 +392,27 @@ export function FamilyTreePage({
     try {
       if (addEditMode === 'create') {
         // Create new person
-        const res = await fetch('/api/people', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            firstName: data.firstName,
-            lastName: data.lastName,
-            displayName: data.displayName,
-            birthDate: data.birthDate,
-            deathDate: data.deathDate,
-            bio: data.bio,
-            personType: data.personType,
-          }),
+        const res = await fetchWithCSRFAndJSON('/api/people', {
+          firstName: data.firstName,
+          lastName: data.lastName,
+          displayName: data.displayName,
+          birthDate: data.birthDate,
+          deathDate: data.deathDate,
+          bio: data.bio,
+          personType: data.personType,
         })
         if (!res.ok) throw new Error('Failed to create person')
       } else {
         // Update existing person
         if (!selectedPersonId) throw new Error('No person selected')
-        const res = await fetch(`/api/people/${selectedPersonId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            firstName: data.firstName,
-            lastName: data.lastName,
-            displayName: data.displayName,
-            birthDate: data.birthDate,
-            deathDate: data.deathDate,
-            bio: data.bio,
-            personType: data.personType,
-          }),
+        const res = await fetchWithCSRFAndJSON(`/api/people/${selectedPersonId}`, {
+          firstName: data.firstName,
+          lastName: data.lastName,
+          displayName: data.displayName,
+          birthDate: data.birthDate,
+          deathDate: data.deathDate,
+          bio: data.bio,
+          personType: data.personType,
         })
         if (!res.ok) throw new Error('Failed to update person')
       }
@@ -436,7 +429,7 @@ export function FamilyTreePage({
 
   const handleDeletePerson = async (personId: string) => {
     try {
-      const res = await fetch(`/api/people/${personId}`, {
+      const res = await fetchWithCSRF(`/api/people/${personId}`, {
         method: 'DELETE',
       })
       if (!res.ok) throw new Error('Failed to delete person')
@@ -578,19 +571,19 @@ export function FamilyTreePage({
     })
   }, [isFullscreen, cardPositions, treeCanvasWidth])
 
-  const connectorPaths: ConnectorPath[] = useMemo(() => {
-    const paths: ConnectorPath[] = []
-    const cardById = new Map(cardPositions.map((c) => [c.id, c]))
-
-    const getStyle = (kind: FamilyTreeRelationshipEdge['relationshipKind']) => {
-      if (kind === 'biological') {
-        return { stroke: CONNECTOR_BIOLOGICAL_COLOR, strokeWidth: CONNECTOR_THICKNESS }
-      }
-      return { stroke: CONNECTOR_NON_BIO_COLOR, strokeWidth: CONNECTOR_THICKNESS, strokeDasharray: '6 4' }
+  // Helper function to get connector style based on relationship kind
+  const getConnectorStyle = useCallback((kind: FamilyTreeRelationshipEdge['relationshipKind']) => {
+    if (kind === 'biological') {
+      return { stroke: CONNECTOR_BIOLOGICAL_COLOR, strokeWidth: CONNECTOR_THICKNESS }
     }
+    return { stroke: CONNECTOR_NON_BIO_COLOR, strokeWidth: CONNECTOR_THICKNESS, strokeDasharray: '6 4' }
+  }, [])
 
-    // --- Spouse connectors: horizontal line at vertical midpoint between two cards ---
+  // Helper function to create spouse connectors
+  const createSpouseConnectors = useCallback((cardById: Map<string, CardPosition>): ConnectorPath[] => {
+    const paths: ConnectorPath[] = []
     const spouseEdges = familyData.relationshipEdges.filter((e) => e.type === 'SPOUSE')
+    
     for (const edge of spouseEdges) {
       const a = cardById.get(edge.sourceId)
       const b = cardById.get(edge.targetId)
@@ -609,14 +602,16 @@ export function FamilyTreePage({
         strokeWidth: CONNECTOR_THICKNESS,
       })
     }
+    
+    return paths
+  }, [familyData.relationshipEdges])
 
-    // --- Parent-child connectors with proper T-junction pattern ---
-    // Group parent-child edges into "family units" (parents who share children)
+  // Helper function to build parent-child relationship maps
+  const buildParentChildMaps = useCallback((cardById: Map<string, CardPosition>) => {
     const parentChildEdges = familyData.relationshipEdges
       .filter((e) => e.type === 'PARENT_CHILD')
       .filter((e) => cardById.has(e.sourceId) && cardById.has(e.targetId))
 
-    // Build parent→children and child→parents maps
     const parentToChildren = new Map<string, Set<string>>()
     const childToParents = new Map<string, Set<string>>()
     const edgeKind = new Map<string, FamilyTreeRelationshipEdge['relationshipKind']>()
@@ -628,11 +623,25 @@ export function FamilyTreePage({
       if (!childToParents.has(edge.targetId)) childToParents.set(edge.targetId, new Set())
       childToParents.get(edge.targetId)!.add(edge.sourceId)
 
-      edgeKind.set(`${edge.sourceId}:${edge.targetId}`, edge.relationshipKind)
+      edgeKind.set(`${edge.sourceId}-${edge.targetId}`, edge.relationshipKind)
     }
+
+    return { parentToChildren, childToParents, edgeKind }
+  }, [familyData.relationshipEdges])
+
+  const connectorPaths: ConnectorPath[] = useMemo(() => {
+    const paths: ConnectorPath[] = []
+    const cardById = new Map(cardPositions.map((c) => [c.id, c]))
+
+    // Add spouse connectors
+    paths.push(...createSpouseConnectors(cardById))
+
+    // Build parent-child relationship maps
+    const { parentToChildren, childToParents, edgeKind } = buildParentChildMaps(cardById)
 
     // Identify family units: group parents who are spouses and share children
     const spouseSet = new Set<string>()
+    const spouseEdges = familyData.relationshipEdges.filter((e) => e.type === 'SPOUSE')
     for (const edge of spouseEdges) {
       spouseSet.add(`${edge.sourceId}:${edge.targetId}`)
       spouseSet.add(`${edge.targetId}:${edge.sourceId}`)
@@ -691,7 +700,7 @@ export function FamilyTreePage({
 
       if (parentCards.length === 0 || childCards.length === 0) continue
 
-      const style = getStyle(unit.isBiological ? 'biological' : 'nonBiological')
+      const style = getConnectorStyle(unit.isBiological ? 'biological' : 'nonBiological')
 
       // Anchor point: midpoint between parents (bottom center)
       const allParentCentersX = parentCards.map((c) => c.x + c.width / 2)
@@ -739,7 +748,7 @@ export function FamilyTreePage({
           const childKind = unit.parentIds
             .map((pid) => edgeKind.get(`${pid}:${childId}`))
             .find((k) => k !== undefined) || (unit.isBiological ? 'biological' : 'nonBiological')
-          const childStyle = getStyle(childKind)
+          const childStyle = getConnectorStyle(childKind)
 
           paths.push({
             id: `stem-child-${childId}`,

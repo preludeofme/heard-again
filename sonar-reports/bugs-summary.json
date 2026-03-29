@@ -1,0 +1,327 @@
+{
+  "bugs_count": 23,
+  "bugs": [
+    {
+      "file": "src/components/pages/StoriesPage.tsx",
+      "line": 373,
+      "rule": "typescript:S3923",
+      "message": "This conditional operation returns the same value whether the condition is \"true\" or \"false\".",
+      "severity": "MAJOR",
+      "effort": "15min",
+      "impacts": [
+        {
+          "softwareQuality": "RELIABILITY",
+          "severity": "MEDIUM"
+        }
+      ]
+    },
+    {
+      "file": "src/lib/prisma.ts",
+      "line": 35,
+      "rule": "typescript:S3923",
+      "message": "This conditional operation returns the same value whether the condition is \"true\" or \"false\".",
+      "severity": "MAJOR",
+      "effort": "15min",
+      "impacts": [
+        {
+          "softwareQuality": "RELIABILITY",
+          "severity": "MEDIUM"
+        }
+      ]
+    },
+    {
+      "file": "src/lib/security/file-validator.ts",
+      "line": 41,
+      "rule": "typescript:S6324",
+      "message": "Remove this control character.",
+      "severity": "MAJOR",
+      "effort": "5min",
+      "impacts": [
+        {
+          "softwareQuality": "RELIABILITY",
+          "severity": "MEDIUM"
+        }
+      ]
+    },
+    {
+      "file": "src/lib/security/file-validator.ts",
+      "line": 41,
+      "rule": "typescript:S6324",
+      "message": "Remove this control character.",
+      "severity": "MAJOR",
+      "effort": "5min",
+      "impacts": [
+        {
+          "softwareQuality": "RELIABILITY",
+          "severity": "MEDIUM"
+        }
+      ]
+    },
+    {
+      "file": "src/lib/security/file-validator.ts",
+      "line": 41,
+      "rule": "typescript:S6324",
+      "message": "Remove this control character.",
+      "severity": "MAJOR",
+      "effort": "5min",
+      "impacts": [
+        {
+          "softwareQuality": "RELIABILITY",
+          "severity": "MEDIUM"
+        }
+      ]
+    },
+    {
+      "file": "src/lib/security/file-validator.ts",
+      "line": 41,
+      "rule": "typescript:S6324",
+      "message": "Remove this control character.",
+      "severity": "MAJOR",
+      "effort": "5min",
+      "impacts": [
+        {
+          "softwareQuality": "RELIABILITY",
+          "severity": "MEDIUM"
+        }
+      ]
+    },
+    {
+      "file": "src/lib/security/file-validator.ts",
+      "line": 47,
+      "rule": "typescript:S6324",
+      "message": "Remove this control character.",
+      "severity": "MAJOR",
+      "effort": "5min",
+      "impacts": [
+        {
+          "softwareQuality": "RELIABILITY",
+          "severity": "MEDIUM"
+        }
+      ]
+    },
+    {
+      "file": "src/lib/security/file-validator.ts",
+      "line": 47,
+      "rule": "typescript:S6324",
+      "message": "Remove this control character.",
+      "severity": "MAJOR",
+      "effort": "5min",
+      "impacts": [
+        {
+          "softwareQuality": "RELIABILITY",
+          "severity": "MEDIUM"
+        }
+      ]
+    },
+    {
+      "file": "src/lib/security/file-validator.ts",
+      "line": 47,
+      "rule": "typescript:S6324",
+      "message": "Remove this control character.",
+      "severity": "MAJOR",
+      "effort": "5min",
+      "impacts": [
+        {
+          "softwareQuality": "RELIABILITY",
+          "severity": "MEDIUM"
+        }
+      ]
+    },
+    {
+      "file": "src/lib/security/file-validator.ts",
+      "line": 47,
+      "rule": "typescript:S6324",
+      "message": "Remove this control character.",
+      "severity": "MAJOR",
+      "effort": "5min",
+      "impacts": [
+        {
+          "softwareQuality": "RELIABILITY",
+          "severity": "MEDIUM"
+        }
+      ]
+    },
+    {
+      "file": "src/lib/security/file-validator.ts",
+      "line": 47,
+      "rule": "typescript:S6324",
+      "message": "Remove this control character.",
+      "severity": "MAJOR",
+      "effort": "5min",
+      "impacts": [
+        {
+          "softwareQuality": "RELIABILITY",
+          "severity": "MEDIUM"
+        }
+      ]
+    },
+    {
+      "file": "src/lib/security/file-validator.ts",
+      "line": 47,
+      "rule": "typescript:S6324",
+      "message": "Remove this control character.",
+      "severity": "MAJOR",
+      "effort": "5min",
+      "impacts": [
+        {
+          "softwareQuality": "RELIABILITY",
+          "severity": "MEDIUM"
+        }
+      ]
+    },
+    {
+      "file": "src/pages/api/workspaces/index.ts",
+      "line": 65,
+      "rule": "typescript:S5850",
+      "message": "Group parts of the regex together to make the intended operator precedence explicit.",
+      "severity": "MAJOR",
+      "effort": "10min",
+      "impacts": [
+        {
+          "softwareQuality": "RELIABILITY",
+          "severity": "MEDIUM"
+        }
+      ]
+    },
+    {
+      "file": "tts-service/app/auth.py",
+      "line": 73,
+      "rule": "python:S7499",
+      "message": "Use an async HTTP client in this async function instead of a synchronous one.",
+      "severity": "MAJOR",
+      "effort": "5min",
+      "impacts": [
+        {
+          "softwareQuality": "RELIABILITY",
+          "severity": "HIGH"
+        }
+      ]
+    },
+    {
+      "file": "tts-service/app/auth.py",
+      "line": 118,
+      "rule": "python:S7499",
+      "message": "Use an async HTTP client in this async function instead of a synchronous one.",
+      "severity": "MAJOR",
+      "effort": "5min",
+      "impacts": [
+        {
+          "softwareQuality": "RELIABILITY",
+          "severity": "HIGH"
+        }
+      ]
+    },
+    {
+      "file": "src/pages/family-tree.tsx",
+      "line": 168,
+      "rule": "typescript:S6959",
+      "message": "Add an initial value to this \"reduce()\" call.",
+      "severity": "MAJOR",
+      "effort": "2min",
+      "impacts": [
+        {
+          "softwareQuality": "RELIABILITY",
+          "severity": "MEDIUM"
+        }
+      ]
+    },
+    {
+      "file": "src/pages/family-tree.tsx",
+      "line": 406,
+      "rule": "typescript:S2871",
+      "message": "Provide a compare function that depends on \"String.localeCompare\", to reliably sort elements alphabetically.",
+      "severity": "CRITICAL",
+      "effort": "10min",
+      "impacts": [
+        {
+          "softwareQuality": "RELIABILITY",
+          "severity": "HIGH"
+        }
+      ]
+    },
+    {
+      "file": "src/pages/family-tree.tsx",
+      "line": 228,
+      "rule": "typescript:S3923",
+      "message": "This conditional operation returns the same value whether the condition is \"true\" or \"false\".",
+      "severity": "MAJOR",
+      "effort": "15min",
+      "impacts": [
+        {
+          "softwareQuality": "RELIABILITY",
+          "severity": "MEDIUM"
+        }
+      ]
+    },
+    {
+      "file": "src/pages/search.tsx",
+      "line": 147,
+      "rule": "typescript:S2871",
+      "message": "Provide a compare function that depends on \"String.localeCompare\", to reliably sort elements alphabetically.",
+      "severity": "CRITICAL",
+      "effort": "10min",
+      "impacts": [
+        {
+          "softwareQuality": "RELIABILITY",
+          "severity": "HIGH"
+        }
+      ]
+    },
+    {
+      "file": "src/pages/api/auth/signup.ts",
+      "line": 38,
+      "rule": "typescript:S5850",
+      "message": "Group parts of the regex together to make the intended operator precedence explicit.",
+      "severity": "MAJOR",
+      "effort": "10min",
+      "impacts": [
+        {
+          "softwareQuality": "RELIABILITY",
+          "severity": "MEDIUM"
+        }
+      ]
+    },
+    {
+      "file": "docs/dashboard_legacy_home/code.html",
+      "line": 3,
+      "rule": "Web:PageWithoutTitleCheck",
+      "message": "Add a <title> tag to this page.",
+      "severity": "MAJOR",
+      "effort": "5min",
+      "impacts": [
+        {
+          "softwareQuality": "RELIABILITY",
+          "severity": "MEDIUM"
+        }
+      ]
+    },
+    {
+      "file": "docs/story_collection_portal/code.html",
+      "line": 3,
+      "rule": "Web:PageWithoutTitleCheck",
+      "message": "Add a <title> tag to this page.",
+      "severity": "MAJOR",
+      "effort": "5min",
+      "impacts": [
+        {
+          "softwareQuality": "RELIABILITY",
+          "severity": "MEDIUM"
+        }
+      ]
+    },
+    {
+      "file": "docs/voice_documents_lab/code.html",
+      "line": 3,
+      "rule": "Web:PageWithoutTitleCheck",
+      "message": "Add a <title> tag to this page.",
+      "severity": "MAJOR",
+      "effort": "5min",
+      "impacts": [
+        {
+          "softwareQuality": "RELIABILITY",
+          "severity": "MEDIUM"
+        }
+      ]
+    }
+  ]
+}

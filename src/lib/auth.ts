@@ -4,12 +4,16 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 import GoogleProvider from 'next-auth/providers/google'
 import bcrypt from 'bcrypt'
 import { prisma } from '@/lib/prisma'
+import { validatePassword, hashPassword } from './security/password-policy'
+import { logger } from './logger'
 
 export const authOptions: NextAuthOptions = {
+  // @ts-expect-error trustHost is valid in NextAuth.js v4+ but not in type definitions
+  trustHost: true,
   adapter: PrismaAdapter(prisma),
   session: {
     strategy: 'jwt',
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    maxAge: 8 * 60 * 60, // 8 hours (reduced from 24 hours for security)
   },
   pages: {
     signIn: '/login',
@@ -71,6 +75,21 @@ export const authOptions: NextAuthOptions = {
         token.avatarUrl = (user as any).avatarUrl || (user as any).image || null
         token.defaultWorkspaceId = (user as any).defaultWorkspaceId || null
       }
+      
+      // Ensure role is always present in token (for new and existing sessions)
+      if (!token.role && token.id) {
+        try {
+          const membership = await prisma.membership.findFirst({
+            where: { userId: token.id },
+            select: { role: true }
+          })
+          token.role = membership?.role || 'VIEWER'
+        } catch (e) {
+          console.error('Failed to fetch user role:', e)
+          token.role = 'VIEWER'
+        }
+      }
+      
       return token
     },
     async session({ session, token }) {
@@ -80,6 +99,7 @@ export const authOptions: NextAuthOptions = {
         session.user.displayName = (token.displayName as string) || null
         session.user.avatarUrl = (token.avatarUrl as string) || null
         session.user.defaultWorkspaceId = (token.defaultWorkspaceId as string) || null
+        session.user.role = (token.role as string) || 'VIEWER'
       }
       return session
     },

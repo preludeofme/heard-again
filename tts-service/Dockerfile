@@ -23,6 +23,6 @@ COPY app/ ./app/
 # Create directories for models and generated audio
 RUN mkdir -p /app/models /app/generated
 
-EXPOSE 8100
+EXPOSE 8101
 
 CMD ["python", "-m", "app.main"]

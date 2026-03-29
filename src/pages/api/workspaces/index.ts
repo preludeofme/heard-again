@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
 import { getAuthUser } from '@/lib/auth-helpers'
 import { validate, rules } from '@/lib/validation'
+import { withCSRFProtection } from '@/lib/security/csrf'
 
 export default apiHandler({
   // GET /api/workspaces - List user's workspaces
@@ -43,7 +44,8 @@ export default apiHandler({
   },
 
   // POST /api/workspaces - Create a new workspace
-  POST: async (req, res) => {
+  POST: withCSRFProtection(async (req, res) => {
+
     const user = await getAuthUser(req, res)
 
     const { valid, errors } = validate(req.body, {
@@ -110,5 +112,5 @@ export default apiHandler({
       slug: workspace.slug,
       planType: workspace.planType,
     }, 201)
-  },
+  }),
 })

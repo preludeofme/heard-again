@@ -3,6 +3,7 @@ import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
 import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
 import { storyService } from '@/services'
 import { validateBody, validateQuery, createStorySchema, listStoriesQuerySchema, formatZodError } from '@/schemas'
+import { withCSRFProtection } from '@/lib/security/csrf'
 
 export default apiHandler({
   // GET /api/stories - List stories (with filters)
@@ -20,7 +21,8 @@ export default apiHandler({
   },
 
   // POST /api/stories - Create a story
-  POST: async (req, res) => {
+  POST: withCSRFProtection(async (req, res) => {
+
     const user = await getAuthUserWithWorkspace(req, res)
     await requireWorkspaceRole(user.id, user.workspaceId, 'EDITOR')
 
@@ -32,5 +34,5 @@ export default apiHandler({
 
     const result = await storyService.createStory(user.workspaceId, user.id, bodyValidation.data)
     return successResponse(res, result, 201)
-  },
+  }),
 })

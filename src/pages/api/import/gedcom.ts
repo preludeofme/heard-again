@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { prisma } from '@/lib/prisma'
 import { errorResponse, successResponse } from '@/lib/api-helpers'
 import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
+import { validateFileContent, generateSecureFilename } from '@/lib/security/file-validator'
 
 export const config = {
   api: {
@@ -14,6 +15,12 @@ export const config = {
 }
 
 const IMPORT_DIR = path.join(process.cwd(), 'imports')
+
+// Allowed MIME types for GEDCOM files
+const ALLOWED_GEDCOM_MIME_TYPES = [
+  'text/plain',
+  'application/octet-stream',
+] as const
 
 interface ParsedIndividual {
   xref: string
@@ -269,10 +276,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await fs.mkdir(workspaceDir, { recursive: true })
 
     const form = formidable({
-      uploadDir: workspaceDir,
-      keepExtensions: true,
+      keepExtensions: false, // Don't trust original extensions
       maxFileSize: 100 * 1024 * 1024,
-      filename: (_name, ext) => `${uuidv4()}${ext || '.ged'}`,
+      uploadDir: workspaceDir, // Restrict to secure workspace directory
+      filename: () => `${uuidv4()}.tmp`, // Use temporary extension
     })
 
     const [, files] = await form.parse(req)
@@ -283,9 +290,53 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const file = fileArray[0]
-    const content = await fs.readFile(file.filepath, 'utf-8')
+
+    // Validate file content to prevent malicious uploads
+    const fileBuffer = await fs.readFile(file.filepath)
+    
+    const validationResult = await validateFileContent(
+      fileBuffer,
+      file.originalFilename || 'gedcom.ged',
+      file.mimetype || undefined
+    )
+
+    if (!validationResult.isValid) {
+      console.error('GEDCOM file validation failed:', {
+        filename: file.originalFilename,
+        error: validationResult.error,
+        securityRisk: validationResult.securityRisk,
+        detectedType: validationResult.detectedType
+      })
+      
+      // Clean up temporary file
+      await fs.unlink(file.filepath).catch(() => {})
+      
+      return errorResponse(
+        res,
+        validationResult.error || 'GEDCOM file validation failed',
+        400
+      )
+    }
+
+    // Ensure file is an allowed type for GEDCOM
+    if (!ALLOWED_GEDCOM_MIME_TYPES.includes(validationResult.detectedType! as any)) {
+      await fs.unlink(file.filepath).catch(() => {})
+      return errorResponse(res, `File type '${validationResult.detectedType}' is not allowed for GEDCOM import`, 400)
+    }
+
+    // Generate secure filename with .ged extension
+    const secureFilename = generateSecureFilename(
+      file.originalFilename || 'gedcom.ged',
+      'text/plain' // Force plain text MIME for GEDCOM
+    ).replace(/\.[^.]+$/, '.ged') // Force .ged extension
+
+    // Move to final location with secure name
+    const finalPath = path.join(workspaceDir, secureFilename)
+    await fs.rename(file.filepath, finalPath)
+
+    const content = await fs.readFile(finalPath, 'utf-8')
     const { individuals, families } = parseGedcom(content)
-    const relativePath = path.relative(process.cwd(), file.filepath)
+    const relativePath = path.relative(process.cwd(), finalPath)
 
     if (individuals.length === 0) {
       return errorResponse(res, 'No GEDCOM individuals found in file', 400)
@@ -295,10 +346,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const createdAsset = await tx.asset.create({
         data: {
           workspaceId: user.workspaceId,
-          filename: path.basename(file.filepath),
+          filename: path.basename(finalPath),
           originalName: file.originalFilename || 'import.ged',
-          mimeType: file.mimetype || 'application/octet-stream',
-          sizeBytes: BigInt(file.size),
+          mimeType: 'text/plain',
+          sizeBytes: BigInt(fileBuffer.length),
           storageType: 'LOCAL',
           storagePath: relativePath,
           assetType: 'DOCUMENT',
@@ -306,6 +357,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           uploadedById: user.id,
           metadata: {
             importType: 'GEDCOM',
+            validatedType: 'text/plain',
+            secureFilename: secureFilename,
           },
         },
       })

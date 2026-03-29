@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma'
-import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
+import { apiHandler, successResponse, Errors, sanitizeStoryResponse } from '@/lib/api-helpers'
 import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
+import { withCSRFProtection } from '@/lib/security/csrf'
 
 export default apiHandler({
   // GET /api/stories/[id] - Get story details
@@ -62,7 +63,8 @@ export default apiHandler({
 
     if (!story) throw Errors.notFound('Story')
 
-    return successResponse(res, {
+    // Sanitize response to remove storage path information
+    const sanitizedStory = sanitizeStoryResponse({
       id: story.id,
       title: story.title,
       content: story.content,
@@ -77,23 +79,26 @@ export default apiHandler({
       speaker: story.speaker,
       createdBy: story.createdBy,
       voiceProfile: story.voiceProfile,
-      generatedAudio: story.generatedAudioAsset,
+      generatedAudio: story.generatedAudioAsset, // Will be sanitized
       assets: story.assets.map((sa) => ({
         id: sa.id,
         role: sa.assetRole,
         sortOrder: sa.sortOrder,
         caption: sa.caption,
-        asset: sa.asset,
+        asset: sa.asset, // Will be sanitized
       })),
       comments: story.comments,
       favoriteCount: story._count.favorites,
       createdAt: story.createdAt,
       updatedAt: story.updatedAt,
     })
+
+    return successResponse(res, sanitizedStory)
   },
 
   // PUT /api/stories/[id] - Update story
-  PUT: async (req, res) => {
+  PUT: withCSRFProtection(async (req, res) => {
+
     const user = await getAuthUserWithWorkspace(req, res)
     const storyId = req.query.id as string
     await requireWorkspaceRole(user.id, user.workspaceId, 'EDITOR')
@@ -134,10 +139,11 @@ export default apiHandler({
       status: story.status,
       updatedAt: story.updatedAt,
     })
-  },
+  }),
 
   // DELETE /api/stories/[id] - Delete story
-  DELETE: async (req, res) => {
+  DELETE: withCSRFProtection(async (req, res) => {
+
     const user = await getAuthUserWithWorkspace(req, res)
     const storyId = req.query.id as string
     await requireWorkspaceRole(user.id, user.workspaceId, 'EDITOR')
@@ -150,5 +156,5 @@ export default apiHandler({
     await prisma.story.delete({ where: { id: storyId } })
 
     return successResponse(res, { deleted: true })
-  },
+  }),
 })

@@ -26,6 +26,7 @@ import {
   CheckCircle as CheckIcon,
   Error as ErrorIcon,
 } from '@mui/icons-material'
+import { fetchWithCSRFAndFormData } from '@/lib/api-client'
 
 interface FileUpload {
   file: File
@@ -128,10 +129,7 @@ export function AssetUpload({
     formData.append('file', upload.file)
 
     try {
-      const response = await fetch('/api/assets/upload', {
-        method: 'POST',
-        body: formData,
-      })
+      const response = await fetchWithCSRFAndFormData('/api/assets/upload', formData)
 
       // Simulate progress updates
       const progressInterval = setInterval(() => {

@@ -12,9 +12,9 @@ interface StoriesPageProps {
   selectedFamilyMember?: {
     id: string
     firstName: string
-    lastName?: string
-    displayName?: string
-  }
+    lastName?: string | null
+    displayName?: string | null
+  } | null
   onSubmitStory?: (title: string, content: string) => Promise<void>
   onSubmitAudio?: (audioBlob: Blob, duration: number) => Promise<void>
 }
@@ -370,7 +370,7 @@ export function StoriesPage({ stories, selectedFamilyMember, onSubmitStory, onSu
               {stories.map((story, index) => (
             <Grid 
               key={story.id} 
-              size={{ xs: 12, md: index === 1 ? 12 : 6, lg: index === 1 ? 4 : 4 }}
+              size={{ xs: 12, md: index === 1 ? 12 : 6, lg: index === 1 ? 12 : 4 }}
             >
               <Card
                 onClick={() => router.push(`/stories/${story.id}`)}

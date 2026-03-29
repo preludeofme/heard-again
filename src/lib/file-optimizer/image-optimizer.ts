@@ -89,7 +89,9 @@ export class ImageOptimizer {
 
         case 'image/gif':
           // For GIFs, we might want to keep them as-is or convert to WebP
-          if (metadata.pageCount && metadata.pageCount > 1) {
+          // Check for animated GIF using pages property (sharp uses 'pages' not 'pageCount')
+          const pages = (metadata as any).pages || (metadata as any).pageCount
+          if (pages && pages > 1) {
             // Animated GIF - keep original
             optimizedBuffer = file
             optimizationMethod = 'none'

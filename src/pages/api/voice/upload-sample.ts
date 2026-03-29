@@ -2,6 +2,9 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { TTS_SERVICE_URL } from '@/lib/tts-client'
 import { prisma } from '@/lib/prisma'
 import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
+import { validateFileContent } from '@/lib/security/file-validator'
+import { scanAndQuarantineFile } from '@/lib/security/malware-scanner'
+import fs from 'fs/promises'
 
 /**
  * POST /api/voice/upload-sample
@@ -26,20 +29,63 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const user = await getAuthUserWithWorkspace(req, res)
     await requireWorkspaceRole(user.id, user.workspaceId, 'EDITOR')
 
-    // Stream the multipart form data directly to the TTS service
+    // Buffer the request for security scanning
     const chunks: Buffer[] = []
     for await (const chunk of req) {
       chunks.push(Buffer.from(chunk))
     }
-    const body = Buffer.concat(chunks)
+    const fileBuffer = Buffer.concat(chunks)
 
     const contentType = req.headers['content-type'] || ''
 
-    // Upload to TTS service (auto-transcribes with Whisper)
+    // 1. Validate file content (magic bytes)
+    const validationResult = await validateFileContent(
+      fileBuffer,
+      'audio-upload.wav',
+      contentType
+    )
+    
+    if (!validationResult.isValid) {
+      return res.status(400).json({ 
+        success: false, 
+        error: validationResult.error || 'Invalid file' 
+      })
+    }
+
+    // 2. Scan for malware
+    const tempFile = `/tmp/scan-${Date.now()}.wav`
+    await fs.writeFile(tempFile, fileBuffer)
+    
+    try {
+      const { scanResult, quarantined } = await scanAndQuarantineFile(tempFile)
+      
+      if (!scanResult.isClean) {
+        return res.status(403).json({
+          success: false,
+          error: `Security threat detected: ${scanResult.threats.join(', ')}`
+        })
+      }
+      
+      // If file was quarantined (shouldn't happen if clean), abort
+      if (quarantined) {
+        return res.status(403).json({
+          success: false,
+          error: 'File was quarantined during security scan'
+        })
+      }
+    } finally {
+      // Clean up temp file
+      try { await fs.unlink(tempFile) } catch {}
+    }
+
+    // 3. Now safe to forward to TTS service
     const response = await fetch(`${TTS_SERVICE_URL}/api/tts/upload-reference`, {
       method: 'POST',
-      headers: { 'Content-Type': contentType },
-      body,
+      headers: { 
+        'Content-Type': contentType,
+        'Authorization': `Bearer ${process.env.TTS_SERVICE_TOKEN || 'default-token'}` // Add service auth
+      },
+      body: fileBuffer,
     })
 
     if (!response.ok) {

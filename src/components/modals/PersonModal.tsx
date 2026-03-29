@@ -9,6 +9,7 @@ import {
   Mic, AutoStories, FamilyRestroom, Cancel,
 } from '@mui/icons-material'
 import { format } from 'date-fns'
+import { fetchWithCSRFAndJSON, fetchWithCSRF } from '@/lib/api-client'
 
 interface VoiceProfile {
   id: string
@@ -159,11 +160,7 @@ export function PersonModal({ open, personId, initialTab = 'overview', onClose, 
         if (marriageDate) payload.marriageDate = marriageDate
         if (marriagePlace) payload.marriagePlace = marriagePlace
       }
-      const res = await fetch(`/api/people/${personId}/relationships`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
+      const res = await fetchWithCSRFAndJSON(`/api/people/${personId}/relationships`, payload)
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to create relationship')
       setRelationshipTargetId('')
@@ -183,7 +180,7 @@ export function PersonModal({ open, personId, initialTab = 'overview', onClose, 
     setError(null)
     try {
       const encodedId = encodeURIComponent(relationshipId)
-      const res = await fetch(`/api/relationships/${encodedId}`, {
+      const res = await fetchWithCSRF(`/api/relationships/${encodedId}`, {
         method: 'DELETE',
       })
       const data = await res.json()
@@ -200,11 +197,7 @@ export function PersonModal({ open, personId, initialTab = 'overview', onClose, 
     if (!personId || !person) return
     setIsSaving(true)
     try {
-      const res = await fetch(`/api/people/${personId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editForm),
-      })
+      const res = await fetchWithCSRFAndJSON(`/api/people/${personId}`, editForm)
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to save')
       setPerson(data.data)
@@ -220,7 +213,7 @@ export function PersonModal({ open, personId, initialTab = 'overview', onClose, 
   const handleDelete = async () => {
     if (!personId || !confirm('Are you sure you want to delete this person? This cannot be undone.')) return
     try {
-      await fetch(`/api/people/${personId}`, { method: 'DELETE' })
+      await fetchWithCSRF(`/api/people/${personId}`, { method: 'DELETE' })
       onDelete?.(personId)
       onClose()
     } catch {

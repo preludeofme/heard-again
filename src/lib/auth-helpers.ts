@@ -61,7 +61,7 @@ export async function getAuthUserWithWorkspace(
   })
 
   if (!membership) {
-    throw Errors.notFound('Workspace')
+    throw Errors.forbidden('Access denied')
   }
 
   return { ...user, workspaceId: membership.workspaceId }

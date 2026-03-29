@@ -10,3 +10,4 @@ tts-service/data/
 tts-service/__pycache__/
 tts-service/app/__pycache__/
 *.pyc
+venv/

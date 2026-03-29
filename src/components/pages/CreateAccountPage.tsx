@@ -22,6 +22,7 @@ import {
   Security,
 } from '@mui/icons-material'
 import Link from 'next/link'
+import { fetchWithCSRFAndJSON } from '@/lib/api-client'
 
 export function CreateAccountPage() {
   const theme = useTheme()
@@ -41,15 +42,11 @@ export function CreateAccountPage() {
     setIsLoading(true)
 
     try {
-      // Call signup API
-      const response = await fetch('/api/auth/signup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password,
-          displayName: formData.fullName,
-        }),
+      // Call signup API with CSRF protection
+      const response = await fetchWithCSRFAndJSON('/api/auth/signup', {
+        email: formData.email,
+        password: formData.password,
+        displayName: formData.fullName,
       })
 
       const data = await response.json()

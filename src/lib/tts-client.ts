@@ -2,24 +2,34 @@
  * Client for communicating with the Qwen3-TTS Python backend service.
  */
 
-const TTS_SERVICE_URL = process.env.TTS_SERVICE_URL || 'http://localhost:8100'
+const TTS_SERVICE_URL = process.env.TTS_SERVICE_URL || 'http://localhost:8101'
 
 interface TTSRequestOptions {
   method?: string
   body?: any
   headers?: Record<string, string>
   isFormData?: boolean
+  authToken?: string
 }
 
 export async function ttsRequest<T = any>(
   path: string,
   options: TTSRequestOptions = {}
 ): Promise<T> {
-  const { method = 'GET', body, headers = {}, isFormData = false } = options
+  const { method = 'GET', body, headers = {}, isFormData = false, authToken } = options
+
+  const requestHeaders: Record<string, string> = isFormData 
+    ? { ...headers } 
+    : { 'Content-Type': 'application/json', ...headers }
+  
+  // Add auth token if provided
+  if (authToken) {
+    requestHeaders['Authorization'] = `Bearer ${authToken}`
+  }
 
   const fetchOptions: RequestInit = {
     method,
-    headers: isFormData ? headers : { 'Content-Type': 'application/json', ...headers },
+    headers: requestHeaders,
   }
 
   if (body) {
