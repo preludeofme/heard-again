@@ -5,8 +5,14 @@ uploads/
 *.log
 output/
 
+# Environment files
+.env
+.env.local
+.env.*.local
+
 # TTS service
 tts-service/data/
 tts-service/__pycache__/
 tts-service/app/__pycache__/
 *.pyc
+venv/
