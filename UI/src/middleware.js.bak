@@ -1,0 +1,46 @@
+import { NextRequest, NextResponse } from 'next/server'
+
+export function middleware(request) {
+  const start = Date.now()
+  const url = request.url
+  const method = request.method
+  
+  // Log incoming request
+  console.log(`[${new Date().toISOString()}] ${method} ${url}`)
+  
+  // Log headers in development
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Headers:', Object.fromEntries(request.headers.entries()))
+  }
+  
+  // Add request ID for tracking
+  const requestId = Math.random().toString(36).substring(7)
+  request.headers.set('x-request-id', requestId)
+  
+  // Continue with the request
+  const response = NextResponse.next()
+  
+  // Log response
+  response.headers.set('x-request-id', requestId)
+  
+  // Override response to log completion
+  const originalResponse = response.clone()
+  
+  // Note: In Next.js middleware, we can't use waitUntil like this
+  // For simplicity, we'll just log the request start
+  
+  return response
+}
+
+export const config = {
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public folder
+     */
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+  ],
+}

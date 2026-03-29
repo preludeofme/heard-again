@@ -6,8 +6,8 @@ uploads/
 output/
 
 # TTS service
-tts-service/data/
-tts-service/__pycache__/
-tts-service/app/__pycache__/
+TTS/data/
+TTS/__pycache__/
+TTS/app/__pycache__/
 *.pyc
 venv/

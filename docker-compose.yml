@@ -1,11 +1,61 @@
 version: '3.8'
 
 services:
+  # Chat System
+  chat:
+    build:
+      context: ./Chat
+      dockerfile: docker/Dockerfile
+    ports:
+      - "3001:3002"
+    environment:
+      - NODE_ENV=production
+      - PORT=3002
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/heard_again
+      - REDIS_URL=redis://redis:6379
+      - CHROMA_URL=http://chromadb:8000
+      - OLLAMA_URL=http://ollama:11434
+      - TTS_SERVICE_URL=http://tts:8100
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      chromadb:
+        condition: service_healthy
+    volumes:
+      - uploads:/app/uploads
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  # Ollama LLM Service (optional - requires GPU)
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+    profiles:
+      - with-llm
+
   # Main Next.js application
   app:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: UI/Dockerfile
     ports:
       - "3002:3000"
     environment:
@@ -103,7 +153,7 @@ services:
   # TTS Service (optional - requires GPU)
   tts:
     build:
-      context: ./tts-service
+      context: ./TTS
       dockerfile: Dockerfile
     ports:
       - "8101:8100"
@@ -115,7 +165,7 @@ services:
       - STAGING_URL=${STAGING_URL}
     volumes:
       - tts_models:/app/models
-      - generated:/app/generated
+      - ./TTS/generated:/app/generated
     deploy:
       resources:
         reservations:
@@ -155,8 +205,8 @@ services:
 volumes:
   postgres_data:
   uploads:
-  generated:
   tts_models:
   redis_data:
   clamav_db:
   chroma_data:
+  ollama_data:
