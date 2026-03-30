@@ -67,6 +67,7 @@ export function VoiceProfileSelector({
       const response = await fetch('/api/voice/synthesize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           profileId,
           text: 'Hello, this is a preview of my voice.',

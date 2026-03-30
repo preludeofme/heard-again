@@ -4,6 +4,7 @@ import { useRouter } from 'next/router'
 import { useEffect, useMemo, useState } from 'react'
 import { Avatar, Box, Button, Card, Chip, CircularProgress, MenuItem, Select, Stack, Typography } from '@mui/material'
 import { Layout } from '@/components/layout/Layout'
+import { AIProfileSection } from '@/components/profile/AIProfileSection'
 
 interface PersonSummary {
   id: string
@@ -167,6 +168,12 @@ export default function PersonProfilePage() {
               </Box>
             </Card>
           </Stack>
+
+          {/* AI Profile Section */}
+          <AIProfileSection 
+            personId={personId} 
+            personName={person ? fullName(person) : 'Unknown'} 
+          />
         </Box>
       </Layout>
     </>

@@ -53,7 +53,7 @@ export default function ExportPage() {
   const loadJobs = useCallback(async () => {
     setIsLoading(true)
     try {
-      const response = await fetch('/api/export/jobs')
+      const response = await fetch('/api/export/jobs', { credentials: 'include' })
       const data = await response.json()
 
       if (!response.ok || !data.success) {
@@ -78,7 +78,7 @@ export default function ExportPage() {
     setSuccess(null)
 
     try {
-      const response = await fetch('/api/export/json', { method: 'POST' })
+      const response = await fetch('/api/export/json', { method: 'POST', credentials: 'include' })
       const data = await response.json()
 
       if (!response.ok || !data.success) {
@@ -100,7 +100,7 @@ export default function ExportPage() {
     setSuccess(null)
 
     try {
-      const response = await fetch('/api/export/pdf', { method: 'POST' })
+      const response = await fetch('/api/export/pdf', { method: 'POST', credentials: 'include' })
       const data = await response.json()
 
       if (!response.ok || !data.success) {
@@ -122,7 +122,7 @@ export default function ExportPage() {
     setSuccess(null)
 
     try {
-      const response = await fetch('/api/export/gedcom', { method: 'POST' })
+      const response = await fetch('/api/export/gedcom', { method: 'POST', credentials: 'include' })
       const data = await response.json()
 
       if (!response.ok || !data.success) {
@@ -142,7 +142,7 @@ export default function ExportPage() {
     setError(null)
 
     try {
-      const response = await fetch(`/api/export/jobs/${jobId}/download`)
+      const response = await fetch(`/api/export/jobs/${jobId}/download`, { credentials: 'include' })
       const data = await response.json()
 
       if (!response.ok || !data.success) {

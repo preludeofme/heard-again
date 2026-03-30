@@ -57,7 +57,7 @@ export default function SearchPage() {
     }
     setIsSearching(true)
     try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&limit=20`)
+      const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&limit=20`, { credentials: 'include' })
       const data = await res.json()
       if (data.success) {
         setResults(data.data)
@@ -97,7 +97,7 @@ export default function SearchPage() {
 
     const loadFavoriteStories = async () => {
       try {
-        const res = await fetch('/api/favorites')
+        const res = await fetch('/api/favorites', { credentials: 'include' })
         const data = await res.json()
         if (isMounted && data.success) {
           setFavoriteStories((data.data.stories || []).slice(0, 4))

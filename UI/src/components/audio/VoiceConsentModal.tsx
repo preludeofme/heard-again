@@ -70,6 +70,7 @@ export function VoiceConsentModal({
       const response = await fetch('/api/voice/consent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           personId,
           voiceProfileId,

@@ -559,8 +559,8 @@ export default function FamilyTree() {
       const res = await fetch('/api/people', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(cleanedData),
         credentials: 'include',
+        body: JSON.stringify(cleanedData),
       })
 
       const created = await res.json()
@@ -593,8 +593,8 @@ export default function FamilyTree() {
         const relationshipRes = await fetch(`/api/people/${createdPersonId}/relationships`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(relationshipPayload),
           credentials: 'include',
+          body: JSON.stringify(relationshipPayload),
         })
         
         if (!relationshipRes.ok) {

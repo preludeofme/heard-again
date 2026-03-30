@@ -71,6 +71,7 @@ export function WorkspaceSwitcher() {
     try {
       const response = await fetch(`/api/workspaces/${workspaceId}/switch`, {
         method: 'POST',
+        credentials: 'include',
       })
 
       if (!response.ok) {

@@ -66,7 +66,7 @@ export default function StoryDetailPage() {
     if (!id) return
     setIsLoading(true)
     try {
-      const res = await fetch(`/api/stories/${id}`)
+      const res = await fetch(`/api/stories/${id}`, { credentials: 'include' })
       const data = await res.json()
       if (!res.ok || !data.success) throw new Error(data.error || 'Failed to load story')
       setStory(data.data)
@@ -85,7 +85,7 @@ export default function StoryDetailPage() {
     if (!story) return
     try {
       const method = isFavorited ? 'DELETE' : 'POST'
-      await fetch(`/api/stories/${story.id}/favorite`, { method })
+      await fetch(`/api/stories/${story.id}/favorite`, { method, credentials: 'include' })
       setIsFavorited(!isFavorited)
     } catch {
       // Silently fail
@@ -99,6 +99,7 @@ export default function StoryDetailPage() {
       const res = await fetch(`/api/stories/${story.id}/comments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ content: commentText }),
       })
       if (res.ok) {

@@ -103,6 +103,7 @@ export function MemberManagementModal({
       const response = await fetch(`/api/workspaces/${workspaceId}/invite`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           email: inviteEmail.trim(),
           role: inviteRole,
@@ -137,6 +138,7 @@ export function MemberManagementModal({
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify({ role: newRole }),
         }
       )
@@ -166,6 +168,7 @@ export function MemberManagementModal({
         `/api/workspaces/${workspaceId}/members/${selectedMember.userId}`,
         {
           method: 'DELETE',
+          credentials: 'include',
         }
       )
 

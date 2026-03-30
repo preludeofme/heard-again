@@ -49,8 +49,8 @@ export default function PricingPage() {
   const fetchData = useCallback(async () => {
     try {
       const [plansRes, subRes] = await Promise.all([
-        fetch('/api/billing/plans'),
-        fetch('/api/billing/subscription'),
+        fetch('/api/billing/plans', { credentials: 'include' }),
+        fetch('/api/billing/subscription', { credentials: 'include' }),
       ])
 
       const plansData = await plansRes.json()
@@ -79,6 +79,7 @@ export default function PricingPage() {
       const res = await fetch('/api/billing/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ planId, billingCycle }),
       })
 

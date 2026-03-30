@@ -180,6 +180,7 @@ export function TimelinePageComponent({ events, isLoading, hasMore, onLoadMore, 
       const response = await fetch('/api/timeline', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           personId: newEvent.personId,
           eventType: newEvent.eventType,

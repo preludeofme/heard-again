@@ -68,7 +68,7 @@ export default function ImportPage() {
   const loadJobs = useCallback(async () => {
     setIsLoadingJobs(true)
     try {
-      const response = await fetch('/api/import/jobs')
+      const response = await fetch('/api/import/jobs', { credentials: 'include' })
       const data = await response.json()
 
       if (!response.ok || !data.success) {
