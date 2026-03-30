@@ -1,4 +1,5 @@
 // CSRF-aware API client for secure requests
+import { fetchWithSessionHandling, handleApiError } from './session-handler'
 let csrfToken: string | null = null
 let tokenPromise: Promise<string> | null = null
 
@@ -11,18 +12,22 @@ async function fetchCSRFToken(): Promise<string> {
     throw new Error('Failed to fetch CSRF token')
   }
   const data = await response.json()
-  return data.csrfToken
+  console.log('CSRF token response:', data)
+  // Handle both wrapped {success, data} and direct {csrfToken} formats
+  const csrfToken = data.data?.csrfToken || data.csrfToken
+  console.log('CSRF token value:', csrfToken)
+  return csrfToken
 }
 
 /**
  * Get CSRF token (cached or fetch new)
  */
 export async function getCSRFToken(): Promise<string> {
-  // Return cached token if available
-  if (csrfToken) {
-    return csrfToken
-  }
-
+  // Always fetch a fresh token for now to avoid caching issues
+  // TODO: Implement proper caching with expiration
+  tokenPromise = null
+  csrfToken = null
+  
   // If fetch is in progress, wait for it
   if (tokenPromise) {
     return await tokenPromise
@@ -57,6 +62,17 @@ export async function fetchWithCSRF(
   if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
     try {
       const token = await getCSRFToken()
+      console.log('=== Client CSRF Debug ===')
+      console.log('Fetched token:', token)
+      console.log('Token type:', typeof token)
+      console.log('Token length:', token?.length)
+      console.log('======================')
+      
+      // If token is undefined or invalid, throw an error
+      if (!token || token === 'undefined' || token.length !== 64) {
+        console.error('Invalid CSRF token:', token)
+        throw new Error(`Invalid CSRF token: ${token}`)
+      }
       
       // Add CSRF token to headers
       options.headers = {
@@ -72,7 +88,7 @@ export async function fetchWithCSRF(
     }
   }
 
-  return fetch(url, options)
+  return fetchWithSessionHandling(url, options)
 }
 
 /**

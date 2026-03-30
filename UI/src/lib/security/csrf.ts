@@ -28,14 +28,27 @@ export async function validateCSRFToken(
   req: NextApiRequest,
   res: NextApiResponse
 ): Promise<boolean> {
+  console.log('CSRF validation called for method:', req.method)
+  
   // Skip CSRF for GET, HEAD, OPTIONS requests
   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method || '')) {
+    console.log('Skipping CSRF for method:', req.method)
     return true
   }
 
   // Get token from header or body
   const token = req.headers['x-csrf-token'] as string || 
                req.body?.csrfToken
+
+  console.log('=== CSRF Debug ===')
+  console.log('Method:', req.method)
+  console.log('Headers:', req.headers)
+  console.log('Token from header:', req.headers['x-csrf-token'])
+  console.log('Token from body:', req.body?.csrfToken)
+  console.log('Final token:', token)
+  console.log('Token type:', typeof token)
+  console.log('Token length:', token?.length)
+  console.log('================')
 
   if (!token) {
     errorResponse(res, 'CSRF token required', 403, 'CSRF_REQUIRED')
@@ -44,6 +57,9 @@ export async function validateCSRFToken(
 
   // Basic format validation
   if (token.length !== 64 || !/^[a-f0-9]{64}$/i.test(token)) {
+    console.error('Invalid CSRF token format. Expected 64 hex chars, got:', token)
+    console.error('Length:', token?.length)
+    console.error('Pattern match:', /^[a-f0-9]{64}$/i.test(token || ''))
     errorResponse(res, 'Invalid CSRF token format', 403, 'CSRF_INVALID')
     return false
   }

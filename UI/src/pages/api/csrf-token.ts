@@ -26,6 +26,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Set cookie for client-side access (HttpOnly for security)
     setCSRFCookie(res, token)
 
+    console.log('CSRF token generated:', token)
+    console.log('CSRF token length:', token.length)
+    console.log('CSRF response:', { csrfToken: token })
+
     return successResponse(res, { csrfToken: token })
   } catch (error) {
     console.error('CSRF token generation error:', error)

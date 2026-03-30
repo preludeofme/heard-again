@@ -32,6 +32,7 @@ import {
   SmartToy as RobotIcon,
 } from '@mui/icons-material'
 import { fetchWithCSRF } from '@/lib/api-client'
+import { useApiWithSession } from '@/hooks/useApiWithSession'
 
 interface AIProfileData {
   id?: string
