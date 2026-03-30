@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react'
+import { useRouter } from 'next/router'
 import {
   Box,
   Typography,
@@ -272,6 +273,7 @@ export function FamilyTreePage({
   initialSearchExpanded = false,
   initialSearchQuery = '',
 }: FamilyTreePageProps) {
+  const router = useRouter()
   const theme = useTheme()
   const familyData = people && (people.grandparents.length > 0 || people.parents.length > 0 || people.children.length > 0)
     ? people
@@ -501,6 +503,10 @@ export function FamilyTreePage({
   const handleStoryClick = (storyId: string) => {
     console.log('Navigate to story:', storyId)
     // TODO: Navigate to story detail page
+  }
+
+  const handleViewFullProfile = (personId: string) => {
+    router.push(`/profile/${personId}`)
   }
 
   const handleCanvasMouseDown = useCallback((e: React.MouseEvent) => {
@@ -1236,6 +1242,7 @@ export function FamilyTreePage({
         onAddVoiceProfile={handleAddVoiceProfile}
         onAddRelationship={handleAddRelationship}
         onStoryClick={handleStoryClick}
+        onViewFullProfile={handleViewFullProfile}
       />
 
       {/* Add/Edit Person Modal - Only for editing existing people */}

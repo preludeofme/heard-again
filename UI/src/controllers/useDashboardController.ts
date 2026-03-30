@@ -50,7 +50,7 @@ export function useDashboardController(): DashboardControllerState & DashboardCo
     setState(prev => ({ ...prev, isLoading: true, hasError: false, errorMessage: null }))
 
     try {
-      const response = await fetch('/api/dashboard/stats')
+      const response = await fetch('/api/dashboard/stats', { credentials: 'include' })
       const data = await response.json()
 
       if (!response.ok || !data.success) {

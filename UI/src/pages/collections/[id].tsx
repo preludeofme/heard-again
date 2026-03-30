@@ -65,7 +65,7 @@ export default function CollectionDetailPage() {
     if (!id) return
     setIsLoading(true)
     try {
-      const res = await fetch(`/api/collections/${id}`)
+      const res = await fetch(`/api/collections/${id}`, { credentials: 'include' })
       const data = await res.json()
       if (!res.ok || !data.success) throw new Error(data.error || 'Failed to load collection')
       setCollection(data.data)
@@ -85,6 +85,7 @@ export default function CollectionDetailPage() {
       await fetch(`/api/collections/${id}/stories`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ storyId }),
       })
       setCollection(prev => prev ? {
@@ -98,7 +99,7 @@ export default function CollectionDetailPage() {
   
   const fetchAvailableStories = useCallback(async () => {
     try {
-      const res = await fetch('/api/stories?status=PUBLISHED&limit=100')
+      const res = await fetch('/api/stories?status=PUBLISHED&limit=100', { credentials: 'include' })
       const data = await res.json()
       if (data.success) {
         // Filter out stories already in collection
@@ -140,6 +141,7 @@ export default function CollectionDetailPage() {
         fetch(`/api/collections/${id}/stories`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify({ storyId }),
         })
       )

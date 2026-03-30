@@ -55,7 +55,7 @@ export default function SelfHostingPage() {
 
   const fetchStatus = useCallback(async () => {
     try {
-      const res = await fetch('/api/instance/status')
+      const res = await fetch('/api/instance/status', { credentials: 'include' })
       const data = await res.json()
       
       if (data.success) {
@@ -88,6 +88,7 @@ export default function SelfHostingPage() {
       const res = await fetch('/api/instance/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           type: instanceType,
           version,
@@ -125,6 +126,7 @@ export default function SelfHostingPage() {
       const res = await fetch('/api/instance/tunnel', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ action: 'enable' }),
       })
 
@@ -145,6 +147,7 @@ export default function SelfHostingPage() {
       const res = await fetch('/api/instance/tunnel', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ action: 'disable' }),
       })
 

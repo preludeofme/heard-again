@@ -31,7 +31,7 @@ export function useVoiceProfiles(subjectId?: string): VoiceProfilesState & Voice
 
     try {
       const url = subjectId ? `/api/voice/profiles?personId=${encodeURIComponent(subjectId)}` : '/api/voice/profiles'
-      const response = await fetch(url)
+      const response = await fetch(url, { credentials: 'include' })
       if (!response.ok) throw new Error('Failed to fetch profiles')
 
       const data = await response.json()
@@ -62,6 +62,7 @@ export function useVoiceProfiles(subjectId?: string): VoiceProfilesState & Voice
     try {
       const response = await fetch(`/api/voice/profiles/${profileId}`, {
         method: 'DELETE',
+        credentials: 'include',
       })
 
       if (!response.ok) {

@@ -52,7 +52,7 @@ export default function TimelinePage() {
         params.set('personId', selectedFamilyMember.id)
       }
 
-      const response = await fetch(`/api/timeline?${params.toString()}`)
+      const response = await fetch(`/api/timeline?${params.toString()}`, { credentials: 'include' })
       const data = await response.json()
 
       if (!data.success) {
@@ -74,7 +74,7 @@ export default function TimelinePage() {
 
   const fetchPeople = useCallback(async () => {
     try {
-      const res = await fetch('/api/people')
+      const res = await fetch('/api/people', { credentials: 'include' })
       const data = await res.json()
       if (data.success) {
         setPeople(data.data || [])

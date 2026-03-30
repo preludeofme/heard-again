@@ -57,6 +57,7 @@ export function useChatConversation({
           'x-workspace-id': 'default', // TODO: Get from auth context
           'x-user-id': 'default', // TODO: Get from auth context
         },
+        credentials: 'include',
         body: JSON.stringify({
           personId: subjectId,
           title: `Chat with ${subjectId}`,
@@ -87,6 +88,7 @@ export function useChatConversation({
           'x-workspace-id': 'default',
           'x-user-id': 'default',
         },
+        credentials: 'include',
       })
 
       if (!response.ok) {
@@ -140,6 +142,7 @@ export function useChatConversation({
           'x-workspace-id': 'default',
           'x-user-id': 'default',
         },
+        credentials: 'include',
         body: JSON.stringify({
           sessionId: state.sessionId,
           message: userInput,

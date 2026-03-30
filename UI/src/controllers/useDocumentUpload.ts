@@ -41,6 +41,7 @@ export function useDocumentUpload(): DocumentUploadState & DocumentUploadActions
 
       const response = await fetch('/api/assets/upload', {
         method: 'POST',
+        credentials: 'include',
         body: formData,
       })
 
@@ -84,7 +85,7 @@ export function useDocumentUpload(): DocumentUploadState & DocumentUploadActions
 
   const refreshDocuments = useCallback(async () => {
     try {
-      const response = await fetch('/api/assets')
+      const response = await fetch('/api/assets', { credentials: 'include' })
       if (!response.ok) throw new Error('Failed to fetch documents')
 
       const data = await response.json()

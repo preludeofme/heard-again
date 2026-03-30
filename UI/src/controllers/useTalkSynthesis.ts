@@ -35,7 +35,7 @@ export function useTalkSynthesis({
     const maxAttempts = 8
 
     for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-      const response = await fetch(`/api/voice/jobs/${jobId}`)
+      const response = await fetch(`/api/voice/jobs/${jobId}`, { credentials: 'include' })
       const payload = await response.json()
 
       if (!response.ok || !payload.success) {
@@ -89,6 +89,7 @@ export function useTalkSynthesis({
       const response = await fetch('/api/voice/synthesize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           modelId: targetModelId,
           text,

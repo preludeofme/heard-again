@@ -34,6 +34,7 @@ import {
   Schedule as ScheduleIcon,
   Person as PersonIcon,
   MoreVert as MoreIcon,
+  OpenInNew as OpenInNewIcon,
 } from '@mui/icons-material'
 import { formatDistanceToNow } from 'date-fns'
 
@@ -103,6 +104,7 @@ interface PersonDetailModalProps {
   onAddVoiceProfile?: (personId: string) => void
   onAddRelationship?: (personId: string) => void
   onStoryClick?: (storyId: string) => void
+  onViewFullProfile?: (personId: string) => void
 }
 
 // Mock data for initial UI development
@@ -212,6 +214,7 @@ export function PersonDetailModal({
   onAddVoiceProfile,
   onAddRelationship,
   onStoryClick,
+  onViewFullProfile,
 }: PersonDetailModalProps) {
   const [activeTab, setActiveTab] = useState(0)
 
@@ -783,6 +786,19 @@ export function PersonDetailModal({
             }}
           >
             Delete
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<OpenInNewIcon />}
+            onClick={() => person && person.id && onViewFullProfile?.(person.id)}
+            sx={{
+              backgroundColor: '#1a6b5a',
+              textTransform: 'none',
+              borderRadius: 2,
+              '&:hover': { backgroundColor: '#145a4b' },
+            }}
+          >
+            View Full Profile
           </Button>
         </Box>
 

@@ -106,6 +106,7 @@ export default function WorkspaceSettingsPage() {
       const response = await fetch(`/api/workspaces/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ name: editName.trim() }),
       })
 
@@ -132,6 +133,7 @@ export default function WorkspaceSettingsPage() {
     try {
       const response = await fetch(`/api/workspaces/${id}`, {
         method: 'DELETE',
+        credentials: 'include',
       })
 
       const result = await response.json()

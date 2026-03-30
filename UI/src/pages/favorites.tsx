@@ -42,7 +42,7 @@ export default function FavoritesPage() {
   const fetchFavorites = useCallback(async () => {
     setIsLoading(true)
     try {
-      const res = await fetch('/api/favorites')
+      const res = await fetch('/api/favorites', { credentials: 'include' })
       const data = await res.json()
       if (data.success) {
         setStories(data.data.stories)
@@ -61,7 +61,7 @@ export default function FavoritesPage() {
   const handleUnfavorite = async (storyId: string) => {
     setUnfavoritingId(storyId)
     try {
-      await fetch(`/api/stories/${storyId}/favorite`, { method: 'DELETE' })
+      await fetch(`/api/stories/${storyId}/favorite`, { method: 'DELETE', credentials: 'include' })
       setStories(prev => prev.filter(s => s.id !== storyId))
     } catch {
       // Silently fail

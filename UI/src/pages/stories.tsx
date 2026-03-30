@@ -30,7 +30,7 @@ export default function Stories() {
     let active = true
     const loadPeople = async () => {
       try {
-        const res = await fetch('/api/people')
+        const res = await fetch('/api/people', { credentials: 'include' })
         const data = await res.json()
         if (!active) return
         if (data.success) setPeople(data.data || [])

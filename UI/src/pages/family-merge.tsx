@@ -148,7 +148,7 @@ export default function FamilyMergePage() {
   const loadProposals = useCallback(async () => {
     setIsLoading(true)
     try {
-      const response = await fetch('/api/family-merge/proposals')
+      const response = await fetch('/api/family-merge/proposals', { credentials: 'include' })
       const data = await response.json()
       
       if (!response.ok || !data.success) {
@@ -168,7 +168,7 @@ export default function FamilyMergePage() {
     const loadWorkspaces = async () => {
       setIsLoadingWorkspaces(true)
       try {
-        const response = await fetch('/api/workspaces')
+        const response = await fetch('/api/workspaces', { credentials: 'include' })
         const data = await response.json()
         
         if (response.ok && data.success) {
@@ -195,6 +195,7 @@ export default function FamilyMergePage() {
       const response = await fetch('/api/family-merge/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ sourceWorkspaceId: selectedSourceWorkspace, minScore: 0.6 })
       })
       
@@ -222,6 +223,7 @@ export default function FamilyMergePage() {
       const response = await fetch('/api/family-merge/proposals', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ sourceWorkspaceId: selectedSourceWorkspace, minScore: 0.6 })
       })
       
@@ -250,7 +252,7 @@ export default function FamilyMergePage() {
     setError(null)
     
     try {
-      const response = await fetch(`/api/family-merge/proposals/${proposal.id}`)
+      const response = await fetch(`/api/family-merge/proposals/${proposal.id}`, { credentials: 'include' })
       const data = await response.json()
       
       if (!response.ok || !data.success) {
@@ -273,6 +275,7 @@ export default function FamilyMergePage() {
       const response = await fetch(`/api/family-merge/proposals/${selectedProposal.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ status: 'APPROVED' })
       })
       
@@ -298,6 +301,7 @@ export default function FamilyMergePage() {
       const response = await fetch(`/api/family-merge/proposals/${selectedProposal.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ status: 'REJECTED' })
       })
       
@@ -325,6 +329,7 @@ export default function FamilyMergePage() {
       const response = await fetch('/api/family-merge/execute', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ proposalId: selectedProposal.id })
       })
       
@@ -351,7 +356,8 @@ export default function FamilyMergePage() {
     setError(null)
     try {
       const response = await fetch(`/api/family-merge/proposals/${proposalId}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        credentials: 'include',
       })
       
       const data = await response.json()

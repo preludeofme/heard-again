@@ -131,7 +131,7 @@ export default function SubscriptionPage() {
   const handleCancel = async () => {
     setIsCancelling(true)
     try {
-      const res = await fetch('/api/billing/cancel', { method: 'POST' })
+      const res = await fetch('/api/billing/cancel', { method: 'POST', credentials: 'include' })
       if (res.ok) {
         setShowCancelDialog(false)
         fetchData()

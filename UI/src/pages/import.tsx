@@ -105,6 +105,7 @@ export default function ImportPage() {
 
       const response = await fetch(endpoint, {
         method: 'POST',
+        credentials: 'include',
         body: formData,
       })
 

@@ -62,6 +62,7 @@ export function useVoiceSynthesis(): VoiceSynthesisState & VoiceSynthesisActions
       const response = await fetch('/api/voice/synthesize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           modelId,
           text,

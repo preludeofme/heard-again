@@ -76,7 +76,7 @@ export default function TunnelSetup() {
 
   const loadTunnelStatus = async () => {
     try {
-      const response = await fetch('/api/instance/status')
+      const response = await fetch('/api/instance/status', { credentials: 'include' })
       const data = await response.json()
 
       if (data.success && data.data.tunnel) {
@@ -95,6 +95,7 @@ export default function TunnelSetup() {
       const response = await fetch('/api/instance/tunnel-v2', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ action: 'create-named' }),
       })
 
@@ -119,6 +120,7 @@ export default function TunnelSetup() {
       const response = await fetch('/api/instance/tunnel-v2', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ action: 'enable' }),
       })
 
@@ -142,6 +144,7 @@ export default function TunnelSetup() {
       const response = await fetch('/api/instance/tunnel-v2', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ action: 'get-credentials' }),
       })
 
@@ -202,6 +205,7 @@ export default function TunnelSetup() {
       const response = await fetch('/api/instance/tunnel', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ action: 'enable' }),
       })
 

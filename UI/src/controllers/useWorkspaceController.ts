@@ -71,7 +71,7 @@ export function useWorkspaceController(): WorkspaceControllerState & WorkspaceCo
     setState(prev => ({ ...prev, isLoading: true, hasError: false, errorMessage: null }))
 
     try {
-      const response = await fetch('/api/workspaces')
+      const response = await fetch('/api/workspaces', { credentials: 'include' })
       const data = await response.json()
 
       if (!response.ok || !data.success) {
@@ -98,7 +98,7 @@ export function useWorkspaceController(): WorkspaceControllerState & WorkspaceCo
     setState(prev => ({ ...prev, isLoading: true, hasError: false, errorMessage: null }))
 
     try {
-      const response = await fetch(`/api/workspaces/${id}`)
+      const response = await fetch(`/api/workspaces/${id}`, { credentials: 'include' })
       const data = await response.json()
 
       if (!response.ok || !data.success) {
@@ -128,6 +128,7 @@ export function useWorkspaceController(): WorkspaceControllerState & WorkspaceCo
       const response = await fetch('/api/workspaces', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ name }),
       })
       const data = await response.json()
@@ -164,6 +165,7 @@ export function useWorkspaceController(): WorkspaceControllerState & WorkspaceCo
       const response = await fetch(`/api/workspaces/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(data),
       })
       const result = await response.json()
@@ -202,6 +204,7 @@ export function useWorkspaceController(): WorkspaceControllerState & WorkspaceCo
     try {
       const response = await fetch(`/api/workspaces/${id}`, {
         method: 'DELETE',
+        credentials: 'include',
       })
       const result = await response.json()
 
@@ -233,6 +236,7 @@ export function useWorkspaceController(): WorkspaceControllerState & WorkspaceCo
     try {
       const response = await fetch(`/api/workspaces/${id}/switch`, {
         method: 'POST',
+        credentials: 'include',
       })
       const result = await response.json()
 

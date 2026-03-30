@@ -170,7 +170,7 @@ export default function AccountPage() {
     setIsLoading(true)
     try {
       // Get current user
-      const userRes = await fetch('/api/auth/session')
+      const userRes = await fetch('/api/auth/session', { credentials: 'include' })
       const userData = await userRes.json()
       if (userData?.user) {
         setUser(userData.user)
@@ -178,7 +178,7 @@ export default function AccountPage() {
 
       // Get subscription
       try {
-        const subRes = await fetch('/api/billing/subscription')
+        const subRes = await fetch('/api/billing/subscription', { credentials: 'include' })
         const subData = await subRes.json()
         if (subData.success) {
           setSubscription(subData.data)
@@ -188,14 +188,14 @@ export default function AccountPage() {
       }
 
       // Get plans
-      const plansRes = await fetch('/api/billing/plans')
+      const plansRes = await fetch('/api/billing/plans', { credentials: 'include' })
       const plansData = await plansRes.json()
       if (plansData.success) {
         setPlans(plansData.data.plans)
       }
 
       // Get instance/tunnel status
-      const instanceRes = await fetch('/api/instance/status')
+      const instanceRes = await fetch('/api/instance/status', { credentials: 'include' })
       const instanceData = await instanceRes.json()
       if (instanceData.success) {
         setInstance(instanceData.data.instance || null)
@@ -211,7 +211,7 @@ export default function AccountPage() {
 
   const handleCancelSubscription = async () => {
     try {
-      const res = await fetch('/api/billing/cancel', { method: 'POST' })
+      const res = await fetch('/api/billing/cancel', { method: 'POST', credentials: 'include' })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to cancel')
       setSuccess('Subscription cancelled successfully')
@@ -228,6 +228,7 @@ export default function AccountPage() {
       const res = await fetch('/api/billing/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ planId: selectedPlanId, billingCycle: 'monthly' }),
       })
       const data = await res.json()
@@ -245,6 +246,7 @@ export default function AccountPage() {
       const res = await fetch('/api/instance/tunnel', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ action }),
       })
       const data = await res.json()
@@ -266,6 +268,7 @@ export default function AccountPage() {
       await fetch('/api/test-overrides', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ [key]: value }),
       })
       setSuccess(`${key} ${value ? 'enabled' : 'disabled'} for testing`)

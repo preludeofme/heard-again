@@ -33,7 +33,7 @@ export default function CollectionsPage() {
 
   const fetchCollections = useCallback(async () => {
     try {
-      const res = await fetch('/api/collections')
+      const res = await fetch('/api/collections', { credentials: 'include' })
       const data = await res.json()
       if (data.success) {
         setCollections(data.data || [])
@@ -56,6 +56,7 @@ export default function CollectionsPage() {
       const res = await fetch('/api/collections', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ name: newName, description: newDescription }),
       })
       if (res.ok) {
@@ -73,7 +74,7 @@ export default function CollectionsPage() {
 
   const handleDelete = async (id: string) => {
     try {
-      await fetch(`/api/collections/${id}`, { method: 'DELETE' })
+      await fetch(`/api/collections/${id}`, { method: 'DELETE', credentials: 'include' })
       setCollections(prev => prev.filter(c => c.id !== id))
     } catch {
       // Silently fail

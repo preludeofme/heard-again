@@ -67,7 +67,7 @@ export function useMembershipController(): MembershipControllerState & Membershi
     setState(prev => ({ ...prev, isLoadingMembers: true, hasError: false, errorMessage: null }))
 
     try {
-      const response = await fetch(`/api/workspaces/${workspaceId}/members`)
+      const response = await fetch(`/api/workspaces/${workspaceId}/members`, { credentials: 'include' })
       const data = await response.json()
 
       if (!response.ok || !data.success) {
@@ -94,7 +94,7 @@ export function useMembershipController(): MembershipControllerState & Membershi
     setState(prev => ({ ...prev, isLoadingInvites: true, hasError: false, errorMessage: null }))
 
     try {
-      const response = await fetch(`/api/workspaces/${workspaceId}/invite`)
+      const response = await fetch(`/api/workspaces/${workspaceId}/invite`, { credentials: 'include' })
       const data = await response.json()
 
       if (!response.ok || !data.success) {
@@ -124,6 +124,7 @@ export function useMembershipController(): MembershipControllerState & Membershi
       const response = await fetch(`/api/workspaces/${workspaceId}/invite`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ email, role }),
       })
       const data = await response.json()
@@ -158,6 +159,7 @@ export function useMembershipController(): MembershipControllerState & Membershi
       const response = await fetch(`/api/workspaces/${workspaceId}/members/${userId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ role }),
       })
       const data = await response.json()
@@ -193,6 +195,7 @@ export function useMembershipController(): MembershipControllerState & Membershi
     try {
       const response = await fetch(`/api/workspaces/${workspaceId}/members/${userId}`, {
         method: 'DELETE',
+        credentials: 'include',
       })
       const data = await response.json()
 
@@ -224,6 +227,7 @@ export function useMembershipController(): MembershipControllerState & Membershi
       const response = await fetch(`/api/workspaces/${workspaceId}/invite`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ inviteId }),
       })
       const data = await response.json()
@@ -253,6 +257,7 @@ export function useMembershipController(): MembershipControllerState & Membershi
     try {
       const response = await fetch(`/api/invites/${token}/accept`, {
         method: 'POST',
+        credentials: 'include',
       })
       const data = await response.json()
 
@@ -276,6 +281,7 @@ export function useMembershipController(): MembershipControllerState & Membershi
     try {
       const response = await fetch(`/api/invites/${token}/decline`, {
         method: 'POST',
+        credentials: 'include',
       })
       const data = await response.json()
 

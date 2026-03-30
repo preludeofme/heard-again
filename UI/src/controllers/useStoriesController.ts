@@ -63,7 +63,7 @@ const fetchStories = useCallback(async () => {
 
     try {
       const query = subjectId ? `?subjectId=${encodeURIComponent(subjectId)}` : ''
-      const response = await fetch(`/api/stories${query}`)
+      const response = await fetch(`/api/stories${query}`, { credentials: 'include' })
 
       const data = await handleApiResponse<{ stories: StoryApiResponse[] }>(response)
       const stories = (data?.stories || []).map(mapStoryToContribution)
@@ -106,6 +106,7 @@ const fetchStories = useCallback(async () => {
       const response = await fetch('/api/stories', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(input),
       })
 
@@ -147,6 +148,7 @@ const fetchStories = useCallback(async () => {
 
       const uploadRes = await fetch('/api/assets/upload', {
         method: 'POST',
+        credentials: 'include',
         body: formData,
       })
 
@@ -162,6 +164,7 @@ const fetchStories = useCallback(async () => {
       const response = await fetch('/api/stories', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           title: storyTitle,
           content: `Audio recording (${Math.round(duration)} seconds)`,

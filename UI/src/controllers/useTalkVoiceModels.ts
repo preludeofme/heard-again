@@ -30,7 +30,7 @@ export function useTalkVoiceModels(
   const loadVoiceModels = useCallback(async () => {
     try {
       const url = subjectId ? `/api/voice/profiles?personId=${encodeURIComponent(subjectId)}` : '/api/voice/profiles'
-      const response = await fetch(url)
+      const response = await fetch(url, { credentials: 'include' })
       const data = await response.json()
 
       if (!data.success) {

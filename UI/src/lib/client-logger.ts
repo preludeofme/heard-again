@@ -36,6 +36,7 @@ export class ClientLogger {
       await fetch(this.logEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(errorData),
       })
     } catch (e) {
@@ -74,6 +75,7 @@ export class ClientLogger {
       await fetch(this.logEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(errorData),
       })
     } catch (e) {

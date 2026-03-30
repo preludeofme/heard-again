@@ -36,6 +36,7 @@ export function useApi<T = unknown>({
     try {
       const options: RequestInit = {
         method,
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },

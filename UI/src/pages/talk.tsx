@@ -29,7 +29,7 @@ export default function Talk() {
     let active = true
     const loadPeople = async () => {
       try {
-        const res = await fetch('/api/people')
+        const res = await fetch('/api/people', { credentials: 'include' })
         const data = await res.json()
         if (!active) return
         if (data.success) setPeople(data.data || [])
@@ -76,7 +76,7 @@ export default function Talk() {
         
         // If no person selected, get the first person
         if (!personId) {
-          const peopleRes = await fetch('/api/people?limit=1')
+          const peopleRes = await fetch('/api/people?limit=1', { credentials: 'include' })
           const peopleData = await peopleRes.json()
           if (peopleData.success && peopleData.data?.length > 0) {
             personId = peopleData.data[0].id
@@ -85,7 +85,7 @@ export default function Talk() {
 
         if (personId) {
           // Get the specific person
-          const res = await fetch(`/api/people/${personId}`)
+          const res = await fetch(`/api/people/${personId}`, { credentials: 'include' })
           const data = await res.json()
           if (data.success && data.data) {
             const p = data.data

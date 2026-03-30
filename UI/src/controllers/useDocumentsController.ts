@@ -58,7 +58,7 @@ export function useDocumentsController(personId?: string): DocumentsControllerSt
 
     try {
       const url = personId ? `/api/assets?personId=${encodeURIComponent(personId)}` : '/api/assets'
-      const response = await fetch(url)
+      const response = await fetch(url, { credentials: 'include' })
       const data = await response.json()
 
       if (!response.ok || !data.success) {
@@ -131,6 +131,7 @@ export function useDocumentsController(personId?: string): DocumentsControllerSt
 
       const response = await fetch('/api/assets/upload', {
         method: 'POST',
+        credentials: 'include',
         body: formData,
       })
 
@@ -176,7 +177,7 @@ export function useDocumentsController(personId?: string): DocumentsControllerSt
     setState(prev => ({ ...prev, isLoading: true, hasError: false, errorMessage: null }))
     
     try {
-      const response = await fetch(`/api/assets/${id}`, { method: 'DELETE' })
+      const response = await fetch(`/api/assets/${id}`, { method: 'DELETE', credentials: 'include' })
       const data = await response.json()
 
       if (!response.ok || !data.success) {

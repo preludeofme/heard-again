@@ -8,6 +8,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react'
 import { Box, CircularProgress } from '@mui/material'
 import { useRouter } from 'next/router'
 import { useSelectedFamilyMember } from '@/contexts/SelectedFamilyMemberContext'
+import { fetchWithCSRFAndJSON } from '@/lib/api-client'
 
 interface ApiPerson {
   id: string
@@ -590,12 +591,7 @@ export default function FamilyTree() {
           if (marriagePlace) relationshipPayload.marriagePlace = marriagePlace
         }
         
-        const relationshipRes = await fetch(`/api/people/${createdPersonId}/relationships`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify(relationshipPayload),
-        })
+        const relationshipRes = await fetchWithCSRFAndJSON(`/api/people/${createdPersonId}/relationships`, relationshipPayload)
         
         if (!relationshipRes.ok) {
           const relationshipError = await relationshipRes.json()

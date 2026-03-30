@@ -56,7 +56,7 @@ export default function PrivacyPage() {
       setError(null)
 
       try {
-        const response = await fetch('/api/privacy/retention')
+        const response = await fetch('/api/privacy/retention', { credentials: 'include' })
         const data = await response.json()
 
         if (!response.ok || !data.success) {
@@ -93,6 +93,7 @@ export default function PrivacyPage() {
       const response = await fetch('/api/privacy/retention', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           audioRetentionDays: policy.audioRetentionDays,
           transcriptRetentionDays: policy.transcriptRetentionDays,
@@ -124,7 +125,7 @@ export default function PrivacyPage() {
     setSuccess(null)
 
     try {
-      const response = await fetch('/api/export/json', { method: 'POST' })
+      const response = await fetch('/api/export/json', { method: 'POST', credentials: 'include' })
       const data = await response.json()
 
       if (!response.ok || !data.success) {
@@ -150,6 +151,7 @@ export default function PrivacyPage() {
       const response = await fetch('/api/privacy/permanent-deletion', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ confirmationText }),
       })
 

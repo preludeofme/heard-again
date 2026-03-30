@@ -65,6 +65,7 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
 
       const response = await fetch('/api/voice/upload-sample', {
         method: 'POST',
+        credentials: 'include',
         body: formData,
       })
 
@@ -132,6 +133,7 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
       const response = await fetch('/api/voice/train', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(requestBody),
       })
 
@@ -172,7 +174,7 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
 
   const checkTrainingStatus = useCallback(async (jobId: string) => {
     try {
-      const response = await fetch(`/api/voice/train/${jobId}/status`)
+      const response = await fetch(`/api/voice/train/${jobId}/status`, { credentials: 'include' })
       if (response.ok) {
         const statusData = await response.json()
         setState(prev => ({
@@ -189,6 +191,7 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
     try {
       const response = await fetch(`/api/voice/queue?jobId=${jobId}`, {
         method: 'DELETE',
+        credentials: 'include',
       })
 
       if (!response.ok) throw new Error('Cancel failed')
@@ -223,6 +226,7 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
       const response = await fetch('/api/voice/preprocess', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           jobId: state.trainingJob.id,
           sampleId: 'sample-1',
@@ -255,6 +259,7 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
       const response = await fetch('/api/voice/asr', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           jobId: state.trainingJob.id,
           segments: [
@@ -290,6 +295,7 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
       const response = await fetch('/api/voice/design-and-clone', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ profileName, instruct, refText, language }),
       })
 
