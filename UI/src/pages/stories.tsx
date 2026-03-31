@@ -129,12 +129,14 @@ export default function Stories() {
           <StoriesPage
             stories={visibleStories}
             selectedFamilyMember={selectedFamilyMember}
-            onSubmitStory={async (title, content) => {
+            onSubmitStory={async (title, content, storyDate, location) => {
               await controller.submitStory({
                 title,
                 content,
                 storyType: 'MEMORY',
                 subjectId: selectedSubjectId,
+                storyDate,
+                location,
               })
             }}
             onSubmitAudio={async (audioBlob, duration) => {

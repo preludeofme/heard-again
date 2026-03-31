@@ -2,97 +2,67 @@ import crypto from 'crypto'
 import { NextApiRequest, NextApiResponse } from 'next'
 import { getToken } from 'next-auth/jwt'
 import { errorResponse } from '../api-helpers'
-import { redis } from '../redis-client'
+
+const CSRF_SECRET = process.env.NEXTAUTH_SECRET || 'csrf-fallback-secret'
 
 /**
- * Generate a CSRF token for the session
+ * Derive a deterministic CSRF token from session identifiers using HMAC.
+ * Stateless — no Redis required.
  */
 export function generateCSRFToken(): string {
   return crypto.randomBytes(32).toString('hex')
 }
 
-/**
- * Store CSRF token in Redis for server-side validation
- * Binds token to both user ID and session ID for enhanced security
- */
-export async function storeCSRFToken(sessionId: string, token: string, userId?: string): Promise<void> {
-  // Use user+session binding if user ID is available, otherwise fall back to session only
-  const key = userId ? `csrf:${userId}:${sessionId}` : `csrf:${sessionId}`
-  await redis.setex(key, 28800, token) // 8 hours TTL to match session
+function deriveToken(sessionId: string, userId?: string): string {
+  const payload = userId ? `${userId}:${sessionId}` : sessionId
+  return crypto.createHmac('sha256', CSRF_SECRET).update(payload).digest('hex')
 }
 
 /**
- * Validate CSRF token for state-changing requests
+ * No-op — kept for API compatibility. Tokens are now stateless (HMAC-derived).
+ */
+export async function storeCSRFToken(_sessionId: string, _token: string, _userId?: string): Promise<void> {
+  // Stateless — nothing to store
+}
+
+/**
+ * Validate CSRF token for state-changing requests.
  */
 export async function validateCSRFToken(
   req: NextApiRequest,
   res: NextApiResponse
 ): Promise<boolean> {
-  console.log('CSRF validation called for method:', req.method)
-  
-  // Skip CSRF for GET, HEAD, OPTIONS requests
+  // Skip CSRF for safe methods
   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method || '')) {
-    console.log('Skipping CSRF for method:', req.method)
     return true
   }
 
-  // Get token from header or body
-  const token = req.headers['x-csrf-token'] as string || 
-               req.body?.csrfToken
-
-  console.log('=== CSRF Debug ===')
-  console.log('Method:', req.method)
-  console.log('Headers:', req.headers)
-  console.log('Token from header:', req.headers['x-csrf-token'])
-  console.log('Token from body:', req.body?.csrfToken)
-  console.log('Final token:', token)
-  console.log('Token type:', typeof token)
-  console.log('Token length:', token?.length)
-  console.log('================')
+  const token = (req.headers['x-csrf-token'] as string) || req.body?.csrfToken
 
   if (!token) {
     errorResponse(res, 'CSRF token required', 403, 'CSRF_REQUIRED')
     return false
   }
 
-  // Basic format validation
-  if (token.length !== 64 || !/^[a-f0-9]{64}$/i.test(token)) {
-    console.error('Invalid CSRF token format. Expected 64 hex chars, got:', token)
-    console.error('Length:', token?.length)
-    console.error('Pattern match:', /^[a-f0-9]{64}$/i.test(token || ''))
-    errorResponse(res, 'Invalid CSRF token format', 403, 'CSRF_INVALID')
-    return false
-  }
-
-  // Get the session token
-  const sessionToken = await getToken({ 
-    req, 
-    secret: process.env.NEXTAUTH_SECRET 
+  const sessionToken = await getToken({
+    req,
+    secret: process.env.NEXTAUTH_SECRET,
   })
 
-  if (!sessionToken?.id) {
+  if (!sessionToken) {
     errorResponse(res, 'Authentication required', 401, 'AUTH_REQUIRED')
     return false
   }
 
-  // Try user+session bound key first (enhanced security)
-  const userSessionKey = `csrf:${sessionToken.sub}:${sessionToken.id}`
-  let storedToken = await redis.get(userSessionKey)
-  
-  // Fallback to session-only key for backward compatibility
-  if (!storedToken) {
-    const sessionKey = `csrf:${sessionToken.id}`
-    storedToken = await redis.get(sessionKey)
-  }
+  const sessionId = (sessionToken.id as string) || (sessionToken.sub as string) || ''
+  const expected = deriveToken(sessionId, sessionToken.sub as string | undefined)
 
-  if (!storedToken || storedToken !== token) {
-    errorResponse(res, 'CSRF token invalid or expired', 403, 'CSRF_INVALID')
+  const tokenBuf = Buffer.from(token, 'hex')
+  const expectedBuf = Buffer.from(expected, 'hex')
+  if (tokenBuf.length !== expectedBuf.length || !crypto.timingSafeEqual(tokenBuf, expectedBuf)) {
+    errorResponse(res, 'CSRF token invalid', 403, 'CSRF_INVALID')
     return false
   }
-
-  // Optional: Rotate token after use (one-time token)
-  // For now, keep token valid for session duration
-  // await redis.del(key)
 
   return true
 }

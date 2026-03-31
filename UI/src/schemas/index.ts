@@ -48,6 +48,7 @@ export const createStorySchema = z.object({
   excerpt: z.string().max(500).optional(),
   storyDate: z.string().datetime().or(z.string().date()).optional(),
   storyDatePrecision: datePrecisionSchema.optional(),
+  location: z.string().max(255).optional(),
   tags: z.array(z.string().max(50)).max(20).optional(),
   status: storyStatusSchema.optional(),
 })

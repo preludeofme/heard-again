@@ -36,7 +36,8 @@ export default apiHandler({
       }
 
       console.error('[API] Synthesize error:', error)
-      return errorResponse(res, 'Voice synthesis failed', 503, 'SYNTHESIS_FAILED')
+      const message = error instanceof Error ? error.message : 'Voice synthesis failed'
+      return errorResponse(res, message, 503, 'SYNTHESIS_FAILED')
     }
   },
 })

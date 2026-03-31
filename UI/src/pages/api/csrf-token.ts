@@ -1,7 +1,14 @@
+import crypto from 'crypto'
 import { NextApiRequest, NextApiResponse } from 'next'
-import { generateCSRFToken, storeCSRFToken, setCSRFCookie } from '@/lib/security/csrf'
 import { getToken } from 'next-auth/jwt'
 import { successResponse, errorResponse } from '@/lib/api-helpers'
+
+const CSRF_SECRET = process.env.NEXTAUTH_SECRET || 'csrf-fallback-secret'
+
+function deriveToken(sessionId: string, userId?: string): string {
+  const payload = userId ? `${userId}:${sessionId}` : sessionId
+  return crypto.createHmac('sha256', CSRF_SECRET).update(payload).digest('hex')
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -9,26 +16,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // Get the session token (may be unauthenticated for sign-in flow)
-    const sessionToken = await getToken({ 
-      req, 
-      secret: process.env.NEXTAUTH_SECRET 
+    const sessionToken = await getToken({
+      req,
+      secret: process.env.NEXTAUTH_SECRET,
     })
 
-    // Use session ID if available, otherwise fall back to a temporary session identifier
-    // This allows CSRF protection during sign-in flow before authentication
-    const sessionId = sessionToken?.id || sessionToken?.sub || req.cookies['next-auth.session-token']?.slice(0, 32) || generateCSRFToken()
-    
-    // Generate and store CSRF token
-    const token = generateCSRFToken()
-    await storeCSRFToken(sessionId, token, sessionToken?.sub)
-    
-    // Set cookie for client-side access (HttpOnly for security)
-    setCSRFCookie(res, token)
+    if (!sessionToken) {
+      return errorResponse(res, 'Authentication required', 401, 'AUTH_REQUIRED')
+    }
 
-    console.log('CSRF token generated:', token)
-    console.log('CSRF token length:', token.length)
-    console.log('CSRF response:', { csrfToken: token })
+    const sessionId = (sessionToken.id as string) || (sessionToken.sub as string) || ''
+    const token = deriveToken(sessionId, sessionToken.sub as string | undefined)
 
     return successResponse(res, { csrfToken: token })
   } catch (error) {

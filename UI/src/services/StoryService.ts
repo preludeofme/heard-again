@@ -114,8 +114,9 @@ export class StoryService {
         excerpt: data.excerpt ?? data.content.substring(0, 200),
         storyDate: data.storyDate ? new Date(data.storyDate) : null,
         storyDatePrecision: data.storyDatePrecision ?? DatePrecision.EXACT,
+        location: data.location ?? null,
         tags: data.tags ?? [],
-        status: data.status ?? StoryStatus.DRAFT,
+        status: data.status ?? StoryStatus.PUBLISHED,
       },
     })
 

@@ -110,7 +110,7 @@ export default apiHandler({
 
     const {
       title, content, storyType, subjectId, speakerId, excerpt,
-      storyDate, storyDatePrecision, tags, isPinned,
+      storyDate, storyDatePrecision, location, tags, isPinned, status,
     } = req.body
 
     const updateData: any = {}
@@ -125,8 +125,12 @@ export default apiHandler({
     if (speakerId !== undefined) updateData.speakerId = speakerId || null
     if (storyDate !== undefined) updateData.storyDate = storyDate ? new Date(storyDate) : null
     if (storyDatePrecision !== undefined) updateData.storyDatePrecision = storyDatePrecision
+    if (location !== undefined) updateData.location = location || null
     if (tags !== undefined) updateData.tags = tags
     if (isPinned !== undefined) updateData.isPinned = isPinned
+    if (status !== undefined && ['DRAFT', 'PUBLISHED', 'ARCHIVED'].includes(status)) {
+      updateData.status = status
+    }
 
     const story = await prisma.story.update({
       where: { id: storyId },

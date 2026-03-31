@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import { StoryContribution } from '@/types'
 import { ApiError, handleApiResponse } from '@/lib/errors'
+import { fetchWithCSRF, fetchWithCSRFAndFormData } from '@/lib/api-client'
 
 interface StoriesControllerState {
   stories: StoryContribution[]
@@ -15,6 +16,8 @@ interface CreateStoryInput {
   content: string
   storyType: 'MEMORY' | 'AUDIO_RECORDING'
   subjectId?: string
+  storyDate?: string
+  location?: string
 }
 
 interface StoriesControllerActions {
@@ -103,7 +106,7 @@ const fetchStories = useCallback(async () => {
     }))
 
     try {
-      const response = await fetch('/api/stories', {
+      const response = await fetchWithCSRF('/api/stories', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -146,10 +149,8 @@ const fetchStories = useCallback(async () => {
       const formData = new FormData()
       formData.append('file', audioBlob, 'recording.webm')
 
-      const uploadRes = await fetch('/api/assets/upload', {
-        method: 'POST',
+      const uploadRes = await fetchWithCSRFAndFormData('/api/assets/upload', formData, {
         credentials: 'include',
-        body: formData,
       })
 
       if (!uploadRes.ok) {
@@ -161,7 +162,7 @@ const fetchStories = useCallback(async () => {
 
       // Step 2: Create story with audio asset
       const storyTitle = title || `Audio Recording ${new Date().toLocaleDateString()}`
-      const response = await fetch('/api/stories', {
+      const response = await fetchWithCSRF('/api/stories', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

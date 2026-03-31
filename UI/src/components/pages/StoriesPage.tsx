@@ -1,4 +1,4 @@
-import { Box, Typography, Card, CardContent, Button, Grid, TextField, IconButton, Avatar, Chip, Dialog } from '@mui/material'
+import { Box, Typography, Card, CardContent, Button, Grid, TextField, IconButton, Avatar, Chip, Dialog, Collapse } from '@mui/material'
 import { Mic as MicIcon, AutoStories as AutoStoriesIcon, AttachFile as AttachFileIcon, AddPhotoAlternate as AddPhotoIcon, PlayArrow as PlayIcon, Schedule as ScheduleIcon, ArrowForward as ArrowForwardIcon, Close as CloseIcon, KeyboardArrowDown as ArrowDownIcon } from '@mui/icons-material'
 import { StoryContribution } from '@/types'
 import { formatDistanceToNow } from 'date-fns'
@@ -15,7 +15,7 @@ interface StoriesPageProps {
     lastName?: string | null
     displayName?: string | null
   } | null
-  onSubmitStory?: (title: string, content: string) => Promise<void>
+  onSubmitStory?: (title: string, content: string, storyDate?: string, location?: string) => Promise<void>
   onSubmitAudio?: (audioBlob: Blob, duration: number) => Promise<void>
 }
 
@@ -27,6 +27,9 @@ const getDisplayName = (member: StoriesPageProps['selectedFamilyMember']) => {
 export function StoriesPage({ stories, selectedFamilyMember, onSubmitStory, onSubmitAudio }: StoriesPageProps) {
   const [storyTitle, setStoryTitle] = useState('')
   const [storyContent, setStoryContent] = useState('')
+  const [storyDate, setStoryDate] = useState('')
+  const [storyLocation, setStoryLocation] = useState('')
+  const [showOptional, setShowOptional] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showAudioDialog, setShowAudioDialog] = useState(false)
   const [isSubmittingAudio, setIsSubmittingAudio] = useState(false)
@@ -36,9 +39,17 @@ export function StoriesPage({ stories, selectedFamilyMember, onSubmitStory, onSu
     if (!storyContent.trim() || !onSubmitStory) return
     setIsSubmitting(true)
     try {
-      await onSubmitStory(storyTitle, storyContent)
+      await onSubmitStory(
+        storyTitle,
+        storyContent,
+        storyDate || undefined,
+        storyLocation || undefined,
+      )
       setStoryTitle('')
       setStoryContent('')
+      setStoryDate('')
+      setStoryLocation('')
+      setShowOptional(false)
     } finally {
       setIsSubmitting(false)
     }
@@ -303,6 +314,56 @@ export function StoriesPage({ stories, selectedFamilyMember, onSubmitStory, onSu
                       }
                     }}
                   />
+
+                  {/* Optional date + location toggle */}
+                  <Box>
+                    <Button
+                      size="small"
+                      variant="text"
+                      onClick={() => setShowOptional(p => !p)}
+                      sx={{ color: '#546669', fontSize: '0.78rem', textTransform: 'none', px: 0.5, mb: 0.5 }}
+                    >
+                      {showOptional ? '− Hide details' : '+ Add date & location'}
+                    </Button>
+                    <Collapse in={showOptional}>
+                      <Box sx={{ display: 'flex', gap: 1.5, flexDirection: { xs: 'column', sm: 'row' } }}>
+                        <TextField
+                          type="date"
+                          size="small"
+                          label="Date"
+                          InputLabelProps={{ shrink: true }}
+                          value={storyDate}
+                          onChange={(e) => setStoryDate(e.target.value)}
+                          sx={{
+                            flex: 1,
+                            '& .MuiOutlinedInput-root': {
+                              backgroundColor: '#ebe8e3',
+                              borderRadius: 2,
+                              '& fieldset': { border: 'none' },
+                              '&.Mui-focused': { backgroundColor: '#ffffff' },
+                            },
+                          }}
+                        />
+                        <TextField
+                          size="small"
+                          label="Location"
+                          placeholder="e.g. Chicago, IL"
+                          value={storyLocation}
+                          onChange={(e) => setStoryLocation(e.target.value)}
+                          sx={{
+                            flex: 1,
+                            '& .MuiOutlinedInput-root': {
+                              backgroundColor: '#ebe8e3',
+                              borderRadius: 2,
+                              '& fieldset': { border: 'none' },
+                              '&.Mui-focused': { backgroundColor: '#ffffff' },
+                            },
+                          }}
+                        />
+                      </Box>
+                    </Collapse>
+                  </Box>
+
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pt: 1 }}>
                     <Box sx={{ display: 'flex', gap: 1 }}>
                       <IconButton sx={{ color: '#546669' }}>

@@ -384,6 +384,7 @@ model Story {
   excerpt               String?
   storyDate             DateTime?
   storyDatePrecision    DatePrecision        @default(EXACT)
+  location              String?
   tags                  String[]
   status                StoryStatus          @default(DRAFT)
   isPinned              Boolean              @default(false)

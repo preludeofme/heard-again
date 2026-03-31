@@ -30,7 +30,7 @@ fi
 MAIN_APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 UI_DIR="$MAIN_APP_DIR/UI"
 CHAT_SYSTEM_DIR="$MAIN_APP_DIR/Chat"
-TTS_SERVICE_DIR="$MAIN_APP_DIR/TTS"
+TTS_SERVICE_DIR="$MAIN_APP_DIR/TTS/tts-service"
 
 # PIDs file for cleanup
 PIDS_FILE="/tmp/heard-again-dev.pids"
@@ -134,6 +134,14 @@ if ! command -v redis-cli &> /dev/null; then
     echo -e "${YELLOW}⚠ Redis not found${NC}"
 else
     echo -e "  ${GREEN}✓ Redis${NC}"
+fi
+
+# Check sox (required for TTS audio preprocessing)
+if ! command -v sox &> /dev/null; then
+    echo -e "  ${YELLOW}⚠ sox not found (TTS audio preprocessing may fail — run: sudo apt install sox)${NC}"
+else
+    SOX_VERSION=$(sox --version 2>&1 | head -1)
+    echo -e "  ${GREEN}✓ sox${NC} $SOX_VERSION"
 fi
 
 echo ""
@@ -344,11 +352,14 @@ if command -v python3 &> /dev/null && [ -d "$TTS_SERVICE_DIR" ]; then
 
     if [ -d "$VENV_PATH" ]; then
         cd "$TTS_SERVICE_DIR"
-        source "$VENV_PATH/bin/activate"
+        PYTHON_BIN="$VENV_PATH/bin/python"
+        if [ ! -f "$PYTHON_BIN" ]; then
+            PYTHON_BIN="$VENV_PATH/bin/python3"
+        fi
         if [ "$LOG_MODE" = "live" ]; then
-            python -m app.main 2>&1 | tee "$MAIN_APP_DIR/logs/tts-service.log" &
+            TTS_PORT=$TTS_SERVICE_PORT NEXTAUTH_URL=http://localhost:$MAIN_APP_PORT "$PYTHON_BIN" -m app.main 2>&1 | tee "$MAIN_APP_DIR/logs/tts-service.log" &
         else
-            python -m app.main > "$MAIN_APP_DIR/logs/tts-service.log" 2>&1 &
+            TTS_PORT=$TTS_SERVICE_PORT NEXTAUTH_URL=http://localhost:$MAIN_APP_PORT "$PYTHON_BIN" -m app.main > "$MAIN_APP_DIR/logs/tts-service.log" 2>&1 &
         fi
         TTS_PID=$!
         cd "$MAIN_APP_DIR"
@@ -400,7 +411,7 @@ fi
 
 # Check TTS Service
 if [ "$TTS_STARTED" = true ]; then
-    if wait_for_service "TTS Service" "http://localhost:$TTS_SERVICE_PORT/api/tts/health" 30; then
+    if wait_for_service "TTS Service" "http://localhost:$TTS_SERVICE_PORT/api/tts/health" 90; then
         echo -e "  ${GREEN}✓ TTS Service is healthy${NC}"
     else
         echo -e "  ${YELLOW}⚠ TTS Service may still be loading models (check logs)${NC}"
