@@ -1,115 +1,174 @@
-import { NextApiRequest, NextApiResponse } from 'next'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
+import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
+import { withCSRFProtection } from '@/lib/security/csrf'
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  try {
-    const session = await getServerSession(req, res, authOptions)
-    if (!session?.user?.id) {
-      console.error('AI Persona: No session or user ID')
-      return res.status(401).json({ error: 'Unauthorized' })
-    }
+export default apiHandler({
+  // GET /api/people/[id]/ai-persona - Get person's AI persona
+  GET: async (req, res) => {
+    const user = await getAuthUserWithWorkspace(req, res)
+    const personId = req.query.id as string
 
-    const { id } = req.query
-    if (!id || typeof id !== 'string') {
-      console.error('AI Persona: Invalid person ID', id)
-      return res.status(400).json({ error: 'Invalid person ID' })
-    }
-
-    // Check user has access to this person
+    // Verify person exists in workspace
     const person = await prisma.person.findFirst({
+      where: { id: personId, workspaceId: user.workspaceId },
+    })
+    if (!person) {
+      throw Errors.notFound('Person')
+    }
+
+    // Get the latest active persona profile
+    const persona = await prisma.personaProfile.findFirst({
       where: {
-        id,
-        workspace: {
-          memberships: {
-            some: {
-              userId: session.user.id,
-              status: 'ACTIVE',
-            },
-          },
+        personId,
+        workspaceId: user.workspaceId,
+        status: 'active',
+      },
+      orderBy: { version: 'desc' },
+    })
+
+    // If no active persona, check for draft
+    if (!persona) {
+      const draftPersona = await prisma.personaProfile.findFirst({
+        where: {
+          personId,
+          workspaceId: user.workspaceId,
+          status: 'draft',
+        },
+        orderBy: { version: 'desc' },
+      })
+      return successResponse(res, draftPersona || null)
+    }
+
+    return successResponse(res, persona)
+  },
+
+  // PUT /api/people/[id]/ai-persona - Update or create AI persona
+  PUT: withCSRFProtection(async (req, res) => {
+    const user = await getAuthUserWithWorkspace(req, res)
+    const personId = req.query.id as string
+    await requireWorkspaceRole(user.id, user.workspaceId, 'EDITOR')
+
+    // Verify person exists in workspace
+    const person = await prisma.person.findFirst({
+      where: { id: personId, workspaceId: user.workspaceId },
+    })
+    if (!person) {
+      throw Errors.notFound('Person')
+    }
+
+    const {
+      systemPrompt = '',
+      responseGuidelines = [],
+      formality = 'neutral',
+      averageSentenceLength = 15.0,
+      behaviorInstructions = [],
+      relationshipInstructions = {},
+      topicInstructions = {},
+      contextInstructions = {},
+      styleOverrides = {},
+      status = 'draft',
+    } = req.body
+
+    // Get existing persona to update or create new version
+    const existingPersona = await prisma.personaProfile.findFirst({
+      where: {
+        personId,
+        workspaceId: user.workspaceId,
+      },
+      orderBy: { version: 'desc' },
+    })
+
+    let newVersion = 1
+    if (existingPersona) {
+      // If updating an active persona, create a new version
+      // If updating a draft, keep the same version
+      newVersion = existingPersona.status === 'active' 
+        ? existingPersona.version + 1 
+        : existingPersona.version
+    }
+
+    const persona = await prisma.personaProfile.upsert({
+      where: {
+        personId_workspaceId_version: {
+          personId,
+          workspaceId: user.workspaceId,
+          version: newVersion,
         },
       },
-      include: {
-        aiPersonaProfile: true,
+      update: {
+        systemPrompt,
+        responseGuidelines,
+        formality,
+        averageSentenceLength,
+        behaviorInstructions,
+        relationshipInstructions,
+        topicInstructions,
+        contextInstructions,
+        styleOverrides,
+        status,
+        lastUpdated: new Date(),
+      },
+      create: {
+        personId,
+        workspaceId: user.workspaceId,
+        version: newVersion,
+        systemPrompt,
+        responseGuidelines,
+        formality,
+        averageSentenceLength,
+        behaviorInstructions,
+        relationshipInstructions,
+        topicInstructions,
+        contextInstructions,
+        styleOverrides,
+        status,
       },
     })
 
-    if (!person) {
-      console.error('AI Persona: Person not found', id)
-      return res.status(404).json({ error: 'Person not found' })
+    return successResponse(res, persona)
+  }),
+
+  // POST /api/people/[id]/ai-persona/activate - Activate a persona version
+  POST: withCSRFProtection(async (req, res) => {
+    const user = await getAuthUserWithWorkspace(req, res)
+    const personId = req.query.id as string
+    await requireWorkspaceRole(user.id, user.workspaceId, 'EDITOR')
+
+    const { version } = req.body
+
+    if (!version || typeof version !== 'number') {
+      throw Errors.badRequest('Version is required')
     }
 
-    if (req.method === 'GET') {
-      // Return AI persona profile (or null if not created yet)
-      return res.json({
-        success: true,
-        data: person.aiPersonaProfile,
-      })
+    // Verify persona exists
+    const persona = await prisma.personaProfile.findFirst({
+      where: {
+        personId,
+        workspaceId: user.workspaceId,
+        version,
+      },
+    })
+    if (!persona) {
+      throw Errors.notFound('Persona profile')
     }
 
-    if (req.method === 'POST' || req.method === 'PUT') {
-      const body = req.body
+    // Deactivate all other personas for this person
+    await prisma.personaProfile.updateMany({
+      where: {
+        personId,
+        workspaceId: user.workspaceId,
+        status: 'active',
+      },
+      data: { status: 'archived' },
+    })
 
-      try {
-        const profile = await prisma.aiPersonaProfile.upsert({
-          where: { personId: id },
-          create: {
-            personId: id,
-            workspaceId: person.workspaceId,
-            status: body.status || 'DRAFT',
-            systemPrompt: body.systemPrompt,
-            responseGuidelines: body.responseGuidelines || [],
-            writingStyle: body.writingStyle,
-            knownFacts: body.knownFacts,
-            relationships: body.relationships,
-            customInstructions: body.customInstructions,
-            temperature: body.temperature ?? 0.7,
-            topP: body.topP ?? 0.9,
-            maxTokens: body.maxTokens ?? 500,
-            preferredModel: body.preferredModel,
-          },
-          update: {
-            status: body.status,
-            systemPrompt: body.systemPrompt,
-            responseGuidelines: body.responseGuidelines,
-            writingStyle: body.writingStyle,
-            knownFacts: body.knownFacts,
-            relationships: body.relationships,
-            customInstructions: body.customInstructions,
-            temperature: body.temperature,
-            topP: body.topP,
-            maxTokens: body.maxTokens,
-            preferredModel: body.preferredModel,
-            lastUpdated: new Date(),
-          },
-        })
+    // Activate this persona
+    const activatedPersona = await prisma.personaProfile.update({
+      where: { id: persona.id },
+      data: { status: 'active', lastUpdated: new Date() },
+    })
 
-        return res.json({
-          success: true,
-          data: profile,
-        })
-      } catch (error) {
-        console.error('Error saving AI persona profile:', error)
-        return res.status(500).json({ error: 'Failed to save AI persona profile' })
-      }
-    }
-
-    if (req.method === 'DELETE') {
-      try {
-        await prisma.aiPersonaProfile.deleteMany({
-          where: { personId: id },
-        })
-        return res.json({ success: true })
-      } catch (error) {
-        console.error('Error deleting AI persona profile:', error)
-        return res.status(500).json({ error: 'Failed to delete AI persona profile' })
-      }
-    }
-
-    return res.status(405).json({ error: 'Method not allowed' })
-  } catch (error) {
-    console.error('AI Persona: Unexpected error:', error)
-    return res.status(500).json({ error: 'Internal server error' })
-  }
-}
+    return successResponse(res, activatedPersona)
+  }),
+})

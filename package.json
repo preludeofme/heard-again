@@ -1,43 +1,35 @@
 {
-  "name": "heard-again",
+  "name": "heard-again-root",
   "version": "1.0.0",
   "private": true,
+  "description": "Heard Again - Family Story Preservation Platform",
   "scripts": {
-    "dev": "next dev -p 3002 -H 0.0.0.0 --webpack",
-    "dev:debug": "NODE_ENV=development DEBUG=* next dev -p 3002 -H 0.0.0.0 --webpack",
-    "build": "next build --webpack",
-    "start": "next build && next start -p 3002 -H 0.0.0.0",
-    "start:tts": "cd tts-service && ./start.sh",
+    "dev": "./Scripts/start-dev.sh --live",
+    "build": "cd UI && npm run build",
+    "start": "cd UI && npm run start",
+    "test": "cd UI && npm test",
+    "test:watch": "cd UI && npm run test:watch",
+    "test:coverage": "cd UI && npm run test:coverage",
+    "lint": "cd UI && npm run lint",
+    "start:tts": "cd TTS && ./start.sh",
     "start:voice": "docker compose -f docker-compose.voice.yml up -d",
     "stop:voice": "docker compose -f docker-compose.voice.yml down",
-    "lint": "next lint",
-    "db:generate": "prisma generate",
-    "db:migrate": "prisma migrate dev",
-    "db:push": "prisma db push",
-    "db:studio": "prisma studio",
-    "db:seed": "tsx prisma/seed.ts"
+    "sonar:scan": "sonar-scanner -Dproject.settings=sonar-project.properties",
+    "sonar:start": "docker compose -f docker-compose.sonarqube.yml up -d",
+    "sonar:stop": "docker compose -f docker-compose.sonarqube.yml down",
+    "sonar:logs": "docker logs sonarqube",
+    "db:generate": "cd UI && npm run db:generate",
+    "db:migrate": "cd UI && npm run db:migrate",
+    "db:push": "cd UI && npm run db:push",
+    "db:studio": "cd UI && npm run db:studio",
+    "db:seed": "cd UI && npm run db:seed",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:build": "docker compose build",
+    "install:all": "npm install && cd UI && npm install && cd ../Chat && npm install"
   },
-  "dependencies": {
-    "@emotion/react": "^11.14.0",
-    "@emotion/styled": "^11.14.1",
-    "@mui/icons-material": "^7.3.9",
-    "@mui/material": "^7.3.9",
-    "@mui/system": "^7.3.9",
-    "@prisma/client": "^6.6.0",
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
-    "@types/uuid": "^10.0.0",
-    "date-fns": "^4.1.0",
-    "next": "^16.2.0",
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4",
-    "typescript": "^5.9.3",
-    "uuid": "^13.0.0",
-    "wavesurfer.js": "^7.12.4"
-  },
-  "devDependencies": {
-    "@types/node": "25.5.0",
-    "prisma": "^6.6.0",
-    "tsx": "^4.19.0"
-  }
+  "workspaces": [
+    "UI",
+    "Chat"
+  ]
 }

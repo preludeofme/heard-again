@@ -1,0 +1,1673 @@
+{
+  "code_smells_count": 762,
+  "high_priority": [
+    {
+      "file": "src/lib/security/malware-scanner.ts",
+      "line": 47,
+      "rule": "typescript:S7059",
+      "message": "Refactor this asynchronous operation outside of the constructor.",
+      "severity": "CRITICAL",
+      "effort": "5min",
+      "clean_code_attribute": "MODULAR",
+      "category": "ADAPTABLE"
+    },
+    {
+      "file": "src/lib/storage/providers/local-provider.ts",
+      "line": 18,
+      "rule": "typescript:S7059",
+      "message": "Refactor this asynchronous operation outside of the constructor.",
+      "severity": "CRITICAL",
+      "effort": "5min",
+      "clean_code_attribute": "MODULAR",
+      "category": "ADAPTABLE"
+    },
+    {
+      "file": "tts-service/app/main.py",
+      "line": 49,
+      "rule": "python:S1192",
+      "message": "Define a constant instead of duplicating this literal \"Reference audio not found\" 4 times.",
+      "severity": "CRITICAL",
+      "effort": "8min",
+      "clean_code_attribute": "DISTINCT",
+      "category": "ADAPTABLE"
+    },
+    {
+      "file": "tts-service/app/main.py",
+      "line": 314,
+      "rule": "python:S8415",
+      "message": "Document this HTTPException with status code 503 in the \"responses\" parameter.",
+      "severity": "MAJOR",
+      "effort": "5min",
+      "clean_code_attribute": "COMPLETE",
+      "category": "INTENTIONAL"
+    },
+    {
+      "file": "tts-service/app/main.py",
+      "line": 506,
+      "rule": "python:S8415",
+      "message": "Document this HTTPException with status code 503 in the \"responses\" parameter.",
+      "severity": "MAJOR",
+      "effort": "5min",
+      "clean_code_attribute": "COMPLETE",
+      "category": "INTENTIONAL"
+    },
+    {
+      "file": "tts-service/app/main.py",
+      "line": 583,
+      "rule": "python:S8415",
+      "message": "Document this HTTPException with status code 503 in the \"responses\" parameter.",
+      "severity": "MAJOR",
+      "effort": "5min",
+      "clean_code_attribute": "COMPLETE",
+      "category": "INTENTIONAL"
+    },
+    {
+      "file": "tts-service/app/main.py",
+      "line": 585,
+      "rule": "python:S8415",
+      "message": "Document this HTTPException with status code 503 in the \"responses\" parameter.",
+      "severity": "MAJOR",
+      "effort": "5min",
+      "clean_code_attribute": "COMPLETE",
+      "category": "INTENTIONAL"
+    },
+    {
+      "file": "tts-service/app/main.py",
+      "line": 672,
+      "rule": "python:S8415",
+      "message": "Document this HTTPException with status code 503 in the \"responses\" parameter.",
+      "severity": "MAJOR",
+      "effort": "5min",
+      "clean_code_attribute": "COMPLETE",
+      "category": "INTENTIONAL"
+    },
+    {
+      "file": "tts-service/app/main.py",
+      "line": 674,
+      "rule": "python:S8415",
+      "message": "Document this HTTPException with status code 503 in the \"responses\" parameter.",
+      "severity": "MAJOR",
+      "effort": "5min",
+      "clean_code_attribute": "COMPLETE",
+      "category": "INTENTIONAL"
+    },
+    {
+      "file": "tts-service/app/main.py",
+      "line": 776,
+      "rule": "python:S8415",
+      "message": "Document this HTTPException with status code 503 in the \"responses\" parameter.",
+      "severity": "MAJOR",
+      "effort": "5min",
+      "clean_code_attribute": "COMPLETE",
+      "category": "INTENTIONAL"
+    },
+    {
+      "file": "tts-service/app/main.py",
+      "line": 867,
+      "rule": "python:S8415",
+      "message": "Document this HTTPException with status code 503 in the \"responses\" parameter.",
+      "severity": "MAJOR",
+      "effort": "5min",
+      "clean_code_attribute": "COMPLETE",
+      "category": "INTENTIONAL"
+    },
+    {
+      "file": "src/components/assets/AssetUpload.tsx",
+      "line": 137,
+      "rule": "typescript:S2004",
+      "message": "Refactor this code to not nest functions more than 4 levels deep.",
+      "severity": "CRITICAL",
+      "effort": "20min",
+      "clean_code_attribute": "FOCUSED",
+      "category": "ADAPTABLE"
+    },
+    {
+      "file": "src/components/assets/AssetUpload.tsx",
+      "line": 322,
+      "rule": "typescript:S3358",
+      "message": "Extract this nested ternary operation into an independent statement.",
+      "severity": "MAJOR",
+      "effort": "5min",
+      "clean_code_attribute": "CLEAR",
+      "category": "INTENTIONAL"
+    },
+    {
+      "file": "src/components/assets/AssetUpload.tsx",
+      "line": 338,
+      "rule": "typescript:S3358",
+      "message": "Extract this nested ternary operation into an independent statement.",
+      "severity": "MAJOR",
+      "effort": "5min",
+      "clean_code_attribute": "CLEAR",
+      "category": "INTENTIONAL"
+    },
+    {
+      "file": "src/components/assets/AssetUpload.tsx",
+      "line": 356,
+      "rule": "typescript:S3358",
+      "message": "Extract this nested ternary operation into an independent statement.",
+      "severity": "MAJOR",
+      "effort": "5min",
+      "clean_code_attribute": "CLEAR",
+      "category": "INTENTIONAL"
+    },
+    {
+      "file": "src/components/modals/PersonModal.tsx",
+      "line": 90,
+      "rule": "typescript:S3776",
+      "message": "Refactor this function to reduce its Cognitive Complexity from 17 to the 15 allowed.",
+      "severity": "CRITICAL",
+      "effort": "7min",
+      "clean_code_attribute": "FOCUSED",
+      "category": "ADAPTABLE"
+    },
+    {
+      "file": "src/components/modals/PersonModal.tsx",
+      "line": 573,
+      "rule": "typescript:S4624",
+      "message": "Refactor this code to not use nested template literals.",
+      "severity": "MAJOR",
+      "effort": "10min",
+      "clean_code_attribute": "CLEAR",
+      "category": "INTENTIONAL"
+    },
+    {
+      "file": "src/components/modals/PersonModal.tsx",
+      "line": 573,
+      "rule": "typescript:S3358",
+      "message": "Extract this nested ternary operation into an independent statement.",
+      "severity": "MAJOR",
+      "effort": "5min",
+      "clean_code_attribute": "CLEAR",
+      "category": "INTENTIONAL"
+    },
+    {
+      "file": "src/components/pages/FamilyTreePage.tsx",
+      "line": 120,
+      "rule": "typescript:S3776",
+      "message": "Refactor this function to reduce its Cognitive Complexity from 22 to the 15 allowed.",
+      "severity": "CRITICAL",
+      "effort": "12min",
+      "clean_code_attribute": "FOCUSED",
+      "category": "ADAPTABLE"
+    },
+    {
+      "file": "src/components/pages/FamilyTreePage.tsx",
+      "line": 134,
+      "rule": "typescript:S3358",
+      "message": "Extract this nested ternary operation into an independent statement.",
+      "severity": "MAJOR",
+      "effort": "5min",
+      "clean_code_attribute": "CLEAR",
+      "category": "INTENTIONAL"
+    },
+    {
+      "file": "src/components/pages/FamilyTreePage.tsx",
+      "line": 265,
+      "rule": "typescript:S3776",
+      "message": "Refactor this function to reduce its Cognitive Complexity from 27 to the 15 allowed.",
+      "severity": "CRITICAL",
+      "effort": "17min",
+      "clean_code_attribute": "FOCUSED",
+      "category": "ADAPTABLE"
+    },
+    {
+      "file": "src/components/pages/FamilyTreePage.tsx",
+      "line": 275,
+      "rule": "typescript:S1854",
+      "message": "Remove this useless assignment to variable \"theme\".",
+      "severity": "MAJOR",
+      "effort": "1min",
+      "clean_code_attribute": "LOGICAL",
+      "category": "INTENTIONAL"
+    },
+    {
+      "file": "src/components/pages/FamilyTreePage.tsx",
+      "line": 467,
+      "rule": "typescript:S1854",
+      "message": "Remove this useless assignment to variable \"handlePan\".",
+      "severity": "MAJOR",
+      "effort": "1min",
+      "clean_code_attribute": "LOGICAL",
+      "category": "INTENTIONAL"
+    },
+    {
+      "file": "src/components/pages/FamilyTreePage.tsx",
+      "line": 574,
+      "rule": "typescript:S3776",
+      "message": "Refactor this function to reduce its Cognitive Complexity from 62 to the 15 allowed.",
+      "severity": "CRITICAL",
+      "effort": "52min",
+      "clean_code_attribute": "FOCUSED",
+      "category": "ADAPTABLE"
+    },
+    {
+      "file": "src/components/pages/StoriesPage.tsx",
+      "line": 24,
+      "rule": "typescript:S4624",
+      "message": "Refactor this code to not use nested template literals.",
+      "severity": "MAJOR",
+      "effort": "10min",
+      "clean_code_attribute": "CLEAR",
+      "category": "INTENTIONAL"
+    },
+    {
+      "file": "src/components/pages/StoriesPage.tsx",
+      "line": 228,
+      "rule": "typescript:S6479",
+      "message": "Do not use Array index in keys",
+      "severity": "MAJOR",
+      "effort": "5min",
+      "clean_code_attribute": "LOGICAL",
+      "category": "INTENTIONAL"
+    },
+    {
+      "file": "src/lib/auth.ts",
+      "line": 39,
+      "rule": "typescript:S6582",
+      "message": "Prefer using an optional chain expression instead, as it's more concise and easier to read.",
+      "severity": "MAJOR",
+      "effort": "5min",
+      "clean_code_attribute": "CLEAR",
+      "category": "INTENTIONAL"
+    },
+    {
+      "file": "src/lib/file-optimizer/image-optimizer.ts",
+      "line": 5,
+      "rule": "typescript:S2933",
+      "message": "Member 'supportedMimeTypes' is never reassigned; mark it as `readonly`.",
+      "severity": "MAJOR",
+      "effort": "2min",
+      "clean_code_attribute": "CLEAR",
+      "category": "INTENTIONAL"
+    },
+    {
+      "file": "src/lib/file-optimizer/image-optimizer.ts",
+      "line": 93,
+      "rule": "typescript:S6836",
+      "message": "Unexpected lexical declaration in case block.",
+      "severity": "MAJOR",
+      "effort": "5min",
+      "clean_code_attribute": "CONVENTIONAL",
+      "category": "CONSISTENT"
+    },
+    {
+      "file": "src/lib/file-processor/sandbox-script.js",
+      "line": 55,
+      "rule": "javascript:S7785",
+      "message": "Prefer top-level await over using a promise chain.",
+      "severity": "MAJOR",
+      "effort": "5min",
+      "clean_code_attribute": "CONVENTIONAL",
+      "category": "CONSISTENT"
+    },
+    {
+      "file": "src/lib/security/file-validator.ts",
+      "line": 266,
+      "rule": "typescript:S1854",
+      "message": "Remove this useless assignment to variable \"maxReasonableSize\".",
+      "severity": "MAJOR",
+      "effort": "1min",
+      "clean_code_attribute": "LOGICAL",
+      "category": "INTENTIONAL"
+    },
+    {
+      "file": "src/lib/security/malware-scanner.ts",
+      "line": 45,
+      "rule": "typescript:S7059",
+      "message": "Refactor this asynchronous operation outside of the constructor.",
+      "severity": "CRITICAL",
+      "effort": "5min",
+      "clean_code_attribute": "MODULAR",
+      "category": "ADAPTABLE"
+    },
+    {
+      "file": "src/lib/security/malware-scanner.ts",
+      "line": 250,
+      "rule": "typescript:S7059",
+      "message": "Refactor this asynchronous operation outside of the constructor.",
+      "severity": "CRITICAL",
+      "effort": "5min",
+      "clean_code_attribute": "MODULAR",
+      "category": "ADAPTABLE"
+    },
+    {
+      "file": "src/lib/security/malware-scanner.ts",
+      "line": 30,
+      "rule": "typescript:S2933",
+      "message": "Member 'knownMaliciousHashes' is never reassigned; mark it as `readonly`.",
+      "severity": "MAJOR",
+      "effort": "2min",
+      "clean_code_attribute": "CLEAR",
+      "category": "INTENTIONAL"
+    },
+    {
+      "file": "src/lib/security/malware-scanner.ts",
+      "line": 31,
+      "rule": "typescript:S2933",
+      "message": "Member 'suspiciousPatterns' is never reassigned; mark it as `readonly`.",
+      "severity": "MAJOR",
+      "effort": "2min",
+      "clean_code_attribute": "CLEAR",
+      "category": "INTENTIONAL"
+    },
+    {
+      "file": "src/lib/security/malware-scanner.ts",
+      "line": 209,
+      "rule": "typescript:S6582",
+      "message": "Prefer using an optional chain expression instead, as it's more concise and easier to read.",
+      "severity": "MAJOR",
+      "effort": "5min",
+      "clean_code_attribute": "CLEAR",
+      "category": "INTENTIONAL"
+    },
+    {
+      "file": "src/lib/security/mfa-service.ts",
+      "line": 162,
+      "rule": "typescript:S6582",
+      "message": "Prefer using an optional chain expression instead, as it's more concise and easier to read.",
+      "severity": "MAJOR",
+      "effort": "5min",
+      "clean_code_attribute": "CLEAR",
+      "category": "INTENTIONAL"
+    },
+    {
+      "file": "src/lib/security/password-policy.ts",
+      "line": 33,
+      "rule": "typescript:S6535",
+      "message": "Unnecessary escape character: \\/.",
+      "severity": "MAJOR",
+      "effort": "5min",
+      "clean_code_attribute": "CLEAR",
+      "category": "INTENTIONAL"
+    },
+    {
+      "file": "src/lib/security/password-policy.ts",
+      "line": 33,
+      "rule": "typescript:S6535",
+      "message": "Unnecessary escape character: \\[.",
+      "severity": "MAJOR",
+      "effort": "5min",
+      "clean_code_attribute": "CLEAR",
+      "category": "INTENTIONAL"
+    },
+    {
+      "file": "src/lib/security/password-policy.ts",
+      "line": 94,
+      "rule": "typescript:S6535",
+      "message": "Unnecessary escape character: \\[.",
+      "severity": "MAJOR",
+      "effort": "5min",
+      "clean_code_attribute": "CLEAR",
+      "category": "INTENTIONAL"
+    },
+    {
+      "file": "src/lib/security/password-policy.ts",
+      "line": 94,
+      "rule": "typescript:S6535",
+      "message": "Unnecessary escape character: \\/.",
+      "severity": "MAJOR",
+      "effort": "5min",
+      "clean_code_attribute": "CLEAR",
+      "category": "INTENTIONAL"
+    },
+    {
+      "file": "src/lib/security/password-policy.ts",
+      "line": 132,
+      "rule": "typescript:S6535",
+      "message": "Unnecessary escape character: \\/.",
+      "severity": "MAJOR",
+      "effort": "5min",
+      "clean_code_attribute": "CLEAR",
+      "category": "INTENTIONAL"
+    },
+    {
+      "file": "src/lib/security/password-policy.ts",
+      "line": 132,
+      "rule": "typescript:S6535",
+      "message": "Unnecessary escape character: \\[.",
+      "severity": "MAJOR",
+      "effort": "5min",
+      "clean_code_attribute": "CLEAR",
+      "category": "INTENTIONAL"
+    },
+    {
+      "file": "src/lib/security/password-policy.ts",
+      "line": 132,
+      "rule": "typescript:S6535",
+      "message": "Unnecessary escape character: \\/.",
+      "severity": "MAJOR",
+      "effort": "5min",
+      "clean_code_attribute": "CLEAR",
+      "category": "INTENTIONAL"
+    },
+    {
+      "file": "src/lib/security/password-policy.ts",
+      "line": 132,
+      "rule": "typescript:S6535",
+      "message": "Unnecessary escape character: \\[.",
+      "severity": "MAJOR",
+      "effort": "5min",
+      "clean_code_attribute": "CLEAR",
+      "category": "INTENTIONAL"
+    },
+    {
+      "file": "src/lib/security/security-headers.ts",
+      "line": 21,
+      "rule": "typescript:S3776",
+      "message": "Refactor this function to reduce its Cognitive Complexity from 17 to the 15 allowed.",
+      "severity": "CRITICAL",
+      "effort": "7min",
+      "clean_code_attribute": "FOCUSED",
+      "category": "ADAPTABLE"
+    },
+    {
+      "file": "src/lib/storage/providers/gcp-provider.ts",
+      "line": 12,
+      "rule": "typescript:S2933",
+      "message": "Member 'storage' is never reassigned; mark it as `readonly`.",
+      "severity": "MAJOR",
+      "effort": "2min",
+      "clean_code_attribute": "CLEAR",
+      "category": "INTENTIONAL"
+    },
+    {
+      "file": "src/lib/storage/providers/gcp-provider.ts",
+      "line": 13,
+      "rule": "typescript:S2933",
+      "message": "Member 'bucketName' is never reassigned; mark it as `readonly`.",
+      "severity": "MAJOR",
+      "effort": "2min",
+      "clean_code_attribute": "CLEAR",
+      "category": "INTENTIONAL"
+    },
+    {
+      "file": "src/lib/storage/providers/local-provider.ts",
+      "line": 16,
+      "rule": "typescript:S7059",
+      "message": "Refactor this asynchronous operation outside of the constructor.",
+      "severity": "CRITICAL",
+      "effort": "5min",
+      "clean_code_attribute": "MODULAR",
+      "category": "ADAPTABLE"
+    },
+    {
+      "file": "src/lib/storage/providers/local-provider.ts",
+      "line": 12,
+      "rule": "typescript:S2933",
+      "message": "Member 'config' is never reassigned; mark it as `readonly`.",
+      "severity": "MAJOR",
+      "effort": "2min",
+      "clean_code_attribute": "CLEAR",
+      "category": "INTENTIONAL"
+    },
+    {
+      "file": "src/lib/storage/providers/local-provider.ts",
+      "line": 63,
+      "rule": "typescript:S6535",
+      "message": "Unnecessary escape character: \\/.",
+      "severity": "MAJOR",
+      "effort": "5min",
+      "clean_code_attribute": "CLEAR",
+      "category": "INTENTIONAL"
+    },
+    {
+      "file": "src/lib/storage/providers/s3-provider.ts",
+      "line": 16,
+      "rule": "typescript:S2933",
+      "message": "Member 'client' is never reassigned; mark it as `readonly`.",
+      "severity": "MAJOR",
+      "effort": "2min",
+      "clean_code_attribute": "CLEAR",
+      "category": "INTENTIONAL"
+    },
+    {
+      "file": "src/lib/storage/providers/s3-provider.ts",
+      "line": 17,
+      "rule": "typescript:S2933",
+      "message": "Member 'bucket' is never reassigned; mark it as `readonly`.",
+      "severity": "MAJOR",
+      "effort": "2min",
+      "clean_code_attribute": "CLEAR",
+      "category": "INTENTIONAL"
+    },
+    {
+      "file": "src/lib/storage/providers/s3-provider.ts",
+      "line": 18,
+      "rule": "typescript:S2933",
+      "message": "Member 'region' is never reassigned; mark it as `readonly`.",
+      "severity": "MAJOR",
+      "effort": "2min",
+      "clean_code_attribute": "CLEAR",
+      "category": "INTENTIONAL"
+    },
+    {
+      "file": "src/lib/storage/providers/s3-provider.ts",
+      "line": 19,
+      "rule": "typescript:S2933",
+      "message": "Member 'publicUrlBase' is never reassigned; mark it as `readonly`.",
+      "severity": "MAJOR",
+      "effort": "2min",
+      "clean_code_attribute": "CLEAR",
+      "category": "INTENTIONAL"
+    },
+    {
+      "file": "src/pages/api/assets/serve/[id].ts",
+      "line": 108,
+      "rule": "typescript:S6535",
+      "message": "Unnecessary escape character: \\/.",
+      "severity": "MAJOR",
+      "effort": "5min",
+      "clean_code_attribute": "CLEAR",
+      "category": "INTENTIONAL"
+    },
+    {
+      "file": "src/pages/api/assets/upload.ts",
+      "line": 24,
+      "rule": "typescript:S3776",
+      "message": "Refactor this function to reduce its Cognitive Complexity from 26 to the 15 allowed.",
+      "severity": "CRITICAL",
+      "effort": "16min",
+      "clean_code_attribute": "FOCUSED",
+      "category": "ADAPTABLE"
+    },
+    {
+      "file": "src/pages/api/assets/upload.ts",
+      "line": 52,
+      "rule": "typescript:S1854",
+      "message": "Remove this useless assignment to variable \"fields\".",
+      "severity": "MAJOR",
+      "effort": "1min",
+      "clean_code_attribute": "LOGICAL",
+      "category": "INTENTIONAL"
+    },
+    {
+      "file": "src/pages/api/export/gedcom.ts",
+      "line": 27,
+      "rule": "typescript:S3776",
+      "message": "Refactor this function to reduce its Cognitive Complexity from 53 to the 15 allowed.",
+      "severity": "CRITICAL",
+      "effort": "43min",
+      "clean_code_attribute": "FOCUSED",
+      "category": "ADAPTABLE"
+    },
+    {
+      "file": "src/pages/api/export/pdf.ts",
+      "line": 99,
+      "rule": "typescript:S4624",
+      "message": "Refactor this code to not use nested template literals.",
+      "severity": "MAJOR",
+      "effort": "10min",
+      "clean_code_attribute": "CLEAR",
+      "category": "INTENTIONAL"
+    },
+    {
+      "file": "src/pages/api/export/pdf.ts",
+      "line": 99,
+      "rule": "typescript:S3358",
+      "message": "Extract this nested ternary operation into an independent statement.",
+      "severity": "MAJOR",
+      "effort": "5min",
+      "clean_code_attribute": "CLEAR",
+      "category": "INTENTIONAL"
+    }
+  ],
+  "medium_priority": [
+    {
+      "file": "src/lib/security/malware-scanner.ts",
+      "line": 46,
+      "rule": "typescript:S6647",
+      "message": "Useless constructor.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/lib/security/malware-scanner.ts",
+      "line": 260,
+      "rule": "typescript:S6647",
+      "message": "Useless constructor.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/pages/api/assets/upload.ts",
+      "line": 12,
+      "rule": "typescript:S7772",
+      "message": "Prefer `node:path` over `path`.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/pages/api/assets/upload.ts",
+      "line": 13,
+      "rule": "typescript:S7772",
+      "message": "Prefer `node:fs` over `fs`.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/pages/api/import/bulk-audio.ts",
+      "line": 9,
+      "rule": "typescript:S1128",
+      "message": "Remove this unused import of 'ALLOWED_MIME_TYPES'.",
+      "severity": "MINOR",
+      "effort": "1min"
+    },
+    {
+      "file": "src/pages/api/people/[id]/avatar.ts",
+      "line": 9,
+      "rule": "typescript:S1128",
+      "message": "Remove this unused import of 'ALLOWED_MIME_TYPES'.",
+      "severity": "MINOR",
+      "effort": "1min"
+    },
+    {
+      "file": "src/lib/security/malware-scanner.ts",
+      "line": 664,
+      "rule": "typescript:S2486",
+      "message": "Handle this exception or don't catch it at all.",
+      "severity": "MINOR",
+      "effort": "1h"
+    },
+    {
+      "file": "src/pages/api/documents/[id].ts",
+      "line": 2,
+      "rule": "typescript:S1128",
+      "message": "Remove this unused import of 'getServerSession'.",
+      "severity": "MINOR",
+      "effort": "1min"
+    },
+    {
+      "file": "src/pages/api/documents/[id].ts",
+      "line": 3,
+      "rule": "typescript:S1128",
+      "message": "Remove this unused import of 'authOptions'.",
+      "severity": "MINOR",
+      "effort": "1min"
+    },
+    {
+      "file": "src/__tests__/setup/setup.ts",
+      "line": 52,
+      "rule": "typescript:S7764",
+      "message": "Prefer `globalThis` over `global`.",
+      "severity": "MINOR",
+      "effort": "2min"
+    },
+    {
+      "file": "src/__tests__/setup/setup.ts",
+      "line": 60,
+      "rule": "typescript:S7764",
+      "message": "Prefer `globalThis` over `global`.",
+      "severity": "MINOR",
+      "effort": "2min"
+    },
+    {
+      "file": "src/components/assets/AssetUpload.tsx",
+      "line": 17,
+      "rule": "typescript:S1874",
+      "message": "'ListItemSecondaryAction' is deprecated.",
+      "severity": "MINOR",
+      "effort": "15min"
+    },
+    {
+      "file": "src/components/assets/AssetUpload.tsx",
+      "line": 48,
+      "rule": "typescript:S6759",
+      "message": "Mark the props of the component as read-only.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/components/assets/AssetUpload.tsx",
+      "line": 329,
+      "rule": "typescript:S1874",
+      "message": "'ListItemSecondaryAction' is deprecated.",
+      "severity": "MINOR",
+      "effort": "15min"
+    },
+    {
+      "file": "src/components/assets/AssetUpload.tsx",
+      "line": 359,
+      "rule": "typescript:S1874",
+      "message": "'ListItemSecondaryAction' is deprecated.",
+      "severity": "MINOR",
+      "effort": "15min"
+    },
+    {
+      "file": "src/components/modals/PersonModal.tsx",
+      "line": 90,
+      "rule": "typescript:S6759",
+      "message": "Mark the props of the component as read-only.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/components/modals/PersonModal.tsx",
+      "line": 258,
+      "rule": "typescript:S1874",
+      "message": "'PaperProps' is deprecated.",
+      "severity": "MINOR",
+      "effort": "15min"
+    },
+    {
+      "file": "src/components/modals/PersonModal.tsx",
+      "line": 422,
+      "rule": "typescript:S1874",
+      "message": "'InputLabelProps' is deprecated.",
+      "severity": "MINOR",
+      "effort": "15min"
+    },
+    {
+      "file": "src/components/modals/PersonModal.tsx",
+      "line": 430,
+      "rule": "typescript:S1874",
+      "message": "'InputLabelProps' is deprecated.",
+      "severity": "MINOR",
+      "effort": "15min"
+    },
+    {
+      "file": "src/components/modals/PersonModal.tsx",
+      "line": 545,
+      "rule": "typescript:S1874",
+      "message": "'InputLabelProps' is deprecated.",
+      "severity": "MINOR",
+      "effort": "15min"
+    },
+    {
+      "file": "src/components/modals/PersonModal.tsx",
+      "line": 722,
+      "rule": "typescript:S6759",
+      "message": "Mark the props of the component as read-only.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/components/pages/CreateAccountPage.tsx",
+      "line": 39,
+      "rule": "typescript:S1874",
+      "message": "'FormEvent' is deprecated.",
+      "severity": "MINOR",
+      "effort": "15min"
+    },
+    {
+      "file": "src/components/pages/CreateAccountPage.tsx",
+      "line": 408,
+      "rule": "typescript:S1874",
+      "message": "'InputProps' is deprecated.",
+      "severity": "MINOR",
+      "effort": "15min"
+    },
+    {
+      "file": "src/components/pages/FamilyTreePage.tsx",
+      "line": 120,
+      "rule": "typescript:S6759",
+      "message": "Mark the props of the component as read-only.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/components/pages/FamilyTreePage.tsx",
+      "line": 265,
+      "rule": "typescript:S6759",
+      "message": "Mark the props of the component as read-only.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/components/pages/FamilyTreePage.tsx",
+      "line": 370,
+      "rule": "typescript:S2486",
+      "message": "Handle this exception or don't catch it at all.",
+      "severity": "MINOR",
+      "effort": "1h"
+    },
+    {
+      "file": "src/components/pages/FamilyTreePage.tsx",
+      "line": 421,
+      "rule": "typescript:S7764",
+      "message": "Prefer `globalThis` over `window`.",
+      "severity": "MINOR",
+      "effort": "2min"
+    },
+    {
+      "file": "src/components/pages/FamilyTreePage.tsx",
+      "line": 438,
+      "rule": "typescript:S7764",
+      "message": "Prefer `globalThis` over `window`.",
+      "severity": "MINOR",
+      "effort": "2min"
+    },
+    {
+      "file": "src/components/pages/StoriesPage.tsx",
+      "line": 1,
+      "rule": "typescript:S1128",
+      "message": "Remove this unused import of 'CardContent'.",
+      "severity": "MINOR",
+      "effort": "1min"
+    },
+    {
+      "file": "src/components/pages/StoriesPage.tsx",
+      "line": 1,
+      "rule": "typescript:S1128",
+      "message": "Remove this unused import of 'Chip'.",
+      "severity": "MINOR",
+      "effort": "1min"
+    },
+    {
+      "file": "src/components/pages/StoriesPage.tsx",
+      "line": 27,
+      "rule": "typescript:S6759",
+      "message": "Mark the props of the component as read-only.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/components/pages/StoriesPage.tsx",
+      "line": 226,
+      "rule": "typescript:S7723",
+      "message": "Use `new Array()` instead of `Array()`.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/components/pages/StoriesPage.tsx",
+      "line": 540,
+      "rule": "typescript:S1874",
+      "message": "'PaperProps' is deprecated.",
+      "severity": "MINOR",
+      "effort": "15min"
+    },
+    {
+      "file": "src/components/upload/FileUpload.tsx",
+      "line": 15,
+      "rule": "typescript:S6759",
+      "message": "Mark the props of the component as read-only.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/components/upload/FileUpload.tsx",
+      "line": 195,
+      "rule": "typescript:S6759",
+      "message": "Mark the props of the component as read-only.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/lib/api-helpers.ts",
+      "line": 173,
+      "rule": "typescript:S4325",
+      "message": "This assertion is unnecessary since it does not change the type of the expression.",
+      "severity": "MINOR",
+      "effort": "1min"
+    },
+    {
+      "file": "src/lib/auth.ts",
+      "line": 7,
+      "rule": "typescript:S1128",
+      "message": "Remove this unused import of 'hashPassword'.",
+      "severity": "MINOR",
+      "effort": "1min"
+    },
+    {
+      "file": "src/lib/auth.ts",
+      "line": 7,
+      "rule": "typescript:S1128",
+      "message": "Remove this unused import of 'validatePassword'.",
+      "severity": "MINOR",
+      "effort": "1min"
+    },
+    {
+      "file": "src/lib/auth.ts",
+      "line": 8,
+      "rule": "typescript:S1128",
+      "message": "Remove this unused import of 'logger'.",
+      "severity": "MINOR",
+      "effort": "1min"
+    },
+    {
+      "file": "src/lib/file-optimizer/image-optimizer.ts",
+      "line": 67,
+      "rule": "typescript:S6644",
+      "message": "Unnecessary use of boolean literals in conditional expression.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/lib/file-processor/sandbox-script.js",
+      "line": 10,
+      "rule": "javascript:S7772",
+      "message": "Prefer `node:fs` over `fs`.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/lib/file-processor/worker.ts",
+      "line": 1,
+      "rule": "typescript:S7772",
+      "message": "Prefer `node:child_process` over `child_process`.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/lib/file-processor/worker.ts",
+      "line": 2,
+      "rule": "typescript:S7772",
+      "message": "Prefer `node:path` over `path`.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/lib/security/csp-nonce.ts",
+      "line": 1,
+      "rule": "typescript:S7772",
+      "message": "Prefer `node:crypto` over `crypto`.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/lib/security/csrf.ts",
+      "line": 1,
+      "rule": "typescript:S7772",
+      "message": "Prefer `node:crypto` over `crypto`.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/lib/security/field-encryption.ts",
+      "line": 1,
+      "rule": "typescript:S7772",
+      "message": "Prefer `node:crypto` over `crypto`.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/lib/security/field-encryption.ts",
+      "line": 68,
+      "rule": "typescript:S1874",
+      "message": "The signature '(start?: number | undefined, end?: number | undefined): Buffer<ArrayBuffer>' of 'combined.slice' is deprecated.",
+      "severity": "MINOR",
+      "effort": "15min"
+    },
+    {
+      "file": "src/lib/security/field-encryption.ts",
+      "line": 69,
+      "rule": "typescript:S1874",
+      "message": "The signature '(start?: number | undefined, end?: number | undefined): Buffer<ArrayBuffer>' of 'combined.slice' is deprecated.",
+      "severity": "MINOR",
+      "effort": "15min"
+    },
+    {
+      "file": "src/lib/security/field-encryption.ts",
+      "line": 70,
+      "rule": "typescript:S1874",
+      "message": "The signature '(start?: number | undefined, end?: number | undefined): Buffer<ArrayBuffer>' of 'combined.slice' is deprecated.",
+      "severity": "MINOR",
+      "effort": "15min"
+    },
+    {
+      "file": "src/lib/security/field-encryption.ts",
+      "line": 174,
+      "rule": "typescript:S2486",
+      "message": "Handle this exception or don't catch it at all.",
+      "severity": "MINOR",
+      "effort": "1h"
+    },
+    {
+      "file": "src/lib/security/field-encryption.ts",
+      "line": 183,
+      "rule": "typescript:S2486",
+      "message": "Handle this exception or don't catch it at all.",
+      "severity": "MINOR",
+      "effort": "1h"
+    },
+    {
+      "file": "src/lib/security/field-encryption.ts",
+      "line": 192,
+      "rule": "typescript:S2486",
+      "message": "Handle this exception or don't catch it at all.",
+      "severity": "MINOR",
+      "effort": "1h"
+    },
+    {
+      "file": "src/lib/security/file-validator.ts",
+      "line": 183,
+      "rule": "typescript:S1874",
+      "message": "The signature '(start?: number | undefined, end?: number | undefined): Buffer<ArrayBuffer>' of 'buffer.slice' is deprecated.",
+      "severity": "MINOR",
+      "effort": "15min"
+    },
+    {
+      "file": "src/lib/security/file-validator.ts",
+      "line": 288,
+      "rule": "typescript:S7781",
+      "message": "Prefer `String#replaceAll()` over `String#replace()`.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/lib/security/file-validator.ts",
+      "line": 289,
+      "rule": "typescript:S7781",
+      "message": "Prefer `String#replaceAll()` over `String#replace()`.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/lib/security/malware-scanner.ts",
+      "line": 1,
+      "rule": "typescript:S7772",
+      "message": "Prefer `node:crypto` over `crypto`.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/lib/security/malware-scanner.ts",
+      "line": 2,
+      "rule": "typescript:S7772",
+      "message": "Prefer `node:fs` over `fs`.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/lib/security/malware-scanner.ts",
+      "line": 3,
+      "rule": "typescript:S7772",
+      "message": "Prefer `node:path` over `path`.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/lib/security/malware-scanner.ts",
+      "line": 4,
+      "rule": "typescript:S7772",
+      "message": "Prefer `node:child_process` over `child_process`.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/lib/security/malware-scanner.ts",
+      "line": 5,
+      "rule": "typescript:S7772",
+      "message": "Prefer `node:util` over `util`.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/lib/security/malware-scanner.ts",
+      "line": 6,
+      "rule": "typescript:S7772",
+      "message": "Prefer `node:net` over `net`.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/lib/security/malware-scanner.ts",
+      "line": 141,
+      "rule": "typescript:S1874",
+      "message": "The signature '(start?: number | undefined, end?: number | undefined): Buffer<ArrayBuffer>' of 'buffer.slice' is deprecated.",
+      "severity": "MINOR",
+      "effort": "15min"
+    },
+    {
+      "file": "src/lib/security/malware-scanner.ts",
+      "line": 184,
+      "rule": "typescript:S1874",
+      "message": "The signature '(start?: number | undefined, end?: number | undefined): Buffer<ArrayBuffer>' of 'buffer.slice' is deprecated.",
+      "severity": "MINOR",
+      "effort": "15min"
+    },
+    {
+      "file": "src/lib/security/malware-scanner.ts",
+      "line": 224,
+      "rule": "typescript:S4138",
+      "message": "Expected a `for-of` loop instead of a `for` loop with this simple iteration.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/lib/security/malware-scanner.ts",
+      "line": 314,
+      "rule": "typescript:S7773",
+      "message": "Prefer `Number.parseInt` over `parseInt`.",
+      "severity": "MINOR",
+      "effort": "2min"
+    },
+    {
+      "file": "src/lib/security/malware-scanner.ts",
+      "line": 443,
+      "rule": "typescript:S6594",
+      "message": "Use the \"RegExp.exec()\" method instead.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/lib/security/malware-scanner.ts",
+      "line": 465,
+      "rule": "typescript:S6594",
+      "message": "Use the \"RegExp.exec()\" method instead.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/lib/security/malware-scanner.ts",
+      "line": 522,
+      "rule": "typescript:S6594",
+      "message": "Use the \"RegExp.exec()\" method instead.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/lib/security/mfa-service.ts",
+      "line": 104,
+      "rule": "typescript:S4325",
+      "message": "This assertion is unnecessary since it does not change the type of the expression.",
+      "severity": "MINOR",
+      "effort": "1min"
+    },
+    {
+      "file": "src/lib/security/mfa-service.ts",
+      "line": 263,
+      "rule": "typescript:S7758",
+      "message": "Prefer `String.fromCodePoint()` over `String.fromCharCode()`.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/lib/security/mfa-service.ts",
+      "line": 264,
+      "rule": "typescript:S7758",
+      "message": "Prefer `String#codePointAt()` over `String#charCodeAt()`.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/lib/security/mfa-service.ts",
+      "line": 264,
+      "rule": "typescript:S7758",
+      "message": "Prefer `String#codePointAt()` over `String#charCodeAt()`.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/lib/security/mfa-service.ts",
+      "line": 275,
+      "rule": "typescript:S7758",
+      "message": "Prefer `String.fromCodePoint()` over `String.fromCharCode()`.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/lib/security/mfa-service.ts",
+      "line": 276,
+      "rule": "typescript:S7758",
+      "message": "Prefer `String#codePointAt()` over `String#charCodeAt()`.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/lib/security/mfa.ts",
+      "line": 40,
+      "rule": "typescript:S4325",
+      "message": "This assertion is unnecessary since it does not change the type of the expression.",
+      "severity": "MINOR",
+      "effort": "1min"
+    },
+    {
+      "file": "src/lib/security/password-policy.ts",
+      "line": 32,
+      "rule": "typescript:S6353",
+      "message": "Use concise character class syntax '\\d' instead of '[0-9]'.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/lib/security/password-policy.ts",
+      "line": 45,
+      "rule": "typescript:S7758",
+      "message": "Prefer `String#codePointAt()` over `String#charCodeAt()`.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/lib/security/password-policy.ts",
+      "line": 45,
+      "rule": "typescript:S7758",
+      "message": "Prefer `String#codePointAt()` over `String#charCodeAt()`.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/lib/security/password-policy.ts",
+      "line": 89,
+      "rule": "typescript:S6353",
+      "message": "Use concise character class syntax '\\d' instead of '[0-9]'.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/lib/security/password-policy.ts",
+      "line": 131,
+      "rule": "typescript:S6353",
+      "message": "Use concise character class syntax '\\d' instead of '[0-9]'.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/lib/security/password-policy.ts",
+      "line": 131,
+      "rule": "typescript:S6353",
+      "message": "Use concise character class syntax '\\d' instead of '[0-9]'.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/lib/security/rate-limiter.ts",
+      "line": 100,
+      "rule": "typescript:S1874",
+      "message": "'connection' is deprecated.",
+      "severity": "MINOR",
+      "effort": "15min"
+    },
+    {
+      "file": "src/lib/security/rate-limiter.ts",
+      "line": 138,
+      "rule": "typescript:S3626",
+      "message": "Remove this redundant jump.",
+      "severity": "MINOR",
+      "effort": "1min"
+    },
+    {
+      "file": "src/lib/security/security-headers.ts",
+      "line": 244,
+      "rule": "typescript:S1874",
+      "message": "'connection' is deprecated.",
+      "severity": "MINOR",
+      "effort": "15min"
+    },
+    {
+      "file": "src/lib/security/security-logger.ts",
+      "line": 2,
+      "rule": "typescript:S1128",
+      "message": "Remove this unused import of 'prisma'.",
+      "severity": "MINOR",
+      "effort": "1min"
+    },
+    {
+      "file": "src/lib/security/security-logger.ts",
+      "line": 3,
+      "rule": "typescript:S7772",
+      "message": "Prefer `node:crypto` over `crypto`.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/lib/security/security-logger.ts",
+      "line": 239,
+      "rule": "typescript:S7772",
+      "message": "Prefer `node:crypto` over `crypto`.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/lib/security/security-logger.ts",
+      "line": 245,
+      "rule": "typescript:S1874",
+      "message": "'connection' is deprecated.",
+      "severity": "MINOR",
+      "effort": "15min"
+    },
+    {
+      "file": "src/lib/storage/providers/local-provider.ts",
+      "line": 2,
+      "rule": "typescript:S7772",
+      "message": "Prefer `node:fs/promises` over `fs/promises`.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/lib/storage/providers/local-provider.ts",
+      "line": 3,
+      "rule": "typescript:S7772",
+      "message": "Prefer `node:path` over `path`.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/pages/api/assets/[...slug].ts",
+      "line": 5,
+      "rule": "typescript:S7772",
+      "message": "Prefer `node:path` over `path`.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/pages/api/assets/[...slug].ts",
+      "line": 42,
+      "rule": "typescript:S7772",
+      "message": "Prefer `node:fs` over `fs`.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/pages/api/assets/serve/[id].ts",
+      "line": 7,
+      "rule": "typescript:S1128",
+      "message": "Remove this unused import of 'getSecurityConfig'.",
+      "severity": "MINOR",
+      "effort": "1min"
+    },
+    {
+      "file": "src/pages/api/assets/serve/[id].ts",
+      "line": 8,
+      "rule": "typescript:S7772",
+      "message": "Prefer `node:path` over `path`.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/pages/api/assets/serve/[id].ts",
+      "line": 59,
+      "rule": "typescript:S7772",
+      "message": "Prefer `node:fs` over `fs`.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/pages/api/assets/upload.ts",
+      "line": 8,
+      "rule": "typescript:S1128",
+      "message": "Remove this unused import of 'rateLimitCheck'.",
+      "severity": "MINOR",
+      "effort": "1min"
+    },
+    {
+      "file": "src/pages/api/assets/upload.ts",
+      "line": 9,
+      "rule": "typescript:S1128",
+      "message": "Remove this unused import of 'logger'.",
+      "severity": "MINOR",
+      "effort": "1min"
+    },
+    {
+      "file": "src/pages/api/assets/upload.ts",
+      "line": 65,
+      "rule": "typescript:S7772",
+      "message": "Prefer `node:fs` over `fs`.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/pages/api/assets/upload.ts",
+      "line": 84,
+      "rule": "typescript:S7772",
+      "message": "Prefer `node:fs` over `fs`.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/pages/api/assets/upload.ts",
+      "line": 121,
+      "rule": "typescript:S7772",
+      "message": "Prefer `node:fs` over `fs`.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/pages/api/assets/upload.ts",
+      "line": 208,
+      "rule": "typescript:S7772",
+      "message": "Prefer `node:fs` over `fs`.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/pages/api/assets/upload.ts",
+      "line": 252,
+      "rule": "typescript:S7772",
+      "message": "Prefer `node:fs` over `fs`.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/pages/api/export/gedcom.ts",
+      "line": 1,
+      "rule": "typescript:S7772",
+      "message": "Prefer `node:fs/promises` over `fs/promises`.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/pages/api/export/gedcom.ts",
+      "line": 2,
+      "rule": "typescript:S7772",
+      "message": "Prefer `node:path` over `path`.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/pages/api/export/gedcom.ts",
+      "line": 18,
+      "rule": "typescript:S7781",
+      "message": "Prefer `String#replaceAll()` over `String#replace()`.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/pages/api/export/gedcom.ts",
+      "line": 22,
+      "rule": "typescript:S7781",
+      "message": "Prefer `String#replaceAll()` over `String#replace()`.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/pages/api/export/gedcom.ts",
+      "line": 115,
+      "rule": "typescript:S7778",
+      "message": "Do not call `Array#push()` multiple times.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/pages/api/export/gedcom.ts",
+      "line": 116,
+      "rule": "typescript:S7778",
+      "message": "Do not call `Array#push()` multiple times.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/pages/api/export/gedcom.ts",
+      "line": 117,
+      "rule": "typescript:S7778",
+      "message": "Do not call `Array#push()` multiple times.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/pages/api/export/gedcom.ts",
+      "line": 118,
+      "rule": "typescript:S7778",
+      "message": "Do not call `Array#push()` multiple times.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/pages/api/export/gedcom.ts",
+      "line": 119,
+      "rule": "typescript:S7778",
+      "message": "Do not call `Array#push()` multiple times.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/pages/api/export/gedcom.ts",
+      "line": 120,
+      "rule": "typescript:S7778",
+      "message": "Do not call `Array#push()` multiple times.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/pages/api/export/gedcom.ts",
+      "line": 123,
+      "rule": "typescript:S7778",
+      "message": "Do not call `Array#push()` multiple times.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/pages/api/export/gedcom.ts",
+      "line": 124,
+      "rule": "typescript:S7778",
+      "message": "Do not call `Array#push()` multiple times.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/pages/api/export/gedcom.ts",
+      "line": 133,
+      "rule": "typescript:S7778",
+      "message": "Do not call `Array#push()` multiple times.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/pages/api/export/gedcom.ts",
+      "line": 175,
+      "rule": "typescript:S7781",
+      "message": "Prefer `String#replaceAll()` over `String#replace()`.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/pages/api/export/gedcom.ts",
+      "line": 213,
+      "rule": "typescript:S7778",
+      "message": "Do not call `Array#push()` multiple times.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/pages/api/export/json.ts",
+      "line": 1,
+      "rule": "typescript:S7772",
+      "message": "Prefer `node:fs/promises` over `fs/promises`.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/pages/api/export/json.ts",
+      "line": 2,
+      "rule": "typescript:S7772",
+      "message": "Prefer `node:path` over `path`.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/pages/api/export/pdf.ts",
+      "line": 1,
+      "rule": "typescript:S7772",
+      "message": "Prefer `node:fs/promises` over `fs/promises`.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/pages/api/export/pdf.ts",
+      "line": 2,
+      "rule": "typescript:S7772",
+      "message": "Prefer `node:path` over `path`.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/pages/api/export/pdf.ts",
+      "line": 9,
+      "rule": "typescript:S7780",
+      "message": "`String.raw` should be used to avoid escaping `\\`.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/pages/api/export/pdf.ts",
+      "line": 9,
+      "rule": "typescript:S7781",
+      "message": "Prefer `String#replaceAll()` over `String#replace()`.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/pages/api/export/pdf.ts",
+      "line": 9,
+      "rule": "typescript:S7780",
+      "message": "`String.raw` should be used to avoid escaping `\\`.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/pages/api/export/pdf.ts",
+      "line": 9,
+      "rule": "typescript:S7781",
+      "message": "Prefer `String#replaceAll()` over `String#replace()`.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/pages/api/export/pdf.ts",
+      "line": 9,
+      "rule": "typescript:S7781",
+      "message": "Prefer `String#replaceAll()` over `String#replace()`.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/pages/api/export/pdf.ts",
+      "line": 20,
+      "rule": "typescript:S7778",
+      "message": "Do not call `Array#push()` multiple times.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/pages/api/export/pdf.ts",
+      "line": 29,
+      "rule": "typescript:S7778",
+      "message": "Do not call `Array#push()` multiple times.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/pages/api/export/pdf.ts",
+      "line": 30,
+      "rule": "typescript:S7778",
+      "message": "Do not call `Array#push()` multiple times.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/pages/api/export/pdf.ts",
+      "line": 31,
+      "rule": "typescript:S7778",
+      "message": "Do not call `Array#push()` multiple times.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/pages/api/export/pdf.ts",
+      "line": 32,
+      "rule": "typescript:S7778",
+      "message": "Do not call `Array#push()` multiple times.",
+      "severity": "MINOR",
+      "effort": "5min"
+    },
+    {
+      "file": "src/pages/api/export/pdf.ts",
+      "line": 103,
+      "rule": "typescript:S7778",
+      "message": "Do not call `Array#push()` multiple times.",
+      "severity": "MINOR",
+      "effort": "5min"
+    }
+  ]
+}

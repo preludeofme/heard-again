@@ -1,0 +1,99 @@
+services:
+  # Existing services (inherited from main app)
+  app:
+    extends:
+      file: ../../docker-compose.yml
+      service: app
+  db:
+    extends:
+      file: ../../docker-compose.yml
+      service: db
+  redis:
+    extends:
+      file: ../../docker-compose.yml
+      service: redis
+  tts:
+    extends:
+      file: ../../docker-compose.yml
+      service: tts
+
+  # Chat System Services
+  chat-app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    ports:
+      - "4778:4778"
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://postgres:password@db:5432/heard_again
+      - REDIS_URL=redis://redis:6379
+      - CHROMA_URL=http://chromadb:8000
+      - OLLAMA_URL=http://ollama:11434
+      - TTS_SERVICE_URL=http://tts:4779
+    depends_on:
+      - db
+      - redis
+      - chromadb
+      - ollama
+    volumes:
+      - ./src:/app/src
+      - ./prisma:/app/prisma
+      - ./uploads:/app/uploads
+      - ./logs:/app/logs
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+
+  chromadb:
+    image: chromadb/chroma:latest
+    ports:
+      - "8000:8000"
+    volumes:
+      - chroma_data:/chroma/chroma
+    environment:
+      - CHROMA_SERVER_HOST=0.0.0.0
+      - CHROMA_SERVER_AUTH_CREDENTIALS=admin:admin123
+      - CHROMA_LOG=INFO
+    restart: unless-stopped
+
+  ingestion-worker:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.worker
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://postgres:password@db:5432/heard_again
+      - REDIS_URL=redis://redis:6379
+      - CHROMA_URL=http://chromadb:8000
+      - OLLAMA_URL=http://ollama:11434
+    depends_on:
+      - db
+      - redis
+      - chromadb
+      - ollama
+    volumes:
+      - ./src:/app/src
+      - ./uploads:/app/uploads
+      - ./logs:/app/logs
+    restart: unless-stopped
+    command: ["npm", "run", "ingestion:worker"]
+
+volumes:
+  ollama_models:
+  chroma_data:
