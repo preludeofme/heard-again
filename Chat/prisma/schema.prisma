@@ -86,6 +86,7 @@ enum PersonaStatus {
 model Document {
   id             String          @id @default(cuid())
   workspaceId    String
+  assetId        String?         @unique
   personId       String?
   title          String
   content        String?

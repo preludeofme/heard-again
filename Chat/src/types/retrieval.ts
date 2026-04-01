@@ -56,6 +56,7 @@ export interface RetrievedDocument {
 export interface Document {
   id: string
   workspaceId: string
+  assetId?: string
   personId?: string
   title: string
   content: string

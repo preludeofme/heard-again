@@ -26,6 +26,7 @@ interface DocumentsControllerActions {
   deleteDocument: (id: string) => Promise<void>
   refreshDocuments: () => Promise<void>
   closeShareDialog: () => void
+  linkDocument: (assetId: string) => Promise<void>
 }
 
 interface AssetApiResponse {
@@ -34,6 +35,7 @@ interface AssetApiResponse {
   filename: string
   mimeType: string
   createdAt: string
+  linkedToPerson?: boolean
 }
 
 export function useDocumentsController(personId?: string): DocumentsControllerState & DocumentsControllerActions {
@@ -68,6 +70,7 @@ export function useDocumentsController(personId?: string): DocumentsControllerSt
         mimeType: a.mimeType,
         uploadedAt: new Date(a.createdAt),
         shareAction: 'Share',
+        linkedToPerson: a.linkedToPerson,
       }))
 
       setState(prev => ({ ...prev, documents, isLoading: false }))
@@ -125,6 +128,9 @@ export function useDocumentsController(personId?: string): DocumentsControllerSt
     try {
       const formData = new FormData()
       formData.append('file', file)
+      if (personId) {
+        formData.append('personId', personId)
+      }
 
       const response = await fetch('/api/assets/upload', {
         method: 'POST',
@@ -146,6 +152,7 @@ export function useDocumentsController(personId?: string): DocumentsControllerSt
         mimeType: data.data.mimeType || file.type,
         uploadedAt: new Date(data.data.createdAt),
         shareAction: 'Share',
+        linkedToPerson: !!personId,
       }
 
       setState(prev => ({
@@ -161,7 +168,7 @@ export function useDocumentsController(personId?: string): DocumentsControllerSt
         errorMessage: 'Failed to upload document',
       }))
     }
-  }, [])
+  }, [personId])
 
   const shareDocument = useCallback((id: string) => {
     setState(prev => ({
@@ -216,6 +223,32 @@ export function useDocumentsController(personId?: string): DocumentsControllerSt
     }))
   }, [])
 
+  const linkDocument = useCallback(async (assetId: string) => {
+    if (!personId) return
+    try {
+      const csrfToken = await getCSRFToken()
+      const response = await fetch(`/api/assets/${assetId}`, {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken },
+        body: JSON.stringify({ personId, action: 'link' }),
+      })
+      const data = await response.json()
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to link document')
+      }
+      setState(prev => ({
+        ...prev,
+        documents: prev.documents.map(doc =>
+          doc.id === assetId ? { ...doc, linkedToPerson: true } : doc
+        ),
+      }))
+    } catch (error) {
+      const apiError = ApiError.fromError(error)
+      setState(prev => ({ ...prev, hasError: true, errorMessage: apiError.message }))
+    }
+  }, [personId])
+
   return {
     ...state,
     setSelectedFilter,
@@ -227,5 +260,6 @@ export function useDocumentsController(personId?: string): DocumentsControllerSt
     deleteDocument,
     refreshDocuments,
     closeShareDialog,
+    linkDocument,
   }
 }

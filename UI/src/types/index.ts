@@ -30,6 +30,7 @@ export interface DocumentArtifact {
   uploadedAt: Date
   thumbnailUrl?: string
   shareAction?: string
+  linkedToPerson?: boolean
 }
 
 export interface StoryContribution {

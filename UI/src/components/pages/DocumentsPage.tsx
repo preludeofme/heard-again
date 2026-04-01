@@ -1,5 +1,5 @@
-import { Box, Typography, Card, CardContent, Button, Grid, Chip, IconButton, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions } from '@mui/material'
-import { CloudUpload as UploadIcon, FilterList as FilterIcon, Delete as DeleteIcon } from '@mui/icons-material'
+import { Box, Typography, Card, CardContent, Button, Grid, Chip, IconButton, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Tooltip, CircularProgress } from '@mui/material'
+import { CloudUpload as UploadIcon, FilterList as FilterIcon, Delete as DeleteIcon, Link as LinkIcon, CheckCircle as LinkedIcon } from '@mui/icons-material'
 import { DocumentArtifact } from '@/types'
 import { useState } from 'react'
 import { EmptyState } from '@/components/feedback/UIStates'
@@ -10,15 +10,17 @@ interface DocumentsPageProps {
   documents: DocumentArtifact[]
   onUploadSuccess?: () => void
   onDelete?: (id: string) => Promise<void>
+  onLink?: (assetId: string) => Promise<void>
   personId?: string
 }
 
-export function DocumentsPage({ documents, onUploadSuccess, onDelete, personId }: DocumentsPageProps) {
+export function DocumentsPage({ documents, onUploadSuccess, onDelete, onLink, personId }: DocumentsPageProps) {
   const [selectedFilter, setSelectedFilter] = useState('All')
   const [selectedDocument, setSelectedDocument] = useState<any>(null)
   const [viewerOpen, setViewerOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<DocumentArtifact | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [linkingId, setLinkingId] = useState<string | null>(null)
 
   const filteredDocuments = documents.filter(doc => 
     selectedFilter === 'All' || doc.type === selectedFilter
@@ -60,6 +62,17 @@ export function DocumentsPage({ documents, onUploadSuccess, onDelete, personId }
 
   const handleDeleteCancel = () => {
     setDeleteTarget(null)
+  }
+
+  const handleLinkClick = async (e: React.MouseEvent, doc: DocumentArtifact) => {
+    e.stopPropagation()
+    if (!onLink || linkingId) return
+    setLinkingId(doc.id)
+    try {
+      await onLink(doc.id)
+    } finally {
+      setLinkingId(null)
+    }
   }
 
   return (
@@ -119,6 +132,42 @@ export function DocumentsPage({ documents, onUploadSuccess, onDelete, personId }
                   }
                 }}
               >
+                {/* Link status badge — shown when a person filter is active */}
+                {personId && doc.linkedToPerson === true && (
+                  <Tooltip title="Linked to this person">
+                    <Box sx={{
+                      position: 'absolute',
+                      top: 6,
+                      left: 6,
+                      zIndex: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                    }}>
+                      <LinkedIcon sx={{ fontSize: 18, color: '#2e7d32' }} />
+                    </Box>
+                  </Tooltip>
+                )}
+                {personId && doc.linkedToPerson === false && (
+                  <Tooltip title="Link to this person">
+                    <IconButton
+                      size="small"
+                      onClick={(e) => handleLinkClick(e, doc)}
+                      disabled={linkingId === doc.id}
+                      sx={{
+                        position: 'absolute',
+                        top: 4,
+                        left: 4,
+                        zIndex: 1,
+                        backgroundColor: 'rgba(255,255,255,0.9)',
+                        '&:hover': { backgroundColor: '#e8f5e9', color: '#2e7d32' },
+                      }}
+                    >
+                      {linkingId === doc.id
+                        ? <CircularProgress size={14} />
+                        : <LinkIcon sx={{ fontSize: 14, color: '#546669' }} />}
+                    </IconButton>
+                  </Tooltip>
+                )}
                 {onDelete && (
                   <IconButton
                     className="doc-delete-btn"

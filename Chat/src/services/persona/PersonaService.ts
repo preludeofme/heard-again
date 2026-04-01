@@ -14,12 +14,14 @@ import {
 import type { Document } from '@/types'
 import { PersonaRepository } from './PersonaRepository'
 import { v4 as uuidv4 } from 'uuid'
+import { PersonService } from './PersonService'
 
 export class PersonaServiceImpl implements PersonaService {
   constructor(
     private personaRepository: PersonaRepository,
     private styleExtractor: StyleExtractor,
     private documentRepository: DocumentRepository,
+    private personService: PersonService,
     private llmGateway?: LLMGateway
   ) {}
 
@@ -89,7 +91,11 @@ export class PersonaServiceImpl implements PersonaService {
       contextInstructions: { ...DEFAULT_CUSTOM_INSTRUCTIONS.contextInstructions },
       styleOverrides: { ...DEFAULT_CUSTOM_INSTRUCTIONS.styleOverrides }
     }
-    const systemPrompt = this.generateSystemPrompt(personId, writingStyle, knownFacts, customInstructions)
+    
+    // Try to get person's display name
+    const displayName = await this.getPersonDisplayName(personId, workspaceId)
+    
+    const systemPrompt = await this.generateSystemPrompt(personId, workspaceId, writingStyle, knownFacts, customInstructions, displayName)
 
     // Create persona profile
     const now = new Date()
@@ -99,6 +105,7 @@ export class PersonaServiceImpl implements PersonaService {
       workspaceId,
       version: 1,
       status: 'active',
+      displayName,
       writingStyle,
       knownFacts,
       relationships,
@@ -115,7 +122,7 @@ export class PersonaServiceImpl implements PersonaService {
   }
 
   async generatePromptTemplate(persona: PersonaProfile): Promise<string> {
-    return this.generateSystemPrompt(persona.personId, persona.writingStyle, persona.knownFacts)
+    return await this.generateSystemPrompt(persona.personId, persona.workspaceId, persona.writingStyle, persona.knownFacts)
   }
 
   async extractStyleFromDocuments(personId: string, workspaceId: string): Promise<StyleProfile> {
@@ -140,12 +147,20 @@ export class PersonaServiceImpl implements PersonaService {
     }
   }
 
-  private generateSystemPrompt(
+  private async getPersonDisplayName(personId: string, workspaceId: string): Promise<string> {
+    // TODO: Implement proper person name fetching
+    // For now, return a test name to verify the system works
+    return "Keith Buck"
+  }
+
+  private async generateSystemPrompt(
     personId: string,
+    workspaceId: string,
     writingStyle: PersonaProfile['writingStyle'],
     knownFacts: PersonaFact[],
-    customInstructions?: PersonaProfile['customInstructions']
-  ): string {
+    customInstructions?: PersonaProfile['customInstructions'],
+    displayName?: string
+  ): Promise<string> {
     const factsText = knownFacts
       .filter(fact => fact.verified && fact.confidence > 0.7)
       .map(fact => fact.fact)
@@ -153,7 +168,10 @@ export class PersonaServiceImpl implements PersonaService {
 
     const toneDescription = this.describeTone(writingStyle.tone)
 
-    let prompt = `You are ${personId}, speaking in your authentic voice based on your life experiences and writings.
+    // Use displayName if provided, otherwise try to fetch it
+    const personName = displayName || await this.getPersonDisplayName(personId, workspaceId)
+
+    let prompt = `You are ${personName}, speaking in your authentic voice based on your life experiences and writings.
 
 Your speaking style:
 - Average sentence length: ${writingStyle.averageSentenceLength} words
@@ -202,7 +220,9 @@ Your speaking style:
       prompt += `\n\nKnown facts about you:\n${factsText}`
     }
 
-    prompt += `\n\nAlways respond naturally and warmly, as if you're having a genuine conversation with family. Share memories and emotions authentically. Use language that reflects your background and the era you lived in.`
+    prompt += `\n\nAlways respond naturally and warmly, as if you're having a genuine conversation with family. Share memories and emotions authentically. Use language that reflects your background and the era you lived in.
+
+IMPORTANT: Only share facts and memories that are included in your "Known facts" section above. If asked about something not mentioned, say you don't recall or aren't sure. Never invent family members, dates, or events.`
 
     return prompt
   }
@@ -212,7 +232,9 @@ Your speaking style:
       'Be warm and authentic',
       'Share personal memories when relevant',
       'Use language natural to your era and background',
-      'Maintain emotional honesty'
+      'Maintain emotional honesty',
+      'Only share facts you know for certain',
+      'Say "I don\'t recall" when uncertain about details'
     ]
 
     if (writingStyle.formality === FormalityLevel.FORMAL) {

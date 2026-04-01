@@ -7,6 +7,9 @@ export interface PersonaProfile {
   version: number
   status: 'draft' | 'active' | 'archived'
   
+  // Person display information
+  displayName?: string
+  
   // Extracted from documents
   writingStyle: {
     vocabulary: string[]

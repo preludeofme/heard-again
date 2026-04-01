@@ -53,7 +53,7 @@ export class LLMGatewayImpl implements LLMGateway {
       const processingTime = Date.now() - startTime
 
       const llmResponse: LLMResponse = {
-        content: response.data.response,
+        content: response.data.response ?? '',
         metadata: {
           model: prompt.metadata.model || this.defaultModel,
           promptTokens: response.data.prompt_eval_count || 0,

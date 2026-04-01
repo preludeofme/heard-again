@@ -5,6 +5,7 @@ import { useDocumentsController } from '@/controllers/useDocumentsController'
 import { Box, CircularProgress, Typography, Button, Card, FormControl, InputLabel, MenuItem, Select } from '@mui/material'
 import { useEffect, useMemo, useState } from 'react'
 import { useSelectedFamilyMember } from '@/contexts/SelectedFamilyMemberContext'
+import { useRouter } from 'next/router'
 
 interface PersonOption {
   id: string
@@ -18,9 +19,14 @@ const personName = (person: PersonOption) => {
 }
 
 export default function Documents() {
+  const router = useRouter()
   const { selectedFamilyMember, setSelectedFamilyMember, clearSelectedFamilyMember } = useSelectedFamilyMember()
+  // Derive personId from URL param immediately — avoids the race condition where
+  // selectedFamilyMember is still null while people haven't loaded yet.
+  const urlPersonId = typeof router.query.personId === 'string' ? router.query.personId : undefined
   const selectedSubjectId = selectedFamilyMember?.id
-  const controller = useDocumentsController(selectedSubjectId)
+  const effectivePersonId = urlPersonId || selectedSubjectId
+  const controller = useDocumentsController(effectivePersonId)
   const [people, setPeople] = useState<PersonOption[]>([])
 
   useEffect(() => {
@@ -42,14 +48,35 @@ export default function Documents() {
     }
   }, [])
 
+  // Pre-select person from query param (e.g. when arriving from Talk page)
+  useEffect(() => {
+    const queryPersonId = typeof router.query.personId === 'string' ? router.query.personId : null
+    if (!queryPersonId || people.length === 0) return
+    if (selectedSubjectId === queryPersonId) return
+    const match = people.find(p => p.id === queryPersonId)
+    if (match) {
+      setSelectedFamilyMember({
+        id: match.id,
+        firstName: match.firstName,
+        lastName: match.lastName,
+        displayName: match.displayName,
+      })
+    }
+  }, [router.query.personId, people])
+
   const selectedPersonLabel = useMemo(() => {
-    if (!selectedSubjectId) return null
-    return people.find((person) => person.id === selectedSubjectId) || null
-  }, [people, selectedSubjectId])
+    if (!effectivePersonId) return null
+    return people.find((person) => person.id === effectivePersonId) || null
+  }, [people, effectivePersonId])
 
   const handleSubjectChange = async (value: string) => {
     if (!value) {
       clearSelectedFamilyMember()
+      // Remove personId from URL so urlPersonId no longer overrides the cleared selection
+      if (router.query.personId) {
+        const { personId: _removed, ...rest } = router.query
+        await router.replace({ pathname: router.pathname, query: rest }, undefined, { shallow: true })
+      }
       return
     }
 
@@ -61,6 +88,10 @@ export default function Documents() {
         lastName: selectedPerson.lastName,
         displayName: selectedPerson.displayName,
       })
+      // Keep URL in sync so urlPersonId always reflects the active selection
+      if (router.query.personId !== value) {
+        await router.replace({ pathname: router.pathname, query: { personId: value } }, undefined, { shallow: true })
+      }
     }
   }
 
@@ -91,7 +122,7 @@ export default function Documents() {
                 <InputLabel>Family Member</InputLabel>
                 <Select
                   label="Family Member"
-                  value={selectedSubjectId || ''}
+                  value={effectivePersonId || ''}
                   onChange={(event) => handleSubjectChange(event.target.value)}
                 >
                   <MenuItem value="">All family documents</MenuItem>
@@ -114,7 +145,7 @@ export default function Documents() {
             <Button variant="contained" onClick={controller.refreshDocuments}>Retry</Button>
           </Box>
         ) : (
-          <DocumentsPage documents={controller.documents} onUploadSuccess={controller.refreshDocuments} onDelete={controller.deleteDocument} personId={selectedSubjectId} />
+          <DocumentsPage documents={controller.documents} onUploadSuccess={controller.refreshDocuments} onDelete={controller.deleteDocument} onLink={controller.linkDocument} personId={effectivePersonId} />
         )}
       </Layout>
     </>

@@ -53,7 +53,22 @@ export class StyleExtractorImpl implements StyleExtractor {
   // Additional methods expected by PersonaService
   async extractWritingStyle(documents: Document[]): Promise<PersonaProfile['writingStyle']> {
     // Combine all document content for analysis
-    const combinedText = documents.map(doc => doc.content).join('\n\n')
+    const combinedText = documents.map(doc => doc.content || '').join('\n\n').trim()
+
+    // Documents may still be queued for RAG processing — content arrives asynchronously.
+    // Return a sensible default style rather than crashing the LLM calls with empty text.
+    if (!combinedText) {
+      return {
+        vocabulary: [],
+        sentencePatterns: [],
+        tone: { warmth: 0.5, formality: 0.5, emotionalIntensity: 0.5, optimism: 0.5, humor: 0.5, storytelling: 0.5 },
+        formality: FormalityLevel.NEUTRAL,
+        averageSentenceLength: 15,
+        commonPhrases: [],
+        emotionIndicators: []
+      }
+    }
+
     const styleProfile = await this.analyzeWritingStyle(combinedText)
 
     // Convert StyleProfile to PersonaProfile['writingStyle'] format
@@ -251,7 +266,8 @@ Identify:
 Format as JSON array: [{"emotion": "joy", "indicators": ["word1", "word2"], "intensity": 0.8}]`
   }
 
-  private parseVocabularyResponse(content: string): string[] {
+  private parseVocabularyResponse(content: string | undefined): string[] {
+    if (!content) return []
     try {
       const match = content.match(/\[.*?\]/s)
       if (match) {
@@ -264,7 +280,8 @@ Format as JSON array: [{"emotion": "joy", "indicators": ["word1", "word2"], "int
     return this.extractBasicVocabulary(content)
   }
 
-  private parseSentencePatterns(content: string): string[] {
+  private parseSentencePatterns(content: string | undefined): string[] {
+    if (!content) return []
     try {
       const match = content.match(/\[.*?\]/s)
       if (match) {
@@ -277,7 +294,8 @@ Format as JSON array: [{"emotion": "joy", "indicators": ["word1", "word2"], "int
     return content.split('\n').filter(line => line.trim().length > 0).slice(0, 10)
   }
 
-  private parseToneResponse(content: string): ToneAnalysis {
+  private parseToneResponse(content: string | undefined): ToneAnalysis {
+    if (!content) return { warmth: 0.5, formality: 0.5, emotionalIntensity: 0.5, optimism: 0.5, humor: 0.5, storytelling: 0.5 }
     try {
       const match = content.match(/\{.*?\}/s)
       if (match) {
@@ -304,7 +322,8 @@ Format as JSON array: [{"emotion": "joy", "indicators": ["word1", "word2"], "int
     }
   }
 
-  private parseCommonPhrases(content: string): string[] {
+  private parseCommonPhrases(content: string | undefined): string[] {
+    if (!content) return []
     try {
       const match = content.match(/\[.*?\]/s)
       if (match) {
@@ -317,7 +336,8 @@ Format as JSON array: [{"emotion": "joy", "indicators": ["word1", "word2"], "int
     return content.split('\n').filter(line => line.trim().length > 0).slice(0, 10)
   }
 
-  private parseEmotionIndicators(content: string): EmotionIndicator[] {
+  private parseEmotionIndicators(content: string | undefined): EmotionIndicator[] {
+    if (!content) return []
     try {
       const match = content.match(/\[.*?\]/s)
       if (match) {

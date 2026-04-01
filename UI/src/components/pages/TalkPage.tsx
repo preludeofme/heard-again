@@ -268,7 +268,7 @@ export function TalkPage({ legacySubject, subjectId, availablePeople = [] }: Tal
           px: { xs: 2, md: 4 },
           py: 4
         }}>
-          <Card sx={{ maxWidth: 500, textAlign: 'center', p: 4 }}>
+          <Card sx={{ maxWidth: 520, textAlign: 'center', p: 4 }}>
             <CardContent>
               <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
                 <Avatar sx={{ 
@@ -286,12 +286,44 @@ export function TalkPage({ legacySubject, subjectId, availablePeople = [] }: Tal
               </Typography>
               
               <Typography variant="body1" sx={{ color: '#546669', mb: 3, lineHeight: 1.6 }}>
-                To have meaningful conversations with {legacySubject.fullName}, we need to generate their persona from their memories and documents.
+                To have authentic conversations with {legacySubject.fullName}, follow these two steps:
               </Typography>
+
+              <Box sx={{ textAlign: 'left', mb: 3 }}>
+                <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5, mb: 2 }}>
+                  <Box sx={{ width: 24, height: 24, borderRadius: '50%', bgcolor: '#16334a', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 13, fontWeight: 700 }}>1</Box>
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#16334a' }}>Upload documents</Typography>
+                    <Typography variant="body2" sx={{ color: '#546669' }}>
+                      Go to the Documents page and upload letters, writings, or transcripts for {legacySubject.fullName}. Make sure the person is selected before uploading.
+                    </Typography>
+                    {subjectId && (
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        onClick={() => router.push(`/documents?personId=${subjectId}`)}
+                        sx={{ mt: 1, textTransform: 'none', borderColor: '#16334a', color: '#16334a' }}
+                      >
+                        Go to Documents →
+                      </Button>
+                    )}
+                  </Box>
+                </Box>
+
+                <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+                  <Box sx={{ width: 24, height: 24, borderRadius: '50%', bgcolor: '#adcae6', color: '#16334a', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 13, fontWeight: 700 }}>2</Box>
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#16334a' }}>Generate the AI persona</Typography>
+                    <Typography variant="body2" sx={{ color: '#546669' }}>
+                      Once documents are uploaded and processed, return here and click the button below to build the persona.
+                    </Typography>
+                  </Box>
+                </Box>
+              </Box>
               
               <Alert severity="info" sx={{ mb: 3, textAlign: 'left' }}>
                 <Typography variant="body2">
-                  This analyzes their writing style, memories, and relationships to create authentic responses.
+                  At least one document (PDF, Word, or plain text) must be uploaded and indexed before persona generation. Processing takes a few seconds after upload.
                 </Typography>
               </Alert>
               

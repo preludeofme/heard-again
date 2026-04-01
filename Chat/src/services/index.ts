@@ -12,11 +12,12 @@ export * from './voice/VoiceIntegrationService'
 
 // Service factory for dependency injection
 export class ServiceFactory {
-  private static chatService: ChatService | null = null
+  private static chatService: ChatServiceType | null = null
   private static retrievalService: RetrievalServiceImpl | null = null
   private static personaService: PersonaServiceImpl | null = null
   private static llmGateway: LLMGatewayImpl | null = null
   private static voiceIntegrationService: VoiceIntegrationServiceImpl | null = null
+  private static personService: PersonService | null = null
 
   static getChatService(): ChatServiceType {
     if (!this.chatService) {
@@ -43,10 +44,18 @@ export class ServiceFactory {
       this.personaService = new PersonaServiceImpl(
         new DatabasePersonaRepository(prisma),
         new StyleExtractorImpl(this.getLLMGateway()),
-        new DocumentRepositoryImpl()
+        new PrismaDocumentRepository(),
+        this.getPersonService()
       )
     }
     return this.personaService
+  }
+
+  static getPersonService(): PersonService {
+    if (!this.personService) {
+      this.personService = new PersonService()
+    }
+    return this.personService
   }
 
   static getLLMGateway(): LLMGatewayImpl {
@@ -76,7 +85,7 @@ export class ServiceFactory {
 // Import implementations
 import { ChatService, ChatServiceImpl, ChatRepository } from './chat/ChatService'
 import type { ChatService as ChatServiceType } from './chat/ChatService'
-import { RetrievalServiceImpl, DocumentRepository, DocumentRepositoryImpl } from './retrieval/RetrievalService'
+import { RetrievalServiceImpl } from './retrieval/RetrievalService'
 import { PersonaServiceImpl, StyleExtractor } from './persona/PersonaService'
 import { StyleExtractorImpl } from './persona/StyleExtractor'
 import { DatabasePersonaRepository } from './persona/DatabasePersonaRepository'
@@ -84,48 +93,51 @@ import { LLMGatewayImpl } from './llm/LLMGateway'
 import { VoiceIntegrationService, VoiceIntegrationServiceImpl } from './voice/VoiceIntegrationService'
 import { prisma } from '@/lib/prisma'
 import type { ChatSession, ChatMessage } from '@/types'
+import { PrismaDocumentRepository } from '@/repositories/DocumentRepository'
+
+// Use PrismaChatRepository for persistence
+import { PrismaChatRepository } from '@/repositories/ChatRepository'
+import { PersonService } from '@/services/persona/PersonService'
 
 // Create a simple ChatRepository implementation for now
 class ChatRepositoryImpl implements ChatRepository {
-  // In-memory storage for development - replace with database implementation
-  private sessions: Map<string, ChatSession> = new Map()
-  private messages: Map<string, ChatMessage[]> = new Map()
-
   async createSession(session: ChatSession): Promise<ChatSession> {
-    this.sessions.set(session.id, session)
-    return session
+    const prismaRepo = new PrismaChatRepository()
+    return await prismaRepo.createSession(session)
   }
 
-  async getSession(sessionId: string): Promise<ChatSession | null> {
-    return this.sessions.get(sessionId) || null
+  async getSession(sessionId: string, userId?: string, workspaceId?: string): Promise<ChatSession | null> {
+    const prismaRepo = new PrismaChatRepository()
+    return await prismaRepo.getSession(sessionId, userId, workspaceId)
   }
 
   async updateSession(session: ChatSession): Promise<ChatSession> {
-    this.sessions.set(session.id, session)
-    return session
+    const prismaRepo = new PrismaChatRepository()
+    return await prismaRepo.updateSession(session)
   }
 
   async deleteSession(sessionId: string): Promise<void> {
-    this.sessions.delete(sessionId)
-    this.messages.delete(sessionId)
+    const prismaRepo = new PrismaChatRepository()
+    return await prismaRepo.deleteSession(sessionId)
   }
 
   async listSessions(workspaceId: string, userId: string): Promise<ChatSession[]> {
-    return Array.from(this.sessions.values())
-      .filter(session => session.workspaceId === workspaceId && session.userId === userId)
+    const prismaRepo = new PrismaChatRepository()
+    return await prismaRepo.listSessions(workspaceId, userId)
   }
 
   async addMessage(message: ChatMessage): Promise<ChatMessage> {
-    const sessionMessages = this.messages.get(message.sessionId) || []
-    sessionMessages.push(message)
-    this.messages.set(message.sessionId, sessionMessages)
-    return message
+    const prismaRepo = new PrismaChatRepository()
+    return await prismaRepo.addMessage(message)
   }
 
   async getMessages(sessionId: string, limit?: number, offset?: number): Promise<ChatMessage[]> {
-    const messages = this.messages.get(sessionId) || []
-    const start = offset || 0
-    const end = limit ? start + limit : undefined
-    return messages.slice(start, end)
+    const prismaRepo = new PrismaChatRepository()
+    return await prismaRepo.getMessages(sessionId, limit, offset)
+  }
+
+  async updateMessage(messageId: string, content: string, metadata?: any): Promise<ChatMessage | null> {
+    const prismaRepo = new PrismaChatRepository()
+    return await prismaRepo.updateMessage(messageId, content, metadata)
   }
 }

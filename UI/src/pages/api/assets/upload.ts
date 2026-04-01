@@ -268,6 +268,10 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse) {
         logger.warn({ detectedType: validationResult.detectedType }, 'CHAT_SERVICE_URL or CHAT_SERVICE_SECRET not set — RAG ingestion skipped')
       } else {
         logger.info({ assetId: asset.id, mimeType: validationResult.detectedType }, 'Triggering RAG ingestion')
+        const rawPublicUrl = uploadResult.publicUrl
+        const absoluteStorageUrl = rawPublicUrl.startsWith('http')
+          ? rawPublicUrl
+          : `${process.env.NEXTAUTH_URL || 'http://localhost:4777'}${rawPublicUrl}`
         fetch(`${chatServiceUrl}/api/ingestion/ingest`, {
           method: 'POST',
           headers: {
@@ -277,7 +281,7 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse) {
           body: JSON.stringify({
             assetId: asset.id,
             workspaceId: user.workspaceId,
-            storageUrl: uploadResult.publicUrl,
+            storageUrl: absoluteStorageUrl,
             mimeType: validationResult.detectedType!,
             title: file.originalFilename || asset.filename,
             personId,

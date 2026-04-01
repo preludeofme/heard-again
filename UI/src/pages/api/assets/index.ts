@@ -25,11 +25,20 @@ export default apiHandler({
       ]
     }
 
+    // When personId is provided, return ALL assets but annotate each with
+    // whether it is linked to that person. Filtering to only linked assets
+    // prevented unlinked docs from appearing at all, making it impossible
+    // to link them retroactively from the UI.
+    let linkedAssetIds: Set<string> | null = null
     if (personId && typeof personId === 'string') {
-      where.document = {
-        isDeleted: false,
-        people: { some: { personId } },
-      }
+      const linkedDocs = await prisma.documentPerson.findMany({
+        where: {
+          personId,
+          document: { workspaceId: user.workspaceId, isDeleted: false },
+        },
+        select: { document: { select: { assetId: true } } },
+      })
+      linkedAssetIds = new Set(linkedDocs.map((d) => d.document.assetId))
     }
 
     const [assets, total] = await Promise.all([
@@ -59,6 +68,7 @@ export default apiHandler({
       processingStatus: a.processingStatus,
       uploadedBy: a.uploadedBy,
       createdAt: a.createdAt,
+      linkedToPerson: linkedAssetIds ? linkedAssetIds.has(a.id) : undefined,
     }))
 
     return successResponse(res, {

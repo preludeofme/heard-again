@@ -81,7 +81,7 @@ export class ChatServiceImpl implements ChatService {
       personaProfile,
       retrievedDocuments,
       request.message,
-      await this.getHistory(request.sessionId, 10)
+      await this.getHistory(request.sessionId, 10, 0, session.workspaceId)
     )
 
     // Generate response
@@ -130,10 +130,10 @@ export class ChatServiceImpl implements ChatService {
     }
   }
 
-  async getHistory(sessionId: string, limit?: number, offset?: number): Promise<ChatMessage[]> {
+  async getHistory(sessionId: string, limit?: number, offset?: number, workspaceId?: string): Promise<ChatMessage[]> {
     const actualLimit = limit ?? 50
     const actualOffset = offset ?? 0
-    return await this.chatRepository.getMessages(sessionId, actualLimit, actualOffset)
+    return await this.chatRepository.getMessages(sessionId, actualLimit, actualOffset, undefined, workspaceId)
   }
 
   async getSession(sessionId: string, userId?: string, workspaceId?: string): Promise<ChatSession | null> {
@@ -192,11 +192,26 @@ export class ChatServiceImpl implements ChatService {
       personaProfile,
       retrievedDocuments,
       request.message,
-      await this.getHistory(request.sessionId, 10)
+      await this.getHistory(request.sessionId, 10, 0, session.workspaceId)
     )
 
     // Generate streaming response
     const messageId = uuidv4()
+    
+    // Create assistant message placeholder immediately
+    const assistantMessage: ChatMessage = {
+      id: messageId,
+      sessionId: request.sessionId,
+      role: 'assistant',
+      content: '',
+      metadata: {
+        processingTime: 0,
+        retrievedDocuments,
+        tokenCount: 0
+      },
+      createdAt: new Date()
+    }
+    await this.chatRepository.addMessage(assistantMessage)
     
     return this.createStreamGenerator(messageId, prompt, startTime, retrievedDocuments)
   }

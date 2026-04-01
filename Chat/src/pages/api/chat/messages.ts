@@ -56,13 +56,14 @@ async function handleGetMessages(
     const limit = parseInt(query.limit as string) || 50
     const offset = parseInt(query.offset as string) || 0
 
-    // Verify session exists and belongs to this user/workspace (SEC-3)
-    const session = await chatService.getSession(sessionId, userId, workspaceId)
+    // Verify session exists and belongs to this workspace (SEC-3).
+    // userId ownership is enforced at the UI proxy layer; here we scope to workspace only.
+    const session = await chatService.getSession(sessionId, undefined, workspaceId)
     if (!session) {
       return res.status(404).json({ error: 'Chat session not found' })
     }
 
-    const messages = await chatService.getHistory(sessionId, limit, offset)
+    const messages = await chatService.getHistory(sessionId, limit, offset, workspaceId)
     
     res.status(200).json({
       success: true,

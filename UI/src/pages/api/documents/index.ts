@@ -1,16 +1,17 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/lib/auth'
+import { getAuthUserWithWorkspace } from '@/lib/auth-helpers'
 import { prisma } from '@/lib/prisma'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const session = await getServerSession(req, res, authOptions)
-  if (!session?.user) {
+  let user: Awaited<ReturnType<typeof getAuthUserWithWorkspace>>
+  try {
+    user = await getAuthUserWithWorkspace(req, res)
+  } catch {
     return res.status(401).json({ success: false, error: 'Unauthorized' })
   }
 
   const { method } = req
-  const workspaceId = req.query.workspaceId as string || session.user.defaultWorkspaceId
+  const workspaceId = (req.query.workspaceId as string) || user.workspaceId
 
   if (!workspaceId) {
     return res.status(400).json({ success: false, error: 'Workspace ID required' })
@@ -21,7 +22,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       case 'GET':
         return await getDocuments(req, res, workspaceId)
       case 'POST':
-        return await createDocument(req, res, workspaceId, session.user.id)
+        return await createDocument(req, res, workspaceId, user.id)
       default:
         return res.status(405).json({ success: false, error: 'Method not allowed' })
     }
@@ -118,9 +119,14 @@ async function getDocuments(req: NextApiRequest, res: NextApiResponse, workspace
     prisma.document.count({ where }),
   ])
 
+  const serialized = documents.map(doc => ({
+    ...doc,
+    asset: doc.asset ? { ...doc.asset, sizeBytes: doc.asset.sizeBytes !== null ? Number(doc.asset.sizeBytes) : null } : null,
+  }))
+
   return res.status(200).json({
     success: true,
-    data: documents,
+    data: serialized,
     pagination: {
       page: parseInt(page as string),
       limit: take,
@@ -219,8 +225,13 @@ async function createDocument(
     },
   })
 
+  const serializedDoc = {
+    ...document,
+    asset: document.asset ? { ...document.asset, sizeBytes: document.asset.sizeBytes !== null ? Number(document.asset.sizeBytes) : null } : null,
+  }
+
   return res.status(201).json({
     success: true,
-    data: document,
+    data: serializedDoc,
   })
 }

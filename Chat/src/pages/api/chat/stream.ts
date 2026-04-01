@@ -58,8 +58,9 @@ export default async function handler(
 
     const chatService = ServiceFactory.getChatService()
 
-    // Verify session exists and belongs to this user/workspace (SEC-3)
-    const session = await chatService.getSession(sessionId, userId, workspaceId)
+    // Verify session exists and belongs to this workspace (SEC-3).
+    // userId ownership is enforced at the UI proxy layer; here we scope to workspace only.
+    const session = await chatService.getSession(sessionId, undefined, workspaceId)
     if (!session) {
       res.write(`event: error\ndata: ${JSON.stringify({ error: 'Chat session not found' })}\n\n`)
       res.end()

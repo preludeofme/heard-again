@@ -10,7 +10,7 @@ import {
   SearchQuery
 } from '@/types'
 import { PrismaDocumentRepository } from '@/repositories/DocumentRepository'
-import { ChromaClient } from 'chromadb'
+import { ChromaClient, DefaultEmbeddingFunction } from 'chromadb'
 import { v4 as uuidv4 } from 'uuid'
 
 export class RetrievalServiceImpl implements RetrievalService {
@@ -28,7 +28,11 @@ export class RetrievalServiceImpl implements RetrievalService {
     const collectionName = this.getCollectionName(context.workspaceId)
     
     try {
-      const collection = await this.chromaClient.getCollection({ name: collectionName } as any)
+      const embedder = new DefaultEmbeddingFunction()
+      const collection = await this.chromaClient.getCollection({ 
+        name: collectionName,
+        embeddingFunction: embedder
+      } as any)
 
       // Build metadata filters
       const whereFilters: any = {}
@@ -62,37 +66,33 @@ export class RetrievalServiceImpl implements RetrievalService {
           const metadata = results.metadatas?.[0]?.[i] || {}
           const distance = results.distances?.[0]?.[i] || 0
 
+          // Skip if chunkId is null
+          if (!chunkId) continue
+
           // Get document information
           const document = await this.documentRepository.getDocument(String(metadata.documentId ?? ''))
           if (!document) continue
 
           // Calculate relevance score (convert distance to similarity)
-          const relevanceScore = 1 - (distance || 0)
+          const relevanceScore = 1 - distance
 
-          // Apply minimum relevance filter
-          if (context.minRelevanceScore && relevanceScore < context.minRelevanceScore) {
-            continue
-          }
-
-          const m = metadata as Record<string, any>
           retrievedDocuments.push({
-            id: uuidv4(),
-            documentId: String(m.documentId ?? ''),
-            chunkId,
-            content: content ?? '',
+            id: chunkId,
+            documentId: document.id,
+            chunkId: chunkId,
+            content: content || '',
             metadata: {
               title: document.title,
               source: document.source,
-              pageNumber: m.pageNumber != null ? Number(m.pageNumber) : undefined,
-              chunkIndex: Number(m.chunkIndex ?? 0),
-              totalChunks: Number(m.totalChunks ?? 0),
-              personId: m.personId != null ? String(m.personId) : undefined,
-              documentType: (m.documentType as DocumentType) ?? DocumentType.OTHER,
+              chunkIndex: Number(metadata.chunkIndex ?? 0),
+              totalChunks: Number(metadata.totalChunks ?? 1),
+              personId: document.personId || '',
+              documentType: (metadata.documentType as DocumentType) ?? DocumentType.OTHER,
               relevanceScore,
-              extractedAt: new Date(m.extractedAt ?? Date.now()),
-              embeddingModel: String(m.embeddingModel ?? 'nomic-embed-text'),
-              chunkSize: Number(m.chunkSize ?? 0),
-              overlapSize: Number(m.overlapSize ?? 0)
+              extractedAt: new Date(Number(metadata.extractedAt) || Date.now()),
+              embeddingModel: String(metadata.embeddingModel ?? 'nomic-embed-text'),
+              chunkSize: Number(metadata.chunkSize ?? 0),
+              overlapSize: Number(metadata.overlapSize ?? 0)
             }
           })
         }
@@ -100,7 +100,13 @@ export class RetrievalServiceImpl implements RetrievalService {
 
       // Rank documents by relevance
       return retrievedDocuments.sort((a, b) => b.metadata.relevanceScore - a.metadata.relevanceScore)
-    } catch (error) {
+    } catch (error: any) {
+      // Handle case where collection doesn't exist yet
+      if (error.message?.includes('The requested resource could not be found') || 
+          error.name === 'ChromaNotFoundError') {
+        console.warn(`ChromaDB collection '${collectionName}' not found. No documents have been ingested yet.`)
+        return []
+      }
       console.error('Error searching documents:', error)
       throw new Error('Failed to search documents')
     }

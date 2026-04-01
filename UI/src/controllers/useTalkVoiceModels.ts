@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { VoiceModel } from '@/types'
 import { logger } from '@/lib/client-logger'
 
@@ -21,6 +21,8 @@ export function useTalkVoiceModels(
   options: UseTalkVoiceModelsOptions = {}
 ): TalkVoiceModelsState & TalkVoiceModelsActions {
   const { onError } = options
+  const onErrorRef = useRef(onError)
+  onErrorRef.current = onError
 
   const [state, setState] = useState<TalkVoiceModelsState>({
     voiceModels: [],
@@ -68,10 +70,10 @@ export function useTalkVoiceModels(
       }))
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to load voice models'
-      onError?.('Failed to load voice models')
+      onErrorRef.current?.('Failed to load voice models')
       await logger.logError('Failed to load voice models', { error: message })
     }
-  }, [subjectId, onError])
+  }, [subjectId])
 
   const selectVoiceModel = useCallback((model: VoiceModel) => {
     setState(prev => ({

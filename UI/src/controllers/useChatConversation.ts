@@ -144,16 +144,31 @@ export function useChatConversation({
           const existingSession = sessionsData.sessions.find((session: any) => session.personId === subjectId)
           
           if (existingSession) {
-            setState(prev => ({ 
-              ...prev, 
-              sessionId: existingSession.id, 
-              needsPersonaGeneration: false 
-            }))
-            
-            // Load existing messages if any
-            await loadChatHistory(existingSession.id)
-            setState(prev => ({ ...prev, isLoading: false }))
-            return
+            // Verify the session is accessible before committing to it
+            const testRes = await fetch(`/api/chat/messages?sessionId=${existingSession.id}`, {
+              credentials: 'include',
+            })
+            if (testRes.ok) {
+              setState(prev => ({ 
+                ...prev, 
+                sessionId: existingSession.id, 
+                needsPersonaGeneration: false 
+              }))
+              const data = await testRes.json()
+              if (data.success && data.messages) {
+                const formattedMessages = data.messages.map((msg: any) => ({
+                  id: msg.id,
+                  sender: msg.role === 'user' ? 'User' : 'LegacySubject',
+                  timestamp: new Date(msg.createdAt),
+                  content: msg.content,
+                  state: 'sent' as const,
+                }))
+                setState(prev => ({ ...prev, messages: formattedMessages }))
+              }
+              setState(prev => ({ ...prev, isLoading: false }))
+              return
+            }
+            // Session inaccessible — fall through to create a new one
           }
         }
       }

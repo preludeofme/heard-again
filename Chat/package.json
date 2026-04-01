@@ -27,6 +27,7 @@
     "axios": "^1.14.0",
     "bullmq": "^4.0.0",
     "chromadb": "^1.7.0",
+    "chromadb-default-embed": "^2.14.0",
     "express-rate-limit": "^6.10.0",
     "helmet": "^7.0.0",
     "ioredis": "^5.3.0",

@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { PrismaDocumentRepository } from '@/repositories/DocumentRepository'
 import { queueManager, QUEUE_NAMES } from '@/utils/queues'
-import { Document, DocumentStatus, EmbeddingStatus } from '@/types/retrieval'
+import { Document, DocumentStatus, DocumentType, EmbeddingStatus } from '@/types/retrieval'
 import { logger } from '@/lib/logger'
 import { v4 as uuidv4 } from 'uuid'
 import axios from 'axios'
@@ -87,14 +87,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await fs.promises.writeFile(filePath, fileBytes)
     logger.info({ assetId, documentId, filePath, sizeBytes: fileBytes.length }, 'File downloaded to temp dir')
 
-    // Create Document record in the Chat DB
+    // Create or update Document record in the Chat DB.
+    // Using upsertByAssetId so that re-ingestion of a retroactively-linked asset
+    // updates the existing record's personId instead of creating a duplicate.
     const documentRepository = new PrismaDocumentRepository()
     const document: Document = {
       id: documentId,
       workspaceId,
+      assetId: assetId || undefined,
       personId: personId || undefined,
       title,
-      documentType: 'DOCUMENT', // Use enum value, not MIME type
+      content: '',
+      documentType: DocumentType.DOCUMENT,
       source: 'ui-upload',
       metadata: {
         originalFileName: title,
@@ -107,8 +111,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       updatedAt: new Date(),
     }
 
-    const savedDocument = await documentRepository.createDocument(document)
-    logger.info({ assetId, documentId: savedDocument.id, workspaceId }, 'Document record created in Chat DB')
+    const savedDocument = await documentRepository.upsertByAssetId(document)
+    logger.info({ assetId, documentId: savedDocument.id, workspaceId, personId: personId ?? null }, 'Document record upserted in Chat DB')
 
     // Queue ingestion job for the worker to process
     const traceId = uuidv4()

@@ -29,13 +29,45 @@ export class PrismaDocumentRepository implements DocumentRepository {
       data: {
         id: document.id,
         workspaceId: document.workspaceId,
+        assetId: document.assetId ?? null,
+        personId: document.personId ?? null,
         title: document.title,
-        documentType: document.documentType,
+        documentType: document.documentType.toUpperCase(),
         source: document.source,
         metadata: document.metadata
       }
     })
 
+    return this.mapDbDocumentToDocument(dbDocument)
+  }
+
+  /**
+   * Upsert a document by assetId. If a record with the same assetId already exists,
+   * update its personId (and title) so re-ingestion of a retroactively-linked asset
+   * corrects the missing personId without creating a duplicate.
+   */
+  async upsertByAssetId(document: Document): Promise<Document> {
+    if (!document.assetId) {
+      return this.createDocument(document)
+    }
+    const dbDocument = await (prisma as any).document.upsert({
+      where: { assetId: document.assetId },
+      update: {
+        personId: document.personId ?? null,
+        title: document.title,
+        updatedAt: new Date(),
+      },
+      create: {
+        id: document.id,
+        workspaceId: document.workspaceId,
+        assetId: document.assetId,
+        personId: document.personId ?? null,
+        title: document.title,
+        documentType: document.documentType.toUpperCase(),
+        source: document.source,
+        metadata: document.metadata,
+      },
+    })
     return this.mapDbDocumentToDocument(dbDocument)
   }
 
@@ -125,10 +157,11 @@ export class PrismaDocumentRepository implements DocumentRepository {
     return dbChunks.map(this.mapDbChunkToDocumentChunk)
   }
 
-  private mapDbDocumentToDocument(dbDocument: any): Document {
+  private mapDbDocumentToDocument = (dbDocument: any): Document => {
     return {
       id: dbDocument.id,
       workspaceId: dbDocument.workspaceId,
+      assetId: dbDocument.assetId ?? undefined,
       personId: dbDocument.personId,
       title: dbDocument.title,
       content: dbDocument.content || '',
