@@ -4,6 +4,12 @@ import { getAuthUserWithWorkspace } from '@/lib/auth-helpers'
 import { prisma } from '@/lib/prisma'
 import path from 'path'
 
+// Verify service token for Chat service requests
+function verifyServiceToken(req: NextApiRequest): boolean {
+  const secret = req.headers['x-chat-service-secret']
+  return !!secret && secret === process.env.CHAT_SERVICE_SECRET
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Only allow GET requests
   if (req.method !== 'GET') {
@@ -18,14 +24,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // Authenticate user and get workspace
-    const user = await getAuthUserWithWorkspace(req, res)
+    let workspaceId: string
+    
+    // Try service-to-service auth first (for Chat service)
+    if (verifyServiceToken(req)) {
+      // Extract workspaceId from path for service requests (format: workspace-{id}/...)
+      const pathParts = storagePath.split('/')
+      if (pathParts[0]?.startsWith('workspace-')) {
+        workspaceId = pathParts[0].replace('workspace-', '')
+      } else {
+        return res.status(400).json({ error: 'Invalid storage path format' })
+      }
+    } else {
+      // Fall back to user authentication
+      const user = await getAuthUserWithWorkspace(req, res)
+      workspaceId = user.workspaceId
+    }
     
     // Look up asset by storagePath and verify workspace ownership
     const asset = await prisma.asset.findFirst({
       where: { 
         storagePath: storagePath,
-        workspaceId: user.workspaceId 
+        workspaceId: workspaceId
       },
       select: { id: true, mimeType: true }
     })

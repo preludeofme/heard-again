@@ -226,7 +226,6 @@ services:
 networks:
   internal:
     driver: bridge
-    internal: true
 
 volumes:
   postgres_data:

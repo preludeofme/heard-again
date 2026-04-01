@@ -148,6 +148,7 @@ else
 fi
 
 # UI .env
+UI_ENV_CREATED=false
 if [ ! -f "$UI_DIR/.env" ]; then
     if [ -f "$UI_DIR/.env.example" ]; then
         echo "  Creating UI .env..."
@@ -163,12 +164,14 @@ CHAT_SYSTEM_URL=http://localhost:3001
 REDIS_URL=redis://localhost:6379
 EOF
     fi
+    UI_ENV_CREATED=true
     echo -e "  ${GREEN}✓ UI .env created${NC}"
 else
     echo -e "  ${GREEN}✓ UI .env already exists${NC}"
 fi
 
 # Chat .env
+CHAT_ENV_CREATED=false
 if [ ! -f "$CHAT_DIR/.env" ]; then
     if [ -f "$CHAT_DIR/.env.example" ]; then
         echo "  Creating Chat .env..."
@@ -185,9 +188,52 @@ NODE_ENV=development
 PORT=3001
 EOF
     fi
+    CHAT_ENV_CREATED=true
     echo -e "  ${GREEN}✓ Chat .env created${NC}"
 else
     echo -e "  ${GREEN}✓ Chat .env already exists${NC}"
+fi
+
+# Generate and set CHAT_SERVICE_SECRET in both .env files if not present
+echo ""
+echo -e "${YELLOW}Setting up service authentication...${NC}"
+
+# Generate a secure random secret if needed
+if ! grep -q "^CHAT_SERVICE_SECRET=" "$UI_DIR/.env" 2>/dev/null || ! grep -q "^CHAT_SERVICE_SECRET=" "$CHAT_DIR/.env" 2>/dev/null; then
+    echo "  Generating CHAT_SERVICE_SECRET..."
+    SERVICE_SECRET=$(openssl rand -hex 32 2>/dev/null || head -c 64 /dev/urandom | xxd -p | tr -d '\n' | head -c 64)
+    
+    # Add to UI .env
+    if ! grep -q "^CHAT_SERVICE_SECRET=" "$UI_DIR/.env" 2>/dev/null; then
+        echo "" >> "$UI_DIR/.env"
+        echo "# Service Authentication (shared with Chat service)" >> "$UI_DIR/.env"
+        echo "CHAT_SERVICE_SECRET=$SERVICE_SECRET" >> "$UI_DIR/.env"
+        echo -e "  ${GREEN}✓ CHAT_SERVICE_SECRET added to UI/.env${NC}"
+    fi
+    
+    # Add to Chat .env
+    if ! grep -q "^CHAT_SERVICE_SECRET=" "$CHAT_DIR/.env" 2>/dev/null; then
+        # Check if there's an empty CHAT_SERVICE_SECRET line
+        if grep -q "^CHAT_SERVICE_SECRET=\"\"" "$CHAT_DIR/.env" 2>/dev/null; then
+            # Replace the empty value
+            sed -i "s/^CHAT_SERVICE_SECRET=\"\"/CHAT_SERVICE_SECRET=$SERVICE_SECRET/" "$CHAT_DIR/.env"
+        else
+            echo "" >> "$CHAT_DIR/.env"
+            echo "# Service Authentication (shared with UI service)" >> "$CHAT_DIR/.env"
+            echo "CHAT_SERVICE_SECRET=$SERVICE_SECRET" >> "$CHAT_DIR/.env"
+        fi
+        echo -e "  ${GREEN}✓ CHAT_SERVICE_SECRET added to Chat/.env${NC}"
+    fi
+else
+    # Check if values match
+    UI_SECRET=$(grep '^CHAT_SERVICE_SECRET=' "$UI_DIR/.env" | cut -d'=' -f2- | tr -d '"' | head -1)
+    CHAT_SECRET=$(grep '^CHAT_SERVICE_SECRET=' "$CHAT_DIR/.env" | cut -d'=' -f2- | tr -d '"' | head -1)
+    if [ "$UI_SECRET" = "$CHAT_SECRET" ] && [ -n "$UI_SECRET" ]; then
+        echo -e "  ${GREEN}✓ CHAT_SERVICE_SECRET is set and matches in both .env files${NC}"
+    else
+        echo -e "  ${YELLOW}⚠ CHAT_SERVICE_SECRET mismatch between UI/.env and Chat/.env${NC}"
+        echo -e "    Please ensure both files have the same value."
+    fi
 fi
 
 # TTS .env (if it exists or has example)

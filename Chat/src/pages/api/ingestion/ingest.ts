@@ -79,6 +79,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       timeout: 60000,
       maxContentLength: 100 * 1024 * 1024, // 100 MB hard cap
       maxBodyLength: 100 * 1024 * 1024,
+      headers: {
+        'X-Chat-Service-Secret': process.env.CHAT_SERVICE_SECRET || '',
+      },
     })
     const fileBytes = Buffer.from(response.data)
     await fs.promises.writeFile(filePath, fileBytes)
@@ -91,8 +94,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       workspaceId,
       personId: personId || undefined,
       title,
-      content: '',
-      documentType: mimeType as any,
+      documentType: 'DOCUMENT', // Use enum value, not MIME type
       source: 'ui-upload',
       metadata: {
         originalFileName: title,

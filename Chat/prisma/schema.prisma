@@ -88,7 +88,7 @@ model Document {
   workspaceId    String
   personId       String?
   title          String
-  content        String
+  content        String?
   documentType   DocumentType
   source         String
   metadata       Json            @default("{}")
