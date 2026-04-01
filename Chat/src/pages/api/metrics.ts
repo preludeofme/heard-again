@@ -1,6 +1,9 @@
 import { NextApiRequest, NextApiResponse } from 'next'
+import { verifyServiceToken } from '@/utils/auth-guard'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (!verifyServiceToken(req, res)) return
+
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' })
   }

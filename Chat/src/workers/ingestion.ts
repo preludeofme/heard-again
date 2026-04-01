@@ -3,6 +3,8 @@ import { queueManager, QUEUE_NAMES, JobUtils } from '@/utils/queues'
 import { SimpleIngestionService, SimpleDocumentProcessor } from '@/services/ingestion/SimpleIngestionService'
 import { EmbeddingGeneratorImpl } from '@/services/ingestion/EmbeddingGenerator'
 import { PrismaDocumentRepository } from '@/repositories/DocumentRepository'
+import { logger } from '@/lib/logger'
+import axios from 'axios'
 
 export class IngestionWorker {
   private worker: Worker | null = null
@@ -21,7 +23,7 @@ export class IngestionWorker {
   }
 
   async start(): Promise<void> {
-    console.log('🚀 Starting ingestion worker...')
+    logger.info('Starting ingestion worker')
 
     this.worker = queueManager.createWorker(
       QUEUE_NAMES.DOCUMENT_INGESTION,
@@ -36,33 +38,40 @@ export class IngestionWorker {
     )
 
     // Set up event listeners
-    this.worker.on('completed', (job) => {
-      console.log(`✅ Job ${job.id} completed successfully`)
+    this.worker.on('completed', (job, result) => {
+      logger.info(
+        { jobId: job.id, documentId: result?.documentId, chunksProcessed: result?.chunksProcessed, embeddingsGenerated: result?.embeddingsGenerated, processingTimeMs: result?.processingTime },
+        'RAG ingestion job completed ✓'
+      )
     })
 
     this.worker.on('failed', (job, err) => {
-      console.error(`❌ Job ${job?.id} failed:`, err)
+      logger.error(
+        { jobId: job?.id, documentId: job?.data?.documentId, traceId: job?.data?.traceId, attemptsMade: job?.attemptsMade, err: err?.message },
+        'RAG ingestion job failed'
+      )
     })
 
     this.worker.on('error', (err) => {
-      console.error('Worker error:', err)
+      logger.error({ err: err?.message }, 'Ingestion worker error')
     })
 
-    console.log('✅ Ingestion worker started successfully')
+    logger.info('Ingestion worker ready')
   }
 
   async stop(): Promise<void> {
     if (this.worker) {
       await this.worker.close()
       this.worker = null
-      console.log('🛑 Ingestion worker stopped')
+      logger.info('Ingestion worker stopped')
     }
   }
 
   private async processJob(job: any): Promise<any> {
-    const { documentId, filePath, workspaceId, userId, config, traceId } = job.data
+    const { documentId, filePath, workspaceId, mimeType, title, config, traceId } = job.data
+    const startMs = Date.now()
 
-    console.log(`📄 Processing document ${documentId} (trace: ${traceId})`)
+    logger.info({ jobId: job.id, documentId, workspaceId, mimeType, title, traceId }, 'RAG ingestion job started')
 
     try {
       // Step 1: Extract text
@@ -74,18 +83,16 @@ export class IngestionWorker {
       })
 
       const fs = require('fs').promises
-      const path = require('path')
       const buffer = await fs.readFile(filePath)
-      
-      // Determine MIME type
-      const mimeType = this.getMimeTypeFromPath(filePath)
-      
-      // Extract text using document processor
+
+      // Extract text using document processor (mimeType comes from job.data)
       const textResult = await this.documentProcessor.extractText(buffer, mimeType)
       
       if (!textResult.text || textResult.text.trim().length === 0) {
         throw new Error('No text content extracted from document')
       }
+      const wordCount = textResult.text.split(/\s+/).filter(Boolean).length
+      logger.info({ documentId, traceId, wordCount, mimeType }, 'Text extraction complete')
 
       await JobUtils.updateJobProgress(job, {
         currentStep: 'parsing_structure',
@@ -106,6 +113,7 @@ export class IngestionWorker {
 
       // Step 3: Chunk the text
       const chunks = this.chunkText(textResult.text, config)
+      logger.info({ documentId, traceId, chunkCount: chunks.length }, 'Text chunked')
       
       await JobUtils.updateJobProgress(job, {
         currentStep: 'generating_embeddings',
@@ -115,9 +123,11 @@ export class IngestionWorker {
       })
 
       // Step 4: Generate embeddings
+      logger.info({ documentId, traceId, chunkCount: chunks.length }, 'Generating embeddings')
       const embeddingGenerator = new EmbeddingGeneratorImpl()
       const chunkTexts = chunks.map(chunk => chunk.content)
       const embeddings = await embeddingGenerator.generateEmbeddings(chunkTexts)
+      logger.info({ documentId, traceId, embeddingCount: embeddings.length }, 'Embeddings generated')
 
       await JobUtils.updateJobProgress(job, {
         currentStep: 'indexing',
@@ -130,7 +140,7 @@ export class IngestionWorker {
       await this.storeDocument({
         id: documentId,
         workspaceId,
-        title: path.basename(filePath),
+        title,
         content: textResult.text,
         mimeType,
         chunks: chunks.map((chunk, index) => ({
@@ -140,7 +150,7 @@ export class IngestionWorker {
         })),
         structure,
         metadata: {
-          originalFileName: path.basename(filePath),
+          originalFileName: title,
           fileSize: buffer.length,
           extractedAt: new Date(),
           processingTime: Date.now() - job.timestamp,
@@ -153,7 +163,7 @@ export class IngestionWorker {
       try {
         await fs.unlink(filePath)
       } catch (error) {
-        console.warn(`Failed to cleanup temporary file ${filePath}:`, error)
+        logger.warn({ filePath, err: error instanceof Error ? error.message : String(error) }, 'Failed to clean up temp file after ingestion')
       }
 
       await JobUtils.updateJobProgress(job, {
@@ -163,20 +173,27 @@ export class IngestionWorker {
         currentOperation: 'Document processing completed successfully'
       })
 
-      console.log(`✅ Document ${documentId} processed successfully`)
-      
+      const processingTime = Date.now() - startMs
+      logger.info(
+        { jobId: job.id, documentId, traceId, chunksProcessed: chunks.length, embeddingsGenerated: embeddings.length, processingTimeMs: processingTime },
+        'Document processing complete — chunks stored in Postgres + ChromaDB ✓'
+      )
+
       return {
         success: true,
         documentId,
         chunksProcessed: chunks.length,
         embeddingsGenerated: embeddings.length,
-        processingTime: Date.now() - job.timestamp
+        processingTime,
       }
 
     } catch (error) {
       await JobUtils.addJobError(job, error instanceof Error ? error.message : 'Unknown error')
       
-      console.error(`❌ Failed to process document ${documentId}:`, error)
+      logger.error(
+        { jobId: job.id, documentId, traceId, err: error instanceof Error ? error.message : String(error) },
+        'Document processing failed'
+      )
       
       // Clean up temporary file on error
       try {
@@ -247,15 +264,86 @@ export class IngestionWorker {
   }
 
   private async storeDocument(documentData: any): Promise<void> {
-    // TODO: Implement database storage
-    // This would store the document and chunks in the database
-    // and also add them to ChromaDB for vector search
-    console.log(`📚 Storing document ${documentData.id} with ${documentData.chunks.length} chunks`)
-    
-    // Mock implementation
-    return new Promise((resolve) => {
-      setTimeout(resolve, 100) // Simulate database operation
-    })
+    const { PrismaClient } = require('@prisma/client')
+    const prisma = new PrismaClient()
+    const chromaUrl = process.env.CHROMA_URL || 'http://localhost:8004'
+
+    try {
+      // 1. Update document record with extracted content + mark as completed
+      await prisma.document.update({
+        where: { id: documentData.id },
+        data: {
+          content: documentData.content,
+          status: 'COMPLETED',
+          embeddingStatus: 'COMPLETED',
+          metadata: documentData.metadata ?? {},
+          updatedAt: new Date(),
+        },
+      })
+
+      // 2. Persist chunks + embeddings to Postgres
+      const documentRepository = new PrismaDocumentRepository()
+      for (const chunk of documentData.chunks) {
+        await documentRepository.createChunk({
+          id: chunk.id,
+          documentId: documentData.id,
+          chunkIndex: chunk.index,
+          content: chunk.content,
+          metadata: {
+            startPosition: 0,
+            endPosition: chunk.content.length,
+            wordCount: chunk.content.split(/\s+/).length,
+            tokenCount: Math.ceil(chunk.content.length / 4),
+            overlapSize: 200,
+          },
+          embedding: chunk.embedding,
+          embeddingModel: chunk.embeddingModel || 'nomic-embed-text',
+          createdAt: new Date(),
+        })
+      }
+
+      // 3. Upsert chunks into ChromaDB for vector search
+      const collectionName = `workspace_${documentData.workspaceId}_documents`
+
+      // Ensure collection exists
+      try {
+        await axios.post(
+          `${chromaUrl}/api/v1/collections`,
+          { name: collectionName, get_or_create: true },
+          { timeout: 10000, headers: { 'Content-Type': 'application/json' } }
+        )
+      } catch (err: any) {
+        // 409 means it already exists — that's fine
+        if (err?.response?.status !== 409) throw err
+      }
+
+      // Add chunk vectors
+      const ids = documentData.chunks.map((c: any) => c.id)
+      const embeddings = documentData.chunks.map((c: any) => c.embedding)
+      const documents = documentData.chunks.map((c: any) => c.content)
+      const metadatas = documentData.chunks.map((c: any, i: number) => ({
+        documentId: documentData.id,
+        workspaceId: documentData.workspaceId,
+        title: documentData.title,
+        mimeType: documentData.mimeType,
+        chunkIndex: i,
+        totalChunks: documentData.chunks.length,
+        embeddingModel: c.embeddingModel || 'nomic-embed-text',
+        extractedAt: new Date().toISOString(),
+        chunkSize: c.content.length,
+        overlapSize: 200,
+      }))
+
+      await axios.post(
+        `${chromaUrl}/api/v1/collections/${collectionName}/upsert`,
+        { ids, embeddings, documents, metadatas },
+        { timeout: 60000, headers: { 'Content-Type': 'application/json' } }
+      )
+
+      logger.info({ documentId: documentData.id, workspaceId: documentData.workspaceId, chunkCount: documentData.chunks.length }, 'Chunks upserted to ChromaDB')
+    } finally {
+      await prisma.$disconnect()
+    }
   }
 }
 
@@ -265,22 +353,22 @@ async function startWorker() {
   
   // Handle graceful shutdown
   process.on('SIGINT', async () => {
-    console.log('\n🛑 Received SIGINT, shutting down worker gracefully...')
+    logger.info('Received SIGINT — shutting down ingestion worker gracefully')
     await worker.stop()
     process.exit(0)
   })
 
   process.on('SIGTERM', async () => {
-    console.log('\n🛑 Received SIGTERM, shutting down worker gracefully...')
+    logger.info('Received SIGTERM — shutting down ingestion worker gracefully')
     await worker.stop()
     process.exit(0)
   })
 
   try {
     await worker.start()
-    console.log('🎉 Worker is ready to process jobs')
+    logger.info('Ingestion worker ready to process jobs')
   } catch (error) {
-    console.error('❌ Failed to start worker:', error)
+    logger.error({ err: error instanceof Error ? error.message : String(error) }, 'Failed to start ingestion worker')
     process.exit(1)
   }
 }

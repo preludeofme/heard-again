@@ -9,6 +9,7 @@ interface FileUploadProps {
   accept?: string
   maxSize?: number // in bytes
   multiple?: boolean
+  personId?: string
   children?: React.ReactNode
 }
 
@@ -18,6 +19,7 @@ export function FileUpload({
   accept = "*/*",
   maxSize = 100 * 1024 * 1024, // 100MB
   multiple = false,
+  personId,
   children 
 }: FileUploadProps) {
   const [isUploading, setIsUploading] = useState(false)
@@ -67,6 +69,7 @@ export function FileUpload({
   const uploadFile = async (file: File): Promise<any> => {
     const formData = new FormData()
     formData.append('file', file)
+    if (personId) formData.append('personId', personId)
 
     const response = await fetchWithCSRFAndFormData('/api/assets/upload', formData)
 

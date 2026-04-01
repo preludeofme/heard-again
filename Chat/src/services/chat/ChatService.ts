@@ -7,7 +7,7 @@ export interface ChatService {
   sendMessage(request: SendMessageRequest): Promise<ChatResponse>
   streamResponse(request: SendMessageRequest): Promise<AsyncIterable<StreamChunk>>
   getHistory(sessionId: string, limit?: number, offset?: number): Promise<ChatMessage[]>
-  getSession(sessionId: string): Promise<ChatSession | null>
+  getSession(sessionId: string, userId?: string, workspaceId?: string): Promise<ChatSession | null>
   updateSession(sessionId: string, updates: Partial<ChatSession>): Promise<ChatSession>
   deleteSession(sessionId: string): Promise<void>
   listSessions(workspaceId: string, userId: string): Promise<ChatSession[]>
@@ -50,7 +50,7 @@ export class ChatServiceImpl implements ChatService {
     }
 
     // Get persona profile
-    const personaProfile = await this.personaService.getPersonaProfile(session.personId)
+    const personaProfile = await this.personaService.getPersonaProfile(session.personId, session.workspaceId)
     if (!personaProfile) {
       throw new Error('Persona profile not found')
     }
@@ -87,12 +87,27 @@ export class ChatServiceImpl implements ChatService {
     // Generate response
     const llmResponse = await this.llmGateway.generateResponse(prompt)
 
+    // Validate response for injection / PII before returning to caller
+    const validated = await this.llmGateway.validateResponse(llmResponse.content)
+    const hasHighViolation = validated.violations.some(v => v.severity === 'high')
+    if (hasHighViolation) {
+      console.error('[SEC] High-severity LLM output violation — returning safe fallback', {
+        sessionId: request.sessionId,
+        violationTypes: validated.violations.filter(v => v.severity === 'high').map(v => v.type)
+      })
+    }
+    // High-severity: replace entirely with a neutral fallback to prevent any leak
+    // Medium-severity: use the character-redacted filteredContent
+    const safeContent = hasHighViolation
+      ? "I'm sorry, I'm not able to respond to that."
+      : (validated.filteredContent ?? llmResponse.content)
+
     // Store assistant message
     const assistantMessage: ChatMessage = {
       id: uuidv4(),
       sessionId: request.sessionId,
       role: 'assistant',
-      content: llmResponse.content,
+      content: safeContent,
       metadata: {
         processingTime: Date.now() - startTime,
         retrievedDocuments: retrievedDocuments,
@@ -121,8 +136,8 @@ export class ChatServiceImpl implements ChatService {
     return await this.chatRepository.getMessages(sessionId, actualLimit, actualOffset)
   }
 
-  async getSession(sessionId: string): Promise<ChatSession | null> {
-    return await this.chatRepository.getSession(sessionId)
+  async getSession(sessionId: string, userId?: string, workspaceId?: string): Promise<ChatSession | null> {
+    return await this.chatRepository.getSession(sessionId, userId, workspaceId)
   }
 
   async updateSession(sessionId: string, updates: Partial<ChatSession>): Promise<ChatSession> {
@@ -158,7 +173,7 @@ export class ChatServiceImpl implements ChatService {
     }
 
     // Get persona profile
-    const personaProfile = await this.personaService.getPersonaProfile(session.personId)
+    const personaProfile = await this.personaService.getPersonaProfile(session.personId, session.workspaceId)
     if (!personaProfile) {
       throw new Error('Persona profile not found')
     }
@@ -200,18 +215,11 @@ export class ChatServiceImpl implements ChatService {
   }
 
   async updateAssistantMessage(messageId: string, content: string, metadata?: any): Promise<ChatMessage> {
-    // This would typically update the message in the database
-    // For now, we'll return the updated message object
-    const updatedMessage: ChatMessage = {
-      id: messageId,
-      sessionId: '', // Would be fetched from database
-      role: 'assistant',
-      content,
-      metadata: metadata || {},
-      createdAt: new Date()
+    const updated = await this.chatRepository.updateMessage(messageId, content, metadata)
+    if (!updated) {
+      throw new Error(`Message ${messageId} not found`)
     }
-
-    return updatedMessage
+    return updated
   }
 
   private async* createStreamGenerator(
@@ -221,7 +229,6 @@ export class ChatServiceImpl implements ChatService {
     retrievedDocuments: RetrievedDocument[]
   ): AsyncIterable<StreamChunk> {
     try {
-      // Store initial user message
       yield {
         type: 'start',
         messageId,
@@ -231,10 +238,12 @@ export class ChatServiceImpl implements ChatService {
         }
       }
 
-      // Generate streaming response
+      // Generate streaming response — collect full content for end-of-stream validation
       const stream = await this.llmGateway.streamResponse(prompt)
+      let fullContent = ''
 
       for await (const chunk of stream) {
+        fullContent += chunk
         yield {
           type: 'chunk',
           messageId,
@@ -245,13 +254,28 @@ export class ChatServiceImpl implements ChatService {
         }
       }
 
-      // Final chunk
+      // SEC-6: Validate assembled response before storing
+      const validated = await this.llmGateway.validateResponse(fullContent)
+      const hasHighViolation = validated.violations.some(v => v.severity === 'high')
+      if (hasHighViolation) {
+        console.error('[SEC] High-severity LLM stream violation — returning safe fallback', {
+          messageId,
+          violationTypes: validated.violations.filter(v => v.severity === 'high').map(v => v.type)
+        })
+      }
+
+      // High-severity → neutral fallback; medium-severity → filteredContent; valid → undefined (use streamed)
+      const safeStreamContent = hasHighViolation
+        ? "I'm sorry, I'm not able to respond to that."
+        : (!validated.isValid ? (validated.filteredContent ?? fullContent) : undefined)
+
       yield {
         type: 'end',
         messageId,
         metadata: {
           totalProcessingTime: Date.now() - startTime,
-          totalTokens: 0 // Would be calculated from stream chunks
+          totalTokens: 0,
+          filteredContent: safeStreamContent
         }
       }
     } catch (error) {
@@ -292,12 +316,13 @@ export class ChatServiceImpl implements ChatService {
 // Repository interface for data access
 export interface ChatRepository {
   createSession(session: ChatSession): Promise<ChatSession>
-  getSession(sessionId: string): Promise<ChatSession | null>
+  getSession(sessionId: string, userId?: string, workspaceId?: string): Promise<ChatSession | null>
   updateSession(session: ChatSession): Promise<ChatSession>
   deleteSession(sessionId: string): Promise<void>
   listSessions(workspaceId: string, userId: string): Promise<ChatSession[]>
   addMessage(message: ChatMessage): Promise<ChatMessage>
-  getMessages(sessionId: string, limit?: number, offset?: number): Promise<ChatMessage[]>
+  updateMessage(messageId: string, content: string, metadata?: any): Promise<ChatMessage | null>
+  getMessages(sessionId: string, limit?: number, offset?: number, userId?: string, workspaceId?: string): Promise<ChatMessage[]>
 }
 
 // Import types (these will be resolved when we implement the other services)

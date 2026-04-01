@@ -12,3 +12,7 @@ TTS/app/__pycache__/
 *.pyc
 venv/
 .env
+generated/
+generated/**
+data
+data/

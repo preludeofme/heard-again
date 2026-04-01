@@ -148,12 +148,12 @@ export interface PersonaGenerationOptions {
 }
 
 export interface PersonaService {
-  getPersonaProfile(personId: string): Promise<PersonaProfile | null>
+  getPersonaProfile(personId: string, workspaceId: string): Promise<PersonaProfile | null>
   createPersonaProfile(profile: PersonaProfile): Promise<PersonaProfile>
   updatePersonaProfile(personId: string, updates: PersonaUpdateRequest): Promise<PersonaProfile>
   deletePersonaProfile(personId: string): Promise<void>
   listPersonaProfiles(workspaceId: string): Promise<PersonaProfile[]>
-  generatePersonaProfile(personId: string, options: PersonaGenerationOptions): Promise<PersonaProfile>
+  generatePersonaProfile(personId: string, workspaceId: string, options: PersonaGenerationOptions): Promise<PersonaProfile>
 }
 
 export interface StyleExtractor {

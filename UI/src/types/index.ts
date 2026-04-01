@@ -26,6 +26,7 @@ export interface DocumentArtifact {
   id: string
   title: string
   type: 'PDF' | 'Letter' | 'Photo' | 'Handwritten'
+  mimeType?: string
   uploadedAt: Date
   thumbnailUrl?: string
   shareAction?: string

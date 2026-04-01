@@ -114,7 +114,7 @@ export default function Documents() {
             <Button variant="contained" onClick={controller.refreshDocuments}>Retry</Button>
           </Box>
         ) : (
-          <DocumentsPage documents={controller.documents} />
+          <DocumentsPage documents={controller.documents} onUploadSuccess={controller.refreshDocuments} onDelete={controller.deleteDocument} personId={selectedSubjectId} />
         )}
       </Layout>
     </>

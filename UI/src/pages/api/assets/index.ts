@@ -6,7 +6,7 @@ export default apiHandler({
   // GET /api/assets - List assets in workspace
   GET: async (req, res) => {
     const user = await getAuthUserWithWorkspace(req, res)
-    const { type, search, page = '1', limit = '20' } = req.query
+    const { type, search, personId, page = '1', limit = '20' } = req.query
 
     const pageNum = Math.max(1, parseInt(page as string, 10) || 1)
     const pageSize = Math.min(50, Math.max(1, parseInt(limit as string, 10) || 20))
@@ -23,6 +23,13 @@ export default apiHandler({
         { originalName: { contains: search, mode: 'insensitive' } },
         { filename: { contains: search, mode: 'insensitive' } },
       ]
+    }
+
+    if (personId && typeof personId === 'string') {
+      where.document = {
+        isDeleted: false,
+        people: { some: { personId } },
+      }
     }
 
     const [assets, total] = await Promise.all([

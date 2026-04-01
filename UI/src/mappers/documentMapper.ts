@@ -33,6 +33,7 @@ export function toDocumentArtifact(asset: AssetResponse): DocumentArtifact {
     id: asset.id,
     title: asset.originalName || asset.filename,
     type: getDocumentTypeFromMimeType(mimeType),
+    mimeType,
     uploadedAt: typeof asset.createdAt === 'string' ? new Date(asset.createdAt) : asset.createdAt,
     shareAction: 'Share',
   }

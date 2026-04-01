@@ -8,19 +8,23 @@ import {
   PersonaGenerationOptions,
   ToneAnalysis,
   FormalityLevel,
-  DEFAULT_CUSTOM_INSTRUCTIONS
+  DEFAULT_CUSTOM_INSTRUCTIONS,
+  LLMGateway
 } from '@/types'
 import type { Document } from '@/types'
+import { PersonaRepository } from './PersonaRepository'
+import { v4 as uuidv4 } from 'uuid'
 
 export class PersonaServiceImpl implements PersonaService {
   constructor(
     private personaRepository: PersonaRepository,
     private styleExtractor: StyleExtractor,
-    private documentRepository: DocumentRepository
+    private documentRepository: DocumentRepository,
+    private llmGateway?: LLMGateway
   ) {}
 
-  async getPersonaProfile(personId: string): Promise<PersonaProfile | null> {
-    return await this.personaRepository.getPersonaProfile(personId)
+  async getPersonaProfile(personId: string, workspaceId: string): Promise<PersonaProfile | null> {
+    return await this.personaRepository.getPersonaProfile(personId, workspaceId)
   }
 
   async createPersonaProfile(profile: PersonaProfile): Promise<PersonaProfile> {
@@ -28,7 +32,7 @@ export class PersonaServiceImpl implements PersonaService {
   }
 
   async updatePersonaProfile(personId: string, updates: PersonaUpdateRequest): Promise<PersonaProfile> {
-    return await this.personaRepository.updatePersonaProfile(personId, updates)
+    return await this.personaRepository.updatePersonaProfile(personId, updates as Partial<PersonaProfile>)
   }
 
   async deletePersonaProfile(personId: string): Promise<void> {
@@ -39,9 +43,9 @@ export class PersonaServiceImpl implements PersonaService {
     return await this.personaRepository.listPersonaProfiles(workspaceId)
   }
 
-  async generatePersonaProfile(personId: string, options: PersonaGenerationOptions): Promise<PersonaProfile> {
+  async generatePersonaProfile(personId: string, workspaceId: string, options: PersonaGenerationOptions): Promise<PersonaProfile> {
     // Get documents for analysis
-    const documents = await this.documentRepository.listDocuments('default', { // TODO: Pass workspaceId
+    const documents = await this.documentRepository.listDocuments(workspaceId, {
       personId
     })
 
@@ -92,7 +96,7 @@ export class PersonaServiceImpl implements PersonaService {
     const personaProfile: PersonaProfile = {
       id: `persona_${personId}_${Date.now()}`,
       personId,
-      workspaceId: 'default', // TODO: Pass workspaceId
+      workspaceId,
       version: 1,
       status: 'active',
       writingStyle,
@@ -114,9 +118,9 @@ export class PersonaServiceImpl implements PersonaService {
     return this.generateSystemPrompt(persona.personId, persona.writingStyle, persona.knownFacts)
   }
 
-  async extractStyleFromDocuments(personId: string): Promise<StyleProfile> {
+  async extractStyleFromDocuments(personId: string, workspaceId: string): Promise<StyleProfile> {
     // Get all documents for this person
-    const documents = await this.documentRepository.listDocuments('default', { personId })
+    const documents = await this.documentRepository.listDocuments(workspaceId, { personId })
     
     if (documents.length === 0) {
       throw new Error(`No documents found for person ${personId}`)
@@ -244,15 +248,91 @@ Your speaking style:
   }
 
   private async extractFacts(documents: Document[]): Promise<PersonaFact[]> {
-    // TODO: Implement fact extraction using LLM
-    // For now, return empty array
-    return []
+    if (!this.llmGateway || documents.length === 0) return []
+
+    // Sample up to 4 documents to stay within context limits
+    const sample = documents.slice(0, 4)
+    const combinedText = sample
+      .map(d => `[${d.title}]\n${d.content.slice(0, 1200)}`)
+      .join('\n\n---\n\n')
+
+    try {
+      const result = await this.llmGateway.generateResponse({
+        systemPrompt: 'You are a careful fact extractor. Output ONLY valid JSON — no prose, no markdown fences.',
+        context: '',
+        history: [],
+        userMessage: `Extract biographical facts from the following texts. Return a JSON array where each element has:\n- "fact": a concise factual statement (string)\n- "type": one of biographical | relationship | preference | experience | achievement\n- "confidence": a number 0-1\n\nTexts:\n${combinedText}\n\nJSON array:`,
+        metadata: {
+          model: process.env.OLLAMA_MODEL || 'llama3.1:8b-instruct',
+          temperature: 0.1,
+          maxTokens: 1024,
+          topP: 0.9,
+          topK: 40,
+        }
+      })
+
+      const parsed = JSON.parse(result.content.trim())
+      if (!Array.isArray(parsed)) return []
+
+      return parsed
+        .filter((item: any) => typeof item.fact === 'string' && typeof item.confidence === 'number')
+        .map((item: any): PersonaFact => ({
+          id: uuidv4(),
+          type: (['biographical','relationship','preference','experience','achievement'] as const)
+            .includes(item.type) ? item.type : 'biographical',
+          fact: item.fact,
+          confidence: Math.min(1, Math.max(0, Number(item.confidence))),
+          sources: sample.map(d => d.id),
+          context: item.context || '',
+          verified: item.confidence >= 0.7,
+        }))
+    } catch (error) {
+      console.warn('[PersonaService] extractFacts LLM parse failed, returning empty:', error)
+      return []
+    }
   }
 
   private async extractRelationships(documents: Document[]): Promise<Relationship[]> {
-    // TODO: Implement relationship extraction using LLM
-    // For now, return empty array
-    return []
+    if (!this.llmGateway || documents.length === 0) return []
+
+    const sample = documents.slice(0, 4)
+    const combinedText = sample
+      .map(d => `[${d.title}]\n${d.content.slice(0, 1200)}`)
+      .join('\n\n---\n\n')
+
+    try {
+      const result = await this.llmGateway.generateResponse({
+        systemPrompt: 'You are a relationship extractor. Output ONLY valid JSON — no prose, no markdown fences.',
+        context: '',
+        history: [],
+        userMessage: `Extract named relationships mentioned in the following texts. Return a JSON array where each element has:\n- "relatedPersonId": the person\'s name as a slug (e.g. "john-smith")\n- "relationshipLabel": how the author refers to them (e.g. "mother", "best friend")\n- "relationshipType": one of parent | child | spouse | sibling | friend | colleague | other\n- "strength": a number 0-1 indicating closeness\n- "context": a brief quote or description\n\nTexts:\n${combinedText}\n\nJSON array:`,
+        metadata: {
+          model: process.env.OLLAMA_MODEL || 'llama3.1:8b-instruct',
+          temperature: 0.1,
+          maxTokens: 1024,
+          topP: 0.9,
+          topK: 40,
+        }
+      })
+
+      const parsed = JSON.parse(result.content.trim())
+      if (!Array.isArray(parsed)) return []
+
+      const validTypes = ['parent','child','spouse','sibling','friend','colleague','other'] as const
+      return parsed
+        .filter((item: any) => typeof item.relatedPersonId === 'string' && typeof item.relationshipLabel === 'string')
+        .map((item: any): Relationship => ({
+          id: uuidv4(),
+          relatedPersonId: item.relatedPersonId,
+          relationshipType: validTypes.includes(item.relationshipType) ? item.relationshipType : 'other',
+          relationshipLabel: item.relationshipLabel,
+          strength: Math.min(1, Math.max(0, Number(item.strength) || 0.5)),
+          context: item.context || '',
+        }))
+    } catch (error) {
+      console.warn('[PersonaService] extractRelationships LLM parse failed, returning empty:', error)
+      return []
+    }
   }
 
   private calculateConfidenceScore(documentCount: number, factCount: number, relationshipCount: number): number {
@@ -283,13 +363,4 @@ export interface StyleExtractor {
 // Document repository interface
 export interface DocumentRepository {
   listDocuments(workspaceId: string, filters?: { personId?: string }): Promise<Document[]>
-}
-
-// Persona repository interface
-export interface PersonaRepository {
-  getPersonaProfile(personId: string): Promise<PersonaProfile | null>
-  createPersonaProfile(profile: PersonaProfile): Promise<PersonaProfile>
-  updatePersonaProfile(personId: string, updates: PersonaUpdateRequest): Promise<PersonaProfile>
-  deletePersonaProfile(personId: string): Promise<void>
-  listPersonaProfiles(workspaceId: string): Promise<PersonaProfile[]>
 }

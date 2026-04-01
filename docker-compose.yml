@@ -1,13 +1,14 @@
 version: '3.8'
 
 services:
-  # Chat System
+  # Chat System — internal only, not reachable from the host
   chat:
     build:
       context: ./Chat
       dockerfile: docker/Dockerfile
-    ports:
-      - "4778:4778"
+    # No public port binding — chat is accessed only via the internal network
+    expose:
+      - "4778"
     environment:
       - NODE_ENV=production
       - PORT=4778
@@ -16,6 +17,9 @@ services:
       - CHROMA_URL=http://chromadb:8000
       - OLLAMA_URL=http://ollama:11434
       - TTS_SERVICE_URL=http://tts:4779
+      - CHAT_SERVICE_SECRET=${CHAT_SERVICE_SECRET:?CHAT_SERVICE_SECRET must be set}
+    networks:
+      - internal
     depends_on:
       db:
         condition: service_healthy
@@ -31,11 +35,14 @@ services:
     cap_drop:
       - ALL
 
-  # Ollama LLM Service (optional - requires GPU)
+  # Ollama LLM Service (optional - requires GPU) — internal only
   ollama:
     image: ollama/ollama:latest
-    ports:
-      - "11434:11434"
+    # No public port binding
+    expose:
+      - "11434"
+    networks:
+      - internal
     volumes:
       - ollama_data:/root/.ollama
     environment:
@@ -64,12 +71,15 @@ services:
       - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:4777}
       - TTS_SERVICE_URL=${TTS_SERVICE_URL:-http://tts:4779}
       - CHAT_SYSTEM_URL=${CHAT_SYSTEM_URL:-http://chat:4778}
+      - CHAT_SERVICE_SECRET=${CHAT_SERVICE_SECRET:?CHAT_SERVICE_SECRET must be set}
       - REDIS_URL=redis://redis:6379
       - CLAMAV_HOST=clamav
       - CLAMAV_PORT=3310
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - REQUIRE_SIGNED_URLS=true
       - NODE_ENV=production
+    networks:
+      - internal
     depends_on:
       db:
         condition: service_healthy
@@ -110,7 +120,9 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "5433:5432"
+    networks:
+      - internal
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
@@ -129,6 +141,8 @@ services:
     volumes:
       - clamav_db:/var/lib/clamav
       - /var/run/clamav:/var/run/clamav
+    networks:
+      - internal
     ports:
       - "3310:3310"
     healthcheck:
@@ -143,6 +157,8 @@ services:
     image: redis:7-alpine
     volumes:
       - redis_data:/data
+    networks:
+      - internal
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -155,8 +171,8 @@ services:
     build:
       context: ./TTS
       dockerfile: Dockerfile
-    ports:
-      - "4779:4779"
+    expose:
+      - "4779"
     environment:
       - PORT=4779
       - MODEL_DEVICE=cuda
@@ -166,6 +182,8 @@ services:
     volumes:
       - tts_models:/app/models
       - ./TTS/generated:/app/generated
+    networks:
+      - internal
     deploy:
       resources:
         reservations:
@@ -181,11 +199,12 @@ services:
     profiles:
       - with-tts
 
-  # ChromaDB for vector search (RAG)
+  # ChromaDB for vector search (RAG) — internal only, not reachable from the host
   chromadb:
     image: chromadb/chroma:latest
-    ports:
-      - "8004:8000"
+    # No public port binding — only the chat service needs to reach chromadb
+    expose:
+      - "8000"
     environment:
       - IS_PERSISTENT=TRUE
       - CHROMA_SERVER_HOST=0.0.0.0
@@ -194,6 +213,8 @@ services:
       - ANONYMIZED_TELEMETRY=FALSE
     volumes:
       - chroma_data:/chroma/chroma
+    networks:
+      - internal
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
@@ -202,9 +223,15 @@ services:
       retries: 5
       start_period: 10s
 
+networks:
+  internal:
+    driver: bridge
+    internal: true
+
 volumes:
   postgres_data:
   uploads:
+  generated:
   tts_models:
   redis_data:
   clamav_db:

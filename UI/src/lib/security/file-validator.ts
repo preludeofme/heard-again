@@ -99,7 +99,30 @@ export async function validateFileContent(
       }
     }
 
-    // Detect actual file type from content
+    // Text-based formats have no magic bytes — fileTypeFromBuffer returns undefined for them.
+    // Validate these using extension-to-MIME mapping instead of magic byte detection.
+    const TEXT_MIME_BY_EXT: Record<string, string> = {
+      '.txt': 'text/plain',
+      '.csv': 'text/csv',
+      '.md': 'text/markdown',
+      '.markdown': 'text/markdown',
+      '.json': 'application/json',
+    }
+
+    const textMime = TEXT_MIME_BY_EXT[originalExtension]
+    if (textMime) {
+      if (!ALLOWED_MIME_TYPES.includes(textMime as any)) {
+        return {
+          isValid: false,
+          error: `File type '${textMime}' is not allowed`,
+          detectedType: textMime,
+          securityRisk: 'malicious_signature'
+        }
+      }
+      return { isValid: true, detectedType: textMime }
+    }
+
+    // Detect actual file type from content (binary formats)
     const fileType = await fileTypeFromBuffer(buffer)
     
     if (!fileType) {
@@ -110,12 +133,26 @@ export async function validateFileContent(
       }
     }
 
+    // OLE2/CFB container: .doc, .xls, .ppt all share the same magic bytes and are
+    // detected as application/x-cfb by fileTypeFromBuffer. Remap to the semantic
+    // MIME type based on the trusted (already-allowlist-checked) extension.
+    let resolvedMime = fileType.mime
+    if (fileType.mime === 'application/x-cfb') {
+      const CFB_MIME_BY_EXT: Record<string, string> = {
+        '.doc':  'application/msword',
+        '.xls':  'application/vnd.ms-excel',
+        '.ppt':  'application/vnd.ms-powerpoint',
+        '.mdb':  'application/vnd.ms-access',
+      }
+      resolvedMime = CFB_MIME_BY_EXT[originalExtension] ?? fileType.mime
+    }
+
     // Check if detected type is in our allowlist
-    if (!ALLOWED_MIME_TYPES.includes(fileType.mime as any)) {
+    if (!ALLOWED_MIME_TYPES.includes(resolvedMime as any)) {
       return {
         isValid: false,
-        error: `File type '${fileType.mime}' is not allowed`,
-        detectedType: fileType.mime,
+        error: `File type '${resolvedMime}' is not allowed`,
+        detectedType: resolvedMime,
         securityRisk: 'malicious_signature'
       }
     }
@@ -132,19 +169,19 @@ export async function validateFileContent(
     }
 
     // Check for MIME type spoofing
-    if (declaredMimeType && declaredMimeType !== fileType.mime) {
-      console.warn(`MIME type mismatch for ${originalName}: declared=${declaredMimeType}, detected=${fileType.mime}`)
+    if (declaredMimeType && declaredMimeType !== resolvedMime) {
+      console.warn(`MIME type mismatch for ${originalName}: declared=${declaredMimeType}, detected=${resolvedMime}`)
     }
 
     // Additional checks for specific file types
-    const extraValidation = await performFileTypeSpecificValidation(buffer, fileType.mime)
+    const extraValidation = await performFileTypeSpecificValidation(buffer, resolvedMime)
     if (!extraValidation.isValid) {
       return extraValidation
     }
 
     return {
       isValid: true,
-      detectedType: fileType.mime
+      detectedType: resolvedMime
     }
 
   } catch (error) {

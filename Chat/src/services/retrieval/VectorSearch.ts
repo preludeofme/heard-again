@@ -1,15 +1,15 @@
 import {
-  VectorSearch,
   RetrievedDocument,
   SearchQuery,
   SearchResult,
   SearchContext,
-  Document
+  Document,
+  DocumentType
 } from '@/types'
 import { EmbeddingGeneratorImpl } from '@/services/ingestion/EmbeddingGenerator'
 import axios from 'axios'
 
-export class VectorSearchImpl implements VectorSearch {
+export class VectorSearchImpl {
   private embeddingGenerator: EmbeddingGeneratorImpl
   private chromaUrl: string
 
@@ -35,7 +35,8 @@ export class VectorSearchImpl implements VectorSearch {
 
     try {
       // Generate query embedding
-      const queryEmbedding = await this.embeddingGenerator.generateEmbedding(query)
+      const queryEmbeddingResult = await this.embeddingGenerator.generateEmbedding(query)
+      const queryEmbedding = queryEmbeddingResult.vector
 
       // Build ChromaDB query
       const collectionName = this.getCollectionName(context.workspaceId)
@@ -105,7 +106,7 @@ export class VectorSearchImpl implements VectorSearch {
     }
   ): Promise<RetrievedDocument[]> {
     const keywordWeight = options?.keywordWeight || 0.3
-    const semanticWeight = options?.keywordWeight || 0.7
+    const semanticWeight = options?.semanticWeight || 0.7
 
     try {
       // Perform semantic search
@@ -177,9 +178,8 @@ export class VectorSearchImpl implements VectorSearch {
     // Combine context filters with additional filters
     const enhancedContext: SearchContext = {
       ...context,
-      documentTypes: filters.documentTypes,
+      documentTypes: filters.documentTypes as unknown as DocumentType[] | undefined,
       dateRange: filters.dateRange,
-      personIds: filters.personIds,
       filters: {
         ...context.filters,
         minWordCount: filters.minWordCount,
@@ -333,8 +333,8 @@ export class VectorSearchImpl implements VectorSearch {
       }
     }
 
-    if (context.personIds && context.personIds.length > 0) {
-      filters.personId = { $in: context.personIds }
+    if (context.personId) {
+      filters.personId = context.personId
     }
 
     // Add custom filters

@@ -1,5 +1,15 @@
 // Retrieval and vector search related types
 
+export enum DocumentType {
+  STORY = 'story',
+  LETTER = 'letter',
+  DIARY = 'diary',
+  PHOTO_CAPTION = 'photo_caption',
+  AUDIO_TRANSCRIPT = 'audio_transcript',
+  DOCUMENT = 'document',
+  OTHER = 'other'
+}
+
 export interface RetrievalService {
   searchDocuments(query: string, context: SearchContext): Promise<RetrievedDocument[]>
   searchPersonaDocuments(personId: string, query: string, context?: SearchContext): Promise<RetrievedDocument[]>
@@ -108,6 +118,15 @@ export interface VectorSearchConfig {
   efConstruction?: number
   m?: number
   nlist?: number
+}
+
+export interface DocumentRepository {
+  getDocument(documentId: string): Promise<Document | null>
+  getChunk(chunkId: string): Promise<DocumentChunk | null>
+  createDocument(document: Document): Promise<Document>
+  updateDocument(document: Document): Promise<Document>
+  deleteDocument(documentId: string): Promise<void>
+  listDocuments(workspaceId: string, filters?: any): Promise<Document[]>
 }
 
 export interface EmbeddingGenerationRequest {

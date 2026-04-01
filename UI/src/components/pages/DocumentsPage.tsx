@@ -1,45 +1,31 @@
-import { Box, Typography, Card, CardContent, Button, Grid, Chip, IconButton } from '@mui/material'
-import { CloudUpload as UploadIcon, FilterList as FilterIcon } from '@mui/icons-material'
+import { Box, Typography, Card, CardContent, Button, Grid, Chip, IconButton, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions } from '@mui/material'
+import { CloudUpload as UploadIcon, FilterList as FilterIcon, Delete as DeleteIcon } from '@mui/icons-material'
 import { DocumentArtifact } from '@/types'
 import { useState } from 'react'
 import { EmptyState } from '@/components/feedback/UIStates'
 import { FileUpload } from '@/components/upload/FileUpload'
 import { DocumentViewer, DocumentThumbnail } from '@/components/viewers/DocumentViewer'
 
-// Helper function to convert DocumentArtifact type back to mimeType
-function getMimeTypeFromType(type: DocumentArtifact['type']): string {
-  switch (type) {
-    case 'PDF': return 'application/pdf'
-    case 'Photo': return 'image/jpeg' // Default image type
-    case 'Letter': 
-    case 'Handwritten': 
-    default: return 'application/octet-stream'
-  }
-}
-
 interface DocumentsPageProps {
   documents: DocumentArtifact[]
+  onUploadSuccess?: () => void
+  onDelete?: (id: string) => Promise<void>
+  personId?: string
 }
 
-export function DocumentsPage({ documents }: DocumentsPageProps) {
+export function DocumentsPage({ documents, onUploadSuccess, onDelete, personId }: DocumentsPageProps) {
   const [selectedFilter, setSelectedFilter] = useState('All')
-  const [uploadedFiles, setUploadedFiles] = useState<any[]>([])
   const [selectedDocument, setSelectedDocument] = useState<any>(null)
   const [viewerOpen, setViewerOpen] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<DocumentArtifact | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const filteredDocuments = documents.filter(doc => 
     selectedFilter === 'All' || doc.type === selectedFilter
   )
 
   const handleUploadSuccess = (result: any) => {
-    console.log('Upload successful:', result)
-    // You could add the uploaded file to the state or refresh the documents list
-    setUploadedFiles(prev => [...prev, result])
-    
-    // Show success message
-    if (result.optimization) {
-      console.log(`File optimized: ${result.optimization.sizeSavedPercentage} reduction`)
-    }
+    onUploadSuccess?.()
   }
 
   const handleUploadError = (error: string) => {
@@ -54,6 +40,26 @@ export function DocumentsPage({ documents }: DocumentsPageProps) {
   const handleViewerClose = () => {
     setViewerOpen(false)
     setSelectedDocument(null)
+  }
+
+  const handleDeleteClick = (e: React.MouseEvent, doc: DocumentArtifact) => {
+    e.stopPropagation()
+    setDeleteTarget(doc)
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget || !onDelete) return
+    setIsDeleting(true)
+    try {
+      await onDelete(deleteTarget.id)
+    } finally {
+      setIsDeleting(false)
+      setDeleteTarget(null)
+    }
+  }
+
+  const handleDeleteCancel = () => {
+    setDeleteTarget(null)
   }
 
   return (
@@ -71,7 +77,7 @@ export function DocumentsPage({ documents }: DocumentsPageProps) {
 
         {/* Filter Chips */}
         <Box sx={{ display: 'flex', gap: 2, mb: 4, flexWrap: 'wrap' }}>
-          {['All', 'PDFs', 'Handwritten', 'Photos', 'Letters'].map((filter) => (
+          {(['All', 'PDF', 'Photo', 'Letter', 'Handwritten'] as const).map((filter) => (
             <Chip
               key={filter}
               label={filter}
@@ -90,13 +96,13 @@ export function DocumentsPage({ documents }: DocumentsPageProps) {
 
         {/* Document Grid */}
         <Grid container spacing={3}>
-          {filteredDocuments.length === 0 ? (
+          {filteredDocuments.length === 0 && (
             <Grid size={12}>
               <EmptyState type="documents" onAction={() => {}} />
             </Grid>
-          ) : (
-            <>
-              {filteredDocuments.map((doc) => (
+          )}
+
+          {filteredDocuments.map((doc) => (
             <Grid key={doc.id} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
               <Card
                 sx={{
@@ -105,27 +111,45 @@ export function DocumentsPage({ documents }: DocumentsPageProps) {
                   boxShadow: 'none',
                   cursor: 'pointer',
                   transition: 'transform 0.2s',
+                  position: 'relative',
                   '&:hover': {
                     transform: 'translateY(-4px)',
                     boxShadow: 2,
+                    '& .doc-delete-btn': { opacity: 1 },
                   }
                 }}
               >
+                {onDelete && (
+                  <IconButton
+                    className="doc-delete-btn"
+                    size="small"
+                    onClick={(e) => handleDeleteClick(e, doc)}
+                    sx={{
+                      position: 'absolute',
+                      top: 6,
+                      right: 6,
+                      opacity: 0,
+                      transition: 'opacity 0.15s',
+                      backgroundColor: 'rgba(255,255,255,0.85)',
+                      zIndex: 1,
+                      '&:hover': { backgroundColor: '#fdecea', color: '#d32f2f' },
+                    }}
+                  >
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
+                )}
                 <CardContent sx={{ p: 3 }}>
-                  {/* Interactive Thumbnail */}
                   <DocumentThumbnail
                     document={{
                       id: doc.id,
-                      filename: doc.title, // Use title as filename since DocumentArtifact doesn't have filename
+                      filename: doc.title,
                       originalName: doc.title,
-                      mimeType: getMimeTypeFromType(doc.type), // Convert type back to mimeType
-                      publicUrl: `/api/assets/serve/${doc.id}`, // Use the new serve endpoint
-                      storagePath: doc.id // Use id as storage path
+                      mimeType: doc.mimeType || 'application/octet-stream',
+                      publicUrl: `/api/assets/serve/${doc.id}`,
+                      storagePath: doc.id
                     }}
                     onClick={() => handleDocumentClick(doc)}
                   />
-                  
-                  {/* Type Pill */}
                   <Chip
                     label={doc.type}
                     size="small"
@@ -138,8 +162,6 @@ export function DocumentsPage({ documents }: DocumentsPageProps) {
                       mt: 1
                     }}
                   />
-                  
-                  {/* Title */}
                   <Typography
                     variant="body2"
                     sx={{
@@ -153,13 +175,9 @@ export function DocumentsPage({ documents }: DocumentsPageProps) {
                   >
                     {doc.title}
                   </Typography>
-                  
-                  {/* Date */}
                   <Typography variant="caption" sx={{ color: '#546669' }}>
                     {new Date(doc.uploadedAt).toLocaleDateString()}
                   </Typography>
-                  
-                  {/* Share Action */}
                   <Button
                     size="small"
                     sx={{
@@ -176,51 +194,75 @@ export function DocumentsPage({ documents }: DocumentsPageProps) {
               </Card>
             </Grid>
           ))}
-              
-              {/* Upload Artifact Card */}
-              <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
-                <FileUpload
-                  onUploadSuccess={handleUploadSuccess}
-                  onUploadError={handleUploadError}
-                  accept="image/*,application/pdf,.doc,.docx,.txt,.rtf"
-                  maxSize={50 * 1024 * 1024} // 50MB
-                >
-                  <Card
-                    sx={{
-                      backgroundColor: '#f6f3ee',
-                      border: '2px dashed #d0e3e6',
-                      boxShadow: 'none',
-                      height: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      transition: 'all 0.2s',
-                      '&:hover': {
-                        backgroundColor: '#ebe8e3',
-                        borderColor: '#16334a',
-                      }
-                    }}
-                  >
-                    <CardContent sx={{ p: 3, textAlign: 'center' }}>
-                      <UploadIcon sx={{ fontSize: 40, color: '#adcae6', mb: 2 }} />
-                      <Typography variant="body1" sx={{ color: '#546669', fontWeight: 600 }}>
-                        Upload Artifact
-                      </Typography>
-                      <Typography variant="caption" sx={{ color: '#546669', mt: 1, display: 'block' }}>
-                        Add photos, letters, or documents
-                      </Typography>
-                      <Typography variant="caption" sx={{ color: '#adcae6', mt: 1, display: 'block' }}>
-                        Drag & drop or click to browse
-                      </Typography>
-                    </CardContent>
-                  </Card>
-                </FileUpload>
-              </Grid>
-            </>
-          )}
+
+          {/* Upload Artifact Card — always rendered */}
+          <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
+            <FileUpload
+              onUploadSuccess={handleUploadSuccess}
+              onUploadError={handleUploadError}
+              accept="image/*,application/pdf,.doc,.docx,.txt,.csv,.rtf"
+              maxSize={50 * 1024 * 1024}
+              personId={personId}
+            >
+              <Card
+                sx={{
+                  backgroundColor: '#f6f3ee',
+                  border: '2px dashed #d0e3e6',
+                  boxShadow: 'none',
+                  height: '100%',
+                  minHeight: 200,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.2s',
+                  '&:hover': {
+                    backgroundColor: '#ebe8e3',
+                    borderColor: '#16334a',
+                  }
+                }}
+              >
+                <CardContent sx={{ p: 3, textAlign: 'center' }}>
+                  <UploadIcon sx={{ fontSize: 40, color: '#adcae6', mb: 2 }} />
+                  <Typography variant="body1" sx={{ color: '#546669', fontWeight: 600 }}>
+                    Upload Artifact
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: '#546669', mt: 1, display: 'block' }}>
+                    Add photos, letters, or documents
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: '#adcae6', mt: 1, display: 'block' }}>
+                    Drag & drop or click to browse
+                  </Typography>
+                </CardContent>
+              </Card>
+            </FileUpload>
+          </Grid>
         </Grid>
       </Box>
       
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!deleteTarget} onClose={handleDeleteCancel} maxWidth="xs" fullWidth>
+        <DialogTitle>Delete document?</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            <strong>{deleteTarget?.title}</strong> will be permanently removed. This cannot be undone.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={handleDeleteCancel} disabled={isDeleting} sx={{ color: '#546669' }}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleDeleteConfirm}
+            disabled={isDeleting}
+            variant="contained"
+            color="error"
+            sx={{ minWidth: 90 }}
+          >
+            {isDeleting ? 'Deleting…' : 'Delete'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Document Viewer Dialog */}
       <DocumentViewer
         open={viewerOpen}
@@ -229,7 +271,7 @@ export function DocumentsPage({ documents }: DocumentsPageProps) {
           id: selectedDocument.id,
           filename: selectedDocument.title,
           originalName: selectedDocument.title,
-          mimeType: getMimeTypeFromType(selectedDocument.type),
+          mimeType: selectedDocument.mimeType || 'application/octet-stream',
           publicUrl: `/api/assets/serve/${selectedDocument.id}`, // Use the new serve endpoint
           storagePath: selectedDocument.id
         } : {

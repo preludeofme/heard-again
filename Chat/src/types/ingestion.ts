@@ -101,6 +101,7 @@ export interface TextExtractionResult {
     language: string
     confidence: number
     extractionMethod: string
+    [key: string]: unknown
   }
   structure?: DocumentStructure
   images?: ExtractedImage[]

@@ -1,10 +1,13 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { ServiceFactory } from '@/services'
+import { verifyServiceToken } from '@/utils/auth-guard'
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  if (!verifyServiceToken(req, res)) return
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
@@ -55,8 +58,8 @@ export default async function handler(
 
     const chatService = ServiceFactory.getChatService()
 
-    // Verify session exists
-    const session = await chatService.getSession(sessionId)
+    // Verify session exists and belongs to this user/workspace (SEC-3)
+    const session = await chatService.getSession(sessionId, userId, workspaceId)
     if (!session) {
       res.write(`event: error\ndata: ${JSON.stringify({ error: 'Chat session not found' })}\n\n`)
       res.end()
@@ -70,14 +73,13 @@ export default async function handler(
     res.write(`event: user_message\ndata: ${JSON.stringify({ message: userMessage })}\n\n`)
 
     try {
-      // Stream the response
+      // Stream the response — strict options allowlist (SEC-7)
       const stream = await chatService.streamResponse({
         sessionId,
         message: message.trim(),
         options: {
-          maxRetrievedDocuments: options?.maxRetrievedDocuments || 5,
-          temperature: options?.temperature || 0.7,
-          ...options
+          maxRetrievedDocuments: Math.min(Math.max(Number(options?.maxRetrievedDocuments) || 5, 1), 10),
+          temperature: Math.min(Math.max(Number(options?.temperature) || 0.7, 0.0), 1.0)
         }
       }) as AsyncIterable<any>
 
@@ -87,25 +89,28 @@ export default async function handler(
       for await (const chunk of stream) {
         if (chunk.type === 'start') {
           messageId = chunk.messageId || null
-          res.write(`event: start\ndata: ${JSON.stringify({ messageId })}\n\n`)
+          // Bug-2 fix: include type in data JSON so client can use data.type
+          res.write(`event: start\ndata: ${JSON.stringify({ type: 'start', messageId })}\n\n`)
         } else if (chunk.type === 'chunk') {
           fullResponse += chunk.content
-          res.write(`event: chunk\ndata: ${JSON.stringify({ content: chunk.content })}\n\n`)
+          res.write(`event: chunk\ndata: ${JSON.stringify({ type: 'chunk', content: chunk.content })}\n\n`)
         } else if (chunk.type === 'metadata') {
-          res.write(`event: metadata\ndata: ${JSON.stringify(chunk.metadata)}\n\n`)
+          res.write(`event: metadata\ndata: ${JSON.stringify({ type: 'metadata', ...chunk.metadata })}\n\n`)
         } else if (chunk.type === 'end') {
-          // Store the complete assistant message
-          if (messageId && fullResponse) {
-            await chatService.updateAssistantMessage(messageId, fullResponse, chunk.metadata || {})
+          // Use filteredContent if validation found violations; otherwise use the streamed content
+          const contentToStore = chunk.metadata?.filteredContent || fullResponse
+          if (messageId && contentToStore) {
+            await chatService.updateAssistantMessage(messageId, contentToStore, chunk.metadata || {})
           }
           res.write(`event: end\ndata: ${JSON.stringify({ 
+            type: 'end',
             messageId,
             processingTime: chunk.processingTime,
             tokensUsed: chunk.tokensUsed
           })}\n\n`)
           break
         } else if (chunk.type === 'error') {
-          res.write(`event: error\ndata: ${JSON.stringify({ error: chunk.error })}\n\n`)
+          res.write(`event: error\ndata: ${JSON.stringify({ type: 'error', error: chunk.error })}\n\n`)
           break
         }
       }

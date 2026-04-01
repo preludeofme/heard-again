@@ -154,31 +154,37 @@ export function DocumentViewer({ open, onClose, document }: DocumentViewerProps)
         )
 
       case 'document':
-      case 'spreadsheet':
-      case 'presentation':
-        // For Office documents, use Google Docs viewer or Microsoft Office Online
+        // .doc / .docx: render mammoth-converted HTML in a sandboxed iframe
         return (
           <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-            <Box sx={{ 
-              flexGrow: 1, 
-              display: 'flex', 
-              justifyContent: 'center', 
-              alignItems: 'center',
-              p: 4
-            }}>
+            <Box sx={{ flexGrow: 1, position: 'relative' }}>
+              <iframe
+                src={`/api/assets/${document.id}/preview`}
+                sandbox="allow-same-origin"
+                style={{ width: '100%', height: '100%', border: 'none' }}
+                onLoad={() => setIsLoading(false)}
+                onError={() => {
+                  setIsLoading(false)
+                  console.error('Failed to load document preview')
+                }}
+              />
+            </Box>
+          </Box>
+        )
+
+      case 'spreadsheet':
+      case 'presentation':
+        return (
+          <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', p: 4 }}>
               <Box sx={{ textAlign: 'center' }}>
                 <Typography variant="h6" sx={{ mb: 2 }}>
-                  {viewerType === 'document' ? 'Document' : 
-                   viewerType === 'spreadsheet' ? 'Spreadsheet' : 'Presentation'} Viewer
+                  {viewerType === 'spreadsheet' ? 'Spreadsheet' : 'Presentation'} Preview
                 </Typography>
                 <Typography variant="body2" sx={{ mb: 3, color: 'text.secondary' }}>
                   This file type cannot be previewed directly. Please download to view.
                 </Typography>
-                <Button 
-                  variant="contained" 
-                  startIcon={<DownloadIcon />}
-                  onClick={handleDownload}
-                >
+                <Button variant="contained" startIcon={<DownloadIcon />} onClick={handleDownload}>
                   Download {document.originalName}
                 </Button>
               </Box>
@@ -294,7 +300,7 @@ export function DocumentViewer({ open, onClose, document }: DocumentViewerProps)
         alignItems: 'center',
         pb: 1
       }}>
-        <Typography variant="h6" noWrap>
+        <Typography variant="h6" component="span" noWrap>
           {document.originalName}
         </Typography>
         <IconButton onClick={onClose} size="small">

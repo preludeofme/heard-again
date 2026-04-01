@@ -1,5 +1,4 @@
-import { DocumentRepository } from '@/services/retrieval/RetrievalService'
-import { Document, DocumentChunk } from '@/types/retrieval'
+import { DocumentRepository, Document, DocumentChunk } from '@/types/retrieval'
 import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()

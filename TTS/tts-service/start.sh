@@ -25,6 +25,18 @@ fi
 # Install service dependencies (FastAPI, etc.)
 pip install -q -r requirements.txt 2>/dev/null || true
 
+# Check for flash-attention and install if missing (improves TTS performance significantly)
+python -c "import flash_attn" 2>/dev/null || {
+    echo "flash-attn not found. Installing for improved TTS performance..."
+    echo "This may take a few minutes (building CUDA extensions)..."
+    # Try pre-built wheels first, then build from source
+    pip install -q flash-attn --no-build-isolation 2>/dev/null || \
+    pip install flash-attn --no-build-isolation || {
+        echo "WARNING: Failed to install flash-attn. TTS will work but be slower."
+        echo "To manually install: pip install flash-attn --no-build-isolation"
+    }
+}
+
 # Start the service
 echo "Starting Qwen3-TTS service on port ${TTS_PORT:-4779}..."
 python -m uvicorn app.main:app \

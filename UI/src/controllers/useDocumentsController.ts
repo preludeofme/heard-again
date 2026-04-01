@@ -1,6 +1,8 @@
 import { useState, useCallback, useEffect } from 'react'
 import { DocumentArtifact } from '@/types'
 import { ApiError } from '@/lib/errors'
+import { getDocumentTypeFromMimeType } from '@/mappers/documentMapper'
+import { getCSRFToken } from '@/lib/api-client'
 
 interface DocumentsControllerState {
   documents: DocumentArtifact[]
@@ -34,12 +36,6 @@ interface AssetApiResponse {
   createdAt: string
 }
 
-function mapAssetType(mimeType: string): DocumentArtifact['type'] {
-  if (mimeType.includes('pdf')) return 'PDF'
-  if (mimeType.includes('image')) return 'Photo'
-  return 'Letter'
-}
-
 export function useDocumentsController(personId?: string): DocumentsControllerState & DocumentsControllerActions {
   const [state, setState] = useState<DocumentsControllerState>({
     documents: [],
@@ -68,7 +64,8 @@ export function useDocumentsController(personId?: string): DocumentsControllerSt
       const documents: DocumentArtifact[] = (data.data.assets || []).map((a: AssetApiResponse) => ({
         id: a.id,
         title: a.originalName || a.filename,
-        type: mapAssetType(a.mimeType),
+        type: getDocumentTypeFromMimeType(a.mimeType),
+        mimeType: a.mimeType,
         uploadedAt: new Date(a.createdAt),
         shareAction: 'Share',
       }))
@@ -145,7 +142,8 @@ export function useDocumentsController(personId?: string): DocumentsControllerSt
       const newDoc: DocumentArtifact = {
         id: data.data.id,
         title: data.data.originalName || file.name,
-        type: mapAssetType(data.data.mimeType || file.type),
+        type: getDocumentTypeFromMimeType(data.data.mimeType || file.type),
+        mimeType: data.data.mimeType || file.type,
         uploadedAt: new Date(data.data.createdAt),
         shareAction: 'Share',
       }
@@ -177,7 +175,12 @@ export function useDocumentsController(personId?: string): DocumentsControllerSt
     setState(prev => ({ ...prev, isLoading: true, hasError: false, errorMessage: null }))
     
     try {
-      const response = await fetch(`/api/assets/${id}`, { method: 'DELETE', credentials: 'include' })
+      const csrfToken = await getCSRFToken()
+      const response = await fetch(`/api/assets/${id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+        headers: { 'x-csrf-token': csrfToken },
+      })
       const data = await response.json()
 
       if (!response.ok || !data.success) {

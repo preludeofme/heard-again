@@ -3,8 +3,6 @@
 # Heard Again - Full Stack Development Startup Script
 # This script starts all required services for development
 
-set -e
-
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -32,15 +30,17 @@ UI_DIR="$MAIN_APP_DIR/UI"
 CHAT_SYSTEM_DIR="$MAIN_APP_DIR/Chat"
 TTS_SERVICE_DIR="$MAIN_APP_DIR/TTS/tts-service"
 
+# Ensure logs directory exists
+mkdir -p "$MAIN_APP_DIR/logs"
+
 # PIDs file for cleanup
 PIDS_FILE="/tmp/heard-again-dev.pids"
 
-echo -e "${BLUE}═══════════════════════════════════════════════════════════════${NC}"
-echo -e "${BLUE}  Heard Again - Full Stack Development Environment Startup${NC}"
-echo -e "${BLUE}═══════════════════════════════════════════════════════════════${NC}"
-echo ""
+# ---------------------------------------------------------------------------
+# Functions (all defined before first use)
+# ---------------------------------------------------------------------------
 
-# Cleanup function
+# Cleanup function (called on Ctrl-C / SIGTERM)
 cleanup() {
     echo ""
     echo -e "${YELLOW}Shutting down services...${NC}"
@@ -58,20 +58,73 @@ cleanup() {
         echo "  Stopping ChromaDB container..."
         docker stop chromadb >/dev/null 2>&1 || true
     fi
+    # Stop Redis dev container if it was started by this script
+    if docker ps --format '{{.Names}}' | grep -q '^redis-dev$'; then
+        echo "  Stopping Redis container..."
+        docker stop redis-dev >/dev/null 2>&1 || true
+    fi
     echo -e "${GREEN}All services stopped.${NC}"
     exit 0
 }
 
-# Set trap for cleanup
-trap cleanup SIGINT SIGTERM
-
-# Function to check if a port is available
+# Function to check if a port is available (returns 0=available, 1=in use)
 check_port() {
     local port=$1
-    if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null 2>&1; then
+    if fuser "${port}/tcp" >/dev/null 2>&1; then
         return 1
     else
         return 0
+    fi
+}
+
+# Stop only this application's processes (never touches postgres, redis, chromadb, ollama)
+stop_app_processes() {
+    local APP_PORTS=($MAIN_APP_PORT $CHAT_SYSTEM_PORT $TTS_SERVICE_PORT)
+    local STOPPED=0
+
+    # Step 1: SIGTERM any PIDs we previously tracked (and their process groups)
+    if [ -f "$PIDS_FILE" ]; then
+        while read pid; do
+            if kill -0 "$pid" 2>/dev/null; then
+                # Kill the whole process group so child processes (e.g. node spawned by npm) also die
+                kill -TERM -"$pid" 2>/dev/null || kill -TERM "$pid" 2>/dev/null || true
+                STOPPED=$((STOPPED + 1))
+            fi
+        done < "$PIDS_FILE"
+        rm -f "$PIDS_FILE"
+    fi
+
+    # Step 2: Kill anything currently listening on app-only ports (catches leftover children)
+    for port in "${APP_PORTS[@]}"; do
+        if fuser "${port}/tcp" >/dev/null 2>&1; then
+            echo -e "  Stopping process on port $port..."
+            fuser -k "${port}/tcp" 2>/dev/null || true
+            STOPPED=$((STOPPED + 1))
+        fi
+    done
+
+    # Step 3: Wait up to 5 s for all app ports to clear
+    if [ $STOPPED -gt 0 ]; then
+        local waited=0
+        while [ $waited -lt 5 ]; do
+            local still_busy=0
+            for port in "${APP_PORTS[@]}"; do
+                fuser "${port}/tcp" >/dev/null 2>&1 && still_busy=1
+            done
+            [ $still_busy -eq 0 ] && break
+            sleep 1
+            waited=$((waited + 1))
+        done
+
+        # Final hard-kill pass if anything is still holding a port
+        for port in "${APP_PORTS[@]}"; do
+            if fuser "${port}/tcp" >/dev/null 2>&1; then
+                echo -e "  Force-stopping port $port..."
+                fuser -k "${port}/tcp" 2>/dev/null || true
+            fi
+        done
+
+        echo -e "  ${GREEN}✓ Previous app processes stopped${NC}"
     fi
 }
 
@@ -95,6 +148,19 @@ wait_for_service() {
     echo -e " ${RED}✗ Timeout${NC}"
     return 1
 }
+
+# Set trap for cleanup on Ctrl-C / SIGTERM
+trap cleanup SIGINT SIGTERM
+
+echo -e "${BLUE}═══════════════════════════════════════════════════════════════${NC}"
+echo -e "${BLUE}  Heard Again - Full Stack Development Environment Startup${NC}"
+echo -e "${BLUE}═══════════════════════════════════════════════════════════════${NC}"
+echo ""
+
+# Stop any existing app processes so this script doubles as a restart
+echo -e "${YELLOW}Stopping existing app processes...${NC}"
+stop_app_processes
+echo ""
 
 # Check dependencies
 echo -e "${YELLOW}Checking dependencies...${NC}"
@@ -138,10 +204,39 @@ fi
 
 # Check sox (required for TTS audio preprocessing)
 if ! command -v sox &> /dev/null; then
-    echo -e "  ${YELLOW}⚠ sox not found (TTS audio preprocessing may fail — run: sudo apt install sox)${NC}"
+    echo -e "  ${YELLOW}⚠ sox not found (TTS audio preprocessing may fail)${NC}"
+    echo -e "    ${BLUE}Install: sudo apt install sox libsox-fmt-all${NC}"
+    if command -v apt &> /dev/null; then
+        echo -e "    ${BLUE}Attempting to install sox automatically...${NC}"
+        if sudo apt update >/dev/null 2>&1 && sudo apt install -y sox libsox-fmt-all >/dev/null 2>&1; then
+            echo -e "    ${GREEN}✓ sox installed successfully${NC}"
+        else
+            echo -e "    ${YELLOW}⚠ Failed to auto-install sox (may need manual install)${NC}"
+        fi
+    fi
 else
     SOX_VERSION=$(sox --version 2>&1 | head -1)
     echo -e "  ${GREEN}✓ sox${NC} $SOX_VERSION"
+fi
+
+# Check flash-attn for TTS performance
+if command -v python3 &> /dev/null && [ -d "$TTS_SERVICE_DIR" ]; then
+    # Get the venv path from .env if available
+    TTS_VENV="$HOME/qwen3-tts/venv"
+    if [ -f "$TTS_SERVICE_DIR/.env" ]; then
+        _PARSED=$(grep '^QWEN_TTS_VENV=' "$TTS_SERVICE_DIR/.env" | cut -d'=' -f2- | tr -d '"')
+        [ -n "$_PARSED" ] && TTS_VENV="$_PARSED"
+    fi
+    
+    if [ -d "$TTS_VENV" ]; then
+        PYTHON_BIN="$TTS_VENV/bin/python"
+        if $PYTHON_BIN -c "import flash_attn" 2>/dev/null; then
+            echo -e "  ${GREEN}✓ flash-attn${NC} (TTS will use optimized attention)"
+        else
+            echo -e "  ${YELLOW}⚠ flash-attn not installed${NC} (TTS will be slower)"
+            echo -e "    ${BLUE}It will be auto-installed when TTS starts (may take a few minutes)${NC}"
+        fi
+    fi
 fi
 
 echo ""
@@ -180,9 +275,7 @@ fi
 
 if [ $PORT_CONFLICTS -gt 0 ]; then
     echo ""
-    echo -e "${RED}Port conflicts detected. Please stop the conflicting services first.${NC}"
-    echo "Run: lsof -ti:$CHAT_SYSTEM_PORT,$MAIN_APP_PORT,$TTS_SERVICE_PORT | xargs kill -9"
-    exit 1
+    echo -e "${YELLOW}⚠ Some app ports still occupied after stop attempt — proceeding anyway${NC}"
 fi
 
 echo ""
@@ -210,7 +303,143 @@ echo -e "  ${GREEN}✓ Environment files ready${NC}"
 
 echo ""
 
-# Database setup for chat-system
+# Start infrastructure ( Phase 1: Dependencies for other services )
+echo -e "${YELLOW}Starting infrastructure services...${NC}"
+cd "$MAIN_APP_DIR"
+
+# Start PostgreSQL via compose (it has no port conflict with host processes)
+echo "  Starting PostgreSQL..."
+docker compose up -d db 2>/dev/null || {
+    echo -e "  ${YELLOW}⚠ Could not start PostgreSQL via docker compose - may already be running${NC}"
+}
+
+# Wait for PostgreSQL to be healthy
+wait_for_postgres() {
+    local max_attempts=30
+    local attempt=1
+    echo -n "  Waiting for PostgreSQL..."
+    while [ $attempt -le $max_attempts ]; do
+        if docker compose ps db | grep -q "healthy\|running" 2>/dev/null; then
+            # Also verify we can connect on port 5433
+            if docker compose exec -T db pg_isready -U postgres -h localhost -p 5432 >/dev/null 2>&1; then
+                echo -e " ${GREEN}✓ Ready${NC}"
+                return 0
+            fi
+        fi
+        # Also accept external PostgreSQL on 5433
+        if command -v pg_isready &> /dev/null && pg_isready -h localhost -p 5433 >/dev/null 2>&1; then
+            echo -e " ${GREEN}✓ Ready (port 5433)${NC}"
+            return 0
+        fi
+        echo -n "."
+        sleep 1
+        attempt=$((attempt + 1))
+    done
+    echo -e " ${YELLOW}⚠ Timeout${NC}"
+    return 1
+}
+wait_for_postgres
+
+# Start Redis with host port exposed so the Chat service (running on host) can reach it.
+REDIS_STARTED=false
+if ! check_port $REDIS_PORT; then
+    echo -e "  ${GREEN}✓ Redis already running on port $REDIS_PORT${NC}"
+    REDIS_STARTED=true
+else
+    echo "  Starting Redis (port $REDIS_PORT)..."
+    if command -v docker &> /dev/null; then
+        docker run -d --name redis-dev -p 6379:6379 redis:7-alpine 2>/dev/null || \
+            docker start redis-dev 2>/dev/null || {
+            echo -e "    ${YELLOW}⚠ Could not start Redis via Docker${NC}"
+            echo -e "    ${BLUE}  Run manually: docker run -d --name redis-dev -p 6379:6379 redis:7-alpine${NC}"
+        }
+        sleep 1
+        if ! check_port $REDIS_PORT; then
+            echo -e "    ${GREEN}✓ Redis started via Docker${NC}"
+            REDIS_STARTED=true
+        else
+            echo -e "    ${YELLOW}⚠ Redis container may still be starting${NC}"
+        fi
+    else
+        echo -e "    ${YELLOW}⚠ Docker not found - Redis cannot start (BullMQ queues will fail)${NC}"
+    fi
+fi
+
+# Start ChromaDB if not running
+CHROMA_STARTED=false
+if ! check_port 8004; then
+    echo -e "  ${GREEN}✓ ChromaDB already running${NC}"
+    CHROMA_STARTED=true
+else
+    echo "  Starting ChromaDB (port 8004)..."
+    if command -v docker &> /dev/null; then
+        docker run -d --name chromadb -p 8004:8000 -v chroma_data:/chroma/chroma \
+            -e IS_PERSISTENT=TRUE \
+            -e ANONYMIZED_TELEMETRY=FALSE \
+            chromadb/chroma:latest 2>/dev/null || docker start chromadb 2>/dev/null || {
+            echo -e "    ${YELLOW}⚠ Could not start ChromaDB via Docker${NC}"
+            echo -e "    ${BLUE}  Run manually: docker run -p 8004:8000 chromadb/chroma:latest${NC}"
+        }
+        sleep 2
+        if docker ps | grep -q chromadb; then
+            echo -e "    ${GREEN}✓ ChromaDB started via Docker${NC}"
+            CHROMA_STARTED=true
+        fi
+    else
+        echo -e "    ${YELLOW}⚠ Docker not found - ChromaDB cannot start${NC}"
+    fi
+fi
+
+# Start Ollama if not running
+# Read OLLAMA_URL from Chat .env so we check the right address
+OLLAMA_URL_ENV="http://localhost:11434"
+if [ -f "$CHAT_SYSTEM_DIR/.env" ]; then
+    _PARSED=$(grep '^OLLAMA_URL=' "$CHAT_SYSTEM_DIR/.env" | cut -d'=' -f2- | tr -d '"')
+    [ -n "$_PARSED" ] && OLLAMA_URL_ENV="$_PARSED"
+fi
+
+OLLAMA_STARTED=false
+if curl -sk "$OLLAMA_URL_ENV/api/tags" >/dev/null 2>&1; then
+    echo -e "  ${GREEN}✓ Ollama already running${NC} ($OLLAMA_URL_ENV)"
+    OLLAMA_STARTED=true
+elif command -v ollama &> /dev/null; then
+    echo "  Starting Ollama..."
+    ollama serve > /tmp/ollama.log 2>&1 &
+    OLLAMA_PID=$!
+    sleep 4
+    if curl -sk "$OLLAMA_URL_ENV/api/tags" >/dev/null 2>&1; then
+        echo -e "    ${GREEN}✓ Ollama started (PID: $OLLAMA_PID)${NC}"
+        OLLAMA_STARTED=true
+    else
+        echo -e "    ${YELLOW}⚠ Ollama started but not yet reachable at $OLLAMA_URL_ENV${NC}"
+    fi
+else
+    echo -e "  ${YELLOW}⚠ Ollama not found and not reachable at $OLLAMA_URL_ENV — LLM features unavailable${NC}"
+fi
+
+echo ""
+
+# Wait for all infrastructure to be ready before starting application services
+echo -e "${YELLOW}Waiting for infrastructure health...${NC}"
+
+# Verify ChromaDB health
+if [ "$CHROMA_STARTED" = true ]; then
+    wait_for_service "ChromaDB" "http://localhost:8004/api/v2/heartbeat" 30
+fi
+
+# Verify Redis
+if [ "$REDIS_STARTED" = true ]; then
+    echo -n "  Verifying Redis..."
+    if redis-cli -h localhost -p 6379 ping >/dev/null 2>&1; then
+        echo -e " ${GREEN}✓ Ready${NC}"
+    else
+        echo -e " ${YELLOW}⚠ May not be fully ready${NC}"
+    fi
+fi
+
+echo ""
+
+# Database setup for chat-system (NOW: after PostgreSQL is confirmed running)
 echo -e "${YELLOW}Setting up Chat System database...${NC}"
 cd "$CHAT_SYSTEM_DIR"
 
@@ -226,84 +455,47 @@ fi
 
 # Generate Prisma client
 echo "  Generating Prisma client..."
-npx prisma generate
+npx prisma generate --silent 2>/dev/null || npx prisma generate
 
-# Run migrations
+# Run migrations — resolve any failed ones first, then fall back to db push
 echo "  Running database migrations..."
-npx prisma migrate deploy 2>/dev/null || {
-    echo "  Creating initial migration..."
-    npx prisma migrate dev --name init --create-only 2>/dev/null || true
-}
+if npx prisma migrate deploy 2>/tmp/prisma-migrate.log; then
+    echo "  ✓ Migrations applied"
+else
+    FAILED_MIGRATION=$(grep 'The.*migration' /tmp/prisma-migrate.log | grep -oP '\`\K[^\`]+' | head -1)
+    if [ -n "$FAILED_MIGRATION" ]; then
+        echo "  Resolving failed migration: $FAILED_MIGRATION"
+        npx prisma migrate resolve --rolled-back "$FAILED_MIGRATION" 2>/dev/null || true
+    fi
+    echo "  Falling back to prisma db push..."
+    npx prisma db push --accept-data-loss 2>/dev/null || {
+        echo -e "  ${YELLOW}⚠ Could not sync database schema — check Chat/.env DATABASE_URL${NC}"
+    }
+fi
+
+# Validate CHAT_SERVICE_SECRET is set in Chat .env
+if [ -f "$CHAT_SYSTEM_DIR/.env" ]; then
+    SECRET_VAL=$(grep '^CHAT_SERVICE_SECRET=' "$CHAT_SYSTEM_DIR/.env" | cut -d'=' -f2- | tr -d '"')
+    if [ -z "$SECRET_VAL" ]; then
+        echo -e "  ${RED}✗ CHAT_SERVICE_SECRET is not set in Chat/.env — service auth will fail${NC}"
+    else
+        echo "  ✓ CHAT_SERVICE_SECRET is set"
+    fi
+fi
 
 cd "$MAIN_APP_DIR"
 echo -e "  ${GREEN}✓ Chat System database ready${NC}"
 
 echo ""
 
-# Start infrastructure
-echo -e "${YELLOW}Starting infrastructure services...${NC}"
-cd "$MAIN_APP_DIR"
-docker compose up -d db redis 2>/dev/null || {
-    echo -e "  ${YELLOW}⚠ Could not start Docker services - may already be running${NC}"
-}
-sleep 2
-echo -e "  ${GREEN}✓ Infrastructure services ready${NC}"
-
-echo ""
-
-# Start ChromaDB if not running
-CHROMA_STARTED=false
-if ! check_port 8004; then
-    echo -e "  ${GREEN}✓ ChromaDB already running${NC}"
-    CHROMA_STARTED=true
-else
-    echo "  Starting ChromaDB (port 8004)..."
-    if command -v docker &> /dev/null; then
-        docker run -d --name chromadb -p 8004:8000 -v chroma_data:/chroma/chroma chromadb/chroma:latest 2>/dev/null || docker start chromadb 2>/dev/null || {
-            echo -e "    ${YELLOW}⚠ Could not start ChromaDB via Docker${NC}"
-            echo -e "    ${BLUE}  Run manually: docker run -p 8004:8000 chromadb/chroma:latest${NC}"
-        }
-        if docker ps | grep -q chromadb; then
-            echo -e "    ${GREEN}✓ ChromaDB started via Docker${NC}"
-            CHROMA_STARTED=true
-        fi
-    else
-        echo -e "    ${YELLOW}⚠ Docker not found - ChromaDB cannot start${NC}"
-    fi
-fi
-
-# Start Ollama if not running
-OLLAMA_STARTED=false
-if command -v ollama &> /dev/null; then
-    if curl -s http://localhost:11434/api/tags >/dev/null 2>&1; then
-        echo -e "  ${GREEN}✓ Ollama already running${NC}"
-        OLLAMA_STARTED=true
-    else
-        echo "  Starting Ollama (port 11434)..."
-        ollama serve > /tmp/ollama.log 2>&1 &
-        OLLAMA_PID=$!
-        sleep 3
-        if curl -s http://localhost:11434/api/tags >/dev/null 2>&1; then
-            echo -e "    ${GREEN}✓ Ollama started (PID: $OLLAMA_PID)${NC}"
-            OLLAMA_STARTED=true
-        else
-            echo -e "    ${YELLOW}⚠ Ollama may still be starting${NC}"
-        fi
-    fi
-else
-    echo -e "  ${YELLOW}⚠ Ollama not found - LLM features unavailable${NC}"
-fi
-
-echo ""
-
-# Start services
-echo -e "${YELLOW}Starting services...${NC}"
+# Start services (Phase 2: Application services - start in dependency order)
+echo -e "${YELLOW}Starting application services...${NC}"
 
 # Clear old PIDs
 rm -f "$PIDS_FILE"
 touch "$PIDS_FILE"
 
-# Start Chat System
+# Start Chat System first (other services depend on it)
 echo "  Starting Chat System (port $CHAT_SYSTEM_PORT)..."
 cd "$CHAT_SYSTEM_DIR"
 if [ "$LOG_MODE" = "live" ]; then
@@ -319,10 +511,15 @@ if [ "$LOG_MODE" != "live" ]; then
     echo -e "    ${BLUE}  Logs: $MAIN_APP_DIR/logs/chat-system.log${NC}"
 fi
 
-# Wait for chat system to be ready
-sleep 3
+# Wait for Chat System to be healthy before starting Main App
+echo -n "  Waiting for Chat System health..."
+if wait_for_service "Chat System" "http://localhost:$CHAT_SYSTEM_PORT/api/health" 60; then
+    :
+else
+    echo -e "  ${YELLOW}⚠ Chat System may need more time (continuing anyway)${NC}"
+fi
 
-# Start Main App
+# Start Main App (depends on Chat System and ChromaDB)
 echo "  Starting Main App (port $MAIN_APP_PORT)..."
 cd "$UI_DIR"
 if [ "$LOG_MODE" = "live" ]; then
@@ -338,7 +535,15 @@ if [ "$LOG_MODE" != "live" ]; then
     echo -e "    ${BLUE}  Logs: $MAIN_APP_DIR/logs/main-app.log${NC}"
 fi
 
-# Start TTS Service (if Python is available)
+# Wait for Main App to be healthy before starting TTS
+echo -n "  Waiting for Main App health..."
+if wait_for_service "Main App" "http://localhost:$MAIN_APP_PORT/api/instance/health" 60; then
+    :
+else
+    echo -e "  ${YELLOW}⚠ Main App may need more time (continuing anyway)${NC}"
+fi
+
+# Start TTS Service (if Python is available) - uses wrapper script for flash-attn
 if command -v python3 &> /dev/null && [ -d "$TTS_SERVICE_DIR" ]; then
     echo "  Starting TTS Service (port $TTS_SERVICE_PORT)..."
 
@@ -352,14 +557,15 @@ if command -v python3 &> /dev/null && [ -d "$TTS_SERVICE_DIR" ]; then
 
     if [ -d "$VENV_PATH" ]; then
         cd "$TTS_SERVICE_DIR"
-        PYTHON_BIN="$VENV_PATH/bin/python"
-        if [ ! -f "$PYTHON_BIN" ]; then
-            PYTHON_BIN="$VENV_PATH/bin/python3"
-        fi
+        
+        # Use the wrapper start.sh script which handles flash-attn installation
+        export TTS_PORT=$TTS_SERVICE_PORT
+        export NEXTAUTH_URL=http://localhost:$MAIN_APP_PORT
+        
         if [ "$LOG_MODE" = "live" ]; then
-            TTS_PORT=$TTS_SERVICE_PORT NEXTAUTH_URL=http://localhost:$MAIN_APP_PORT "$PYTHON_BIN" -m app.main 2>&1 | tee "$MAIN_APP_DIR/logs/tts-service.log" &
+            ./start.sh 2>&1 | tee "$MAIN_APP_DIR/logs/tts-service.log" &
         else
-            TTS_PORT=$TTS_SERVICE_PORT NEXTAUTH_URL=http://localhost:$MAIN_APP_PORT "$PYTHON_BIN" -m app.main > "$MAIN_APP_DIR/logs/tts-service.log" 2>&1 &
+            ./start.sh > "$MAIN_APP_DIR/logs/tts-service.log" 2>&1 &
         fi
         TTS_PID=$!
         cd "$MAIN_APP_DIR"
@@ -382,9 +588,8 @@ fi
 
 echo ""
 
-# Health checks
-echo -e "${YELLOW}Running health checks...${NC}"
-sleep 2
+# Final health checks
+echo -e "${YELLOW}Running final health checks...${NC}"
 
 # Check ChromaDB
 if [ "$CHROMA_STARTED" = true ]; then
@@ -429,7 +634,7 @@ if [ "$CHROMA_STARTED" = true ]; then
     echo -e "  ${BLUE}ChromaDB:${NC}      http://localhost:8004"
 fi
 if [ "$OLLAMA_STARTED" = true ]; then
-    echo -e "  ${BLUE}Ollama:${NC}        http://localhost:11434"
+    echo -e "  ${BLUE}Ollama:${NC}        $OLLAMA_URL_ENV"
 fi
 if [ "$TTS_STARTED" = true ]; then
     echo -e "  ${BLUE}TTS Service:${NC}   http://localhost:$TTS_SERVICE_PORT"

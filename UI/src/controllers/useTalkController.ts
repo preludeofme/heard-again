@@ -41,49 +41,35 @@ export function useTalkController(subjectId?: string) {
     setErrorState({ hasError: true, errorMessage: message })
   })
 
-  // Use chat conversation for real subjects, fallback to mock for demo
-  const conversation = subjectId 
-    ? useChatConversation({
-        subjectId,
-        onAssistantMessage: async (text: string) => {
-          const selectedModel = selectedVoiceModelRef.current
-          if (!selectedModel) {
-            return
-          }
+  const onAssistantMessage = useCallback(async (text: string) => {
+    const selectedModel = selectedVoiceModelRef.current
+    if (!selectedModel) return
+    try {
+      const audioUrl = await synthesizeSpeechRef.current(text, selectedModel.id)
+      if (audioUrl) playAudioRef.current(audioUrl)
+    } catch (e) {
+      console.warn('[TALK] Voice synthesis for response failed (non-critical):', e)
+    }
+  }, [])
 
-          try {
-            const audioUrl = await synthesizeSpeechRef.current(text, selectedModel.id)
-            if (audioUrl) {
-              playAudioRef.current(audioUrl)
-            }
-          } catch (e) {
-            console.warn('[TALK] Voice synthesis for response failed (non-critical):', e)
-          }
-        },
-        onError: (message) => {
-          setErrorState({ hasError: true, errorMessage: message })
-        },
-      })
-    : useConversation({
-        onAssistantMessage: async (text: string) => {
-          const selectedModel = selectedVoiceModelRef.current
-          if (!selectedModel) {
-            return
-          }
+  const onConversationError = useCallback((message: string) => {
+    setErrorState({ hasError: true, errorMessage: message })
+  }, [])
 
-          try {
-            const audioUrl = await synthesizeSpeechRef.current(text, selectedModel.id)
-            if (audioUrl) {
-              playAudioRef.current(audioUrl)
-            }
-          } catch (e) {
-            console.warn('[TALK] Voice synthesis for response failed (non-critical):', e)
-          }
-        },
-        onError: (message) => {
-          setErrorState({ hasError: true, errorMessage: message })
-        },
-      })
+  // Always call both hooks unconditionally (Rules of Hooks)
+  const chatConversation = useChatConversation({
+    subjectId,
+    onAssistantMessage,
+    onError: onConversationError,
+  })
+
+  const mockConversation = useConversation({
+    onAssistantMessage,
+    onError: onConversationError,
+  })
+
+  // Select the active conversation based on whether a real subject is selected
+  const conversation = subjectId ? chatConversation : mockConversation
 
   const synthesis = useTalkSynthesis({
     selectedVoiceModelId: voiceModels.selectedVoiceModel?.id,
@@ -147,5 +133,17 @@ export function useTalkController(subjectId?: string) {
     setComparisonModelA: comparison.setComparisonModelA,
     setComparisonModelB: comparison.setComparisonModelB,
     compareVoices: comparison.compareVoices,
+    // Persona-related properties — only meaningful when a real subjectId is active
+    personaExists: chatConversation.personaExists,
+    personaConfidence: chatConversation.personaConfidence,
+    needsPersonaGeneration: chatConversation.needsPersonaGeneration,
+    generatePersona: chatConversation.generatePersona,
+    checkPersonaExists: chatConversation.checkPersonaExists,
+    // Session management
+    sessions: chatConversation.sessions,
+    isLoadingSessions: chatConversation.isLoadingSessions,
+    loadSessions: chatConversation.loadSessions,
+    switchSession: chatConversation.switchSession,
+    deleteSession: chatConversation.deleteSession,
   }
 }

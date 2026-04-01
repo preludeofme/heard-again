@@ -23,9 +23,12 @@ interface PrismaPersonaProfile {
 export class DatabasePersonaRepository implements PersonaRepository {
   constructor(private prisma: any) {} // PrismaClient will be injected
 
-  async getPersonaProfile(personId: string): Promise<PersonaProfile | null> {
+  async getPersonaProfile(personId: string, workspaceId: string): Promise<PersonaProfile | null> {
     const profile = await this.prisma.personaProfile.findUnique({
-      where: { personId }
+      where: { 
+        personId,
+        workspaceId // Add workspaceId to query for defense-in-depth
+      }
     })
 
     if (!profile) return null
@@ -54,12 +57,17 @@ export class DatabasePersonaRepository implements PersonaRepository {
     return this.mapDbPersonaToPersonaProfile(dbProfile)
   }
 
-  async updatePersonaProfile(personId: string, updates: Partial<PersonaProfile>): Promise<PersonaProfile> {
+  async updatePersonaProfile(personId: string, updates: Partial<PersonaProfile>, workspaceId?: string): Promise<PersonaProfile> {
     const existing = await this.prisma.personaProfile.findUnique({
       where: { personId }
     })
 
     if (!existing) {
+      throw new Error(`Persona profile not found for person ${personId}`)
+    }
+
+    // Defense-in-depth: ensure callers cannot mutate a profile from another workspace
+    if (workspaceId && existing.workspaceId !== workspaceId) {
       throw new Error(`Persona profile not found for person ${personId}`)
     }
 
@@ -86,12 +94,17 @@ export class DatabasePersonaRepository implements PersonaRepository {
     return this.mapDbPersonaToPersonaProfile(updatedProfile)
   }
 
-  async deletePersonaProfile(personId: string): Promise<void> {
+  async deletePersonaProfile(personId: string, workspaceId?: string): Promise<void> {
     const exists = await this.prisma.personaProfile.findUnique({
       where: { personId }
     })
 
     if (!exists) {
+      throw new Error(`Persona profile not found for person ${personId}`)
+    }
+
+    // Defense-in-depth: ensure callers cannot delete a profile from another workspace
+    if (workspaceId && exists.workspaceId !== workspaceId) {
       throw new Error(`Persona profile not found for person ${personId}`)
     }
 
@@ -106,16 +119,16 @@ export class DatabasePersonaRepository implements PersonaRepository {
       orderBy: { createdAt: 'desc' }
     })
 
-    return profiles.map(profile => this.mapDbPersonaToPersonaProfile(profile))
+    return profiles.map((profile: PrismaPersonaProfile) => this.mapDbPersonaToPersonaProfile(profile))
   }
 
-  async getPersonaFacts(personId: string): Promise<PersonaFact[]> {
-    const profile = await this.getPersonaProfile(personId)
+  async getPersonaFacts(personId: string, workspaceId: string): Promise<PersonaFact[]> {
+    const profile = await this.getPersonaProfile(personId, workspaceId)
     return profile?.knownFacts || []
   }
 
-  async getPersonaRelationships(personId: string): Promise<Relationship[]> {
-    const profile = await this.getPersonaProfile(personId)
+  async getPersonaRelationships(personId: string, workspaceId: string): Promise<Relationship[]> {
+    const profile = await this.getPersonaProfile(personId, workspaceId)
     return profile?.relationships || []
   }
 

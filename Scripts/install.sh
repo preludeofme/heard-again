@@ -59,9 +59,52 @@ else
     echo -e "  ${GREEN}✓ Docker Compose${NC}"
 fi
 
-echo ""
+# Check Python (for TTS)
+if ! command -v python3 &> /dev/null; then
+    echo -e "${YELLOW}⚠ Python 3 is not installed${NC}"
+    echo "    Python is required for the TTS service."
+else
+    PYTHON_VERSION=$(python3 --version 2>&1)
+    echo -e "  ${GREEN}✓ Python${NC} $PYTHON_VERSION"
+fi
 
-# Create necessary directories
+# Check for pip
+if ! command -v pip3 &> /dev/null; then
+    echo -e "${YELLOW}⚠ pip3 is not installed${NC}"
+    echo "    pip is required for TTS dependencies."
+else
+    echo -e "  ${GREEN}✓ pip${NC}"
+fi
+
+# Check sox (required for TTS audio processing)
+if ! command -v sox &> /dev/null; then
+    echo -e "${YELLOW}⚠ sox not found (TTS audio preprocessing may fail)${NC}"
+    echo -e "    ${BLUE}Attempting to install sox...${NC}"
+    if command -v apt &> /dev/null; then
+        sudo apt update >/dev/null 2>&1 && sudo apt install -y sox libsox-fmt-all >/dev/null 2>&1 && echo -e "  ${GREEN}✓ sox installed${NC}" || echo -e "  ${YELLOW}⚠ Failed to install sox (may need manual: sudo apt install sox libsox-fmt-all)${NC}"
+    else
+        echo -e "    ${YELLOW}⚠ Automatic install not available - please install manually${NC}"
+    fi
+else
+    SOX_VERSION=$(sox --version 2>&1 | head -1)
+    echo -e "  ${GREEN}✓ sox${NC} $SOX_VERSION"
+fi
+
+# Check for nvcc (CUDA compiler) - needed for flash-attn
+if ! command -v nvcc &> /dev/null; then
+    echo -e "${YELLOW}⚠ CUDA toolkit (nvcc) not found${NC}"
+    echo -e "    ${BLUE}Attempting to install nvidia-cuda-toolkit...${NC}"
+    if command -v apt &> /dev/null; then
+        sudo apt update >/dev/null 2>&1 && sudo apt install -y nvidia-cuda-toolkit >/dev/null 2>&1 && echo -e "  ${GREEN}✓ CUDA toolkit installed${NC}" || echo -e "  ${YELLOW}⚠ Failed to install CUDA toolkit (may need manual: sudo apt install nvidia-cuda-toolkit)${NC}"
+    else
+        echo -e "    ${YELLOW}⚠ Automatic install not available - please install manually${NC}"
+    fi
+else
+    NVCC_VERSION=$(nvcc --version 2>&1 | grep "release" | head -1)
+    echo -e "  ${GREEN}✓ CUDA toolkit${NC} $NVCC_VERSION"
+fi
+
+echo ""
 echo -e "${YELLOW}Creating directories...${NC}"
 mkdir -p "$ROOT_DIR/logs"
 mkdir -p "$ROOT_DIR/uploads"
@@ -186,6 +229,49 @@ if [ ! -d "node_modules" ]; then
     echo -e "  ${GREEN}✓ Chat dependencies installed${NC}"
 else
     echo -e "  ${GREEN}✓ Chat dependencies already installed${NC}"
+fi
+
+echo ""
+
+# Setup TTS virtual environment and install flash-attn
+if command -v python3 &> /dev/null; then
+    echo -e "${YELLOW}Setting up TTS virtual environment...${NC}"
+
+    # Determine venv path - check if QWEN_TTS_VENV is set in environment or TTS .env
+    TTS_VENV="$HOME/qwen3-tts/venv"
+    if [ -f "$TTS_DIR/tts-service/.env" ]; then
+        _PARSED=$(grep '^QWEN_TTS_VENV=' "$TTS_DIR/tts-service/.env" | cut -d'=' -f2- | tr -d '"')
+        [ -n "$_PARSED" ] && TTS_VENV="$_PARSED"
+    fi
+
+    # Create venv if it doesn't exist
+    if [ ! -d "$TTS_VENV" ]; then
+        echo "  Creating TTS virtual environment at $TTS_VENV..."
+        python3 -m venv "$TTS_VENV"
+        echo -e "  ${GREEN}✓ Virtual environment created${NC}"
+    else
+        echo -e "  ${GREEN}✓ Virtual environment already exists${NC}"
+    fi
+
+    # Install flash-attn if not present
+    echo "  Checking for flash-attn..."
+    PYTHON_BIN="$TTS_VENV/bin/python"
+    if $PYTHON_BIN -c "import flash_attn" 2>/dev/null; then
+        echo -e "  ${GREEN}✓ flash-attn already installed${NC}"
+    else
+        echo -e "  ${YELLOW}⚠ flash-attn not found, installing... (this may take a few minutes)${NC}"
+        # Set CUDA_HOME correctly (nvcc is typically in /usr/bin on Ubuntu)
+        export CUDA_HOME=/usr
+        "$TTS_VENV/bin/pip" install flash-attn --no-build-isolation 2>&1 | tail -5
+        if $PYTHON_BIN -c "import flash_attn" 2>/dev/null; then
+            echo -e "  ${GREEN}✓ flash-attn installed successfully${NC}"
+        else
+            echo -e "  ${YELLOW}⚠ flash-attn installation failed (TTS will work but be slower)${NC}"
+            echo -e "    Manual install: export CUDA_HOME=/usr && pip install flash-attn --no-build-isolation"
+        fi
+    fi
+else
+    echo -e "${YELLOW}⚠ Skipping TTS setup (Python not available)${NC}"
 fi
 
 echo ""

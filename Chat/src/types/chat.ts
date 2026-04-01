@@ -1,17 +1,8 @@
 import type { PersonaProfile } from './persona'
 import type { RetrievedDocument, SearchContext } from './retrieval'
+export { DocumentType } from './retrieval'
 
 // Core chat-related types for the Phase 1 Chat System
-
-export enum DocumentType {
-  STORY = 'story',
-  LETTER = 'letter',
-  DIARY = 'diary',
-  PHOTO_CAPTION = 'photo_caption',
-  AUDIO_TRANSCRIPT = 'audio_transcript',
-  DOCUMENT = 'document',
-  OTHER = 'other'
-}
 
 export interface ChatSession {
   id: string

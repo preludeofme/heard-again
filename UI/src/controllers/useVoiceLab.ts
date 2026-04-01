@@ -13,7 +13,6 @@
 
 import { useVoiceProfiles } from './useVoiceProfiles'
 import { useVoiceTraining } from './useVoiceTraining'
-import { useDocumentUpload } from './useDocumentUpload'
 import { useVoiceSynthesis } from './useVoiceSynthesis'
 
 /**
@@ -24,7 +23,6 @@ import { useVoiceSynthesis } from './useVoiceSynthesis'
 export function useVoiceLab() {
   const profiles = useVoiceProfiles()
   const training = useVoiceTraining()
-  const documents = useDocumentUpload()
   const synthesis = useVoiceSynthesis()
 
   return {
@@ -56,10 +54,10 @@ export function useVoiceLab() {
     runASR: training.runASR,
     designAndCloneVoice: training.designAndCloneVoice,
 
-    // From useDocumentUpload
-    documents: documents.documents,
-    uploadDocument: documents.uploadDocument,
-    shareDocument: documents.shareDocument,
+    // Document upload (handled by dedicated documents page; stubs for backward compat)
+    documents: [] as any[],
+    uploadDocument: async (_file: File) => {},
+    shareDocument: (_id: string) => {},
 
     // From useVoiceSynthesis
     isSynthesizing: synthesis.isSynthesizing,

@@ -1,11 +1,29 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { ServiceFactory } from '@/services'
 import { v4 as uuidv4 } from 'uuid'
+import { verifyServiceToken } from '@/utils/auth-guard'
+
+function generateConversationTitle(personId: string): string {
+  const now = new Date()
+  const timeString = now.toLocaleTimeString('en-US', { 
+    hour: 'numeric', 
+    minute: '2-digit',
+    hour12: true 
+  })
+  const dateString = now.toLocaleDateString('en-US', { 
+    month: 'short', 
+    day: 'numeric' 
+  })
+  
+  return `Chat with ${personId} - ${dateString} at ${timeString}`
+}
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  if (!verifyServiceToken(req, res)) return
+
   try {
     // Extract workspace and user info from headers
     const workspaceId = req.headers['x-workspace-id'] as string
@@ -79,7 +97,7 @@ async function handleCreateSession(
       workspaceId,
       personId,
       userId,
-      title: title || `Chat with ${personId}`
+      title: title || generateConversationTitle(personId)
     })
 
     res.status(201).json({
