@@ -5,7 +5,7 @@ import type { ChatMessage } from './chat'
 export interface LLMGateway {
   generateResponse(prompt: CompiledPrompt): Promise<LLMResponse>
   streamResponse(prompt: CompiledPrompt): Promise<AsyncIterable<string>>
-  validateResponse(response: string): Promise<ValidatedResponse>
+  validateResponse(response: string, context?: { documents?: string[], knownFacts?: string[] }): Promise<ValidatedResponse>
   getModelInfo(model: string): Promise<ModelInfo>
   listModels(): Promise<ModelInfo[]>
 }
@@ -47,7 +47,7 @@ export interface ValidatedResponse {
 }
 
 export interface ContentViolation {
-  type: 'prompt_injection' | 'pii_leak' | 'inappropriate_content' | 'hallucination' | 'format_violation'
+  type: 'prompt_injection' | 'pii_leak' | 'inappropriate_content' | 'hallucination' | 'format_violation' | 'potential_hallucination' | 'unsupported_claim' | 'uncertainty_bypass'
   severity: 'low' | 'medium' | 'high'
   description: string
   position?: {

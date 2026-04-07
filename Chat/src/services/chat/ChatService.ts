@@ -72,7 +72,8 @@ export class ChatServiceImpl implements ChatService {
       request.message,
       {
         workspaceId: session.workspaceId,
-        personId: session.personId
+        personId: session.personId,
+        maxResults: 5
       }
     )
 
@@ -87,20 +88,52 @@ export class ChatServiceImpl implements ChatService {
     // Generate response
     const llmResponse = await this.llmGateway.generateResponse(prompt)
 
-    // Validate response for injection / PII before returning to caller
-    const validated = await this.llmGateway.validateResponse(llmResponse.content)
+    // Prepare document content for validation context
+    const documentContents = retrievedDocuments.map(d => `${d.metadata.title}: ${d.content}`)
+    
+    // Validate response for injection / PII / hallucinations before returning to caller
+    const validated = await this.llmGateway.validateResponse(llmResponse.content, {
+      documents: documentContents,
+      knownFacts: personaProfile.knownFacts?.map(f => f.fact) || []
+    })
+    
     const hasHighViolation = validated.violations.some(v => v.severity === 'high')
-    if (hasHighViolation) {
-      console.error('[SEC] High-severity LLM output violation — returning safe fallback', {
+    const hasHallucination = validated.violations.some(v => 
+      v.type === 'potential_hallucination' || v.type === 'unsupported_claim'
+    )
+    
+    if (hasHighViolation || hasHallucination) {
+      console.error('[SEC/HALLUCINATION] Violation detected — logging details', {
         sessionId: request.sessionId,
-        violationTypes: validated.violations.filter(v => v.severity === 'high').map(v => v.type)
+        violations: validated.violations.map(v => ({ type: v.type, severity: v.severity, desc: v.description }))
       })
     }
-    // High-severity: replace entirely with a neutral fallback to prevent any leak
-    // Medium-severity: use the character-redacted filteredContent
-    const safeContent = hasHighViolation
-      ? "I'm sorry, I'm not able to respond to that."
-      : (validated.filteredContent ?? llmResponse.content)
+    
+    // Handle hallucinations with uncertainty phrase fallback
+    const uncertaintyPhrases = [
+      "Hmm, I seem to have forgotten about that.",
+      "I don't recall that, I'm afraid.",
+      "That doesn't ring a bell, sorry.",
+      "My memory fails me on that one.",
+      "I wish I could remember, but I don't."
+    ]
+    
+    // Determine safe content:
+    // - High-severity violations: neutral fallback
+    // - Hallucinations: use uncertainty phrase
+    // - Medium violations: use filtered content
+    // - Valid: use original content
+    let safeContent: string
+    if (hasHighViolation) {
+      safeContent = "I'm sorry, I'm not able to respond to that."
+    } else if (hasHallucination) {
+      // Use a random uncertainty phrase for hallucinations
+      safeContent = uncertaintyPhrases[Math.floor(Math.random() * uncertaintyPhrases.length)]
+    } else if (!validated.isValid) {
+      safeContent = validated.filteredContent ?? llmResponse.content
+    } else {
+      safeContent = llmResponse.content
+    }
 
     // Store assistant message
     const assistantMessage: ChatMessage = {
@@ -183,7 +216,8 @@ export class ChatServiceImpl implements ChatService {
       request.message,
       {
         workspaceId: session.workspaceId,
-        personId: session.personId
+        personId: session.personId,
+        maxResults: 5
       }
     )
 
@@ -213,7 +247,7 @@ export class ChatServiceImpl implements ChatService {
     }
     await this.chatRepository.addMessage(assistantMessage)
     
-    return this.createStreamGenerator(messageId, prompt, startTime, retrievedDocuments)
+    return this.createStreamGenerator(messageId, prompt, startTime, retrievedDocuments, personaProfile)
   }
 
   async storeUserMessage(sessionId: string, message: string): Promise<ChatMessage> {
@@ -241,7 +275,8 @@ export class ChatServiceImpl implements ChatService {
     messageId: string,
     prompt: CompiledPrompt,
     startTime: number,
-    retrievedDocuments: RetrievedDocument[]
+    retrievedDocuments: RetrievedDocument[],
+    personaProfile: PersonaProfile
   ): AsyncIterable<StreamChunk> {
     try {
       yield {
@@ -269,20 +304,45 @@ export class ChatServiceImpl implements ChatService {
         }
       }
 
-      // SEC-6: Validate assembled response before storing
-      const validated = await this.llmGateway.validateResponse(fullContent)
+      // SEC-6: Validate assembled response before storing with context for hallucination detection
+      const documentContents = retrievedDocuments.map(d => `${d.metadata.title}: ${d.content}`)
+      const validated = await this.llmGateway.validateResponse(fullContent, {
+        documents: documentContents,
+        knownFacts: personaProfile.knownFacts?.map((f: { fact: string }) => f.fact) || []
+      })
+      
       const hasHighViolation = validated.violations.some(v => v.severity === 'high')
-      if (hasHighViolation) {
-        console.error('[SEC] High-severity LLM stream violation — returning safe fallback', {
+      const hasHallucination = validated.violations.some(v => 
+        v.type === 'potential_hallucination' || v.type === 'unsupported_claim'
+      )
+      
+      if (hasHighViolation || hasHallucination) {
+        console.error('[SEC/HALLUCINATION] Stream violation detected', {
           messageId,
-          violationTypes: validated.violations.filter(v => v.severity === 'high').map(v => v.type)
+          violations: validated.violations.map(v => ({ type: v.type, severity: v.severity }))
         })
       }
 
-      // High-severity → neutral fallback; medium-severity → filteredContent; valid → undefined (use streamed)
-      const safeStreamContent = hasHighViolation
-        ? "I'm sorry, I'm not able to respond to that."
-        : (!validated.isValid ? (validated.filteredContent ?? fullContent) : undefined)
+      // Uncertainty phrases for hallucination fallback
+      const uncertaintyPhrases = [
+        "Hmm, I seem to have forgotten about that.",
+        "I don't recall that, I'm afraid.",
+        "That doesn't ring a bell, sorry.",
+        "My memory fails me on that one.",
+        "I wish I could remember, but I don't."
+      ]
+
+      // Determine safe content with hallucination handling
+      let safeStreamContent: string | undefined
+      if (hasHighViolation) {
+        safeStreamContent = "I'm sorry, I'm not able to respond to that."
+      } else if (hasHallucination) {
+        safeStreamContent = uncertaintyPhrases[Math.floor(Math.random() * uncertaintyPhrases.length)]
+      } else if (!validated.isValid) {
+        safeStreamContent = validated.filteredContent ?? fullContent
+      } else {
+        safeStreamContent = undefined // Use streamed content
+      }
 
       yield {
         type: 'end',

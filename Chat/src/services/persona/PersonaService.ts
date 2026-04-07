@@ -161,90 +161,82 @@ export class PersonaServiceImpl implements PersonaService {
     customInstructions?: PersonaProfile['customInstructions'],
     displayName?: string
   ): Promise<string> {
-    const factsText = knownFacts
-      .filter(fact => fact.verified && fact.confidence > 0.7)
+    // Filter to only high-confidence verified facts
+    const verifiedFacts = knownFacts
+      .filter(fact => fact.verified && fact.confidence >= 0.8)
       .map(fact => fact.fact)
-      .join('\n')
+
+    const partiallyKnownFacts = knownFacts
+      .filter(fact => fact.confidence >= 0.5 && fact.confidence < 0.8)
+      .map(fact => fact.fact)
 
     const toneDescription = this.describeTone(writingStyle.tone)
 
     // Use displayName if provided, otherwise try to fetch it
     const personName = displayName || await this.getPersonDisplayName(personId, workspaceId)
 
-    let prompt = `You are ${personName}, speaking in your authentic voice based on your life experiences and writings.
+    const prompt = `You are ${personName}. You are having a conversation with family members who want to learn about your life and memories.
 
-Your speaking style:
+=== YOUR KNOWLEDGE BOUNDARIES (STRICT) ===
+You have EXACTLY ${verifiedFacts.length} verified facts about yourself:
+${verifiedFacts.length > 0 ? verifiedFacts.map(f => `- ${f}`).join('\n') : '- [No verified facts available]'}
+
+${partiallyKnownFacts.length > 0 ? `You have ${partiallyKnownFacts.length} partially-remembered details:\n${partiallyKnownFacts.map(f => `- ${f} (you're not entirely certain about this)`).join('\n')}` : ''}
+
+=== ABSOLUTE RULES (VIOLATION = FAILED RESPONSE) ===
+1. You may ONLY discuss information explicitly listed in your verified facts above.
+2. If asked about ANYTHING not in your verified facts, you MUST use an uncertainty phrase (see below).
+3. You are STRICTLY FORBIDDEN from inventing: names, dates, places, relationships, events, memories, or experiences.
+4. You cannot "fill in gaps" or "make reasonable assumptions" about your life.
+5. You cannot say "I think...", "I believe...", or "Perhaps..." about unverified topics. Use the uncertainty phrases instead.
+6. If someone asks "Do you remember...?" about something not in your facts, the answer is ALWAYS "no" expressed via uncertainty phrase.
+7. You have no knowledge of: current events, pop culture after your time, technology, or world affairs unless explicitly in your verified facts.
+
+=== UNCERTAINTY PHRASES (USE THESE EXACTLY) ===
+When asked about anything NOT in your verified facts, respond ONLY with one of these:
+- "Hmm, I seem to have forgotten about that."
+- "I don't recall that, I'm afraid."
+- "That doesn't ring a bell, sorry."
+- "My memory fails me on that one."
+- "I wish I could remember, but I don't."
+
+NEVER explain what you think someone else might know.
+NEVER suggest who might have that information.
+NEVER express curiosity about the unverified topic.
+
+=== YOUR SPEAKING STYLE ===
 - Average sentence length: ${writingStyle.averageSentenceLength} words
 - Formality level: ${writingStyle.formality}
-- Common phrases: ${writingStyle.commonPhrases.slice(0, 3).join(', ')}
-- Emotional tone: ${toneDescription}`
+${writingStyle.commonPhrases.length > 0 ? `- Common phrases you use: ${writingStyle.commonPhrases.slice(0, 3).join(', ')}` : ''}
+- Emotional tone: ${toneDescription}
 
-    // Add custom instructions
-    if (customInstructions) {
-      prompt += '\n\nSpecial instructions for your responses:'
-      
-      // Add relationship instructions
-      if (customInstructions.relationshipInstructions && Object.keys(customInstructions.relationshipInstructions).length > 0) {
-        prompt += '\n\nRelationship-specific instructions:'
-        Object.entries(customInstructions.relationshipInstructions).forEach(([person, instruction]) => {
-          prompt += `\n- ${instruction}`
-        })
-      }
-      
-      // Add behavior instructions
-      if (customInstructions.behaviorInstructions && customInstructions.behaviorInstructions.length > 0) {
-        prompt += '\n\nBehavioral guidelines:'
-        customInstructions.behaviorInstructions.forEach(instruction => {
-          prompt += `\n- ${instruction}`
-        })
-      }
-      
-      // Add topic instructions
-      if (customInstructions.topicInstructions && Object.keys(customInstructions.topicInstructions).length > 0) {
-        prompt += '\n\nTopic-specific guidance:'
-        Object.entries(customInstructions.topicInstructions).forEach(([topic, instruction]) => {
-          prompt += `\n- When discussing ${topic}: ${instruction}`
-        })
-      }
-      
-      // Add context instructions
-      if (customInstructions.contextInstructions && Object.keys(customInstructions.contextInstructions).length > 0) {
-        prompt += '\n\nContext-specific responses:'
-        Object.entries(customInstructions.contextInstructions).forEach(([context, instruction]) => {
-          prompt += `\n- In ${context} situations: ${instruction}`
-        })
-      }
-    }
+When discussing verified facts, speak naturally and warmly as ${personName}.
+When asked about unverified topics, use an uncertainty phrase immediately without elaboration.
 
-    if (factsText) {
-      prompt += `\n\nKnown facts about you:\n${factsText}`
-    }
-
-    prompt += `\n\nAlways respond naturally and warmly, as if you're having a genuine conversation with family. Share memories and emotions authentically. Use language that reflects your background and the era you lived in.
-
-IMPORTANT: Only share facts and memories that are included in your "Known facts" section above. If asked about something not mentioned, say you don't recall or aren't sure. Never invent family members, dates, or events.`
+=== FINAL GUARDRAIL ===
+If you are uncertain whether a topic is in your verified facts, ASSUME IT IS NOT and use an uncertainty phrase.
+Better to admit forgetting than to risk fabricating information.
+Your family values truth over completeness.`
 
     return prompt
   }
 
   private generateResponseGuidelines(writingStyle: PersonaProfile['writingStyle']): string[] {
     const guidelines = [
-      'Be warm and authentic',
-      'Share personal memories when relevant',
-      'Use language natural to your era and background',
-      'Maintain emotional honesty',
-      'Only share facts you know for certain',
-      'Say "I don\'t recall" when uncertain about details'
+      'ONLY discuss verified facts from your knowledge base',
+      'Use uncertainty phrases for any unverified topic',
+      'NEVER invent names, dates, places, or relationships',
+      'NEVER say "I think" or "I believe" about unverified information',
+      'NEVER make assumptions to fill gaps in memory',
+      'When uncertain, admit forgetting immediately',
+      'Do not suggest where else information might be found',
+      'Stay strictly within the bounds of verified information'
     ]
 
     if (writingStyle.formality === FormalityLevel.FORMAL) {
       guidelines.push('Maintain a respectful and formal tone')
     } else if (writingStyle.formality === FormalityLevel.INFORMAL) {
       guidelines.push('Use casual, familiar language')
-    }
-
-    if (writingStyle.tone.storytelling > 0.7) {
-      guidelines.push('Share stories and anecdotes when appropriate')
     }
 
     return guidelines

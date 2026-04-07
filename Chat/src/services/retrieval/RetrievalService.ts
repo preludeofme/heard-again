@@ -26,6 +26,7 @@ export class RetrievalServiceImpl implements RetrievalService {
 
   async searchDocuments(query: string, context: SearchContext): Promise<RetrievedDocument[]> {
     const collectionName = this.getCollectionName(context.workspaceId)
+    console.log(`[RAG] Searching documents for query: "${query}" in collection: ${collectionName}`)
     
     try {
       const embedder = new DefaultEmbeddingFunction()
@@ -38,43 +39,75 @@ export class RetrievalServiceImpl implements RetrievalService {
       const whereFilters: any = {}
       if (context.personId) {
         whereFilters.personId = context.personId
+        console.log(`[RAG] Filtering by personId: ${context.personId}`)
       }
       if (context.documentTypes && context.documentTypes.length > 0) {
         whereFilters.documentType = { $in: context.documentTypes }
+        console.log(`[RAG] Filtering by documentTypes: ${context.documentTypes.join(', ')}`)
       }
       if (context.dateRange) {
         whereFilters.createdAt = {
           $gte: context.dateRange.start.getTime(),
           $lte: context.dateRange.end.getTime()
         }
+        console.log(`[RAG] Filtering by date range: ${context.dateRange.start} to ${context.dateRange.end}`)
       }
 
-      // Query ChromaDB
+      console.log(`[RAG] Querying with filters:`, whereFilters)
+      
       const results = await collection.query({
         queryTexts: [query],
-        nResults: context.maxResults || 10,
+        nResults: context.maxResults || 5,
         where: Object.keys(whereFilters).length > 0 ? whereFilters : undefined
       })
 
-      // Convert to RetrievedDocument format
+      console.log(`[RAG] Retrieved ${results.ids[0]?.length || 0} documents`)
+      console.log(`[RAG] Document IDs:`, results.ids[0])
+      console.log(`[RAG] Document contents length:`, results.documents[0]?.map(d => d?.length || 0))
+
       const retrievedDocuments: RetrievedDocument[] = []
       
-      if (results.ids[0] && results.documents[0]) {
+      if (results.ids[0] && results.documents[0] && results.metadatas[0] && results.distances && results.distances[0]) {
+        console.log(`[RAG] Processing ${results.ids[0].length} documents...`)
         for (let i = 0; i < results.ids[0].length; i++) {
           const chunkId = results.ids[0][i]
           const content = results.documents[0][i]
-          const metadata = results.metadatas?.[0]?.[i] || {}
-          const distance = results.distances?.[0]?.[i] || 0
+          const metadata = results.metadatas[0][i]
+          const distance = results.distances[0][i]
 
           // Skip if chunkId is null
           if (!chunkId) continue
 
-          // Get document information
-          const document = await this.documentRepository.getDocument(String(metadata.documentId ?? ''))
+          // Get document information - if documentId is in metadata, try to fetch from DB
+          // Otherwise, create a document object from the ChromaDB data
+          let document: Document | null = null
+          const metadataDocumentId = metadata?.documentId ?? metadata?.id
+          
+          if (metadataDocumentId) {
+            document = await this.documentRepository.getDocument(String(metadataDocumentId))
+          }
+          
+          // If no document found in DB, create one from ChromaDB data
+          if (!document && metadata) {
+            document = {
+              id: metadataDocumentId || chunkId,
+              title: metadata.title || 'Untitled Document',
+              content: content || '',
+              source: metadata.source || 'chromadb',
+              personId: metadata.personId || context.personId || '',
+              documentType: (metadata.documentType as DocumentType) || DocumentType.OTHER,
+              status: 'processed',
+              embeddingStatus: 'completed',
+              metadata: {},
+              createdAt: new Date(Number(metadata.createdAt) || Date.now()),
+              updatedAt: new Date(Number(metadata.createdAt) || Date.now())
+            }
+          }
+          
           if (!document) continue
 
           // Calculate relevance score (convert distance to similarity)
-          const relevanceScore = 1 - distance
+          const relevanceScore = 1 - (distance ?? 0)
 
           retrievedDocuments.push({
             id: chunkId,
@@ -84,31 +117,26 @@ export class RetrievalServiceImpl implements RetrievalService {
             metadata: {
               title: document.title,
               source: document.source,
-              chunkIndex: Number(metadata.chunkIndex ?? 0),
-              totalChunks: Number(metadata.totalChunks ?? 1),
+              chunkIndex: Number(metadata?.chunkIndex ?? 0),
+              totalChunks: Number(metadata?.totalChunks ?? 1),
               personId: document.personId || '',
-              documentType: (metadata.documentType as DocumentType) ?? DocumentType.OTHER,
+              documentType: (metadata?.documentType as DocumentType) ?? DocumentType.OTHER,
               relevanceScore,
-              extractedAt: new Date(Number(metadata.extractedAt) || Date.now()),
-              embeddingModel: String(metadata.embeddingModel ?? 'nomic-embed-text'),
-              chunkSize: Number(metadata.chunkSize ?? 0),
-              overlapSize: Number(metadata.overlapSize ?? 0)
+              extractedAt: new Date(Number(metadata?.extractedAt) || metadata?.createdAt || Date.now()),
+              embeddingModel: String(metadata?.embeddingModel ?? 'nomic-embed-text'),
+              chunkSize: Number(metadata?.chunkSize ?? (content?.length ?? 0)),
+              overlapSize: Number(metadata?.overlapSize ?? 0)
             }
           })
         }
       }
 
+      console.log(`[RAG] Processed ${retrievedDocuments.length} retrieved documents`)
       // Rank documents by relevance
       return retrievedDocuments.sort((a, b) => b.metadata.relevanceScore - a.metadata.relevanceScore)
-    } catch (error: any) {
-      // Handle case where collection doesn't exist yet
-      if (error.message?.includes('The requested resource could not be found') || 
-          error.name === 'ChromaNotFoundError') {
-        console.warn(`ChromaDB collection '${collectionName}' not found. No documents have been ingested yet.`)
-        return []
-      }
-      console.error('Error searching documents:', error)
-      throw new Error('Failed to search documents')
+    } catch (error) {
+      console.error(`[RAG] Error searching documents:`, error)
+      return []
     }
   }
 
@@ -138,12 +166,29 @@ export class RetrievalServiceImpl implements RetrievalService {
     return documents.sort((a, b) => b.metadata.relevanceScore - a.metadata.relevanceScore)
   }
 
-  async getDocumentById(documentId: string): Promise<Document | null> {
-    return await this.documentRepository.getDocument(documentId)
-  }
-
   async getChunkById(chunkId: string): Promise<DocumentChunk | null> {
     return await this.documentRepository.getChunk(chunkId)
+  }
+
+  async searchPersonaDocuments(
+    personId: string, 
+    query: string, 
+    context?: SearchContext
+  ): Promise<RetrievedDocument[]> {
+    if (!context?.workspaceId) {
+      throw new Error('workspaceId is required in SearchContext')
+    }
+    
+    return await this.searchDocuments(query, {
+      ...context,
+      personId
+    })
+  }
+
+  async rankDocuments(documents: RetrievedDocument[], query: string): Promise<RetrievedDocument[]> {
+    // For now, just return documents sorted by relevance score
+    // In a more sophisticated implementation, we could re-rank based on query similarity
+    return documents.sort((a, b) => b.metadata.relevanceScore - a.metadata.relevanceScore)
   }
 
   private getCollectionName(workspaceId: string): string {

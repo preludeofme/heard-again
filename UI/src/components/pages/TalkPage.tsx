@@ -19,6 +19,7 @@ export function TalkPage({ legacySubject, subjectId, availablePeople = [] }: Tal
   const [showVoiceSettings, setShowVoiceSettings] = useState(false)
   const [showComparisonDialog, setShowComparisonDialog] = useState(false)
   const [showNewConversationDialog, setShowNewConversationDialog] = useState(false)
+  const [showResetDialog, setShowResetDialog] = useState(false)
   const [comparisonText, setComparisonText] = useState('')
   const [comparisonResults, setComparisonResults] = useState<{ audioA: string | null; audioB: string | null } | null>(null)
   const [isComparing, setIsComparing] = useState(false)
@@ -518,6 +519,20 @@ export function TalkPage({ legacySubject, subjectId, availablePeople = [] }: Tal
             {isMuted ? 'Unmute' : 'Mute'}
           </Button>
           
+          <Button
+            variant="text"
+            startIcon={<DeleteIcon />}
+            onClick={() => setShowResetDialog(true)}
+            sx={{ 
+              color: '#546669',
+              textTransform: 'none',
+              fontWeight: 600
+            }}
+            disabled={!controller.sessionId}
+          >
+            Reset
+          </Button>
+          
           <TextField
             fullWidth
             placeholder="Type a memory or just say hello..."
@@ -862,6 +877,39 @@ export function TalkPage({ legacySubject, subjectId, availablePeople = [] }: Tal
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowNewConversationDialog(false)}>Cancel</Button>
+        </DialogActions>
+      </Dialog>
+      
+      {/* Reset Confirmation Dialog */}
+      <Dialog open={showResetDialog} onClose={() => setShowResetDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          Reset Conversation?
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ mb: 2 }}>
+            This will clear the entire conversation history and start a new conversation with {legacySubject.fullName}. 
+            This action cannot be undone.
+          </Typography>
+          <Alert severity="warning" sx={{ mt: 2 }}>
+            All messages in this conversation will be permanently deleted.
+          </Alert>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowResetDialog(false)}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={async () => {
+              if (controller.sessionId) {
+                await controller.deleteSession(controller.sessionId)
+                setShowResetDialog(false)
+              }
+            }}
+            color="error"
+            variant="contained"
+          >
+            Reset Conversation
+          </Button>
         </DialogActions>
       </Dialog>
       </Box>

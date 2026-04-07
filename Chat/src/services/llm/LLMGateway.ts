@@ -102,7 +102,7 @@ export class LLMGatewayImpl implements LLMGateway {
     return this.createStreamIterator(response.data)
     }
 
-  async validateResponse(response: string): Promise<ValidatedResponse> {
+  async validateResponse(response: string, context?: { documents?: string[], knownFacts?: string[] }): Promise<ValidatedResponse> {
     const violations: ContentViolation[] = []
 
     // Check for prompt injection attempts
@@ -170,6 +170,88 @@ export class LLMGatewayImpl implements LLMGateway {
       }
     }
 
+    // === HALLUCINATION DETECTION ===
+    
+    // Check for speculative language that suggests fabrication
+    const speculativePatterns = [
+      { pattern: /\b(I think|I believe|perhaps|maybe|probably|likely|I suppose|I guess|I imagine)\b/gi, severity: 'medium' },
+      { pattern: /\b(it seems|it appears|it looks like|apparently)\b/gi, severity: 'medium' },
+      { pattern: /\b(if I recall correctly|if memory serves|as far as I remember)\b/gi, severity: 'low' },
+    ]
+
+    for (const { pattern, severity } of speculativePatterns) {
+      const matches = response.match(pattern)
+      if (matches) {
+        violations.push({
+          type: 'potential_hallucination',
+          severity: severity as 'low' | 'medium' | 'high',
+          description: `Speculative language detected: "${matches[0]}" - may indicate uncertainty/fabulation`,
+          position: {
+            start: response.indexOf(matches[0]),
+            end: response.indexOf(matches[0]) + matches[0].length
+          }
+        })
+      }
+    }
+
+    // Check for specific name/date/place invention patterns
+    const inventionPatterns = [
+      { pattern: /\b(my (wife|husband|spouse|partner) (was|is named|name was)\s+)([A-Z][a-z]+)/gi, severity: 'high' },
+      { pattern: /\b(my (son|daughter|child) (was|is named|name was)\s+)([A-Z][a-z]+)/gi, severity: 'high' },
+      { pattern: /\b(I had \d+ (children|kids|sons|daughters))/gi, severity: 'high' },
+      { pattern: /\b(we moved to|I moved to|I lived in|we lived in)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi, severity: 'high' },
+      { pattern: /\b(I was born in|born on)\s+(\d{1,4}|January|February|March|April|May|June|July|August|September|October|November|December)/gi, severity: 'high' },
+    ]
+
+    for (const { pattern, severity } of inventionPatterns) {
+      const matches = [...response.matchAll(pattern)]
+      for (const match of matches) {
+        violations.push({
+          type: 'potential_hallucination',
+          severity: severity as 'low' | 'medium' | 'high',
+          description: `Potential fabricated detail: "${match[0]}"`,
+          position: {
+            start: match.index || 0,
+            end: (match.index || 0) + match[0].length
+          }
+        })
+      }
+    }
+
+    // Check if response contradicts provided context (if available)
+    if (context?.documents && context.documents.length > 0) {
+      const hasDocumentSupport = this.checkDocumentSupport(response, context.documents)
+      if (!hasDocumentSupport.supported && hasDocumentSupport.claims.length > 0) {
+        violations.push({
+          type: 'unsupported_claim',
+          severity: 'high',
+          description: `Claims without document support: ${hasDocumentSupport.claims.slice(0, 3).join(', ')}${hasDocumentSupport.claims.length > 3 ? '...' : ''}`,
+        })
+      }
+    }
+
+    // Check for "I don't know" variations that might be bypassing uncertainty phrases
+    const bypassPatterns = [
+      /I don't know (much|a lot|very much) about/gi,
+      /I'm not (an expert|sure about all the details|entirely certain)/gi,
+      /I (can't|couldn't) tell you (much|anything|specifics)/gi,
+    ]
+
+    for (const pattern of bypassPatterns) {
+      const matches = response.match(pattern)
+      if (matches) {
+        violations.push({
+          type: 'uncertainty_bypass',
+          severity: 'medium',
+          description: 'Response may be bypassing required uncertainty phrase format',
+          position: {
+            start: response.indexOf(matches[0]),
+            end: response.indexOf(matches[0]) + matches[0].length
+          }
+        })
+      }
+    }
+
     const isValid = violations.length === 0 || violations.every(v => v.severity === 'low')
 
     return {
@@ -177,6 +259,45 @@ export class LLMGatewayImpl implements LLMGateway {
       content: response,
       violations,
       filteredContent: isValid ? response : this.filterContent(response, violations)
+    }
+  }
+
+  /**
+   * Check if response claims are supported by provided documents
+   */
+  private checkDocumentSupport(response: string, documents: string[]): { supported: boolean; claims: string[] } {
+    // Simple heuristic: check if significant phrases from response appear in documents
+    const sentences = response.split(/[.!?]+/).filter(s => s.trim().length > 10)
+    const unsupportedClaims: string[] = []
+    
+    const combinedDocuments = documents.join(' ').toLowerCase()
+    
+    for (const sentence of sentences) {
+      const normalized = sentence.toLowerCase().trim()
+      // Skip uncertainty phrases (these are expected and fine)
+      const uncertaintyPhrases = [
+        "i don't recall", "i don't remember", "i've forgotten", 
+        "that doesn't ring a bell", "my memory fails me",
+        "i seem to have forgotten", "i wish i could remember"
+      ]
+      const isUncertainty = uncertaintyPhrases.some(phrase => normalized.includes(phrase))
+      if (isUncertainty) continue
+
+      // Check for significant keywords (names, places, dates)
+      const significantWords = normalized.match(/\b[A-Z][a-z]+\b/g) || []
+      if (significantWords.length > 0) {
+        const hasSupport = significantWords.some(word => 
+          combinedDocuments.includes(word.toLowerCase())
+        )
+        if (!hasSupport) {
+          unsupportedClaims.push(sentence.trim())
+        }
+      }
+    }
+    
+    return {
+      supported: unsupportedClaims.length === 0,
+      claims: unsupportedClaims
     }
   }
 

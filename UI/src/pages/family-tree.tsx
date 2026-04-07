@@ -557,12 +557,7 @@ export default function FamilyTree() {
         tags: personCreateData.tags || undefined,
       }
       
-      const res = await fetch('/api/people', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(cleanedData),
-      })
+      const res = await fetchWithCSRFAndJSON('/api/people', cleanedData)
 
       const created = await res.json()
       if (!res.ok || !created.success) {
