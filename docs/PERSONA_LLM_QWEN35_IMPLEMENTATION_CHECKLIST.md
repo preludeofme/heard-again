@@ -1,4 +1,4 @@
-# Persona LLM + Qwen3.5 Implementation Checklist
+# Persona LLM Implementation Checklist (No-Training First)
 
 This plan is based on a review of:
 - `docs/persona-llm-spec.md`
@@ -9,6 +9,11 @@ This plan is based on a review of:
 - `Chat/src/services/persona/PersonaService.ts`
 - Existing docs in `docs/` (`STRICT_PERSONA_SYSTEM.md`, `TALK_LLM_INTEGRATION_PLAN.md`, `PHASE1_CHAT_ARCHITECTURE.md`)
 
+Current strategy for this phase:
+- [x] No custom model training required.
+- [x] Focus on system instructions, retrieval gating, validation, and inference tuning.
+- [x] Revisit fine-tuning only after enough high-quality data exists.
+
 ---
 
 ## 0) Target Outcome (must hold true)
@@ -17,7 +22,7 @@ This plan is based on a review of:
 - [ ] Unsupported questions produce refusal-first responses (not guesses).
 - [ ] Every non-refusal answer is evidence-grounded in retrieved data.
 - [ ] No fabricated names/dates/places/relationships in acceptance eval set.
-- [ ] Qwen3.5-based custom model outperforms current baseline on groundedness and persona consistency.
+- [ ] Prompt/system-tuned model configuration meets groundedness and persona consistency targets without custom training.
 
 ---
 
@@ -33,11 +38,11 @@ This plan is based on a review of:
 
 ---
 
-## 2) Architecture Decision Gate (restart vs increment)
+## 2) Architecture Decision (locked)
 
-- [ ] Decide approach:
-  - [ ] Option A: Incremental refactor on current services (recommended for faster delivery).
-  - [ ] Option B: Fresh persona/chat pipeline behind feature flag.
+- [x] Approach locked: Full redesign (greenfield replacement), not incremental refactor.
+- [x] Existing persona/chat/RAG implementation can be removed and replaced in-place.
+- [x] No versioning, feature flags, or dual-run model required in this phase.
 - [ ] Lock response contract for all model outputs:
   - [ ] `FACT_SUPPORTED`
   - [ ] `STORY_SUPPORTED`
@@ -47,7 +52,8 @@ This plan is based on a review of:
 - [ ] Define refusal copy policy (single canonical phrase + optional safe variants).
 
 Acceptance:
-- [ ] Team agrees on A or B and contract is documented before implementation starts.
+- [x] Redesign approach finalized (full replacement, no versioning).
+- [ ] Response contract and refusal policy documented before coding starts.
 
 ---
 
@@ -162,62 +168,61 @@ Acceptance:
 
 ---
 
-## 8) Qwen3.5 Custom Model Plan (focused on grounding + persona fidelity)
+## 8) Model Strategy (No-Training First)
 
-### 8.1 Base Model + Scope
-- [ ] Select base (`Qwen3.5 Instruct` variant) by quality/latency budget.
-- [ ] Confirm licensing and deployment constraints.
-- [ ] Decide tuning strategy:
-  - [ ] QLoRA (recommended first)
-  - [ ] optional full fine-tune later if needed
+### 8.1 Base Model Selection
+- [ ] Select best available base instruct model for current stack (include at least one Qwen3.5 candidate).
+- [ ] Confirm serving compatibility with current infrastructure (Ollama/runtime constraints).
+- [ ] Lock one primary model and one fallback model for reliability.
 
-### 8.2 Training Data
-- [ ] Build supervised dataset with strict templates:
-  - [ ] grounded answer examples with citations
-  - [ ] refusal examples for insufficient evidence
-  - [ ] anti-hallucination negatives (bad -> corrected)
-  - [ ] style-preserving persona examples
-- [ ] Add hard-negative prompts that tempt speculation.
-- [ ] Split data into train/validation/test with persona/workspace leakage controls.
+### 8.2 System Instruction Pack
+- [ ] Create canonical persona system instruction template v1.
+- [ ] Create canonical refusal policy and uncertainty phrasing policy.
+- [ ] Create strict response-mode contract prompt instructions (`FACT_SUPPORTED`, `STORY_SUPPORTED`, `QUOTE_SUPPORTED`, `INSUFFICIENT_EVIDENCE`).
+- [ ] Add explicit non-negotiable grounding constraints and anti-injection clauses.
 
-### 8.3 Training
-- [ ] Run SFT (LoRA/QLoRA) on structured persona-grounded format.
-- [ ] Optional preference tuning (DPO/ORPO) for:
-  - [ ] refusal preference over guessing
-  - [ ] citation-backed preference over uncited answers
-- [ ] Track run config, checkpoints, and reproducibility metadata.
+### 8.3 Inference and Prompt Tuning
+- [ ] Tune decoding parameters using eval harness:
+  - [ ] `temperature`
+  - [ ] `top_p`
+  - [ ] `top_k`
+  - [ ] repeat penalty
+  - [ ] max generation length
+- [ ] Tune retrieval-to-context formatting for citation clarity.
+- [ ] Tune prompt structure for concise, evidence-bounded responses.
 
-### 8.4 Packaging + Serving
-- [ ] Export adapter/merged model.
-- [ ] Quantize for serving target(s) (if Ollama path, prepare compatible artifacts).
-- [ ] Create model deployment manifest/config with fixed inference params.
-- [ ] Add canary route or model flag for gradual rollout.
-
-### 8.5 Evaluation and Go/No-Go
-- [ ] Compare Qwen3.5 custom model vs current baseline on full harness.
+### 8.4 Evaluation and Go/No-Go (No Training)
+- [ ] Compare tuned configuration vs current baseline on full harness.
 - [ ] Set launch thresholds (must pass):
   - [ ] lower unsupported-claim rate
   - [ ] higher refusal precision
   - [ ] equal or better persona consistency
   - [ ] acceptable latency/cost
+- [ ] Freeze model + prompt + inference configuration as release candidate.
+
+### 8.5 Deferred Training Gate (Future)
+- [ ] Define minimum dataset threshold required to justify fine-tuning (quality + volume + labeling standards).
+- [ ] Define training ROI criteria (expected gain vs effort/cost).
+- [ ] Keep custom training explicitly out of current implementation scope.
 
 Acceptance:
-- [ ] Custom model only promoted if all go/no-go thresholds are met.
+- [ ] Launch targets are achieved through prompt/inference/retrieval tuning alone.
+- [ ] Custom model training remains deferred until data and ROI gates are met.
 
 ---
 
-## 9) Rollout and Safety Operations
+## 9) Cutover and Safety Operations (single-track)
 
-- [ ] Add feature flags:
-  - [ ] by workspace
-  - [ ] by persona
-  - [ ] by endpoint (`sendMessage` vs `streamResponse`)
+- [ ] Prepare hard cutover plan (single production path, no version split):
+  - [ ] freeze redesigned contracts before final integration
+  - [ ] deploy redesigned pipeline as the only active path
+  - [ ] run smoke checks immediately after deploy
 - [ ] Add real-time monitoring dashboard:
   - [ ] refusal rate
   - [ ] hallucination/violation rate
   - [ ] retrieval-empty rate
   - [ ] citation-missing rate
-- [ ] Add rollback protocol (single-switch revert to baseline model + old policy).
+- [ ] Add rollback protocol (revert to last known-good commit/image if needed).
 - [ ] Run red-team suite weekly until stability targets are met.
 
 Acceptance:
@@ -229,13 +234,15 @@ Acceptance:
 ## 10) Implementation Order (recommended)
 
 - [ ] Step 1: Complete and lock `docs/persona-llm-spec.md` (no placeholders).
-- [ ] Step 2: Implement retrieval gate + `EvidencePacket` + citation transport.
-- [ ] Step 3: Unify prompt/inference configuration and deterministic refusal behavior.
-- [ ] Step 4: Upgrade validator (claim-evidence checks + bug fixes + tests).
-- [ ] Step 5: Replace hardcoded persona fields and complete schema/provenance flow.
-- [ ] Step 6: Build baseline evaluation harness and run current model.
-- [ ] Step 7: Train Qwen3.5 custom model (QLoRA SFT -> optional preference tuning).
-- [ ] Step 8: Evaluate, canary deploy, monitor, and roll out gradually.
+- [ ] Step 2: Define clean-slate service contracts and module boundaries for the new pipeline.
+- [ ] Step 3: Implement retrieval gate + `EvidencePacket` + citation transport.
+- [ ] Step 4: Implement unified prompt/inference policy and deterministic refusal behavior.
+- [ ] Step 5: Implement validator 2.0 (claim-evidence checks + bug fixes + tests).
+- [ ] Step 6: Implement persona data/provenance flow and remove hardcoded identity paths.
+- [ ] Step 7: Build baseline evaluation harness and benchmark the current baseline.
+- [ ] Step 8: Tune base model + prompt + inference configuration and freeze release candidate.
+- [ ] Step 9: Evaluate, perform hard cutover to redesigned pipeline, and remove superseded code.
+- [ ] Step 10: Document deferred fine-tuning gate and data requirements as backlog.
 
 ---
 
@@ -246,5 +253,8 @@ Acceptance:
 - [ ] Response modes are enforced and logged for every answer.
 - [ ] Citation payload available for all supported responses.
 - [ ] Evaluation harness exists and is part of pre-release checks.
-- [ ] Qwen3.5 custom model is benchmarked and only promoted if thresholds are met.
+- [ ] Launch quality targets are met without custom model training.
+- [ ] Fine-tuning scope is explicitly deferred behind data/ROI gates.
+- [ ] Redesigned pipeline is the only active runtime path (no version split/feature-flag branch).
+- [ ] Superseded persona/chat/LLM code paths are removed from runtime.
 - [ ] Runbook exists for rollback and incident response.
