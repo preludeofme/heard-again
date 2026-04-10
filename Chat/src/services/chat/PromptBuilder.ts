@@ -7,6 +7,14 @@ import {
   RetrievedDocument,
   ChatMessage
 } from '@/types'
+import {
+  PROMPT_CONTEXT_TUNING,
+  RELEASE_CANDIDATE_MODEL_POLICY,
+  STRICT_CHAT_INFERENCE_SETTINGS,
+  STYLE_ANALYSIS_INFERENCE_SETTINGS,
+} from '@/config/releaseCandidate'
+
+const CANONICAL_REFUSAL_MESSAGE = "I don't have that documented in the materials I was given."
 
 export class PromptBuilderImpl implements PromptBuilder {
   
@@ -48,25 +56,27 @@ export class PromptBuilderImpl implements PromptBuilder {
       customSystemPrompt?: string
     }
   ): Promise<CompiledPrompt> {
-    const maxContextLength = options?.maxContextLength || 8000
+    const maxContextLength = options?.maxContextLength || PROMPT_CONTEXT_TUNING.maxContextTokens
     const includeMetadata = options?.includeMetadata || false
+    const tunedRetrievedDocuments = retrievedDocuments.slice(0, PROMPT_CONTEXT_TUNING.maxDocuments)
 
     // Sanitize user input before building prompt (Phase 6 — SEC-6 extension)
     const sanitizedMessage = this.sanitizeUserInput(userMessage)
 
     // Build system prompt
     const systemPrompt = options?.customSystemPrompt || 
-      this.buildSystemPrompt(personaProfile, retrievedDocuments)
+      this.buildSystemPrompt(personaProfile, tunedRetrievedDocuments)
 
     // Format context from retrieved documents
-    const context = this.formatContext(retrievedDocuments, {
+    const context = this.formatContext(tunedRetrievedDocuments, {
       maxTokens: maxContextLength,
       includeMetadata
     })
 
     // Filter and format conversation history
+    const contextTokens = this.estimateTokens(context)
     const history = this.formatConversationHistory(chatHistory, {
-      maxTokens: Math.max(1000, maxContextLength - context.length - 500),
+      maxTokens: Math.max(1000, maxContextLength - contextTokens - 125),
       includeSystem: false
     })
 
@@ -76,14 +86,16 @@ export class PromptBuilderImpl implements PromptBuilder {
       history,
       userMessage: sanitizedMessage,
       metadata: {
-        model: process.env.OLLAMA_MODEL || 'llama3.1:8b-instruct',
-        temperature: 0.7,
-        maxTokens: 2048,
-        topP: 0.9,
-        topK: 40,
-        retrievedDocumentCount: retrievedDocuments.length,
+        model: RELEASE_CANDIDATE_MODEL_POLICY.primaryModel,
+        temperature: STRICT_CHAT_INFERENCE_SETTINGS.temperature,
+        maxTokens: STRICT_CHAT_INFERENCE_SETTINGS.maxTokens,
+        topP: STRICT_CHAT_INFERENCE_SETTINGS.topP,
+        topK: STRICT_CHAT_INFERENCE_SETTINGS.topK,
+        repeatPenalty: STRICT_CHAT_INFERENCE_SETTINGS.repeatPenalty,
+        retrievedDocumentCount: tunedRetrievedDocuments.length,
         contextLength: context.length,
-        historyLength: history.length
+        historyLength: history.length,
+        releaseCandidateSpec: RELEASE_CANDIDATE_MODEL_POLICY.specVersion,
       }
     }
   }
@@ -101,15 +113,16 @@ export class PromptBuilderImpl implements PromptBuilder {
       history: [],
       userMessage: query,
       metadata: {
-        model: process.env.OLLAMA_MODEL || 'llama3.1:8b-instruct',
-        temperature: 0.3, // Lowered for strict fact adherence
-        maxTokens: 2048,
-        topP: 0.9,
-        topK: 40,
-        repeatPenalty: 1.2,
+        model: RELEASE_CANDIDATE_MODEL_POLICY.primaryModel,
+        temperature: STRICT_CHAT_INFERENCE_SETTINGS.temperature,
+        maxTokens: STRICT_CHAT_INFERENCE_SETTINGS.maxTokens,
+        topP: STRICT_CHAT_INFERENCE_SETTINGS.topP,
+        topK: STRICT_CHAT_INFERENCE_SETTINGS.topK,
+        repeatPenalty: STRICT_CHAT_INFERENCE_SETTINGS.repeatPenalty,
         retrievedDocumentCount: 0,
         contextLength: context?.length || 0,
-        historyLength: 0
+        historyLength: 0,
+        releaseCandidateSpec: RELEASE_CANDIDATE_MODEL_POLICY.specVersion,
       }
     }
   }
@@ -171,13 +184,15 @@ Format your response as a detailed analysis with specific examples and insights.
       history: [],
       userMessage: prompts[analysisType].replace('{text}', text),
       metadata: {
-        model: process.env.OLLAMA_MODEL || 'llama3.1:8b-instruct',
-        temperature: 0.3, // Lower temperature for analysis
-        maxTokens: 1500,
-        topP: 0.8,
-        topK: 40,
+        model: RELEASE_CANDIDATE_MODEL_POLICY.primaryModel,
+        temperature: STYLE_ANALYSIS_INFERENCE_SETTINGS.temperature,
+        maxTokens: STYLE_ANALYSIS_INFERENCE_SETTINGS.maxTokens,
+        topP: STYLE_ANALYSIS_INFERENCE_SETTINGS.topP,
+        topK: STYLE_ANALYSIS_INFERENCE_SETTINGS.topK,
+        repeatPenalty: STYLE_ANALYSIS_INFERENCE_SETTINGS.repeatPenalty,
         analysisType,
-        textLength: text.length
+        textLength: text.length,
+        releaseCandidateSpec: RELEASE_CANDIDATE_MODEL_POLICY.specVersion,
       }
     }
   }
@@ -199,7 +214,7 @@ Format your response as a detailed analysis with specific examples and insights.
       prompt += `\n\n=== NO DOCUMENTS RETRIEVED ===`
       prompt += `\nNo relevant documents were found for this question.`
       prompt += `\nYou have NO verified information about this topic.`
-      prompt += `\nYou MUST use an uncertainty phrase to respond.`
+      prompt += `\nYou MUST respond exactly with: "${CANONICAL_REFUSAL_MESSAGE}"`
     }
 
     // Add response guidelines
@@ -218,6 +233,15 @@ Format your response as a detailed analysis with specific examples and insights.
       '=== HALLUCINATION PREVENTION (ZERO TOLERANCE) ===',
       'HALLUCINATION = Any response containing fabricated information not in verified facts or retrieved documents.',
       '',
+      '=== RESPONSE MODE CONTRACT (MANDATORY) ===',
+      'Your response must correspond to exactly one mode:',
+      '- FACT_SUPPORTED',
+      '- STORY_SUPPORTED',
+      '- QUOTE_SUPPORTED',
+      '- INSUFFICIENT_EVIDENCE',
+      `If evidence is insufficient, respond exactly with: "${CANONICAL_REFUSAL_MESSAGE}"`,
+      'Do not provide alternative refusal phrases.',
+      '',
       'FORBIDDEN behaviors (will result in failed response):',
       '- Inventing names of people not explicitly mentioned',
       '- Creating dates, places, or events not in your records',
@@ -228,10 +252,10 @@ Format your response as a detailed analysis with specific examples and insights.
       '- Expressing curiosity about information you don\'t have',
       '',
       'REQUIRED behaviors (must follow strictly):',
-      '- Use ONLY the exact uncertainty phrases provided in your system prompt',
-      '- Admit forgetting IMMEDIATELY when asked about unverified topics',
+      `- Use ONLY this refusal message when evidence is insufficient: "${CANONICAL_REFUSAL_MESSAGE}"`,
+      '- Refuse IMMEDIATELY when asked about unverified topics',
       '- Stay SILENT about topics not in your knowledge base (no speculation)',
-      '- If asked "Do you remember X?" and X is not verified: answer is ALWAYS "no" via uncertainty phrase',
+      `- If asked "Do you remember X?" and X is not verified: answer with exactly "${CANONICAL_REFUSAL_MESSAGE}"`,
       '',
       '=== RESPONSE VALIDATION CHECKLIST ===',
       'Before responding, verify your answer contains ZERO of these:',
@@ -242,7 +266,7 @@ Format your response as a detailed analysis with specific examples and insights.
       '- Events without direct evidence',
       '- Speculative language (might, maybe, perhaps, probably, likely)',
       '',
-      'If your draft response contains ANY of the above, DELETE IT and use an uncertainty phrase instead.',
+      `If your draft response contains ANY of the above, DELETE IT and respond exactly: "${CANONICAL_REFUSAL_MESSAGE}"`,
       '=== END ENFORCEMENT RULES ===',
     ].join('\n')
 
@@ -260,7 +284,12 @@ Format your response as a detailed analysis with specific examples and insights.
       return 'No relevant documents found.'
     }
 
-    let context = 'Relevant documents and memories:\n\n'
+    let context = [
+      '=== EVIDENCE CONTEXT (CITATION-READY) ===',
+      'Use only the evidence blocks below and do not infer beyond these excerpts.',
+      'When referencing evidence internally, use [documentId:chunkId] format.',
+      ''
+    ].join('\n')
     let currentTokens = 0
     const maxTokens = options.maxTokens
 
@@ -272,8 +301,11 @@ Format your response as a detailed analysis with specific examples and insights.
       if (currentTokens + docTokens > maxTokens) {
         // Truncate the document if needed
         const remainingTokens = maxTokens - currentTokens - 50 // Leave room for truncation notice
-        const truncatedContent = this.truncateToTokens(doc.content, remainingTokens)
-        context += `[Document ${i + 1}]: ${doc.metadata.title}\n${truncatedContent}...\n[Content truncated due to length limits]\n\n`
+        const truncatedContent = this.truncateToTokens(
+          doc.content,
+          Math.max(32, Math.min(remainingTokens, PROMPT_CONTEXT_TUNING.maxExcerptTokens))
+        )
+        context += `[CITATION ${i + 1}] [${doc.documentId}:${doc.chunkId}] ${doc.metadata.title}\n${truncatedContent}...\n[Excerpt truncated due to token limits]\n\n`
       } else {
         context += docText + '\n\n'
       }
@@ -285,7 +317,12 @@ Format your response as a detailed analysis with specific examples and insights.
   }
 
   private formatDocument(document: RetrievedDocument, includeMetadata: boolean): string {
-    let formatted = `[Document]: ${document.metadata.title}`
+    let formatted = `[${document.documentId}:${document.chunkId}] ${document.metadata.title}`
+
+    if (PROMPT_CONTEXT_TUNING.includeCitationMetadata) {
+      formatted += ` | relevance=${document.metadata.relevanceScore.toFixed(3)}`
+      formatted += ` | chunk=${document.metadata.chunkIndex + 1}/${document.metadata.totalChunks}`
+    }
 
     if (includeMetadata && document.metadata.source) {
       formatted += ` (Source: ${document.metadata.source})`
@@ -295,7 +332,8 @@ Format your response as a detailed analysis with specific examples and insights.
       formatted += ` - Page ${document.metadata.pageNumber}`
     }
 
-    formatted += `\n${document.content}`
+    const excerpt = this.truncateToTokens(document.content, PROMPT_CONTEXT_TUNING.maxExcerptTokens)
+    formatted += `\nExcerpt: ${excerpt}`
 
     return formatted
   }

@@ -10,11 +10,12 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Ports configuration
+# Ports configuration (only these ports will be killed by stop_app_processes)
 MAIN_APP_PORT=4777
 CHAT_SYSTEM_PORT=4778
 TTS_SERVICE_PORT=4779
 REDIS_PORT=6379
+# Note: Port 8101 is also managed for cleanup (legacy TTS port)
 
 # Logging mode: "file" (default) or "live" (show in terminal)
 # Can be set via: LOG_MODE=live or ./start-dev.sh --live
@@ -79,7 +80,7 @@ check_port() {
 
 # Stop only this application's processes (never touches postgres, redis, chromadb, ollama)
 stop_app_processes() {
-    local APP_PORTS=($MAIN_APP_PORT $CHAT_SYSTEM_PORT $TTS_SERVICE_PORT)
+    local APP_PORTS=($MAIN_APP_PORT $CHAT_SYSTEM_PORT $TTS_SERVICE_PORT 8101)
     local STOPPED=0
 
     # Step 1: SIGTERM any PIDs we previously tracked (and their process groups)
@@ -268,9 +269,16 @@ else
 fi
 
 if ! check_port $TTS_SERVICE_PORT; then
-    echo -e "  ${YELLOW}⚠ Port $TTS_SERVICE_PORT is already in use (TTS Service)${NC}"
+    echo -e "  ${YELLOW}TTS Service port $TTS_SERVICE_PORT is already in use (TTS Service)${NC}"
 else
-    echo -e "  ${GREEN}✓ Port $TTS_SERVICE_PORT available${NC} (TTS Service)"
+    echo -e "  ${GREEN}TTS Service port $TTS_SERVICE_PORT available${NC} (TTS Service)"
+fi
+
+# Check legacy TTS port 8101 (in case there are leftover processes)
+if ! check_port 8101; then
+    echo -e "  ${YELLOW}Legacy TTS port 8101 is already in use - will be cleaned${NC}"
+else
+    echo -e "  ${GREEN}Legacy TTS port 8101 is available${NC}"
 fi
 
 if [ $PORT_CONFLICTS -gt 0 ]; then

@@ -12,9 +12,15 @@ import {
   LLMGateway
 } from '@/types'
 import type { Document } from '@/types'
+import {
+  FACT_EXTRACTION_INFERENCE_SETTINGS,
+  RELEASE_CANDIDATE_MODEL_POLICY,
+} from '@/config/releaseCandidate'
 import { PersonaRepository } from './PersonaRepository'
 import { v4 as uuidv4 } from 'uuid'
 import { PersonService } from './PersonService'
+
+const CANONICAL_REFUSAL_MESSAGE = "I don't have that documented in the materials I was given."
 
 export class PersonaServiceImpl implements PersonaService {
   constructor(
@@ -76,7 +82,7 @@ export class PersonaServiceImpl implements PersonaService {
     }
 
     if (options.extractFacts) {
-      knownFacts = await this.extractFacts(documents)
+      knownFacts = await this.extractFacts(documents, workspaceId, personId)
     }
 
     if (options.extractRelationships) {
@@ -148,9 +154,12 @@ export class PersonaServiceImpl implements PersonaService {
   }
 
   private async getPersonDisplayName(personId: string, workspaceId: string): Promise<string> {
-    // TODO: Implement proper person name fetching
-    // For now, return a test name to verify the system works
-    return "Keith Buck"
+    const person = await this.personService.getPerson(personId, workspaceId)
+    if (person?.fullName?.trim()) {
+      return person.fullName.trim()
+    }
+
+    return this.buildFallbackDisplayName(personId)
   }
 
   private async generateSystemPrompt(
@@ -185,20 +194,16 @@ ${partiallyKnownFacts.length > 0 ? `You have ${partiallyKnownFacts.length} parti
 
 === ABSOLUTE RULES (VIOLATION = FAILED RESPONSE) ===
 1. You may ONLY discuss information explicitly listed in your verified facts above.
-2. If asked about ANYTHING not in your verified facts, you MUST use an uncertainty phrase (see below).
+2. If asked about ANYTHING not in your verified facts, you MUST respond exactly with: "${CANONICAL_REFUSAL_MESSAGE}".
 3. You are STRICTLY FORBIDDEN from inventing: names, dates, places, relationships, events, memories, or experiences.
 4. You cannot "fill in gaps" or "make reasonable assumptions" about your life.
-5. You cannot say "I think...", "I believe...", or "Perhaps..." about unverified topics. Use the uncertainty phrases instead.
-6. If someone asks "Do you remember...?" about something not in your facts, the answer is ALWAYS "no" expressed via uncertainty phrase.
+5. You cannot say "I think...", "I believe...", or "Perhaps..." about unverified topics.
+6. If someone asks "Do you remember...?" about something not in your facts, respond exactly with "${CANONICAL_REFUSAL_MESSAGE}".
 7. You have no knowledge of: current events, pop culture after your time, technology, or world affairs unless explicitly in your verified facts.
 
-=== UNCERTAINTY PHRASES (USE THESE EXACTLY) ===
-When asked about anything NOT in your verified facts, respond ONLY with one of these:
-- "Hmm, I seem to have forgotten about that."
-- "I don't recall that, I'm afraid."
-- "That doesn't ring a bell, sorry."
-- "My memory fails me on that one."
-- "I wish I could remember, but I don't."
+=== REFUSAL FORMAT (USE THIS EXACTLY) ===
+When asked about anything NOT in your verified facts, respond ONLY with:
+"${CANONICAL_REFUSAL_MESSAGE}"
 
 NEVER explain what you think someone else might know.
 NEVER suggest who might have that information.
@@ -211,10 +216,10 @@ ${writingStyle.commonPhrases.length > 0 ? `- Common phrases you use: ${writingSt
 - Emotional tone: ${toneDescription}
 
 When discussing verified facts, speak naturally and warmly as ${personName}.
-When asked about unverified topics, use an uncertainty phrase immediately without elaboration.
+When asked about unverified topics, use the exact refusal format immediately without elaboration.
 
 === FINAL GUARDRAIL ===
-If you are uncertain whether a topic is in your verified facts, ASSUME IT IS NOT and use an uncertainty phrase.
+If you are uncertain whether a topic is in your verified facts, ASSUME IT IS NOT and respond exactly with "${CANONICAL_REFUSAL_MESSAGE}".
 Better to admit forgetting than to risk fabricating information.
 Your family values truth over completeness.`
 
@@ -224,11 +229,11 @@ Your family values truth over completeness.`
   private generateResponseGuidelines(writingStyle: PersonaProfile['writingStyle']): string[] {
     const guidelines = [
       'ONLY discuss verified facts from your knowledge base',
-      'Use uncertainty phrases for any unverified topic',
+      `Use exact canonical refusal for any unverified topic: "${CANONICAL_REFUSAL_MESSAGE}"`,
       'NEVER invent names, dates, places, or relationships',
       'NEVER say "I think" or "I believe" about unverified information',
       'NEVER make assumptions to fill gaps in memory',
-      'When uncertain, admit forgetting immediately',
+      'When uncertain, refuse immediately using the canonical refusal format',
       'Do not suggest where else information might be found',
       'Stay strictly within the bounds of verified information'
     ]
@@ -261,7 +266,11 @@ Your family values truth over completeness.`
     return descriptions.join(', ')
   }
 
-  private async extractFacts(documents: Document[]): Promise<PersonaFact[]> {
+  private async extractFacts(
+    documents: Document[],
+    workspaceId: string,
+    personId: string
+  ): Promise<PersonaFact[]> {
     if (!this.llmGateway || documents.length === 0) return []
 
     // Sample up to 4 documents to stay within context limits
@@ -277,11 +286,13 @@ Your family values truth over completeness.`
         history: [],
         userMessage: `Extract biographical facts from the following texts. Return a JSON array where each element has:\n- "fact": a concise factual statement (string)\n- "type": one of biographical | relationship | preference | experience | achievement\n- "confidence": a number 0-1\n\nTexts:\n${combinedText}\n\nJSON array:`,
         metadata: {
-          model: process.env.OLLAMA_MODEL || 'llama3.1:8b-instruct',
-          temperature: 0.1,
-          maxTokens: 1024,
-          topP: 0.9,
-          topK: 40,
+          model: RELEASE_CANDIDATE_MODEL_POLICY.primaryModel,
+          temperature: FACT_EXTRACTION_INFERENCE_SETTINGS.temperature,
+          maxTokens: FACT_EXTRACTION_INFERENCE_SETTINGS.maxTokens,
+          topP: FACT_EXTRACTION_INFERENCE_SETTINGS.topP,
+          topK: FACT_EXTRACTION_INFERENCE_SETTINGS.topK,
+          repeatPenalty: FACT_EXTRACTION_INFERENCE_SETTINGS.repeatPenalty,
+          releaseCandidateSpec: RELEASE_CANDIDATE_MODEL_POLICY.specVersion,
         }
       })
 
@@ -290,20 +301,52 @@ Your family values truth over completeness.`
 
       return parsed
         .filter((item: any) => typeof item.fact === 'string' && typeof item.confidence === 'number')
-        .map((item: any): PersonaFact => ({
-          id: uuidv4(),
-          type: (['biographical','relationship','preference','experience','achievement'] as const)
-            .includes(item.type) ? item.type : 'biographical',
-          fact: item.fact,
-          confidence: Math.min(1, Math.max(0, Number(item.confidence))),
-          sources: sample.map(d => d.id),
-          context: item.context || '',
-          verified: item.confidence >= 0.7,
-        }))
+        .map((item: any): PersonaFact => {
+          const normalizedConfidence = Math.min(1, Math.max(0, Number(item.confidence)))
+
+          return {
+            id: uuidv4(),
+            type: (['biographical','relationship','preference','experience','achievement'] as const)
+              .includes(item.type) ? item.type : 'biographical',
+            fact: item.fact,
+            confidence: normalizedConfidence,
+            sources: sample.map(d => d.id),
+            provenance: sample.map(d => ({
+              workspaceId,
+              personId,
+              documentId: d.id,
+              documentTitle: d.title,
+              excerpt: this.createProvenanceExcerpt(d.content),
+              capturedAt: new Date(),
+            })),
+            context: item.context || '',
+            verified: normalizedConfidence >= 0.7,
+          }
+        })
     } catch (error) {
       console.warn('[PersonaService] extractFacts LLM parse failed, returning empty:', error)
       return []
     }
+  }
+
+  private buildFallbackDisplayName(personId: string): string {
+    const normalized = personId
+      .split(/[-_\s]+/)
+      .filter(part => part.length > 0)
+      .map(part => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
+      .join(' ')
+
+    return normalized || 'This person'
+  }
+
+  private createProvenanceExcerpt(content: string, maxLength: number = 240): string {
+    const normalized = content.replace(/\s+/g, ' ').trim()
+
+    if (normalized.length <= maxLength) {
+      return normalized
+    }
+
+    return `${normalized.slice(0, maxLength)}...`
   }
 
   private async extractRelationships(documents: Document[]): Promise<Relationship[]> {
@@ -321,11 +364,13 @@ Your family values truth over completeness.`
         history: [],
         userMessage: `Extract named relationships mentioned in the following texts. Return a JSON array where each element has:\n- "relatedPersonId": the person\'s name as a slug (e.g. "john-smith")\n- "relationshipLabel": how the author refers to them (e.g. "mother", "best friend")\n- "relationshipType": one of parent | child | spouse | sibling | friend | colleague | other\n- "strength": a number 0-1 indicating closeness\n- "context": a brief quote or description\n\nTexts:\n${combinedText}\n\nJSON array:`,
         metadata: {
-          model: process.env.OLLAMA_MODEL || 'llama3.1:8b-instruct',
-          temperature: 0.1,
-          maxTokens: 1024,
-          topP: 0.9,
-          topK: 40,
+          model: RELEASE_CANDIDATE_MODEL_POLICY.primaryModel,
+          temperature: FACT_EXTRACTION_INFERENCE_SETTINGS.temperature,
+          maxTokens: FACT_EXTRACTION_INFERENCE_SETTINGS.maxTokens,
+          topP: FACT_EXTRACTION_INFERENCE_SETTINGS.topP,
+          topK: FACT_EXTRACTION_INFERENCE_SETTINGS.topK,
+          repeatPenalty: FACT_EXTRACTION_INFERENCE_SETTINGS.repeatPenalty,
+          releaseCandidateSpec: RELEASE_CANDIDATE_MODEL_POLICY.specVersion,
         }
       })
 

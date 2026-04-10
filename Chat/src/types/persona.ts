@@ -89,12 +89,22 @@ export interface EmotionIndicator {
   examples: string[]
 }
 
+export interface PersonaFactProvenance {
+  workspaceId: string
+  personId: string
+  documentId: string
+  documentTitle?: string
+  excerpt?: string
+  capturedAt: Date
+}
+
 export interface PersonaFact {
   id: string
   type: 'biographical' | 'relationship' | 'preference' | 'experience' | 'achievement'
   fact: string
   confidence: number // 0-1 scale
   sources: string[] // document IDs where this fact was found
+  provenance?: PersonaFactProvenance[]
   context?: string
   verified: boolean
 }

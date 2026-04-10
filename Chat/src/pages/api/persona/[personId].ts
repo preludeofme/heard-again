@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { PersonaServiceImpl } from '@/services/persona/PersonaService'
 import { DatabasePersonaRepository } from '@/services/persona/DatabasePersonaRepository'
 import { StyleExtractorImpl } from '@/services/persona/StyleExtractor'
+import { PersonService } from '@/services/persona/PersonService'
 import { LLMGatewayImpl } from '@/services/llm/LLMGateway'
 import { PrismaDocumentRepository } from '@/repositories/DocumentRepository'
 import { prisma } from '@/lib/prisma'
@@ -12,7 +13,8 @@ const llmGateway = new LLMGatewayImpl()
 const styleExtractor = new StyleExtractorImpl(llmGateway)
 const documentRepository = new PrismaDocumentRepository()
 const personaRepository = new DatabasePersonaRepository(prisma)
-const personaService = new PersonaServiceImpl(personaRepository, styleExtractor, documentRepository, llmGateway)
+const personService = new PersonService()
+const personaService = new PersonaServiceImpl(personaRepository, styleExtractor, documentRepository, personService, llmGateway)
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (!verifyServiceToken(req, res)) return

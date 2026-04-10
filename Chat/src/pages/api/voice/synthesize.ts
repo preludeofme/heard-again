@@ -3,8 +3,9 @@ import { VoiceIntegrationServiceImpl, VoiceIntegrationService } from '@/services
 import { PersonaServiceImpl } from '@/services/persona/PersonaService'
 import { DatabasePersonaRepository } from '@/services/persona/DatabasePersonaRepository'
 import { StyleExtractorImpl } from '@/services/persona/StyleExtractor'
+import { PersonService } from '@/services/persona/PersonService'
 import { LLMGatewayImpl } from '@/services/llm/LLMGateway'
-import { DocumentRepositoryImpl } from '@/services/retrieval/RetrievalService'
+import { PrismaDocumentRepository } from '@/repositories/DocumentRepository'
 import { prisma } from '@/lib/prisma'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -23,9 +24,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const voiceIntegration: VoiceIntegrationService = new VoiceIntegrationServiceImpl()
   const llmGateway = new LLMGatewayImpl()
   const styleExtractor = new StyleExtractorImpl(llmGateway)
-  const documentRepository = new DocumentRepositoryImpl()
+  const documentRepository = new PrismaDocumentRepository()
   const personaRepository = new DatabasePersonaRepository(prisma)
-  const personaService = new PersonaServiceImpl(personaRepository, styleExtractor, documentRepository)
+  const personService = new PersonService()
+  const personaService = new PersonaServiceImpl(personaRepository, styleExtractor, documentRepository, personService)
 
   try {
     switch (method) {

@@ -1,7 +1,5 @@
 import { DocumentRepository, Document, DocumentChunk } from '@/types/retrieval'
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
+import { prisma } from '@/lib/prisma'
 
 export class PrismaDocumentRepository implements DocumentRepository {
   async getDocument(documentId: string): Promise<Document | null> {
@@ -50,35 +48,30 @@ export class PrismaDocumentRepository implements DocumentRepository {
     if (!document.assetId) {
       return this.createDocument(document)
     }
-    const dbDocument = await (prisma as any).document.upsert({
-      where: { assetId: document.assetId },
-      update: {
-        personId: document.personId ?? null,
-        title: document.title,
-        updatedAt: new Date(),
-      },
-      create: {
-        id: document.id,
-        workspaceId: document.workspaceId,
-        assetId: document.assetId,
-        personId: document.personId ?? null,
-        title: document.title,
-        documentType: document.documentType.toUpperCase(),
-        source: document.source,
-        metadata: document.metadata,
-      },
+
+    const existing = await (prisma as any).document.findFirst({
+      where: { assetId: document.assetId }
     })
-    return this.mapDbDocumentToDocument(dbDocument)
+
+    if (existing) {
+      return this.updateDocument(document)
+    } else {
+      return this.createDocument(document)
+    }
   }
 
-  async updateDocument(document: Document): Promise<Document> {
+  async updateDocument(document: Partial<Document> & { id: string }): Promise<Document> {
     const dbDocument = await (prisma as any).document.update({
       where: { id: document.id },
       data: {
         title: document.title,
-        documentType: document.documentType,
+        content: document.content,
+        personId: document.personId,
+        documentType: document.documentType?.toUpperCase(),
         source: document.source,
         metadata: document.metadata,
+        status: document.status?.toUpperCase(),
+        embeddingStatus: document.embeddingStatus?.toUpperCase(),
         updatedAt: new Date()
       }
     })

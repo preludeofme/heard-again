@@ -2,6 +2,12 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { ServiceFactory } from '@/services'
 import { verifyServiceToken } from '@/utils/auth-guard'
 
+// Allow long-running SSE streams (LLM generation + validation can exceed 60s)
+export const config = {
+  api: { bodyParser: true, responseLimit: false },
+  maxDuration: 120,
+}
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -49,12 +55,19 @@ export default async function handler(
       })
     }
 
+    // Disable socket timeouts so the SSE stream survives long pauses
+    // (post-stream validation + DB update can take several seconds).
+    req.socket.setTimeout(0)
+    req.socket.setKeepAlive(true)
+
     // Set headers for Server-Sent Events
     res.setHeader('Content-Type', 'text/event-stream')
     res.setHeader('Cache-Control', 'no-cache')
     res.setHeader('Connection', 'keep-alive')
+    res.setHeader('X-Accel-Buffering', 'no')
     res.setHeader('Access-Control-Allow-Origin', '*')
     res.setHeader('Access-Control-Allow-Headers', 'Cache-Control')
+    res.flushHeaders()
 
     const chatService = ServiceFactory.getChatService()
 
@@ -106,8 +119,9 @@ export default async function handler(
           res.write(`event: end\ndata: ${JSON.stringify({ 
             type: 'end',
             messageId,
-            processingTime: chunk.processingTime,
-            tokensUsed: chunk.tokensUsed
+            processingTime: chunk.metadata?.totalProcessingTime,
+            tokensUsed: chunk.metadata?.totalTokens,
+            filteredContent: chunk.metadata?.filteredContent || null
           })}\n\n`)
           break
         } else if (chunk.type === 'error') {

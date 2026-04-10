@@ -145,6 +145,13 @@ export function PersonModal({ open, personId, initialTab = 'overview', onClose, 
     }
   }, [open, personId, initialTab, fetchPerson, loadAvailablePeople])
 
+  // Reset relationshipTargetId if it becomes invalid when availablePeople changes
+  useEffect(() => {
+    if (relationshipTargetId && !availablePeople.some(p => p.id === relationshipTargetId)) {
+      setRelationshipTargetId('')
+    }
+  }, [availablePeople, relationshipTargetId])
+
   const handleCreateRelationship = async () => {
     if (!personId || !relationshipTargetId) return
     setIsMutatingRelationship(true)
@@ -497,7 +504,13 @@ export function PersonModal({ open, personId, initialTab = 'overview', onClose, 
                 size="small"
                 label="Related Person"
                 value={relationshipTargetId}
-                onChange={(e) => setRelationshipTargetId(e.target.value)}
+                onChange={(e) => {
+                  const newValue = e.target.value
+                  // Only set the value if it's empty or exists in availablePeople
+                  if (newValue === '' || availablePeople.some(p => p.id === newValue)) {
+                    setRelationshipTargetId(newValue)
+                  }
+                }}
                 sx={{ minWidth: 220 }}
               >
                 <MenuItem value="">Select person</MenuItem>

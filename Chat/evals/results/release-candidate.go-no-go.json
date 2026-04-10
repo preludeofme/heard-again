@@ -1,0 +1,70 @@
+{
+  "generatedAt": "2026-04-07T16:51:42.419Z",
+  "baselineRunLabel": "baseline-current",
+  "candidateRunLabel": "candidate-example",
+  "thresholds": [
+    {
+      "metric": "groundedPrecision",
+      "target": ">= 0.9",
+      "actual": 1,
+      "passed": true
+    },
+    {
+      "metric": "unsupportedClaimRate",
+      "target": "<= 0.05",
+      "actual": 0,
+      "passed": true
+    },
+    {
+      "metric": "refusalPrecision",
+      "target": ">= 0.95",
+      "actual": 1,
+      "passed": true
+    },
+    {
+      "metric": "refusalRecall",
+      "target": ">= 0.95",
+      "actual": 1,
+      "passed": true
+    },
+    {
+      "metric": "personaStyleConsistencyScore",
+      "target": ">= 0.85",
+      "actual": 1,
+      "passed": true
+    },
+    {
+      "metric": "citationCoverage",
+      "target": ">= 0.95",
+      "actual": 1,
+      "passed": true
+    }
+  ],
+  "improvements": [
+    {
+      "check": "lower unsupported-claim rate",
+      "baseline": 0.125,
+      "candidate": 0,
+      "passed": true
+    },
+    {
+      "check": "higher refusal precision",
+      "baseline": 0.8,
+      "candidate": 1,
+      "passed": true
+    },
+    {
+      "check": "equal or better persona consistency",
+      "baseline": 0.8333,
+      "candidate": 1,
+      "passed": true
+    },
+    {
+      "check": "acceptable latency/cost",
+      "baseline": 4698,
+      "candidate": 3732,
+      "passed": true
+    }
+  ],
+  "decision": "GO"
+}

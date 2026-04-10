@@ -170,27 +170,6 @@ export class RetrievalServiceImpl implements RetrievalService {
     return await this.documentRepository.getChunk(chunkId)
   }
 
-  async searchPersonaDocuments(
-    personId: string, 
-    query: string, 
-    context?: SearchContext
-  ): Promise<RetrievedDocument[]> {
-    if (!context?.workspaceId) {
-      throw new Error('workspaceId is required in SearchContext')
-    }
-    
-    return await this.searchDocuments(query, {
-      ...context,
-      personId
-    })
-  }
-
-  async rankDocuments(documents: RetrievedDocument[], query: string): Promise<RetrievedDocument[]> {
-    // For now, just return documents sorted by relevance score
-    // In a more sophisticated implementation, we could re-rank based on query similarity
-    return documents.sort((a, b) => b.metadata.relevanceScore - a.metadata.relevanceScore)
-  }
-
   private getCollectionName(workspaceId: string): string {
     return `workspace_${workspaceId}_documents`
   }

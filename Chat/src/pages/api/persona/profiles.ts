@@ -2,17 +2,19 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { PersonaServiceImpl } from '@/services/persona/PersonaService'
 import { StyleExtractorImpl } from '@/services/persona/StyleExtractor'
 import { LLMGatewayImpl } from '@/services/llm/LLMGateway'
-import { DocumentRepositoryImpl } from '@/services/retrieval/RetrievalService'
+import { PrismaDocumentRepository } from '@/repositories/DocumentRepository'
 import { DatabasePersonaRepository } from '@/services/persona/DatabasePersonaRepository'
+import { PersonService } from '@/services/persona/PersonService'
 import { prisma } from '@/lib/prisma'
 import { verifyServiceToken } from '@/utils/auth-guard'
 
 // Initialize services with database backend
 const llmGateway = new LLMGatewayImpl()
 const styleExtractor = new StyleExtractorImpl(llmGateway)
-const documentRepository = new DocumentRepositoryImpl()
+const documentRepository = new PrismaDocumentRepository()
 const personaRepository = new DatabasePersonaRepository(prisma)
-const personaService = new PersonaServiceImpl(personaRepository, styleExtractor, documentRepository, llmGateway)
+const personService = new PersonService()
+const personaService = new PersonaServiceImpl(personaRepository, styleExtractor, documentRepository, personService, llmGateway)
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (!verifyServiceToken(req, res)) return

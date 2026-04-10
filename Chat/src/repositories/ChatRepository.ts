@@ -1,8 +1,6 @@
 import { ChatRepository } from '@/services/chat/ChatService'
 import { ChatSession, ChatMessage } from '@/types/chat'
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
+import { prisma } from '@/lib/prisma'
 
 export class PrismaChatRepository implements ChatRepository {
   async createSession(session: ChatSession): Promise<ChatSession> {

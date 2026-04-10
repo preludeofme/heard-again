@@ -79,6 +79,7 @@ export class ServiceFactory {
     this.personaService = null
     this.llmGateway = null
     this.voiceIntegrationService = null
+    this.personService = null
   }
 }
 
@@ -131,9 +132,9 @@ class ChatRepositoryImpl implements ChatRepository {
     return await prismaRepo.addMessage(message)
   }
 
-  async getMessages(sessionId: string, limit?: number, offset?: number): Promise<ChatMessage[]> {
+  async getMessages(sessionId: string, limit?: number, offset?: number, userId?: string, workspaceId?: string): Promise<ChatMessage[]> {
     const prismaRepo = new PrismaChatRepository()
-    return await prismaRepo.getMessages(sessionId, limit, offset)
+    return await prismaRepo.getMessages(sessionId, limit, offset, userId, workspaceId)
   }
 
   async updateMessage(messageId: string, content: string, metadata?: any): Promise<ChatMessage | null> {

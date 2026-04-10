@@ -9,8 +9,16 @@ export * from './ingestion'
 
 // Import types for interface definitions
 import type { PersonaProfile } from './persona'
-import type { RetrievedDocument } from './retrieval'
-import type { ChatMessage } from './chat'
+import type { RetrievedDocument, SearchContext } from './retrieval'
+import type {
+  ChatMessage,
+  EvidencePacket,
+  EvidenceThresholds,
+  ResponseCitation,
+  ResponseValidationSummary,
+  StrictAssistantEnvelope,
+  StrictChatResponse,
+} from './chat'
 import type { CompiledPrompt } from './llm'
 
 // Common utility types
@@ -21,6 +29,38 @@ export interface PromptBuilder {
     userMessage: string,
     chatHistory: ChatMessage[]
   ): Promise<CompiledPrompt>
+}
+
+export interface EvidenceGate {
+  buildEvidencePacket(
+    query: string,
+    context: SearchContext,
+    retrievedDocuments: RetrievedDocument[],
+    thresholds?: Partial<EvidenceThresholds>
+  ): EvidencePacket
+
+  toCitations(packet: EvidencePacket, limit?: number): ResponseCitation[]
+}
+
+export interface StrictPromptCompiler {
+  compileStrictPrompt(input: {
+    personaProfile: PersonaProfile
+    evidencePacket: EvidencePacket
+    userMessage: string
+    chatHistory: ChatMessage[]
+  }): Promise<CompiledPrompt>
+}
+
+export interface StrictResponseValidator {
+  validateEnvelope(input: {
+    envelope: StrictAssistantEnvelope
+    evidencePacket: EvidencePacket
+    knownFacts: string[]
+  }): Promise<ResponseValidationSummary>
+}
+
+export interface StrictChatOrchestrator {
+  sendMessageStrict(sessionId: string, message: string): Promise<StrictChatResponse>
 }
 
 export interface ApiResponse<T = any> {

@@ -55,7 +55,7 @@ services:
       - OLLAMA_MAX_QUEUE=512
       - OLLAMA_LOAD_TIMEOUT=5m
       - OLLAMA_REQUEST_TIMEOUT=10m
-      - OLLAMA_KEEP_ALIVE=30m
+      - OLLAMA_KEEP_ALIVE=5m
       - OLLAMA_MODELS=/root/.ollama/models
       - OLLAMA_GPU_OVERHEAD=0
       - NVIDIA_VISIBLE_DEVICES=all
