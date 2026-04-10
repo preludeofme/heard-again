@@ -251,7 +251,7 @@ export class ChatServiceImpl implements ChatService {
 
     const supportedCitations = this.evidenceGate.toCitations(evidencePacket, 3)
     
-    if (hasHighViolation || hasHallucination || hasUnsupportedClaims) {
+    if (hasHighViolation || hasHallucination) {
       console.error('[SEC/HALLUCINATION] Violation detected — logging details', {
         sessionId: request.sessionId,
         violations: validated.violations.map(v => ({ type: v.type, severity: v.severity, desc: v.description }))
@@ -267,11 +267,14 @@ export class ChatServiceImpl implements ChatService {
     let refusalApplied = false
     let refusalReason: string | null = null
 
-    if (hasHighViolation || hasHallucination || hasUnsupportedClaims) {
+    if (hasHighViolation || hasHallucination) {
       safeContent = this.buildRefusalMessage(personaProfile, request.message)
       responseMode = 'INSUFFICIENT_EVIDENCE'
       refusalApplied = true
       refusalReason = hasHighViolation ? 'VALIDATION_HIGH_VIOLATION' : 'VALIDATION_HALLUCINATION'
+    } else if (hasUnsupportedClaims) {
+      safeContent = this.buildGroundedFallbackResponse(personaProfile, evidencePacket, request.message)
+      responseMode = this.isStoryPrompt(request.message) ? 'STORY_SUPPORTED' : 'FACT_SUPPORTED'
     } else if (!validated.isValid) {
       safeContent = validated.filteredContent ?? llmResponse.content
     } else {
@@ -509,6 +512,7 @@ export class ChatServiceImpl implements ChatService {
       prompt,
       startTime,
       evidenceDocuments,
+      evidencePacket,
       personaProfile,
       supportedCitationCount,
       retrievedDocuments.length
@@ -541,6 +545,7 @@ export class ChatServiceImpl implements ChatService {
     prompt: CompiledPrompt,
     startTime: number,
     retrievedDocuments: RetrievedDocument[],
+    evidencePacket: ReturnType<EvidenceGate['buildEvidencePacket']>,
     personaProfile: PersonaProfile,
     supportedCitationCount: number,
     retrievedDocumentCountForMetrics: number
@@ -587,7 +592,7 @@ export class ChatServiceImpl implements ChatService {
       )
       const modelReturnedCanonicalRefusal = this.isCanonicalRefusal(fullContent)
       
-      if (hasHighViolation || hasHallucination || hasUnsupportedClaims) {
+      if (hasHighViolation || hasHallucination) {
         console.error('[SEC/HALLUCINATION] Stream violation detected', {
           messageId,
           violations: validated.violations.map(v => ({ type: v.type, severity: v.severity }))
@@ -597,9 +602,11 @@ export class ChatServiceImpl implements ChatService {
       // Determine safe content with deterministic hallucination handling
       let safeStreamContent: string | undefined
       let refusalApplied = false
-      if (hasHighViolation || hasHallucination || hasUnsupportedClaims) {
+      if (hasHighViolation || hasHallucination) {
         safeStreamContent = this.buildRefusalMessage(personaProfile, prompt.userMessage)
         refusalApplied = true
+      } else if (hasUnsupportedClaims) {
+        safeStreamContent = this.buildGroundedFallbackResponse(personaProfile, evidencePacket, prompt.userMessage)
       } else if (!validated.isValid) {
         safeStreamContent = validated.filteredContent ?? fullContent
       } else {
@@ -610,7 +617,7 @@ export class ChatServiceImpl implements ChatService {
       const finalContent = safeStreamContent ?? fullContent
 
       let refusalReason: string | null = null
-      if (hasHighViolation || hasHallucination || hasUnsupportedClaims) {
+      if (hasHighViolation || hasHallucination) {
         refusalReason = hasHighViolation ? 'VALIDATION_HIGH_VIOLATION' : 'VALIDATION_HALLUCINATION'
       } else if (this.isCanonicalRefusal(finalContent)) {
         refusalReason = modelReturnedCanonicalRefusal
@@ -804,6 +811,39 @@ export class ChatServiceImpl implements ChatService {
     }
 
     return `${prefix} Ask me about ${topicSummary}.`
+  }
+
+  private buildGroundedFallbackResponse(
+    personaProfile: PersonaProfile,
+    evidencePacket: ReturnType<EvidenceGate['buildEvidencePacket']>,
+    userMessage: string
+  ): string {
+    const topEvidence = evidencePacket.items
+      .slice(0, this.isStoryPrompt(userMessage) ? 2 : 1)
+      .map(item => this.condenseEvidence(item.content))
+      .filter(Boolean)
+
+    if (topEvidence.length === 0) {
+      return this.buildRefusalMessage(personaProfile, userMessage)
+    }
+
+    if (this.isStoryPrompt(userMessage)) {
+      return `From what I have documented, ${topEvidence.join(' ')}`
+    }
+
+    return `From what I have documented: ${topEvidence[0]}`
+  }
+
+  private condenseEvidence(content: string, maxLength: number = 220): string {
+    const normalized = content.replace(/\s+/g, ' ').trim()
+    if (normalized.length <= maxLength) {
+      return normalized
+    }
+    return `${normalized.slice(0, maxLength).trimEnd()}...`
+  }
+
+  private isStoryPrompt(userMessage: string): boolean {
+    return /(story|tell me about|what happened|remember when|jobsite|on the job)/i.test(userMessage.toLowerCase())
   }
 
   private getRefusalTopics(personaProfile: PersonaProfile): string[] {
