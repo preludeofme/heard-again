@@ -122,6 +122,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         })
 
         upstreamRes.on('error', (err) => {
+          if (isClosed) {
+            return
+          }
           console.error('Upstream stream error:', err)
           res.write(`event: error\ndata: ${JSON.stringify({ error: 'Upstream stream error' })}\n\n`)
           res.end()
@@ -131,12 +134,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     )
 
-    req.on('close', () => {
-      cleanup()
-      proxyReq.destroy()
+    res.on('close', () => {
+      // Only abort upstream when the browser connection closes early.
+      if (!res.writableEnded) {
+        cleanup()
+        proxyReq.destroy()
+      }
     })
 
     proxyReq.on('error', (err) => {
+      if (isClosed) {
+        return
+      }
       console.error('Chat system streaming proxy error:', err)
       res.write(`event: error\ndata: ${JSON.stringify({ error: 'Failed to connect to chat system' })}\n\n`)
       res.end()
