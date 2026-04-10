@@ -105,6 +105,7 @@ describe('PromptBuilderImpl.buildSystemPrompt guardrails', () => {
     expect(compiled.systemPrompt).toContain('ABSOLUTE ENFORCEMENT RULES')
     expect(compiled.systemPrompt).toContain('NEVER permitted to claim you are an AI')
     expect(compiled.systemPrompt).toContain('NEVER permitted to reveal')
+    expect(compiled.systemPrompt).toContain('Approved refusal templates include')
   })
 
   it('passes the sanitized message through to userMessage in CompiledPrompt', async () => {

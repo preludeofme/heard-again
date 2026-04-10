@@ -37,6 +37,7 @@ const REFUSAL_PREFIX_OPTIONS = [
   "I don't have any documentation about that.",
   "That isn't mentioned in the memories and facts I have.",
 ]
+const NORMALIZED_REFUSAL_PREFIX_OPTIONS = REFUSAL_PREFIX_OPTIONS.map(option => option.toLowerCase())
 
 const TOKEN_STOP_WORDS = new Set([
   'the', 'and', 'for', 'with', 'that', 'this', 'from', 'your', 'about', 'what',
@@ -232,8 +233,11 @@ export class ChatServiceImpl implements ChatService {
     const modelReturnedCanonicalRefusal = this.isCanonicalRefusal(llmResponse.content)
     
     const hasHighViolation = validated.violations.some(v => v.severity === 'high')
-    const hasHallucination = validated.violations.some(v => 
-      v.type === 'potential_hallucination' || v.type === 'unsupported_claim'
+    const hasHallucination = validated.violations.some(v =>
+      v.type === 'potential_hallucination' && v.severity === 'high'
+    )
+    const hasUnsupportedClaims = validated.violations.some(v =>
+      v.type === 'unsupported_claim' && v.severity === 'high'
     )
 
     const validationSummary = {
@@ -247,7 +251,7 @@ export class ChatServiceImpl implements ChatService {
 
     const supportedCitations = this.evidenceGate.toCitations(evidencePacket, 3)
     
-    if (hasHighViolation || hasHallucination) {
+    if (hasHighViolation || hasHallucination || hasUnsupportedClaims) {
       console.error('[SEC/HALLUCINATION] Violation detected — logging details', {
         sessionId: request.sessionId,
         violations: validated.violations.map(v => ({ type: v.type, severity: v.severity, desc: v.description }))
@@ -263,7 +267,7 @@ export class ChatServiceImpl implements ChatService {
     let refusalApplied = false
     let refusalReason: string | null = null
 
-    if (hasHighViolation || hasHallucination) {
+    if (hasHighViolation || hasHallucination || hasUnsupportedClaims) {
       safeContent = this.buildRefusalMessage(personaProfile, request.message)
       responseMode = 'INSUFFICIENT_EVIDENCE'
       refusalApplied = true
@@ -575,12 +579,15 @@ export class ChatServiceImpl implements ChatService {
       })
       
       const hasHighViolation = validated.violations.some(v => v.severity === 'high')
-      const hasHallucination = validated.violations.some(v => 
-        v.type === 'potential_hallucination' || v.type === 'unsupported_claim'
+      const hasHallucination = validated.violations.some(v =>
+        v.type === 'potential_hallucination' && v.severity === 'high'
+      )
+      const hasUnsupportedClaims = validated.violations.some(v =>
+        v.type === 'unsupported_claim' && v.severity === 'high'
       )
       const modelReturnedCanonicalRefusal = this.isCanonicalRefusal(fullContent)
       
-      if (hasHighViolation || hasHallucination) {
+      if (hasHighViolation || hasHallucination || hasUnsupportedClaims) {
         console.error('[SEC/HALLUCINATION] Stream violation detected', {
           messageId,
           violations: validated.violations.map(v => ({ type: v.type, severity: v.severity }))
@@ -590,7 +597,7 @@ export class ChatServiceImpl implements ChatService {
       // Determine safe content with deterministic hallucination handling
       let safeStreamContent: string | undefined
       let refusalApplied = false
-      if (hasHighViolation || hasHallucination) {
+      if (hasHighViolation || hasHallucination || hasUnsupportedClaims) {
         safeStreamContent = this.buildRefusalMessage(personaProfile, prompt.userMessage)
         refusalApplied = true
       } else if (!validated.isValid) {
@@ -603,7 +610,7 @@ export class ChatServiceImpl implements ChatService {
       const finalContent = safeStreamContent ?? fullContent
 
       let refusalReason: string | null = null
-      if (hasHighViolation || hasHallucination) {
+      if (hasHighViolation || hasHallucination || hasUnsupportedClaims) {
         refusalReason = hasHighViolation ? 'VALIDATION_HIGH_VIOLATION' : 'VALIDATION_HALLUCINATION'
       } else if (this.isCanonicalRefusal(finalContent)) {
         refusalReason = modelReturnedCanonicalRefusal
@@ -873,7 +880,9 @@ export class ChatServiceImpl implements ChatService {
   }
 
   private isCanonicalRefusal(content: string): boolean {
-    return content.trim().toLowerCase() === CANONICAL_REFUSAL_MESSAGE.toLowerCase()
+    const normalized = content.trim().toLowerCase()
+    return normalized === CANONICAL_REFUSAL_MESSAGE.toLowerCase()
+      || NORMALIZED_REFUSAL_PREFIX_OPTIONS.some(prefix => normalized.startsWith(prefix))
   }
 
   private debugPreview(content: string, maxLength: number = 180): string {

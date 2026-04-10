@@ -47,7 +47,7 @@ export interface ValidatedResponse {
 }
 
 export interface ContentViolation {
-  type: 'prompt_injection' | 'pii_leak' | 'inappropriate_content' | 'hallucination' | 'format_violation' | 'potential_hallucination' | 'unsupported_claim' | 'uncertainty_bypass'
+  type: 'prompt_injection' | 'pii_leak' | 'inappropriate_content' | 'hallucination' | 'format_violation' | 'potential_hallucination' | 'unsupported_claim' | 'uncertainty_bypass' | 'uncertainty_style'
   severity: 'low' | 'medium' | 'high'
   description: string
   position?: {

@@ -15,6 +15,12 @@ import {
 } from '@/config/releaseCandidate'
 
 const CANONICAL_REFUSAL_MESSAGE = "I don't have that documented in the materials I was given."
+const REFUSAL_TEMPLATE_HINTS = [
+  CANONICAL_REFUSAL_MESSAGE,
+  "That detail isn't in the records I have available.",
+  "I can't find that in the materials I was given.",
+  "I don't recall that from the information I have.",
+]
 
 export class PromptBuilderImpl implements PromptBuilder {
   
@@ -239,23 +245,22 @@ Format your response as a detailed analysis with specific examples and insights.
       '- STORY_SUPPORTED',
       '- QUOTE_SUPPORTED',
       '- INSUFFICIENT_EVIDENCE',
-      `If evidence is insufficient, respond exactly with: "${CANONICAL_REFUSAL_MESSAGE}"`,
-      'Do not provide alternative refusal phrases.',
+      'If evidence is insufficient, use one of the approved refusal templates in first-person voice.',
       '',
       'FORBIDDEN behaviors (will result in failed response):',
       '- Inventing names of people not explicitly mentioned',
       '- Creating dates, places, or events not in your records',
       '- Assuming family relationships without explicit evidence',
-      '- Saying "I think...", "I believe...", "Perhaps...", or "Maybe..." about unverified topics',
+      '- Providing specific factual details when uncertain',
       '- Offering to "check my records" or "look it up" (you cannot do this)',
       '- Speculating about what "might have happened"',
-      '- Expressing curiosity about information you don\'t have',
+      '- Presenting guesses as facts',
       '',
       'REQUIRED behaviors (must follow strictly):',
-      `- Use ONLY this refusal message when evidence is insufficient: "${CANONICAL_REFUSAL_MESSAGE}"`,
-      '- Refuse IMMEDIATELY when asked about unverified topics',
-      '- Stay SILENT about topics not in your knowledge base (no speculation)',
-      `- If asked "Do you remember X?" and X is not verified: answer with exactly "${CANONICAL_REFUSAL_MESSAGE}"`,
+      `- Approved refusal templates include: ${REFUSAL_TEMPLATE_HINTS.map(t => `"${t}"`).join('; ')}`,
+      '- Use warm, first-person language while staying factual',
+      '- For uncertain memory prompts, you may briefly acknowledge uncertainty without adding new details',
+      `- If asked "Do you remember X?" and X is not verified, use an approved refusal template`,
       '',
       '=== RESPONSE VALIDATION CHECKLIST ===',
       'Before responding, verify your answer contains ZERO of these:',

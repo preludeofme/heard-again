@@ -12,6 +12,13 @@ import axios from 'axios'
 import { RELEASE_CANDIDATE_MODEL_POLICY } from '@/config/releaseCandidate'
 
 const CANONICAL_REFUSAL_MESSAGE = "I don't have that documented in the materials I was given."
+const REFUSAL_TEMPLATE_PREFIXES = [
+  "i don't have that documented in the materials i was given",
+  "that detail isn't in the records i have available",
+  "i can't find that in the materials i was given",
+  "i don't recall that from the information i have",
+  "that's not something i have documented in my memories",
+]
 const CLAIM_STOP_WORDS = new Set([
   'a', 'an', 'the', 'and', 'or', 'but', 'if', 'then', 'than', 'to', 'of', 'in', 'on', 'at', 'for',
   'from', 'by', 'with', 'without', 'as', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'it',
@@ -207,7 +214,7 @@ export class LLMGatewayImpl implements LLMGateway {
     const violations: ContentViolation[] = []
     const normalizedResponse = this.normalizeText(response)
 
-    if (normalizedResponse === this.normalizeText(CANONICAL_REFUSAL_MESSAGE)) {
+    if (this.isRefusalTemplate(normalizedResponse)) {
       return {
         isValid: true,
         content: response,
@@ -284,19 +291,19 @@ export class LLMGatewayImpl implements LLMGateway {
     // === HALLUCINATION DETECTION ===
     
     // Check for speculative language that suggests fabrication
-    const speculativePatterns = [
-      { pattern: /\b(I think|I believe|perhaps|maybe|probably|likely|I suppose|I guess|I imagine)\b/gi, severity: 'medium' },
-      { pattern: /\b(it seems|it appears|it looks like|apparently)\b/gi, severity: 'medium' },
-      { pattern: /\b(if I recall correctly|if memory serves|as far as I remember)\b/gi, severity: 'low' },
+    const uncertaintyStylePatterns = [
+      { pattern: /\b(I think|I believe|perhaps|maybe|probably|likely|I suppose|I guess|I imagine)\b/gi, severity: 'low' },
+      { pattern: /\b(it seems|it appears|it looks like|apparently)\b/gi, severity: 'low' },
+      { pattern: /\b(if I recall correctly|if memory serves|as far as I remember|I can'?t quite recall)\b/gi, severity: 'low' },
     ]
 
-    for (const { pattern, severity } of speculativePatterns) {
+    for (const { pattern, severity } of uncertaintyStylePatterns) {
       const matches = response.match(pattern)
       if (matches) {
         violations.push({
-          type: 'potential_hallucination',
+          type: 'uncertainty_style',
           severity: severity as 'low' | 'medium' | 'high',
-          description: `Speculative language detected: "${matches[0]}" - may indicate uncertainty/fabulation`,
+          description: `Uncertainty language detected: "${matches[0]}"`,
           position: {
             start: response.indexOf(matches[0]),
             end: response.indexOf(matches[0]) + matches[0].length
@@ -338,10 +345,11 @@ export class LLMGatewayImpl implements LLMGateway {
       )
 
       if (!documentSupport.supported && documentSupport.unsupportedClaims.length > 0) {
+        const unsupportedHighSpecificityCount = documentSupport.unsupportedClaims.filter(c => c.highSpecificity).length
         violations.push({
           type: 'unsupported_claim',
-          severity: 'high',
-          description: `Claims without evidence support: ${documentSupport.unsupportedClaims.slice(0, 3).join(', ')}${documentSupport.unsupportedClaims.length > 3 ? '...' : ''}`,
+          severity: unsupportedHighSpecificityCount > 0 ? 'high' : 'medium',
+          description: `Claims without evidence support: ${documentSupport.unsupportedClaims.slice(0, 3).map(c => c.claim).join(', ')}${documentSupport.unsupportedClaims.length > 3 ? '...' : ''}`,
         })
       }
     }
@@ -388,7 +396,7 @@ export class LLMGatewayImpl implements LLMGateway {
   ): {
     supported: boolean
     checkedClaims: string[]
-    unsupportedClaims: string[]
+    unsupportedClaims: Array<{ claim: string, highSpecificity: boolean }>
   } {
     const claims = this.extractAtomicClaims(response)
     if (claims.length === 0) {
@@ -403,9 +411,16 @@ export class LLMGatewayImpl implements LLMGateway {
       .map(item => this.normalizeText(item))
       .filter(item => item.length > 0)
 
-    const unsupportedClaims = claims.filter(
-      claim => !this.hasEvidenceSupport(claim, normalizedEvidence)
-    )
+    const unsupportedClaims = claims
+      .map((claim) => ({
+        claim,
+        supportScore: this.getEvidenceSupportScore(claim, normalizedEvidence),
+      }))
+      .filter(item => item.supportScore < 0.7)
+      .map(item => ({
+        claim: item.claim,
+        highSpecificity: this.isHighSpecificityClaim(item.claim),
+      }))
 
     return {
       supported: unsupportedClaims.length === 0,
@@ -431,31 +446,29 @@ export class LLMGatewayImpl implements LLMGateway {
       })
   }
 
-  private hasEvidenceSupport(claim: string, normalizedEvidence: string[]): boolean {
+  private getEvidenceSupportScore(claim: string, normalizedEvidence: string[]): number {
     const normalizedClaim = this.normalizeText(claim)
     if (!normalizedClaim) {
-      return true
+      return 1
     }
 
     if (normalizedEvidence.some(item => item.includes(normalizedClaim))) {
-      return true
+      return 1
     }
 
     const keywords = this.extractClaimKeywords(normalizedClaim)
     if (keywords.length === 0) {
-      return true
+      return 1
     }
 
+    let bestRatio = 0
     for (const evidence of normalizedEvidence) {
       const matches = keywords.filter(keyword => evidence.includes(keyword)).length
       const ratio = matches / keywords.length
-
-      if (matches === keywords.length || (matches >= 2 && ratio >= 0.7)) {
-        return true
-      }
+      bestRatio = Math.max(bestRatio, ratio)
     }
 
-    return false
+    return bestRatio
   }
 
   private extractClaimKeywords(normalizedClaim: string): string[] {
@@ -472,6 +485,19 @@ export class LLMGatewayImpl implements LLMGateway {
       .replace(/[^a-z0-9\s]/g, ' ')
       .replace(/\s+/g, ' ')
       .trim()
+  }
+
+  private isRefusalTemplate(normalizedResponse: string): boolean {
+    return REFUSAL_TEMPLATE_PREFIXES.some(prefix => normalizedResponse.startsWith(prefix))
+  }
+
+  private isHighSpecificityClaim(claim: string): boolean {
+    const normalized = claim.toLowerCase()
+    const hasYearOrDate = /\b(19|20)\d{2}\b/.test(normalized) || /\b(january|february|march|april|may|june|july|august|september|october|november|december)\b/.test(normalized)
+    const hasRelationship = /\b(wife|husband|spouse|partner|son|daughter|child|children|mother|father)\b/.test(normalized)
+    const hasCount = /\b\d+\b/.test(normalized)
+
+    return hasYearOrDate || hasRelationship || hasCount
   }
 
   async getModelInfo(model: string): Promise<ModelInfo> {

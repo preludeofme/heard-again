@@ -242,7 +242,7 @@ Your response must correspond to exactly one mode:
 - STORY_SUPPORTED  
 - QUOTE_SUPPORTED
 - INSUFFICIENT_EVIDENCE
-If evidence is insufficient, respond exactly with: "I don't have that documented in the materials I was given."
+If evidence is insufficient, respond with an approved refusal template in first-person voice.
 ```
 
 #### Context Formatting
@@ -330,11 +330,11 @@ const piiPatterns = [
 
 **3. Hallucination Detection**
 
-**Speculative Language Patterns**:
+**Uncertainty Style Patterns (non-blocking)**:
 ```typescript
 const speculativePatterns = [
-  { pattern: /\b(I think|I believe|perhaps|maybe|probably|likely)\b/gi, severity: 'medium' },
-  { pattern: /\b(it seems|it appears|it looks like)\b/gi, severity: 'medium' },
+      { pattern: /\b(I think|I believe|perhaps|maybe|probably|likely)\b/gi, severity: 'low' },
+      { pattern: /\b(it seems|it appears|it looks like)\b/gi, severity: 'low' },
   { pattern: /\b(if I recall correctly|if memory serves)\b/gi, severity: 'low' }
 ]
 ```
@@ -363,7 +363,7 @@ private checkDocumentSupport(response: string, documents: string[], knownFacts: 
 
 #### Validation Outcomes
 ```typescript
-if (hasHighViolation || hasHallucination) {
+if (hasHighViolation || hasHallucination || hasUnsupportedClaims) {
   safeContent = buildRefusalMessage(personaProfile, request.message)
   responseMode = 'INSUFFICIENT_EVIDENCE'
   refusalReason = hasHighViolation ? 'VALIDATION_HIGH_VIOLATION' : 'VALIDATION_HALLUCINATION'
@@ -459,8 +459,8 @@ if (hasHighViolation || hasHallucination) {
 - **Context Limits**: Token-based truncation to prevent overflow
 
 ### Hallucination Prevention
-- **Canonical Refusal**: "I don't have that documented in the materials I was given."
-- **Speculative Language Detection**: Flags uncertainty phrases
+- **Approved Refusal Templates**: Canonical plus a controlled set of equivalent first-person refusals
+- **Uncertainty Style Detection**: Tracks uncertainty phrases without forcing refusal by itself
 - **Fact Verification**: Cross-checks claims against document evidence
 - **Fabricated Detail Detection**: Identifies invented names, dates, places
 
