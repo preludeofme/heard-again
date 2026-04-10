@@ -5,7 +5,7 @@ import { verifyServiceToken } from '@/utils/auth-guard'
 // Allow long-running SSE streams (LLM generation + validation can exceed 60s)
 export const config = {
   api: { bodyParser: true, responseLimit: false },
-  maxDuration: 120,
+  maxDuration: 600,
 }
 
 export default async function handler(
@@ -62,7 +62,7 @@ export default async function handler(
 
     // Set headers for Server-Sent Events
     res.setHeader('Content-Type', 'text/event-stream')
-    res.setHeader('Cache-Control', 'no-cache')
+    res.setHeader('Cache-Control', 'no-cache, no-transform')
     res.setHeader('Connection', 'keep-alive')
     res.setHeader('X-Accel-Buffering', 'no')
     res.setHeader('Access-Control-Allow-Origin', '*')

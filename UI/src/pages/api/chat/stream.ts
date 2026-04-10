@@ -6,7 +6,7 @@ import http from 'http'
 // Allow long-running SSE streams (LLM generation + validation can exceed 60s)
 export const config = {
   api: { bodyParser: true, responseLimit: false },
-  maxDuration: 120,
+  maxDuration: 600,
 }
 
 // Proxy to chat system streaming API using Node.js http.request for true
@@ -45,7 +45,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // Set SSE headers and flush them immediately so the browser establishes
   // the EventSource connection before the upstream LLM starts generating.
   res.setHeader('Content-Type', 'text/event-stream')
-  res.setHeader('Cache-Control', 'no-cache')
+  res.setHeader('Cache-Control', 'no-cache, no-transform')
   res.setHeader('Connection', 'keep-alive')
   res.setHeader('X-Accel-Buffering', 'no')
   res.flushHeaders()
@@ -57,11 +57,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const bodyPayload = JSON.stringify(restBody)
 
   return new Promise<void>((resolve) => {
+    let isClosed = false
+    let heartbeatTimer: ReturnType<typeof setInterval> | null = setInterval(() => {
+      if (!isClosed) {
+        res.write(': keep-alive\n\n')
+      }
+    }, 10_000)
+
+    const cleanup = () => {
+      if (isClosed) return
+      isClosed = true
+      if (heartbeatTimer) {
+        clearInterval(heartbeatTimer)
+        heartbeatTimer = null
+      }
+    }
+
     const proxyReq = http.request(
       upstreamUrl,
       {
         method: 'POST',
-        timeout: 120_000,
+        timeout: 0,
         headers: {
           'Content-Type': 'application/json',
           'Content-Length': Buffer.byteLength(bodyPayload),
@@ -83,6 +99,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             const errMsg = (() => { try { return JSON.parse(body).error } catch { return 'Upstream error' } })()
             res.write(`event: error\ndata: ${JSON.stringify({ error: errMsg })}\n\n`)
             res.end()
+            cleanup()
             resolve()
           })
           return
@@ -100,6 +117,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         upstreamRes.on('end', () => {
           console.log('UPSTREAM END received')
           res.end()
+          cleanup()
           resolve()
         })
 
@@ -107,22 +125,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           console.error('Upstream stream error:', err)
           res.write(`event: error\ndata: ${JSON.stringify({ error: 'Upstream stream error' })}\n\n`)
           res.end()
+          cleanup()
           resolve()
         })
       }
     )
 
+    req.on('close', () => {
+      cleanup()
+      proxyReq.destroy()
+    })
+
     proxyReq.on('error', (err) => {
       console.error('Chat system streaming proxy error:', err)
       res.write(`event: error\ndata: ${JSON.stringify({ error: 'Failed to connect to chat system' })}\n\n`)
       res.end()
+      cleanup()
       resolve()
     })
 
     proxyReq.on('timeout', () => {
-      console.error('Chat system streaming proxy TIMEOUT after 120s')
-      res.write(`event: error\ndata: ${JSON.stringify({ error: 'Upstream request timeout' })}\n\n`)
-      res.end()
+      // Timeout disabled (timeout: 0). Keep handler for safety in case runtime forces one.
+      console.error('Chat system streaming proxy TIMEOUT')
+      if (!isClosed) {
+        res.write(`event: error\ndata: ${JSON.stringify({ error: 'Upstream request timeout' })}\n\n`)
+        res.end()
+      }
+      cleanup()
       resolve()
     })
 
