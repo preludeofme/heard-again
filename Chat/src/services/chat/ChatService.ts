@@ -232,7 +232,9 @@ export class ChatServiceImpl implements ChatService {
 
     const modelReturnedCanonicalRefusal = this.isCanonicalRefusal(llmResponse.content)
     
-    const hasHighViolation = validated.violations.some(v => v.severity === 'high')
+    const hasBlockingHighViolation = validated.violations.some(v =>
+      v.severity === 'high' && v.type !== 'unsupported_claim'
+    )
     const hasHallucination = validated.violations.some(v =>
       v.type === 'potential_hallucination' && v.severity === 'high'
     )
@@ -251,7 +253,7 @@ export class ChatServiceImpl implements ChatService {
 
     const supportedCitations = this.evidenceGate.toCitations(evidencePacket, 3)
     
-    if (hasHighViolation || hasHallucination) {
+    if (hasBlockingHighViolation || hasHallucination) {
       console.error('[SEC/HALLUCINATION] Violation detected — logging details', {
         sessionId: request.sessionId,
         violations: validated.violations.map(v => ({ type: v.type, severity: v.severity, desc: v.description }))
@@ -267,11 +269,11 @@ export class ChatServiceImpl implements ChatService {
     let refusalApplied = false
     let refusalReason: string | null = null
 
-    if (hasHighViolation || hasHallucination) {
+    if (hasBlockingHighViolation || hasHallucination) {
       safeContent = this.buildRefusalMessage(personaProfile, request.message)
       responseMode = 'INSUFFICIENT_EVIDENCE'
       refusalApplied = true
-      refusalReason = hasHighViolation ? 'VALIDATION_HIGH_VIOLATION' : 'VALIDATION_HALLUCINATION'
+      refusalReason = hasBlockingHighViolation ? 'VALIDATION_HIGH_VIOLATION' : 'VALIDATION_HALLUCINATION'
     } else if (hasUnsupportedClaims) {
       safeContent = this.buildGroundedFallbackResponse(personaProfile, evidencePacket, request.message)
       responseMode = this.isStoryPrompt(request.message) ? 'STORY_SUPPORTED' : 'FACT_SUPPORTED'
@@ -583,7 +585,9 @@ export class ChatServiceImpl implements ChatService {
         knownFacts: personaProfile.knownFacts?.map((f: { fact: string }) => f.fact) || []
       })
       
-      const hasHighViolation = validated.violations.some(v => v.severity === 'high')
+      const hasBlockingHighViolation = validated.violations.some(v =>
+        v.severity === 'high' && v.type !== 'unsupported_claim'
+      )
       const hasHallucination = validated.violations.some(v =>
         v.type === 'potential_hallucination' && v.severity === 'high'
       )
@@ -592,7 +596,7 @@ export class ChatServiceImpl implements ChatService {
       )
       const modelReturnedCanonicalRefusal = this.isCanonicalRefusal(fullContent)
       
-      if (hasHighViolation || hasHallucination) {
+      if (hasBlockingHighViolation || hasHallucination) {
         console.error('[SEC/HALLUCINATION] Stream violation detected', {
           messageId,
           violations: validated.violations.map(v => ({ type: v.type, severity: v.severity }))
@@ -602,7 +606,7 @@ export class ChatServiceImpl implements ChatService {
       // Determine safe content with deterministic hallucination handling
       let safeStreamContent: string | undefined
       let refusalApplied = false
-      if (hasHighViolation || hasHallucination) {
+      if (hasBlockingHighViolation || hasHallucination) {
         safeStreamContent = this.buildRefusalMessage(personaProfile, prompt.userMessage)
         refusalApplied = true
       } else if (hasUnsupportedClaims) {
@@ -617,8 +621,8 @@ export class ChatServiceImpl implements ChatService {
       const finalContent = safeStreamContent ?? fullContent
 
       let refusalReason: string | null = null
-      if (hasHighViolation || hasHallucination) {
-        refusalReason = hasHighViolation ? 'VALIDATION_HIGH_VIOLATION' : 'VALIDATION_HALLUCINATION'
+      if (hasBlockingHighViolation || hasHallucination) {
+        refusalReason = hasBlockingHighViolation ? 'VALIDATION_HIGH_VIOLATION' : 'VALIDATION_HALLUCINATION'
       } else if (this.isCanonicalRefusal(finalContent)) {
         refusalReason = modelReturnedCanonicalRefusal
           ? 'MODEL_RETURNED_CANONICAL_REFUSAL'
