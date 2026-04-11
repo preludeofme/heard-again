@@ -16,3 +16,4 @@ generated/
 generated/**
 data
 data/
+Chat/temp-ingestion/
