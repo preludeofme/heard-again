@@ -68,7 +68,7 @@ export class LLMGatewayImpl implements LLMGateway {
           `${this.baseUrl}/api/generate`,
           request,
           {
-            timeout: 60000,
+            timeout: 180000,
             headers: {
               'Content-Type': 'application/json'
             }
@@ -84,7 +84,7 @@ export class LLMGatewayImpl implements LLMGateway {
               model: usedModel,
             },
             {
-              timeout: 60000,
+              timeout: 180000,
               headers: {
                 'Content-Type': 'application/json'
               }
@@ -142,7 +142,7 @@ export class LLMGatewayImpl implements LLMGateway {
         request,
         {
           responseType: 'stream',
-          timeout: 60000,
+          timeout: 180000,
           headers: {
             'Content-Type': 'application/json'
           }
@@ -159,7 +159,7 @@ export class LLMGatewayImpl implements LLMGateway {
           },
           {
             responseType: 'stream',
-            timeout: 60000,
+            timeout: 180000,
             headers: {
               'Content-Type': 'application/json'
             }

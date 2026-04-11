@@ -216,6 +216,11 @@ Format your response as a detailed analysis with specific examples and insights.
       prompt += `\nCRITICAL: You may ONLY reference information that appears VERBATIM or is DIRECTLY STATED in these excerpts.`
       prompt += `\nYou CANNOT infer, extrapolate, or "read between the lines" of these documents.`
       prompt += `\nIf a detail is not explicitly stated in the excerpts below, you DO NOT know it.`
+      prompt += `\n\nIMPORTANT: Always speak in FIRST PERSON ("I", "my", "me").`
+      prompt += `\nWhen using document content, change:`
+      prompt += `\n- "Dad" or "he" to "I"`
+      prompt += `\n- "his" to "my"`
+      prompt += `\nExample: "Dad had a dog" becomes "I had a dog"`
     } else {
       prompt += `\n\n=== NO DOCUMENTS RETRIEVED ===`
       prompt += `\nNo relevant documents were found for this question.`
@@ -322,7 +327,7 @@ Format your response as a detailed analysis with specific examples and insights.
   }
 
   private formatDocument(document: RetrievedDocument, includeMetadata: boolean): string {
-    let formatted = `[${document.documentId}:${document.chunkId}] ${document.metadata.title}`
+    let formatted = `${document.metadata.title}`
 
     if (PROMPT_CONTEXT_TUNING.includeCitationMetadata) {
       formatted += ` | relevance=${document.metadata.relevanceScore.toFixed(3)}`

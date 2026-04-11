@@ -59,11 +59,11 @@ export const RELEASE_CANDIDATE_MODEL_POLICY: ModelReleasePolicy = {
 }
 
 export const STRICT_CHAT_INFERENCE_SETTINGS: InferenceSettings = {
-  temperature: parseNumber(process.env.CHAT_TEMPERATURE, 0.0),
+  temperature: parseNumber(process.env.CHAT_TEMPERATURE, 0.5),
   topP: parseNumber(process.env.CHAT_TOP_P, 0.08),
   topK: parseNumber(process.env.CHAT_TOP_K, 24),
   repeatPenalty: parseNumber(process.env.CHAT_REPEAT_PENALTY, 1.15),
-  maxTokens: parseNumber(process.env.CHAT_MAX_TOKENS, 420),
+  maxTokens: parseNumber(process.env.CHAT_MAX_TOKENS, 800),
 }
 
 export const STYLE_ANALYSIS_INFERENCE_SETTINGS: InferenceSettings = {
