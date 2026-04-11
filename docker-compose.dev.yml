@@ -1,0 +1,61 @@
+# Development docker-compose with ingestion worker enabled
+version: '3.8'
+
+services:
+  # Override ingestion worker to run in development mode
+  ingestion-worker:
+    build:
+      context: ./Chat
+      dockerfile: docker/Dockerfile.worker
+    expose:
+      - "4779"
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/heard_again
+      - REDIS_URL=redis://redis:6379
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - CHROMA_URL=http://chromadb:8000
+      - OLLAMA_URL=http://ollama:11434
+      - CHAT_SERVICE_SECRET=${CHAT_SERVICE_SECRET:-dev-secret}
+      - PORT=4779
+    networks:
+      - internal
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      chromadb:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+    volumes:
+      - ./Chat/src:/app/src
+      - ./Chat/uploads:/app/uploads
+      - ./Chat/temp-ingestion:/app/temp-ingestion
+      - ./Chat/logs:/app/logs
+    restart: unless-stopped
+    command: ["npm", "run", "ingestion:worker"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4779/api/worker/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+# Include the main compose file's networks and volumes
+networks:
+  internal:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  uploads:
+  generated:
+  tts_models:
+  redis_data:
+  clamav_db:
+  chroma_data:
+  ollama_data:
+  temp_ingestion:

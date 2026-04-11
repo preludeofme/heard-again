@@ -106,9 +106,12 @@ export default apiHandler({
         ])
         if (RAG_EXTRACTABLE_TYPES.has(asset.mimeType)) {
           const rawPath = asset.storagePath
-          const storageUrl = rawPath.startsWith('http')
+          const publicPath = rawPath.startsWith('http') || rawPath.startsWith('/')
             ? rawPath
-            : `${process.env.NEXTAUTH_URL || 'http://localhost:4777'}${rawPath}`
+            : `/api/assets/${rawPath}`
+          const storageUrl = publicPath.startsWith('http')
+            ? publicPath
+            : `${process.env.NEXTAUTH_URL || 'http://localhost:4777'}${publicPath}`
           fetch(`${chatServiceUrl}/api/ingestion/ingest`, {
             method: 'POST',
             headers: {

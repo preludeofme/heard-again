@@ -95,19 +95,33 @@ services:
       - NODE_ENV=development
       - DATABASE_URL=postgresql://postgres:password@db:5432/heard_again
       - REDIS_URL=redis://redis:6379
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
       - CHROMA_URL=http://chromadb:8000
       - OLLAMA_URL=http://ollama:11434
+      - PORT=4779  # Worker health check port
     depends_on:
-      - db
-      - redis
-      - chromadb
-      - ollama
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      chromadb:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
     volumes:
       - ./src:/app/src
       - ./uploads:/app/uploads
       - ./logs:/app/logs
+      - ./temp-ingestion:/app/temp-ingestion
     restart: unless-stopped
     command: ["npm", "run", "ingestion:worker"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4779/api/worker/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
 volumes:
   ollama_models:

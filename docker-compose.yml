@@ -223,6 +223,52 @@ services:
       retries: 5
       start_period: 10s
 
+  # Ingestion Worker for document processing
+  ingestion-worker:
+    build:
+      context: ./Chat
+      dockerfile: docker/Dockerfile.worker
+    # No public port binding - health check is internal
+    expose:
+      - "4779"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/heard_again
+      - REDIS_URL=redis://redis:6379
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - CHROMA_URL=http://chromadb:8000
+      - OLLAMA_URL=http://ollama:11434
+      - CHAT_SERVICE_SECRET=${CHAT_SERVICE_SECRET:?CHAT_SERVICE_SECRET must be set}
+      - PORT=4779  # Worker health check port
+    networks:
+      - internal
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      chromadb:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+    volumes:
+      - uploads:/app/uploads
+      - temp_ingestion:/app/temp-ingestion
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4779/api/worker/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    profiles:
+      - with-ingestion
+
 networks:
   internal:
     driver: bridge
@@ -236,3 +282,4 @@ volumes:
   clamav_db:
   chroma_data:
   ollama_data:
+  temp_ingestion:

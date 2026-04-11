@@ -3,8 +3,9 @@ import { queueManager, QUEUE_NAMES, JobUtils } from '@/utils/queues'
 import { SimpleIngestionService, SimpleDocumentProcessor } from '@/services/ingestion/SimpleIngestionService'
 import { EmbeddingGeneratorImpl } from '@/services/ingestion/EmbeddingGenerator'
 import { PrismaDocumentRepository } from '@/repositories/DocumentRepository'
+import { DocumentStatus, EmbeddingStatus } from '@/types/retrieval'
 import { logger } from '@/lib/logger'
-import axios from 'axios'
+import { ChromaClient, DefaultEmbeddingFunction } from 'chromadb'
 
 export class IngestionWorker {
   private worker: Worker | null = null
@@ -122,12 +123,23 @@ export class IngestionWorker {
         currentOperation: 'Creating vector embeddings for chunks'
       })
 
-      // Step 4: Generate embeddings
-      logger.info({ documentId, traceId, chunkCount: chunks.length }, 'Generating embeddings')
-      const embeddingGenerator = new EmbeddingGeneratorImpl()
-      const chunkTexts = chunks.map(chunk => chunk.content)
-      const embeddings = await embeddingGenerator.generateEmbeddings(chunkTexts)
-      logger.info({ documentId, traceId, embeddingCount: embeddings.length }, 'Embeddings generated')
+      // Step 4: Generate Ollama embeddings (for Postgres storage — non-critical)
+      // ChromaDB uses DefaultEmbeddingFunction independently, so Ollama failure
+      // must NOT block the critical RAG indexing path.
+      let embeddings: number[][] = []
+      try {
+        logger.info({ documentId, traceId, chunkCount: chunks.length }, 'Generating Ollama embeddings for Postgres')
+        const embeddingGenerator = new EmbeddingGeneratorImpl()
+        const chunkTexts = chunks.map(chunk => chunk.content)
+        embeddings = await embeddingGenerator.generateEmbeddings(chunkTexts)
+        logger.info({ documentId, traceId, embeddingCount: embeddings.length }, 'Ollama embeddings generated')
+      } catch (embErr) {
+        logger.warn(
+          { documentId, traceId, err: embErr instanceof Error ? embErr.message : String(embErr) },
+          'Ollama embedding generation failed — continuing without Postgres embeddings (ChromaDB will generate its own)'
+        )
+        embeddings = chunks.map(() => [])
+      }
 
       await JobUtils.updateJobProgress(job, {
         currentStep: 'indexing',
@@ -146,7 +158,7 @@ export class IngestionWorker {
         personId: personId || null,
         chunks: chunks.map((chunk, index) => ({
           ...chunk,
-          embedding: embeddings[index],
+          embedding: embeddings[index] || [],
           embeddingModel: 'nomic-embed-text'
         })),
         structure,
@@ -196,12 +208,16 @@ export class IngestionWorker {
         'Document processing failed'
       )
       
-      // Clean up temporary file on error
-      try {
-        const fs = require('fs').promises
-        await fs.unlink(filePath)
-      } catch (cleanupError) {
-        // Ignore cleanup errors
+      // Only clean up temp file on final attempt — preserve for BullMQ retries
+      const maxAttempts = job.opts?.attempts || 3
+      if (job.attemptsMade >= maxAttempts) {
+        try {
+          const fs = require('fs').promises
+          await fs.unlink(filePath)
+          logger.info({ filePath }, 'Temp file cleaned up after final attempt')
+        } catch (cleanupError) {
+          // Ignore cleanup errors
+        }
       }
 
       throw error
@@ -250,7 +266,7 @@ export class IngestionWorker {
       
       if (chunkText.trim().length > 0) {
         chunks.push({
-          id: `chunk_${chunkIndex}`,
+          id: `${Date.now()}_chunk_${chunkIndex}`,
           content: chunkText.trim(),
           index: chunkIndex
         })
@@ -275,8 +291,8 @@ export class IngestionWorker {
         where: { id: documentData.id },
         data: {
           content: documentData.content,
-          status: 'COMPLETED',
-          embeddingStatus: 'COMPLETED',
+          status: DocumentStatus.PROCESSED,
+          embeddingStatus: EmbeddingStatus.COMPLETED,
           metadata: documentData.metadata ?? {},
           updatedAt: new Date(),
         },
@@ -304,45 +320,44 @@ export class IngestionWorker {
       }
 
       // 3. Upsert chunks into ChromaDB for vector search
+      // IMPORTANT: Use the ChromaDB JS client with DefaultEmbeddingFunction
+      // so that document embeddings match the query embeddings in RetrievalService.
+      // We pass text (documents) instead of raw Ollama embeddings — the client
+      // generates consistent embeddings using the same model as retrieval queries.
       const collectionName = `workspace_${documentData.workspaceId}_documents`
+      const chromaClient = new ChromaClient({ path: chromaUrl })
+      const embedder = new DefaultEmbeddingFunction()
 
-      // Ensure collection exists
-      try {
-        await axios.post(
-          `${chromaUrl}/api/v1/collections`,
-          { name: collectionName, get_or_create: true },
-          { timeout: 10000, headers: { 'Content-Type': 'application/json' } }
-        )
-      } catch (err: any) {
-        // 409 means it already exists — that's fine
-        if (err?.response?.status !== 409) throw err
-      }
+      const collection = await chromaClient.getOrCreateCollection({
+        name: collectionName,
+        embeddingFunction: embedder,
+      } as any)
 
-      // Add chunk vectors
-      const ids = documentData.chunks.map((c: any) => c.id)
-      const embeddings = documentData.chunks.map((c: any) => c.embedding)
+      // Build chunk data with globally unique IDs (documentId prefix prevents collisions)
+      const ids = documentData.chunks.map((c: any) => `${documentData.id}_${c.id}`)
       const documents = documentData.chunks.map((c: any) => c.content)
       const metadatas = documentData.chunks.map((c: any, i: number) => ({
         documentId: documentData.id,
         workspaceId: documentData.workspaceId,
         title: documentData.title,
         mimeType: documentData.mimeType,
-        personId: documentData.personId || null,
+        personId: documentData.personId || '',
         chunkIndex: i,
         totalChunks: documentData.chunks.length,
-        embeddingModel: c.embeddingModel || 'nomic-embed-text',
+        embeddingModel: 'default',
         extractedAt: new Date().toISOString(),
         chunkSize: c.content.length,
         overlapSize: 200,
       }))
 
-      await axios.post(
-        `${chromaUrl}/api/v1/collections/${collectionName}/upsert`,
-        { ids, embeddings, documents, metadatas },
-        { timeout: 60000, headers: { 'Content-Type': 'application/json' } }
-      )
+      // Let ChromaDB client generate embeddings from text (matches retrieval query model)
+      await collection.upsert({
+        ids,
+        documents,
+        metadatas,
+      })
 
-      logger.info({ documentId: documentData.id, workspaceId: documentData.workspaceId, chunkCount: documentData.chunks.length }, 'Chunks upserted to ChromaDB')
+      logger.info({ documentId: documentData.id, workspaceId: documentData.workspaceId, chunkCount: documentData.chunks.length }, 'Chunks upserted to ChromaDB via client (DefaultEmbeddingFunction)')
     } finally {
       await prisma.$disconnect()
     }
