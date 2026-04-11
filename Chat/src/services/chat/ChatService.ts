@@ -24,18 +24,16 @@ const CHAT_EVIDENCE_THRESHOLDS = {
 }
 
 const REFUSAL_PREFIX_OPTIONS = [
-  "I don't have that documented in the materials I was given.",
-  'That detail isn\'t in the records I have available.',
-  'I can\'t find that in the materials I was given.',
-  "I don't recall that from the information I have.",
-  "That's not something I have documented in my memories.",
-  "I don't have any record of that in the materials I was given.",
-  "That detail isn't mentioned in the information I have access to.",
-  "I don't remember that being documented in my materials.",
-  "I don't have that information in the records available to me.",
-  "That's not something I can find in the materials I was given.",
-  "I don't have any documentation about that.",
-  "That isn't mentioned in the memories and facts I have.",
+  "I can't quite place that right now.",
+  "I'm drawing a blank on that detail right now.",
+  "I don't remember that clearly at the moment.",
+  "That's not coming back to me right now.",
+  "My memory is fuzzy on that one.",
+  "I can't quite recall that just now.",
+  "That detail is slipping my mind right now.",
+  "I'm not certain about that memory.",
+  "I wish I remembered that more clearly.",
+  "Getting older does this to me sometimes — it's not coming to me right now.",
 ]
 const NORMALIZED_REFUSAL_PREFIX_OPTIONS = REFUSAL_PREFIX_OPTIONS.map(option => option.toLowerCase())
 
@@ -832,10 +830,10 @@ export class ChatServiceImpl implements ChatService {
     }
 
     if (this.isStoryPrompt(userMessage)) {
-      return `From what I have documented, ${topEvidence.join(' ')}`
+      return `What I do remember is this: ${topEvidence.join(' ')}`
     }
 
-    return `From what I have documented: ${topEvidence[0]}`
+    return `What I do remember is: ${topEvidence[0]}`
   }
 
   private condenseEvidence(content: string, maxLength: number = 220): string {

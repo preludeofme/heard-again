@@ -318,6 +318,7 @@ export class DocumentParserFactory {
         case 'application/pdf':
           return await parser.parsePDF(buffer)
         case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+        case 'application/msword':
           return await parser.parseDOCX(buffer)
         case 'text/plain':
           return await parser.parseText(buffer)
