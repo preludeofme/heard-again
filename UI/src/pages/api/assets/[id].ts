@@ -149,6 +149,25 @@ export default apiHandler({
     })
     if (!asset) throw Errors.notFound('Asset')
 
+    const chatServiceUrl = process.env.CHAT_SERVICE_URL
+    const chatServiceSecret = process.env.CHAT_SERVICE_SECRET
+
+    if (chatServiceUrl && chatServiceSecret) {
+      fetch(`${chatServiceUrl}/api/ingestion/delete`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-chat-service-secret': chatServiceSecret,
+        },
+        body: JSON.stringify({
+          assetId,
+          workspaceId: user.workspaceId,
+        }),
+      }).catch(err =>
+        logger.warn({ assetId, err: err?.message }, 'RAG ingestion delete trigger failed (non-fatal)')
+      )
+    }
+
     await prisma.asset.delete({ where: { id: assetId } })
 
     return successResponse(res, { deleted: true })

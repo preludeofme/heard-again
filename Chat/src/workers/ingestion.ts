@@ -68,7 +68,7 @@ export class IngestionWorker {
   }
 
   private async processJob(job: any): Promise<any> {
-    const { documentId, filePath, workspaceId, mimeType, title, config, traceId } = job.data
+    const { documentId, filePath, workspaceId, mimeType, title, personId, config, traceId } = job.data
     const startMs = Date.now()
 
     logger.info({ jobId: job.id, documentId, workspaceId, mimeType, title, traceId }, 'RAG ingestion job started')
@@ -143,6 +143,7 @@ export class IngestionWorker {
         title,
         content: textResult.text,
         mimeType,
+        personId: personId || null,
         chunks: chunks.map((chunk, index) => ({
           ...chunk,
           embedding: embeddings[index],
@@ -326,6 +327,7 @@ export class IngestionWorker {
         workspaceId: documentData.workspaceId,
         title: documentData.title,
         mimeType: documentData.mimeType,
+        personId: documentData.personId || null,
         chunkIndex: i,
         totalChunks: documentData.chunks.length,
         embeddingModel: c.embeddingModel || 'nomic-embed-text',

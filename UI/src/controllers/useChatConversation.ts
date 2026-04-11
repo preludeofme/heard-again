@@ -284,60 +284,107 @@ export function useChatConversation({
 
       let assistantMessage: ConversationMessage | null = null
       let fullContent = ''
+      let sseBuffer = ''
+
+      const processSseEvent = async (eventBlock: string) => {
+        const lines = eventBlock
+          .split('\n')
+          .map((line) => line.trimEnd())
+          .filter(Boolean)
+
+        const dataLines = lines
+          .filter((line) => line.startsWith('data: '))
+          .map((line) => line.slice(6))
+
+        if (dataLines.length === 0) {
+          return
+        }
+
+        const data = JSON.parse(dataLines.join('\n'))
+
+        if (data.type === 'start') {
+          assistantMessage = {
+            id: data.messageId || Date.now().toString(),
+            sender: 'LegacySubject',
+            timestamp: new Date(),
+            content: '',
+            state: 'sent',
+          }
+
+          setState(prev => ({
+            ...prev,
+            messages: [...prev.messages, assistantMessage!],
+            talkState: 'typing',
+          }))
+          return
+        }
+
+        if (data.type === 'chunk' && assistantMessage) {
+          fullContent += data.content
+          assistantMessage.content = fullContent
+
+          setState(prev => ({
+            ...prev,
+            messages: prev.messages.map(msg =>
+              msg.id === assistantMessage!.id ? assistantMessage! : msg
+            ),
+          }))
+          return
+        }
+
+        if (data.type === 'end') {
+          if (data.filteredContent && assistantMessage) {
+            fullContent = data.filteredContent
+            assistantMessage.content = fullContent
+
+            setState(prev => ({
+              ...prev,
+              messages: prev.messages.map(msg =>
+                msg.id === assistantMessage!.id ? assistantMessage! : msg
+              ),
+            }))
+          }
+
+          setState(prev => ({
+            ...prev,
+            isLoading: false,
+            talkState: 'idle',
+          }))
+
+          if (onAssistantMessage && fullContent) {
+            await onAssistantMessage(fullContent)
+          }
+          return
+        }
+
+        if (data.type === 'error') {
+          throw new Error(data.error || 'Stream error')
+        }
+      }
 
       while (true) {
         const { done, value } = await reader.read()
-        if (done) break
-
-        const chunk = decoder.decode(value)
-        const lines = chunk.split('\n')
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            try {
-              const data = JSON.parse(line.slice(6))
-              
-              if (data.type === 'start') {
-                assistantMessage = {
-                  id: data.messageId || Date.now().toString(),
-                  sender: 'LegacySubject',
-                  timestamp: new Date(),
-                  content: '',
-                  state: 'sent',
-                }
-                
-                setState(prev => ({
-                  ...prev,
-                  messages: [...prev.messages, assistantMessage!],
-                  talkState: 'typing',
-                }))
-              } else if (data.type === 'chunk' && assistantMessage) {
-                fullContent += data.content
-                assistantMessage.content = fullContent
-                
-                setState(prev => ({
-                  ...prev,
-                  messages: prev.messages.map(msg => 
-                    msg.id === assistantMessage!.id ? assistantMessage! : msg
-                  ),
-                }))
-              } else if (data.type === 'end') {
-                setState(prev => ({
-                  ...prev,
-                  isLoading: false,
-                  talkState: 'idle',
-                }))
-
-                if (onAssistantMessage && fullContent) {
-                  await onAssistantMessage(fullContent)
-                }
-                break
-              } else if (data.type === 'error') {
-                throw new Error(data.error || 'Stream error')
-              }
-            } catch (parseError) {
-              console.error('Failed to parse chunk:', parseError)
+        if (done) {
+          // Flush any trailing buffered event block (no-op if incomplete/empty)
+          if (sseBuffer.includes('\n\n')) {
+            const events = sseBuffer.split('\n\n')
+            sseBuffer = events.pop() || ''
+            for (const eventBlock of events) {
+              await processSseEvent(eventBlock)
             }
+          }
+          break
+        }
+
+        sseBuffer += decoder.decode(value, { stream: true })
+        const events = sseBuffer.split('\n\n')
+        sseBuffer = events.pop() || ''
+
+        for (const eventBlock of events) {
+          try {
+            await processSseEvent(eventBlock)
+          } catch (parseError) {
+            console.error('Failed to parse chunk:', parseError)
           }
         }
       }

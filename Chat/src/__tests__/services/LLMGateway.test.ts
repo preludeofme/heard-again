@@ -32,6 +32,32 @@ describe('LLMGatewayImpl.validateResponse', () => {
     expect(validated.isValid).toBe(false)
   })
 
+  it('allows uncertainty style language without forcing invalid response', async () => {
+    const response = "I can't quite recall the exact year, but I remember that season fondly."
+
+    const validated = await gateway.validateResponse(response, {
+      documents: ['Diary entry: I remember that season fondly.'],
+      knownFacts: [],
+    })
+
+    expect(validated.violations.some(v => v.type === 'uncertainty_style')).toBe(true)
+    expect(validated.isValid).toBe(true)
+  })
+
+  it('treats low-specificity unsupported paraphrases as medium severity', async () => {
+    const response = 'Life felt busy and joyful during those years.'
+
+    const validated = await gateway.validateResponse(response, {
+      documents: ['Journal: Those years were joyful overall.'],
+      knownFacts: [],
+    })
+
+    const unsupported = validated.violations.find(v => v.type === 'unsupported_claim')
+    if (unsupported) {
+      expect(unsupported.severity).toBe('medium')
+    }
+  })
+
   it('does not flag supported claims found in retrieved documents', async () => {
     const response = 'I grew up in rural Iowa and worked on the family farm for many years.'
 
