@@ -1,7 +1,12 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { VoiceIntegrationServiceImpl, VoiceIntegrationService } from '@/services/voice/VoiceIntegrationService'
 import { PersonaServiceImpl } from '@/services/persona/PersonaService'
-import { PersonaRepositoryImpl } from '@/services/persona/PersonaRepository'
+import { DatabasePersonaRepository } from '@/services/persona/DatabasePersonaRepository'
+import { StyleExtractorImpl } from '@/services/persona/StyleExtractor'
+import { PersonService } from '@/services/persona/PersonService'
+import { LLMGatewayImpl } from '@/services/llm/LLMGateway'
+import { PrismaDocumentRepository } from '@/repositories/DocumentRepository'
+import { prisma } from '@/lib/prisma'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { method } = req
@@ -15,19 +20,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
   }
 
-  // Initialize services
+  // Initialize services with database backend
   const voiceIntegration: VoiceIntegrationService = new VoiceIntegrationServiceImpl()
-  const personaService = new PersonaServiceImpl(
-    new PersonaRepositoryImpl(),
-    // TODO: Add proper service initialization
-    {} as any,
-    {} as any
-  )
+  const llmGateway = new LLMGatewayImpl()
+  const styleExtractor = new StyleExtractorImpl(llmGateway)
+  const documentRepository = new PrismaDocumentRepository()
+  const personaRepository = new DatabasePersonaRepository(prisma)
+  const personService = new PersonService()
+  const personaService = new PersonaServiceImpl(personaRepository, styleExtractor, documentRepository, personService)
 
   try {
     switch (method) {
       case 'POST':
-        await handleSynthesis(req, res, voiceIntegration, personaService)
+        await handleSynthesis(req, res, voiceIntegration, personaService, workspaceId)
         break
       default:
         res.setHeader('Allow', ['POST'])
@@ -49,7 +54,8 @@ async function handleSynthesis(
   req: NextApiRequest,
   res: NextApiResponse,
   voiceIntegration: VoiceIntegrationService,
-  personaService: PersonaServiceImpl
+  personaService: PersonaServiceImpl,
+  workspaceId: string
 ) {
   const { text, personaId, options } = req.body
 
@@ -69,7 +75,7 @@ async function handleSynthesis(
 
   try {
     // Get persona profile
-    const personaProfile = await personaService.getPersonaProfile(personaId)
+    const personaProfile = await personaService.getPersonaProfile(personaId, workspaceId)
     if (!personaProfile) {
       return res.status(404).json({
         success: false,

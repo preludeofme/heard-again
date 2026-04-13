@@ -39,6 +39,10 @@ export class EmbeddingGeneratorImpl implements EmbeddingGenerator {
     }
   }
 
+  async generateEmbeddings(texts: string[]): Promise<number[][]> {
+    return this.generateEmbeddingsFromVectors(texts)
+  }
+
   async generateBatchEmbeddings(texts: string[]): Promise<Embedding[]> {
     const startTime = Date.now()
     const vectors = await this.generateEmbeddingsFromVectors(texts)

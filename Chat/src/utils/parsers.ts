@@ -281,8 +281,7 @@ export class DocumentParserFactory {
         parser = DOCXParser
         break
       case 'application/msword':
-        // For legacy .doc files, we might need a different approach
-        parser = null // TODO: Implement DOC parser
+        parser = DOCXParser // mammoth handles many .doc files; TextParser fallback applies if it fails
         break
       case 'text/plain':
         parser = TextParser
@@ -319,6 +318,7 @@ export class DocumentParserFactory {
         case 'application/pdf':
           return await parser.parsePDF(buffer)
         case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+        case 'application/msword':
           return await parser.parseDOCX(buffer)
         case 'text/plain':
           return await parser.parseText(buffer)

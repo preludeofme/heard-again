@@ -1,9 +1,21 @@
 import { NextApiRequest, NextApiResponse } from 'next'
+import { getAuthUserWithWorkspace } from '@/lib/auth-helpers'
+import { AppError } from '@/lib/api-helpers'
 
 // Proxy to chat system API
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const chatSystemUrl = process.env.CHAT_SYSTEM_URL || 'http://localhost:4778'
-  
+
+  let user: Awaited<ReturnType<typeof getAuthUserWithWorkspace>>
+  try {
+    user = await getAuthUserWithWorkspace(req, res)
+  } catch (err) {
+    if (err instanceof AppError) {
+      return res.status(err.statusCode).json({ success: false, error: err.message })
+    }
+    return res.status(401).json({ success: false, error: 'Unauthorized' })
+  }
+
   try {
     const { sessionId } = req.query
     const url = `${chatSystemUrl}/api/chat/messages${sessionId ? `?sessionId=${sessionId}` : ''}`
@@ -12,8 +24,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       method: req.method,
       headers: {
         'Content-Type': 'application/json',
-        'x-workspace-id': req.headers['x-workspace-id'] as string,
-        'x-user-id': req.headers['x-user-id'] as string,
+        'Authorization': `Bearer ${process.env.CHAT_SERVICE_SECRET}`,
+        'x-workspace-id': user.workspaceId,
+        'x-user-id': user.id,
       },
       body: req.method !== 'GET' ? JSON.stringify(req.body) : undefined,
     })

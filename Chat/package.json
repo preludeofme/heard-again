@@ -12,10 +12,14 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "type-check": "tsc --noEmit",
+    "eval:baseline": "node scripts/run-eval.cjs --benchmark evals/benchmark.v1.json --baseline evals/responses/baseline.current.json --output-dir evals/results",
+    "eval:compare": "node scripts/run-eval.cjs --benchmark evals/benchmark.v1.json --baseline evals/responses/baseline.current.json --candidate evals/responses/candidate.example.json --output-dir evals/results",
+    "eval:go-no-go": "node scripts/eval-go-no-go.cjs --baseline evals/results/baseline-current.scorecard.json --candidate evals/results/candidate-example.scorecard.json --out evals/results/release-candidate.go-no-go.json",
+    "eval:release-candidate": "npm run eval:compare && npm run eval:go-no-go",
     "migration:dev": "prisma migrate dev",
     "migration:deploy": "prisma migrate deploy",
     "migration:generate": "prisma generate",
-    "ingestion:worker": "ts-node src/workers/ingestion-worker.ts",
+    "ingestion:worker": "tsx -r tsconfig-paths/register src/workers/worker-server.ts",
     "docker:build": "docker build -t chat-system -f docker/Dockerfile .",
     "docker:run": "docker-compose -f docker/docker-compose.yml up"
   },
@@ -27,6 +31,7 @@
     "axios": "^1.14.0",
     "bullmq": "^4.0.0",
     "chromadb": "^1.7.0",
+    "chromadb-default-embed": "^2.14.0",
     "express-rate-limit": "^6.10.0",
     "helmet": "^7.0.0",
     "ioredis": "^5.3.0",
@@ -54,7 +59,9 @@
     "jest": "^29.5.0",
     "prisma": "^5.0.0",
     "ts-jest": "^29.1.0",
-    "ts-node": "^10.9.0"
+    "ts-node": "^10.9.0",
+    "tsconfig-paths": "^3.15.0",
+    "tsx": "^4.21.0"
   },
   "engines": {
     "node": ">=18.0.0"

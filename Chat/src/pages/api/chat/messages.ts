@@ -1,10 +1,13 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { ServiceFactory } from '@/services/index'
+import { verifyServiceToken } from '@/utils/auth-guard'
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  if (!verifyServiceToken(req, res)) return
+
   const { sessionId } = req.query
 
   if (!sessionId || typeof sessionId !== 'string') {
@@ -26,7 +29,7 @@ export default async function handler(
 
     switch (req.method) {
       case 'GET':
-        return await handleGetMessages(chatService, sessionId, req.query, res)
+        return await handleGetMessages(chatService, sessionId, req.query, res, userId, workspaceId)
       case 'POST':
         return await handleSendMessage(chatService, sessionId, workspaceId, userId, req.body, res)
       default:
@@ -45,19 +48,22 @@ async function handleGetMessages(
   chatService: any,
   sessionId: string,
   query: any,
-  res: NextApiResponse
+  res: NextApiResponse,
+  userId: string,
+  workspaceId: string
 ) {
   try {
     const limit = parseInt(query.limit as string) || 50
     const offset = parseInt(query.offset as string) || 0
 
-    // Verify session exists
-    const session = await chatService.getSession(sessionId)
+    // Verify session exists and belongs to this workspace (SEC-3).
+    // userId ownership is enforced at the UI proxy layer; here we scope to workspace only.
+    const session = await chatService.getSession(sessionId, undefined, workspaceId)
     if (!session) {
       return res.status(404).json({ error: 'Chat session not found' })
     }
 
-    const messages = await chatService.getHistory(sessionId, limit, offset)
+    const messages = await chatService.getHistory(sessionId, limit, offset, workspaceId)
     
     res.status(200).json({
       success: true,
@@ -107,20 +113,19 @@ async function handleSendMessage(
       })
     }
 
-    // Verify session exists
-    const session = await chatService.getSession(sessionId)
+    // Verify session exists and belongs to this user/workspace (SEC-3)
+    const session = await chatService.getSession(sessionId, userId, workspaceId)
     if (!session) {
       return res.status(404).json({ error: 'Chat session not found' })
     }
 
-    // Send message
+    // Send message — strict options allowlist (SEC-7)
     const response = await chatService.sendMessage({
       sessionId,
       message: message.trim(),
       options: {
-        maxRetrievedDocuments: options?.maxRetrievedDocuments || 5,
-        temperature: options?.temperature || 0.7,
-        ...options
+        maxRetrievedDocuments: Math.min(Math.max(Number(options?.maxRetrievedDocuments) || 5, 1), 10),
+        temperature: Math.min(Math.max(Number(options?.temperature) || 0.7, 0.0), 1.0)
       }
     })
 

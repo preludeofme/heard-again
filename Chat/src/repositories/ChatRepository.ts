@@ -1,8 +1,6 @@
 import { ChatRepository } from '@/services/chat/ChatService'
 import { ChatSession, ChatMessage } from '@/types/chat'
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
+import { prisma } from '@/lib/prisma'
 
 export class PrismaChatRepository implements ChatRepository {
   async createSession(session: ChatSession): Promise<ChatSession> {
@@ -21,7 +19,7 @@ export class PrismaChatRepository implements ChatRepository {
     return this.mapDbSessionToChatSession(dbSession)
   }
 
-  async getSession(sessionId: string): Promise<ChatSession | null> {
+  async getSession(sessionId: string, userId?: string, workspaceId?: string): Promise<ChatSession | null> {
     const dbSession = await (prisma as any).chatSession.findUnique({
       where: { id: sessionId },
       include: {
@@ -32,6 +30,10 @@ export class PrismaChatRepository implements ChatRepository {
     })
 
     if (!dbSession) return null
+
+    // Ownership check — surface as null (404) to prevent enumeration
+    if (userId && dbSession.userId !== userId) return null
+    if (workspaceId && dbSession.workspaceId !== workspaceId) return null
 
     return this.mapDbSessionToChatSession(dbSession)
   }
@@ -83,7 +85,28 @@ export class PrismaChatRepository implements ChatRepository {
     return this.mapDbMessageToChatMessage(dbMessage)
   }
 
-  async getMessages(sessionId: string, limit = 50, offset = 0): Promise<ChatMessage[]> {
+  async updateMessage(messageId: string, content: string, metadata?: any): Promise<ChatMessage | null> {
+    const existing = await (prisma as any).chatMessage.findUnique({ where: { id: messageId } })
+    if (!existing) return null
+
+    const dbMessage = await (prisma as any).chatMessage.update({
+      where: { id: messageId },
+      data: {
+        content,
+        metadata: metadata ?? existing.metadata
+      }
+    })
+
+    return this.mapDbMessageToChatMessage(dbMessage)
+  }
+
+  async getMessages(sessionId: string, limit = 50, offset = 0, userId?: string, workspaceId?: string): Promise<ChatMessage[]> {
+    // Verify session ownership before returning messages
+    if (userId || workspaceId) {
+      const session = await this.getSession(sessionId, userId, workspaceId)
+      if (!session) return []
+    }
+
     const dbMessages = await (prisma as any).chatMessage.findMany({
       where: { sessionId },
       orderBy: { createdAt: 'asc' },

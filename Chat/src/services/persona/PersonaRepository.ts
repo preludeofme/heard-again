@@ -1,13 +1,13 @@
 import { PersonaProfile, PersonaFact, Relationship } from '@/types'
 
 export interface PersonaRepository {
-  getPersonaProfile(personId: string): Promise<PersonaProfile | null>
+  getPersonaProfile(personId: string, workspaceId: string): Promise<PersonaProfile | null>
   createPersonaProfile(profile: PersonaProfile): Promise<PersonaProfile>
   updatePersonaProfile(personId: string, updates: Partial<PersonaProfile>): Promise<PersonaProfile>
   deletePersonaProfile(personId: string): Promise<void>
   listPersonaProfiles(workspaceId: string): Promise<PersonaProfile[]>
-  getPersonaFacts(personId: string): Promise<PersonaFact[]>
-  getPersonaRelationships(personId: string): Promise<Relationship[]>
+  getPersonaFacts(personId: string, workspaceId: string): Promise<PersonaFact[]>
+  getPersonaRelationships(personId: string, workspaceId: string): Promise<Relationship[]>
 }
 
 export class PersonaRepositoryImpl implements PersonaRepository {
@@ -16,8 +16,10 @@ export class PersonaRepositoryImpl implements PersonaRepository {
   private facts: Map<string, PersonaFact[]> = new Map()
   private relationships: Map<string, Relationship[]> = new Map()
 
-  async getPersonaProfile(personId: string): Promise<PersonaProfile | null> {
-    return this.profiles.get(personId) || null
+  async getPersonaProfile(personId: string, workspaceId: string): Promise<PersonaProfile | null> {
+    const profile = this.profiles.get(personId)
+    // Defense-in-depth: ensure profile belongs to the specified workspace
+    return profile && profile.workspaceId === workspaceId ? profile : null
   }
 
   async createPersonaProfile(profile: PersonaProfile): Promise<PersonaProfile> {
@@ -64,12 +66,14 @@ export class PersonaRepositoryImpl implements PersonaRepository {
     return Array.from(this.profiles.values()).filter(profile => profile.workspaceId === workspaceId)
   }
 
-  async getPersonaFacts(personId: string): Promise<PersonaFact[]> {
-    return this.facts.get(personId) || []
+  async getPersonaFacts(personId: string, workspaceId: string): Promise<PersonaFact[]> {
+    const profile = await this.getPersonaProfile(personId, workspaceId)
+    return profile ? this.facts.get(personId) || [] : []
   }
 
-  async getPersonaRelationships(personId: string): Promise<Relationship[]> {
-    return this.relationships.get(personId) || []
+  async getPersonaRelationships(personId: string, workspaceId: string): Promise<Relationship[]> {
+    const profile = await this.getPersonaProfile(personId, workspaceId)
+    return profile ? this.relationships.get(personId) || [] : []
   }
 
   // Helper methods for testing and development

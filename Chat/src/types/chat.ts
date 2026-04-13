@@ -1,17 +1,8 @@
 import type { PersonaProfile } from './persona'
 import type { RetrievedDocument, SearchContext } from './retrieval'
+export { DocumentType } from './retrieval'
 
 // Core chat-related types for the Phase 1 Chat System
-
-export enum DocumentType {
-  STORY = 'story',
-  LETTER = 'letter',
-  DIARY = 'diary',
-  PHOTO_CAPTION = 'photo_caption',
-  AUDIO_TRANSCRIPT = 'audio_transcript',
-  DOCUMENT = 'document',
-  OTHER = 'other'
-}
 
 export interface ChatSession {
   id: string
@@ -93,4 +84,74 @@ export interface StreamChunk {
   processingTime?: number
   tokensUsed?: number
   error?: string
+}
+
+export type PersonaResponseMode =
+  | 'FACT_SUPPORTED'
+  | 'STORY_SUPPORTED'
+  | 'QUOTE_SUPPORTED'
+  | 'INSUFFICIENT_EVIDENCE'
+
+export interface ResponseCitation {
+  documentId: string
+  chunkId: string
+  title: string
+  excerpt: string
+  relevanceScore: number
+}
+
+export interface ValidationViolationSummary {
+  type: string
+  severity: 'low' | 'medium' | 'high'
+  description: string
+}
+
+export interface ResponseValidationSummary {
+  isValid: boolean
+  violations: ValidationViolationSummary[]
+}
+
+export interface EvidenceThresholds {
+  minTopScore: number
+  minAvgTop3: number
+  minSources: number
+}
+
+export interface EvidencePacketItem {
+  documentId: string
+  chunkId: string
+  title: string
+  content: string
+  relevanceScore: number
+  chunkIndex: number
+  totalChunks: number
+  source: string
+}
+
+export interface EvidencePacket {
+  workspaceId: string
+  personId: string
+  query: string
+  retrievedAt: Date
+  topK: number
+  items: EvidencePacketItem[]
+  thresholds: EvidenceThresholds
+  passed: boolean
+}
+
+export interface StrictAssistantEnvelope {
+  mode: PersonaResponseMode
+  answer: string
+  citations: ResponseCitation[]
+  confidence: number
+  validation: ResponseValidationSummary
+}
+
+export interface StrictChatResponse extends ChatResponse {
+  envelope: StrictAssistantEnvelope
+  metadata: ChatResponse['metadata'] & {
+    evidencePassed: boolean
+    refusalApplied: boolean
+    responseMode: PersonaResponseMode
+  }
 }

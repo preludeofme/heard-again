@@ -1,7 +1,12 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { VoiceIntegrationServiceImpl, VoiceIntegrationService } from '@/services/voice/VoiceIntegrationService'
 import { PersonaServiceImpl } from '@/services/persona/PersonaService'
-import { PersonaRepositoryImpl } from '@/services/persona/PersonaRepository'
+import { DatabasePersonaRepository } from '@/services/persona/DatabasePersonaRepository'
+import { StyleExtractorImpl } from '@/services/persona/StyleExtractor'
+import { PersonService } from '@/services/persona/PersonService'
+import { LLMGatewayImpl } from '@/services/llm/LLMGateway'
+import { PrismaDocumentRepository } from '@/repositories/DocumentRepository'
+import { prisma } from '@/lib/prisma'
 
 export const config = {
   api: {
@@ -22,19 +27,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
   }
 
-  // Initialize services
+  // Initialize services with database backend
   const voiceIntegration: VoiceIntegrationService = new VoiceIntegrationServiceImpl()
-  const personaService = new PersonaServiceImpl(
-    new PersonaRepositoryImpl(),
-    // TODO: Add proper service initialization
-    {} as any,
-    {} as any
-  )
+  const llmGateway = new LLMGatewayImpl()
+  const styleExtractor = new StyleExtractorImpl(llmGateway)
+  const documentRepository = new PrismaDocumentRepository()
+  const personaRepository = new DatabasePersonaRepository(prisma)
+  const personService = new PersonService()
+  const personaService = new PersonaServiceImpl(personaRepository, styleExtractor, documentRepository, personService)
 
   try {
     switch (method) {
       case 'POST':
-        await handleStreamingSynthesis(req, res, voiceIntegration, personaService)
+        await handleStreamingSynthesis(req, res, voiceIntegration, personaService, workspaceId)
         break
       default:
         res.setHeader('Allow', ['POST'])
@@ -56,7 +61,8 @@ async function handleStreamingSynthesis(
   req: NextApiRequest,
   res: NextApiResponse,
   voiceIntegration: VoiceIntegrationService,
-  personaService: PersonaServiceImpl
+  personaService: PersonaServiceImpl,
+  workspaceId: string
 ) {
   // Parse request body manually since we disabled bodyParser
   const body = await parseRequestBody(req)
@@ -92,7 +98,7 @@ async function handleStreamingSynthesis(
       }
     } else {
       // Select voice profile based on persona
-      const personaProfile = await personaService.getPersonaProfile(personaId)
+      const personaProfile = await personaService.getPersonaProfile(personaId, workspaceId)
       if (!personaProfile) {
         return res.status(404).json({
           success: false,

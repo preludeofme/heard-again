@@ -10,7 +10,6 @@ export { useMembershipController } from './useMembershipController'
 // Refactored focused hooks (Finding 5.4: Split useVoiceLabController)
 export { useVoiceProfiles } from './useVoiceProfiles'
 export { useVoiceTraining } from './useVoiceTraining'
-export { useDocumentUpload } from './useDocumentUpload'
 export { useVoiceSynthesis } from './useVoiceSynthesis'
 export { useConversation } from './useConversation'
 export { useVoicePlayback } from './useVoicePlayback'

@@ -7,6 +7,9 @@ export interface PersonaProfile {
   version: number
   status: 'draft' | 'active' | 'archived'
   
+  // Person display information
+  displayName?: string
+  
   // Extracted from documents
   writingStyle: {
     vocabulary: string[]
@@ -86,12 +89,22 @@ export interface EmotionIndicator {
   examples: string[]
 }
 
+export interface PersonaFactProvenance {
+  workspaceId: string
+  personId: string
+  documentId: string
+  documentTitle?: string
+  excerpt?: string
+  capturedAt: Date
+}
+
 export interface PersonaFact {
   id: string
   type: 'biographical' | 'relationship' | 'preference' | 'experience' | 'achievement'
   fact: string
   confidence: number // 0-1 scale
   sources: string[] // document IDs where this fact was found
+  provenance?: PersonaFactProvenance[]
   context?: string
   verified: boolean
 }
@@ -148,12 +161,12 @@ export interface PersonaGenerationOptions {
 }
 
 export interface PersonaService {
-  getPersonaProfile(personId: string): Promise<PersonaProfile | null>
+  getPersonaProfile(personId: string, workspaceId: string): Promise<PersonaProfile | null>
   createPersonaProfile(profile: PersonaProfile): Promise<PersonaProfile>
   updatePersonaProfile(personId: string, updates: PersonaUpdateRequest): Promise<PersonaProfile>
   deletePersonaProfile(personId: string): Promise<void>
   listPersonaProfiles(workspaceId: string): Promise<PersonaProfile[]>
-  generatePersonaProfile(personId: string, options: PersonaGenerationOptions): Promise<PersonaProfile>
+  generatePersonaProfile(personId: string, workspaceId: string, options: PersonaGenerationOptions): Promise<PersonaProfile>
 }
 
 export interface StyleExtractor {

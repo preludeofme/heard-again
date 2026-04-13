@@ -22,6 +22,19 @@ const nextConfig = {
   async headers() {
     return [
       {
+        // Allow the document preview iframe to render within the same origin.
+        // Must come before the wildcard so Next.js applies both, with this
+        // specific rule's values winning for matching header keys.
+        source: '/api/assets/:id/preview',
+        headers: [
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+          {
+            key: 'Content-Security-Policy',
+            value: "default-src 'none'; style-src 'unsafe-inline'; img-src data: blob:; frame-ancestors 'self';",
+          },
+        ],
+      },
+      {
         source: '/:path*',
         headers: [
           {

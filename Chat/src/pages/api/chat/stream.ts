@@ -1,10 +1,19 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { ServiceFactory } from '@/services'
+import { verifyServiceToken } from '@/utils/auth-guard'
+
+// Allow long-running SSE streams (LLM generation + validation can exceed 60s)
+export const config = {
+  api: { bodyParser: true, responseLimit: false },
+  maxDuration: 600,
+}
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  if (!verifyServiceToken(req, res)) return
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
@@ -46,17 +55,25 @@ export default async function handler(
       })
     }
 
+    // Disable socket timeouts so the SSE stream survives long pauses
+    // (post-stream validation + DB update can take several seconds).
+    req.socket.setTimeout(0)
+    req.socket.setKeepAlive(true)
+
     // Set headers for Server-Sent Events
     res.setHeader('Content-Type', 'text/event-stream')
-    res.setHeader('Cache-Control', 'no-cache')
+    res.setHeader('Cache-Control', 'no-cache, no-transform')
     res.setHeader('Connection', 'keep-alive')
+    res.setHeader('X-Accel-Buffering', 'no')
     res.setHeader('Access-Control-Allow-Origin', '*')
     res.setHeader('Access-Control-Allow-Headers', 'Cache-Control')
+    res.flushHeaders()
 
     const chatService = ServiceFactory.getChatService()
 
-    // Verify session exists
-    const session = await chatService.getSession(sessionId)
+    // Verify session exists and belongs to this workspace (SEC-3).
+    // userId ownership is enforced at the UI proxy layer; here we scope to workspace only.
+    const session = await chatService.getSession(sessionId, undefined, workspaceId)
     if (!session) {
       res.write(`event: error\ndata: ${JSON.stringify({ error: 'Chat session not found' })}\n\n`)
       res.end()
@@ -70,14 +87,13 @@ export default async function handler(
     res.write(`event: user_message\ndata: ${JSON.stringify({ message: userMessage })}\n\n`)
 
     try {
-      // Stream the response
+      // Stream the response — strict options allowlist (SEC-7)
       const stream = await chatService.streamResponse({
         sessionId,
         message: message.trim(),
         options: {
-          maxRetrievedDocuments: options?.maxRetrievedDocuments || 5,
-          temperature: options?.temperature || 0.7,
-          ...options
+          maxRetrievedDocuments: Math.min(Math.max(Number(options?.maxRetrievedDocuments) || 5, 1), 10),
+          temperature: Math.min(Math.max(Number(options?.temperature) || 0.7, 0.0), 1.0)
         }
       }) as AsyncIterable<any>
 
@@ -85,27 +101,54 @@ export default async function handler(
       let messageId: string | null = null
 
       for await (const chunk of stream) {
-        if (chunk.type === 'start') {
-          messageId = chunk.messageId || null
-          res.write(`event: start\ndata: ${JSON.stringify({ messageId })}\n\n`)
-        } else if (chunk.type === 'chunk') {
-          fullResponse += chunk.content
-          res.write(`event: chunk\ndata: ${JSON.stringify({ content: chunk.content })}\n\n`)
-        } else if (chunk.type === 'metadata') {
-          res.write(`event: metadata\ndata: ${JSON.stringify(chunk.metadata)}\n\n`)
-        } else if (chunk.type === 'end') {
-          // Store the complete assistant message
-          if (messageId && fullResponse) {
-            await chatService.updateAssistantMessage(messageId, fullResponse, chunk.metadata || {})
+        try {
+          if (chunk.type === 'start') {
+            messageId = chunk.messageId || null
+            // Bug-2 fix: include type in data JSON so client can use data.type
+            const data = JSON.stringify({ type: 'start', messageId })
+            res.write(`event: start\ndata: ${data}\n\n`)
+            res.flush()
+          } else if (chunk.type === 'chunk') {
+            fullResponse += chunk.content
+            // Sanitize content to prevent JSON parsing errors
+            const sanitizedContent = chunk.content.replace(/[\u0000-\u001F\u007F-\u009F]/g, '')
+            const data = JSON.stringify({ type: 'chunk', content: sanitizedContent })
+            res.write(`event: chunk\ndata: ${data}\n\n`)
+            res.flush()
+          } else if (chunk.type === 'metadata') {
+            const data = JSON.stringify({ type: 'metadata', ...chunk.metadata })
+            res.write(`event: metadata\ndata: ${data}\n\n`)
+            res.flush()
+          } else if (chunk.type === 'end') {
+            // Use filteredContent if validation found violations; otherwise use the streamed content
+            const contentToStore = chunk.metadata?.filteredContent || fullResponse
+            if (messageId && contentToStore) {
+              await chatService.updateAssistantMessage(messageId, contentToStore, chunk.metadata || {})
+            }
+            const data = JSON.stringify({ 
+              type: 'end',
+              messageId,
+              processingTime: chunk.metadata?.totalProcessingTime,
+              tokensUsed: chunk.metadata?.totalTokens,
+              filteredContent: chunk.metadata?.filteredContent || null
+            })
+            res.write(`event: end\ndata: ${data}\n\n`)
+            res.flush()
+            break
+          } else if (chunk.type === 'error') {
+            const data = JSON.stringify({ type: 'error', error: chunk.error })
+            res.write(`event: error\ndata: ${data}\n\n`)
+            res.flush()
+            break
           }
-          res.write(`event: end\ndata: ${JSON.stringify({ 
-            messageId,
-            processingTime: chunk.processingTime,
-            tokensUsed: chunk.tokensUsed
+        } catch (jsonError) {
+          console.error('Failed to serialize chunk:', chunk, jsonError)
+          res.write(`event: error\ndata: ${JSON.stringify({ 
+            type: 'error', 
+            error: 'Failed to serialize response chunk',
+            details: jsonError instanceof Error ? jsonError.message : 'Unknown error'
           })}\n\n`)
-          break
-        } else if (chunk.type === 'error') {
-          res.write(`event: error\ndata: ${JSON.stringify({ error: chunk.error })}\n\n`)
+          res.flush()
           break
         }
       }
@@ -117,6 +160,7 @@ export default async function handler(
         error: 'Failed to stream response',
         details: streamError instanceof Error ? streamError.message : 'Unknown error'
       })}\n\n`)
+      res.flush()
       res.end()
     }
 

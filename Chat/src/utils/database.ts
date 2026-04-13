@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client'
 
 // Database connection singleton
-class Database {
+export class Database {
   private static instance: PrismaClient | null = null
 
   static getInstance(): PrismaClient {

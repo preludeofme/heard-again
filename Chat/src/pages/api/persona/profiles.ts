@@ -2,18 +2,23 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { PersonaServiceImpl } from '@/services/persona/PersonaService'
 import { StyleExtractorImpl } from '@/services/persona/StyleExtractor'
 import { LLMGatewayImpl } from '@/services/llm/LLMGateway'
-import { DocumentRepositoryImpl } from '@/services/retrieval/RetrievalService'
+import { PrismaDocumentRepository } from '@/repositories/DocumentRepository'
 import { DatabasePersonaRepository } from '@/services/persona/DatabasePersonaRepository'
+import { PersonService } from '@/services/persona/PersonService'
 import { prisma } from '@/lib/prisma'
+import { verifyServiceToken } from '@/utils/auth-guard'
 
 // Initialize services with database backend
 const llmGateway = new LLMGatewayImpl()
 const styleExtractor = new StyleExtractorImpl(llmGateway)
-const documentRepository = new DocumentRepositoryImpl()
+const documentRepository = new PrismaDocumentRepository()
 const personaRepository = new DatabasePersonaRepository(prisma)
-const personaService = new PersonaServiceImpl(personaRepository, styleExtractor, documentRepository)
+const personService = new PersonService()
+const personaService = new PersonaServiceImpl(personaRepository, styleExtractor, documentRepository, personService, llmGateway)
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (!verifyServiceToken(req, res)) return
+
   const { method } = req
   const workspaceId = req.headers['x-workspace-id'] as string
   const userId = req.headers['x-user-id'] as string
@@ -54,9 +59,10 @@ async function handleGetProfiles(req: NextApiRequest, res: NextApiResponse, work
 
   if (personId && typeof personId === 'string') {
     // Get specific persona profile
-    const profile = await personaService.getPersonaProfile(personId)
+    const profile = await personaService.getPersonaProfile(personId, workspaceId)
     
-    if (!profile) {
+    // Ownership check — surface as 404 to prevent enumeration
+    if (!profile || profile.workspaceId !== workspaceId) {
       return res.status(404).json({
         success: false,
         error: 'Persona profile not found'
@@ -94,16 +100,18 @@ async function handleCreateProfile(
   }
 
   const generationOptions = {
+    documentIds: [] as string[],
     minDocumentCount: options?.minDocumentCount || 3,
     maxDocuments: options?.maxDocuments || 10,
     includeRelationships: options?.includeRelationships ?? true,
     extractStyle: options?.extractStyle ?? true,
     extractFacts: options?.extractFacts ?? true,
-    ...options
+    extractRelationships: options?.extractRelationships ?? true,
+    confidenceThreshold: options?.confidenceThreshold || 0.5,
   }
 
   try {
-    const profile = await personaService.generatePersonaProfile(personId, generationOptions)
+    const profile = await personaService.generatePersonaProfile(personId, workspaceId, generationOptions)
     
     return res.status(201).json({
       success: true,

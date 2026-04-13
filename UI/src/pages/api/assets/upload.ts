@@ -28,6 +28,7 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse) {
 
   let fileArray: formidable.File[] | undefined = undefined
   let tempDir: string | undefined = undefined
+  let fields: formidable.Fields | undefined = undefined
   
   try {
     const user = await getAuthUserWithWorkspace(req, res)
@@ -49,7 +50,8 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse) {
     })
 
     try {
-      const [fields, files] = await form.parse(req)
+      const [parsedFields, files] = await form.parse(req)
+      fields = parsedFields
       fileArray = files.file
 
       if (!fileArray || fileArray.length === 0) {
@@ -203,6 +205,35 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse) {
       },
     })
 
+    // Validate personId from form fields against caller's workspace (IDOR guard)
+    let personId: string | null = (fields as any)?.personId?.[0] || null
+    if (personId) {
+      const personBelongsToWorkspace = await prisma.person.findFirst({
+        where: { id: personId, workspaceId: user.workspaceId },
+        select: { id: true },
+      })
+      if (!personBelongsToWorkspace) {
+        personId = null
+        logger.warn({ workspaceId: user.workspaceId }, 'personId does not belong to workspace — ignoring')
+      }
+    }
+
+    // Create UI Document record linking the asset, and optionally a DocumentPerson join
+    // so the /api/assets?personId=... filter can locate this asset.
+    const document = await prisma.document.create({
+      data: {
+        assetId: asset.id,
+        workspaceId: user.workspaceId,
+        title: file.originalFilename || asset.filename,
+        createdById: user.id,
+      },
+    })
+    if (personId) {
+      await prisma.documentPerson.create({
+        data: { documentId: document.id, personId },
+      })
+    }
+
     // Clean up temporary file
     try {
       require('fs').unlinkSync(file.filepath)
@@ -215,6 +246,50 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse) {
       fs.rmSync(tempDir, { recursive: true, force: true })
     } catch (error) {
       console.warn('Failed to clean up temporary directory:', error)
+    }
+
+    // Trigger RAG ingestion in the Chat service for text-extractable document types.
+    // Fire-and-forget — never blocks or fails the upload response.
+    const RAG_EXTRACTABLE_TYPES = new Set([
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/msword',
+      'text/plain',
+      'text/csv',
+      'text/markdown',
+      'image/jpeg',
+      'image/png',
+      'image/tiff',
+    ])
+    const chatServiceUrl = process.env.CHAT_SERVICE_URL
+    const chatServiceSecret = process.env.CHAT_SERVICE_SECRET
+    if (RAG_EXTRACTABLE_TYPES.has(validationResult.detectedType!)) {
+      if (!chatServiceUrl || !chatServiceSecret) {
+        logger.warn({ detectedType: validationResult.detectedType }, 'CHAT_SERVICE_URL or CHAT_SERVICE_SECRET not set — RAG ingestion skipped')
+      } else {
+        logger.info({ assetId: asset.id, mimeType: validationResult.detectedType }, 'Triggering RAG ingestion')
+        const rawPublicUrl = uploadResult.publicUrl
+        const absoluteStorageUrl = rawPublicUrl.startsWith('http')
+          ? rawPublicUrl
+          : `${process.env.NEXTAUTH_URL || 'http://localhost:4777'}${rawPublicUrl}`
+        fetch(`${chatServiceUrl}/api/ingestion/ingest`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-chat-service-secret': chatServiceSecret,
+          },
+          body: JSON.stringify({
+            assetId: asset.id,
+            workspaceId: user.workspaceId,
+            storageUrl: absoluteStorageUrl,
+            mimeType: validationResult.detectedType!,
+            title: file.originalFilename || asset.filename,
+            personId,
+          }),
+        }).catch(err =>
+          logger.warn({ err: err?.message }, 'RAG ingestion trigger failed (non-fatal)')
+        )
+      }
     }
 
     return successResponse(res, {

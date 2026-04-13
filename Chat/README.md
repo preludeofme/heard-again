@@ -57,4 +57,24 @@ npm run test
 
 # Type checking
 npm run type-check
+
+# Evaluation harness (Step 7)
+npm run eval:baseline
+npm run eval:compare
+
+# Release-candidate gate (Step 8)
+npm run eval:go-no-go
+npm run eval:release-candidate
 ```
+
+Runtime safety monitoring:
+- Endpoint: `/api/metrics`
+- Safety rates: refusal, violation, retrieval-empty, citation-missing
+- Alert env vars: `ALERT_MAX_REFUSAL_RATE`, `ALERT_MAX_VIOLATION_RATE`, `ALERT_MAX_RETRIEVAL_EMPTY_RATE`, `ALERT_MAX_CITATION_MISSING_RATE`
+
+Evaluation assets:
+- Benchmark set: `evals/benchmark.v1.json`
+- Response fixtures: `evals/responses/*.json`
+- Generated scorecards/comparisons: `evals/results/*.json`
+- Release-candidate lock/spec: `../docs/PERSONA_LLM_RELEASE_CANDIDATE_V1.md`
+- Cutover/rollback runbook: `../docs/PERSONA_LLM_CUTOVER_AND_SAFETY_RUNBOOK.md`

@@ -2,12 +2,16 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { PersonaServiceImpl } from '@/services/persona/PersonaService'
 import { DatabasePersonaRepository } from '@/services/persona/DatabasePersonaRepository'
 import { StyleExtractorImpl } from '@/services/persona/StyleExtractor'
+import { PersonService } from '@/services/persona/PersonService'
 import { LLMGatewayImpl } from '@/services/llm/LLMGateway'
-import { DocumentRepositoryImpl } from '@/services/retrieval/RetrievalService'
+import { PrismaDocumentRepository } from '@/repositories/DocumentRepository'
 import { CUSTOM_INSTRUCTION_TEMPLATES, DEFAULT_CUSTOM_INSTRUCTIONS } from '@/types'
 import { prisma } from '@/lib/prisma'
+import { verifyServiceToken } from '@/utils/auth-guard'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (!verifyServiceToken(req, res)) return
+
   const { method } = req
   const workspaceId = req.headers['x-workspace-id'] as string
   const userId = req.headers['x-user-id'] as string
@@ -22,9 +26,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // Initialize services with database backend
   const llmGateway = new LLMGatewayImpl()
   const styleExtractor = new StyleExtractorImpl(llmGateway)
-  const documentRepository = new DocumentRepositoryImpl()
+  const documentRepository = new PrismaDocumentRepository()
   const personaRepository = new DatabasePersonaRepository(prisma)
-  const personaService = new PersonaServiceImpl(personaRepository, styleExtractor, documentRepository)
+  const personService = new PersonService()
+  const personaService = new PersonaServiceImpl(personaRepository, styleExtractor, documentRepository, personService, llmGateway)
 
   try {
     switch (method) {
@@ -70,9 +75,10 @@ async function handleGetInstructions(
     })
   }
 
+  const reqWorkspaceId = req.headers['x-workspace-id'] as string
   try {
-    const persona = await personaService.getPersonaProfile(personaId)
-    if (!persona) {
+    const persona = await personaService.getPersonaProfile(personaId, reqWorkspaceId)
+    if (!persona || persona.workspaceId !== reqWorkspaceId) {
       return res.status(404).json({
         success: false,
         error: 'Persona profile not found'
@@ -115,7 +121,13 @@ async function handleUpdateInstructions(
     })
   }
 
+  const reqWorkspaceId = req.headers['x-workspace-id'] as string
   try {
+    const existing = await personaService.getPersonaProfile(personaId, reqWorkspaceId)
+    if (!existing || existing.workspaceId !== reqWorkspaceId) {
+      return res.status(404).json({ success: false, error: 'Persona profile not found' })
+    }
+
     const updatedPersona = await personaService.updatePersonaProfile(personaId, {
       customInstructions
     })
@@ -148,9 +160,10 @@ async function handleAddInstruction(
     })
   }
 
+  const reqWorkspaceId = req.headers['x-workspace-id'] as string
   try {
-    const persona = await personaService.getPersonaProfile(personaId)
-    if (!persona) {
+    const persona = await personaService.getPersonaProfile(personaId, reqWorkspaceId)
+    if (!persona || persona.workspaceId !== reqWorkspaceId) {
       return res.status(404).json({
         success: false,
         error: 'Persona profile not found'
@@ -234,9 +247,10 @@ async function handleRemoveInstruction(
     })
   }
 
+  const reqWorkspaceId = req.headers['x-workspace-id'] as string
   try {
-    const persona = await personaService.getPersonaProfile(personaId)
-    if (!persona) {
+    const persona = await personaService.getPersonaProfile(personaId, reqWorkspaceId)
+    if (!persona || persona.workspaceId !== reqWorkspaceId) {
       return res.status(404).json({
         success: false,
         error: 'Persona profile not found'

@@ -1,5 +1,5 @@
-import { Box, Typography, Card, CardContent, Button, IconButton, TextField, Avatar, Chip, Select, MenuItem, FormControl, InputLabel, Slider, Dialog, DialogTitle, DialogContent, DialogActions, CircularProgress } from '@mui/material'
-import { ArrowBack as BackIcon, Mic as MicIcon, MicOff as MuteIcon, Send as SendIcon, AddPhotoAlternate as PhotoIcon, VolumeUp as SpeakerIcon, Settings as SettingsIcon, Compare as CompareIcon, Close as CloseIcon, Add as AddIcon } from '@mui/icons-material'
+import { Box, Typography, Card, CardContent, Button, IconButton, TextField, Avatar, Chip, Select, MenuItem, FormControl, InputLabel, Slider, Dialog, DialogTitle, DialogContent, DialogActions, CircularProgress, Alert, List, ListItemButton, ListItemText, Tooltip } from '@mui/material'
+import { ArrowBack as BackIcon, Mic as MicIcon, MicOff as MuteIcon, Send as SendIcon, AddPhotoAlternate as PhotoIcon, VolumeUp as SpeakerIcon, Settings as SettingsIcon, Compare as CompareIcon, Close as CloseIcon, Add as AddIcon, Person as PersonIcon, AutoAwesome as AutoAwesomeIcon, Delete as DeleteIcon, Info as InfoIcon } from '@mui/icons-material'
 import { ConversationMessage, LegacySubject, VoiceModel } from '@/types'
 import { useState, useRef, useEffect } from 'react'
 import { formatDistanceToNow } from 'date-fns'
@@ -16,17 +16,21 @@ interface TalkPageProps {
 export function TalkPage({ legacySubject, subjectId, availablePeople = [] }: TalkPageProps) {
   const router = useRouter()
   const [isMuted, setIsMuted] = useState(false)
-  const [isListening, setIsListening] = useState(false)
-  const [isTyping, setIsTyping] = useState(false)
   const [showVoiceSettings, setShowVoiceSettings] = useState(false)
   const [showComparisonDialog, setShowComparisonDialog] = useState(false)
   const [showNewConversationDialog, setShowNewConversationDialog] = useState(false)
+  const [showResetDialog, setShowResetDialog] = useState(false)
   const [comparisonText, setComparisonText] = useState('')
   const [comparisonResults, setComparisonResults] = useState<{ audioA: string | null; audioB: string | null } | null>(null)
   const [isComparing, setIsComparing] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   
   const controller = useTalkController(subjectId)
+
+  // Load all sessions on mount
+  useEffect(() => {
+    controller.loadSessions()
+  }, [])
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -39,52 +43,99 @@ export function TalkPage({ legacySubject, subjectId, availablePeople = [] }: Tal
   const handleSendMessage = async () => {
     if (controller.inputText.trim()) {
       await controller.sendMessage()
-      setIsTyping(true)
-      
-      // Simulate response and synthesize speech
-      setTimeout(async () => {
-        setIsTyping(false)
-        if (controller.selectedVoiceModel && controller.messages.length > 0) {
-          const lastMessage = controller.messages[controller.messages.length - 1]
-          if (lastMessage.sender === 'LegacySubject') {
-            const audioUrl = await controller.synthesizeSpeech(lastMessage.content)
-            if (audioUrl) {
-              controller.playAudio(audioUrl)
-            }
-          }
-        }
-      }, 2000)
     }
   }
 
   return (
     <Box sx={{ height: '100vh', display: 'flex', backgroundColor: '#fcf9f4' }}>
-      {/* Simple Sidebar */}
+      {/* Sidebar */}
       <Box sx={{ 
-        width: 300, 
+        width: 280, 
+        minWidth: 280,
         backgroundColor: '#ffffff', 
         borderRight: '1px solid #f0ece4',
-        p: 3,
         display: 'flex',
-        flexDirection: 'column'
+        flexDirection: 'column',
+        overflow: 'hidden',
       }}>
-        <Typography variant="h6" sx={{ color: '#16334a', fontWeight: 600, mb: 2 }}>
-          Conversations
-        </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => setShowNewConversationDialog(true)}
-          sx={{
-            background: 'linear-gradient(135deg, #16334a 0%, #2e4a62 100%)',
-            fontWeight: 600,
-          }}
-        >
-          New Conversation
-        </Button>
-        <Typography variant="body2" sx={{ color: '#546669', mt: 3, textAlign: 'center' }}>
-          Start conversations from the family tree to see them here.
-        </Typography>
+        <Box sx={{ p: 2.5, borderBottom: '1px solid #f0ece4' }}>
+          <Typography variant="h6" sx={{ color: '#16334a', fontWeight: 600, mb: 1.5 }}>
+            Conversations
+          </Typography>
+          <Button
+            fullWidth
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => setShowNewConversationDialog(true)}
+            sx={{
+              background: 'linear-gradient(135deg, #16334a 0%, #2e4a62 100%)',
+              fontWeight: 600,
+              textTransform: 'none',
+            }}
+          >
+            New Conversation
+          </Button>
+        </Box>
+
+        {/* Session list */}
+        <Box sx={{ flexGrow: 1, overflowY: 'auto' }}>
+          {controller.isLoadingSessions ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+              <CircularProgress size={24} sx={{ color: '#adcae6' }} />
+            </Box>
+          ) : controller.sessions.length === 0 ? (
+            <Typography variant="body2" sx={{ color: '#9aafb3', mt: 3, textAlign: 'center', px: 2 }}>
+              Start conversations from the family tree to see them here.
+            </Typography>
+          ) : (
+            <List disablePadding>
+              {controller.sessions.map(session => (
+                <Box
+                  key={session.id}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    borderBottom: '1px solid #f5f0ea',
+                    '&:hover .delete-btn': { opacity: 1 },
+                  }}
+                >
+                  <ListItemButton
+                    selected={session.id === (controller as any).sessionId}
+                    onClick={() => controller.switchSession(session.id)}
+                    sx={{
+                      flexGrow: 1,
+                      py: 1.5,
+                      '&.Mui-selected': { backgroundColor: '#f0f7ff' },
+                    }}
+                  >
+                    <ListItemText
+                      primary={
+                        <Typography variant="body2" noWrap sx={{ fontWeight: 600, color: '#16334a' }}>
+                          {session.title}
+                        </Typography>
+                      }
+                      secondary={
+                        <Typography variant="caption" sx={{ color: '#9aafb3' }}>
+                          {session.updatedAt ? new Date(session.updatedAt).toLocaleDateString() : ''}
+                        </Typography>
+                      }
+                    />
+                  </ListItemButton>
+                  <Tooltip title="Delete conversation">
+                    <IconButton
+                      className="delete-btn"
+                      size="small"
+                      onClick={() => controller.deleteSession(session.id)}
+                      sx={{ mr: 0.5, opacity: 0, transition: 'opacity 0.15s', color: '#c62828' }}
+                    >
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+              ))}
+            </List>
+          )}
+        </Box>
       </Box>
       
       {/* Main Content */}
@@ -105,9 +156,28 @@ export function TalkPage({ legacySubject, subjectId, availablePeople = [] }: Tal
         >
           <BackIcon />
         </IconButton>
-        <Typography variant="h6" sx={{ color: '#16334a', fontWeight: 600, flexGrow: 1 }}>
-          Conversation with {legacySubject.fullName}
-        </Typography>
+        <Box sx={{ flexGrow: 1 }}>
+          <Typography variant="h6" sx={{ color: '#16334a', fontWeight: 600 }}>
+            Conversation with {legacySubject.fullName}
+          </Typography>
+          {controller.personaExists && controller.personaConfidence !== undefined && (
+            <Chip
+              icon={<InfoIcon sx={{ fontSize: '14px !important' }} />}
+              label={`${Math.round(controller.personaConfidence * 100)}% confidence`}
+              size="small"
+              sx={{
+                mt: 0.25,
+                backgroundColor: controller.personaConfidence >= 0.7 ? '#e8f5e9'
+                  : controller.personaConfidence >= 0.4 ? '#fff3e0' : '#ffebee',
+                color: controller.personaConfidence >= 0.7 ? '#2e7d32'
+                  : controller.personaConfidence >= 0.4 ? '#ef6c00' : '#c62828',
+                fontWeight: 600,
+                fontSize: '11px',
+                height: 20,
+              }}
+            />
+          )}
+        </Box>
         
         {/* Voice Selection Dropdown */}
         {controller.voiceModels.length > 0 && (
@@ -189,6 +259,110 @@ export function TalkPage({ legacySubject, subjectId, availablePeople = [] }: Tal
         </IconButton>
       </Box>
 
+      {/* Persona Generation Required Section */}
+      {controller.needsPersonaGeneration && (
+        <Box sx={{ 
+          flexGrow: 1, 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          px: { xs: 2, md: 4 },
+          py: 4
+        }}>
+          <Card sx={{ maxWidth: 520, textAlign: 'center', p: 4 }}>
+            <CardContent>
+              <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
+                <Avatar sx={{ 
+                  width: 80, 
+                  height: 80, 
+                  bgcolor: '#f6f3ee',
+                  color: '#16334a'
+                }}>
+                  <PersonIcon sx={{ fontSize: 40 }} />
+                </Avatar>
+              </Box>
+              
+              <Typography variant="h5" sx={{ color: '#16334a', fontWeight: 600, mb: 2 }}>
+                {legacySubject.fullName}'s Persona Not Ready
+              </Typography>
+              
+              <Typography variant="body1" sx={{ color: '#546669', mb: 3, lineHeight: 1.6 }}>
+                To have authentic conversations with {legacySubject.fullName}, follow these two steps:
+              </Typography>
+
+              <Box sx={{ textAlign: 'left', mb: 3 }}>
+                <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5, mb: 2 }}>
+                  <Box sx={{ width: 24, height: 24, borderRadius: '50%', bgcolor: '#16334a', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 13, fontWeight: 700 }}>1</Box>
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#16334a' }}>Upload documents</Typography>
+                    <Typography variant="body2" sx={{ color: '#546669' }}>
+                      Go to the Documents page and upload letters, writings, or transcripts for {legacySubject.fullName}. Make sure the person is selected before uploading.
+                    </Typography>
+                    {subjectId && (
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        onClick={() => router.push(`/documents?personId=${subjectId}`)}
+                        sx={{ mt: 1, textTransform: 'none', borderColor: '#16334a', color: '#16334a' }}
+                      >
+                        Go to Documents →
+                      </Button>
+                    )}
+                  </Box>
+                </Box>
+
+                <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+                  <Box sx={{ width: 24, height: 24, borderRadius: '50%', bgcolor: '#adcae6', color: '#16334a', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 13, fontWeight: 700 }}>2</Box>
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#16334a' }}>Generate the AI persona</Typography>
+                    <Typography variant="body2" sx={{ color: '#546669' }}>
+                      Once documents are uploaded and processed, return here and click the button below to build the persona.
+                    </Typography>
+                  </Box>
+                </Box>
+              </Box>
+              
+              <Alert severity="info" sx={{ mb: 3, textAlign: 'left' }}>
+                <Typography variant="body2">
+                  At least one document (PDF, Word, or plain text) must be uploaded and indexed before persona generation. Processing takes a few seconds after upload.
+                </Typography>
+              </Alert>
+              
+              <Button
+                variant="contained"
+                size="large"
+                startIcon={controller.isLoading ? <CircularProgress size={20} color="inherit" /> : <AutoAwesomeIcon />}
+                onClick={controller.generatePersona}
+                disabled={controller.isLoading}
+                fullWidth
+                sx={{
+                  background: 'linear-gradient(135deg, #16334a 0%, #2e4a62 100%)',
+                  fontWeight: 600,
+                  py: 1.5,
+                }}
+              >
+                {controller.isLoading ? 'Generating Persona...' : `Build ${legacySubject.fullName}'s Persona`}
+              </Button>
+              
+              <Typography variant="caption" sx={{ color: '#546669', mt: 2, display: 'block' }}>
+                This may take a minute depending on the amount of data available
+              </Typography>
+            </CardContent>
+          </Card>
+        </Box>
+      )}
+
+      {/* Low Confidence Warning */}
+      {controller.personaConfidence !== undefined && controller.personaConfidence < 0.3 && !controller.needsPersonaGeneration && (
+        <Box sx={{ px: { xs: 2, md: 4 }, py: 2 }}>
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            <Typography variant="body2">
+              Limited data available — responses may be less accurate. Consider adding more documents or memories for {legacySubject.fullName}.
+            </Typography>
+          </Alert>
+        </Box>
+      )}
+
       {/* Messages List */}
       <Box sx={{ flexGrow: 1, overflow: 'auto', px: { xs: 2, md: 4 }, py: 4 }}>
         {controller.messages.map((message) => (
@@ -241,7 +415,7 @@ export function TalkPage({ legacySubject, subjectId, availablePeople = [] }: Tal
         ))}
         
         {/* Typing Indicator */}
-        {isTyping && (
+        {controller.talkState === 'typing' && (
           <Box sx={{ display: 'flex', justifyContent: 'flex-start', mb: 3 }}>
             <Card sx={{ backgroundColor: '#ffffff', borderRadius: 4, boxShadow: 1 }}>
               <CardContent sx={{ p: 3 }}>
@@ -284,7 +458,7 @@ export function TalkPage({ legacySubject, subjectId, availablePeople = [] }: Tal
         py: 4,
         px: { xs: 2, md: 4 }
       }}>
-        {isListening && (
+        {controller.isListening && (
           <>
             {/* Animated Rings */}
             <Box sx={{ position: 'relative', mb: 2 }}>
@@ -323,7 +497,8 @@ export function TalkPage({ legacySubject, subjectId, availablePeople = [] }: Tal
         )}
       </Box>
 
-      {/* Input Bar */}
+      {/* Input Bar - Only show when persona is ready */}
+      {!controller.needsPersonaGeneration && (
       <Box sx={{ 
         backgroundColor: '#ffffff', 
         px: { xs: 2, md: 4 }, 
@@ -341,7 +516,21 @@ export function TalkPage({ legacySubject, subjectId, availablePeople = [] }: Tal
               fontWeight: 600
             }}
           >
-            {isMuted ? 'Unmuted' : 'Muted'}
+            {isMuted ? 'Unmute' : 'Mute'}
+          </Button>
+          
+          <Button
+            variant="text"
+            startIcon={<DeleteIcon />}
+            onClick={() => setShowResetDialog(true)}
+            sx={{ 
+              color: '#546669',
+              textTransform: 'none',
+              fontWeight: 600
+            }}
+            disabled={!controller.sessionId}
+          >
+            Reset
           </Button>
           
           <TextField
@@ -370,15 +559,21 @@ export function TalkPage({ legacySubject, subjectId, availablePeople = [] }: Tal
           </IconButton>
           
           <IconButton
-            onClick={() => setIsListening(!isListening)}
-            sx={{ 
-              backgroundColor: isListening ? '#16334a' : '#f6f3ee',
-              color: isListening ? 'white' : '#546669',
-              '&:hover': {
-                backgroundColor: isListening ? '#2e4a62' : '#ebe8e3',
+            onClick={() => {
+              if (controller.isListening) {
+                controller.stopListening()
+              } else {
+                controller.startListening()
               }
             }}
-            aria-label={isListening ? 'Stop listening' : 'Start listening'}
+            sx={{ 
+              backgroundColor: controller.isListening ? '#16334a' : '#f6f3ee',
+              color: controller.isListening ? 'white' : '#546669',
+              '&:hover': {
+                backgroundColor: controller.isListening ? '#2e4a62' : '#ebe8e3',
+              }
+            }}
+            aria-label={controller.isListening ? 'Stop listening' : 'Start listening'}
           >
             <MicIcon />
           </IconButton>
@@ -416,6 +611,7 @@ export function TalkPage({ legacySubject, subjectId, availablePeople = [] }: Tal
           </Box>
         )}
       </Box>
+      )}
       
       {/* Voice Settings Dialog */}
       <Dialog open={showVoiceSettings} onClose={() => setShowVoiceSettings(false)} maxWidth="sm" fullWidth>
@@ -681,6 +877,39 @@ export function TalkPage({ legacySubject, subjectId, availablePeople = [] }: Tal
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowNewConversationDialog(false)}>Cancel</Button>
+        </DialogActions>
+      </Dialog>
+      
+      {/* Reset Confirmation Dialog */}
+      <Dialog open={showResetDialog} onClose={() => setShowResetDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          Reset Conversation?
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ mb: 2 }}>
+            This will clear the entire conversation history and start a new conversation with {legacySubject.fullName}. 
+            This action cannot be undone.
+          </Typography>
+          <Alert severity="warning" sx={{ mt: 2 }}>
+            All messages in this conversation will be permanently deleted.
+          </Alert>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowResetDialog(false)}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={async () => {
+              if (controller.sessionId) {
+                await controller.deleteSession(controller.sessionId)
+                setShowResetDialog(false)
+              }
+            }}
+            color="error"
+            variant="contained"
+          >
+            Reset Conversation
+          </Button>
         </DialogActions>
       </Dialog>
       </Box>

@@ -772,7 +772,7 @@ export default function PersonProfilePage() {
                   </Typography>
                   <Box
                     component={Link}
-                    href="/documents"
+                    href={`/documents?personId=${personId}`}
                     sx={{ display: 'inline-block', mt: 2, color: C.primary, textDecoration: 'none', fontFamily: 'var(--font-manrope), sans-serif', fontWeight: 600, fontSize: '0.9rem', borderBottom: `2px solid ${C.primary}35`, pb: 0.25 }}
                   >
                     Upload documents →

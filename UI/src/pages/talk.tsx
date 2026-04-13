@@ -186,7 +186,7 @@ export default function Talk() {
             </Box>
           </Card>
         </Box>
-        <TalkPage legacySubject={legacySubject} subjectId={selectedSubjectId} availablePeople={searchablePeople} />
+        <TalkPage legacySubject={legacySubject} subjectId={selectedSubjectId || (legacySubject.id !== 'default' ? legacySubject.id : undefined)} availablePeople={searchablePeople} />
       </Layout>
     </>
   )

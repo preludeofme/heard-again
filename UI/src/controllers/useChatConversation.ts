@@ -1,7 +1,16 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, useRef } from 'react'
 import { ConversationMessage } from '@/types'
 
 type TalkState = 'idle' | 'listening' | 'typing' | 'processing'
+
+interface SessionSummary {
+  id: string
+  personId: string
+  title: string
+  status: string
+  createdAt: string
+  updatedAt: string
+}
 
 interface ChatConversationState {
   messages: ConversationMessage[]
@@ -10,6 +19,11 @@ interface ChatConversationState {
   isLoading: boolean
   isListening: boolean
   sessionId?: string
+  personaExists?: boolean
+  personaConfidence?: number
+  needsPersonaGeneration?: boolean
+  sessions: SessionSummary[]
+  isLoadingSessions: boolean
 }
 
 interface ChatConversationActions {
@@ -19,6 +33,11 @@ interface ChatConversationActions {
   stopListening: () => void
   refreshConversation: () => Promise<void>
   setSessionId: (sessionId: string) => void
+  generatePersona: () => Promise<void>
+  checkPersonaExists: () => Promise<{ exists: boolean; confidence?: number }>
+  loadSessions: () => Promise<void>
+  switchSession: (sessionId: string) => Promise<void>
+  deleteSession: (sessionId: string) => Promise<void>
 }
 
 interface UseChatConversationOptions {
@@ -38,7 +57,50 @@ export function useChatConversation({
     talkState: 'idle',
     isLoading: false,
     isListening: false,
+    sessions: [],
+    isLoadingSessions: false,
   })
+
+  // Speech recognition setup
+  const recognitionRef = useRef<any>(null)
+  
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'webkitSpeechRecognition' in window) {
+      const SpeechRecognition = (window as any).webkitSpeechRecognition
+      recognitionRef.current = new SpeechRecognition()
+      recognitionRef.current.continuous = false
+      recognitionRef.current.interimResults = false
+      recognitionRef.current.lang = 'en-US'
+      
+      recognitionRef.current.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript
+        setState(prev => ({ 
+          ...prev, 
+          inputText: transcript,
+          isListening: false,
+          talkState: 'idle'
+        }))
+      }
+      
+      recognitionRef.current.onerror = (event: any) => {
+        console.error('Speech recognition error:', event.error)
+        setState(prev => ({ 
+          ...prev, 
+          isListening: false,
+          talkState: 'idle'
+        }))
+        onError?.('Speech recognition failed. Please try again.')
+      }
+      
+      recognitionRef.current.onend = () => {
+        setState(prev => ({ 
+          ...prev, 
+          isListening: false,
+          talkState: 'idle'
+        }))
+      }
+    }
+  }, [onError])
 
   // Initialize or get chat session when subjectId changes
   useEffect(() => {
@@ -49,13 +111,73 @@ export function useChatConversation({
 
   const initializeChatSession = async () => {
     try {
-      // Create a new chat session for this subject
+      setState(prev => ({ ...prev, isLoading: true }))
+      
+      // First check if persona exists — use returned value to avoid stale closure
+      const personaStatus = await checkPersonaExists()
+      
+      if (!personaStatus.exists) {
+        setState(prev => ({ 
+          ...prev, 
+          isLoading: false, 
+          needsPersonaGeneration: true 
+        }))
+        onError?.(`${subjectId}'s persona hasn't been built yet. Generate their persona to start chatting.`)
+        return
+      }
+      
+      // Check if persona has low confidence score
+      if (personaStatus.confidence !== undefined && personaStatus.confidence < 0.3) {
+        onError?.('Limited data available — responses may be less accurate.')
+      }
+
+      // Look for existing session with this person
+      const existingSessions = await fetch('/api/chat/sessions', {
+        method: 'GET',
+        credentials: 'include',
+      })
+
+      if (existingSessions.ok) {
+        const sessionsData = await existingSessions.json()
+        if (sessionsData.success && sessionsData.sessions) {
+          // Find a session with the same personId
+          const existingSession = sessionsData.sessions.find((session: any) => session.personId === subjectId)
+          
+          if (existingSession) {
+            // Verify the session is accessible before committing to it
+            const testRes = await fetch(`/api/chat/messages?sessionId=${existingSession.id}`, {
+              credentials: 'include',
+            })
+            if (testRes.ok) {
+              setState(prev => ({ 
+                ...prev, 
+                sessionId: existingSession.id, 
+                needsPersonaGeneration: false 
+              }))
+              const data = await testRes.json()
+              if (data.success && data.messages) {
+                const formattedMessages = data.messages.map((msg: any) => ({
+                  id: msg.id,
+                  sender: msg.role === 'user' ? 'User' : 'LegacySubject',
+                  timestamp: new Date(msg.createdAt),
+                  content: msg.content,
+                  state: 'sent' as const,
+                }))
+                setState(prev => ({ ...prev, messages: formattedMessages }))
+              }
+              setState(prev => ({ ...prev, isLoading: false }))
+              return
+            }
+            // Session inaccessible — fall through to create a new one
+          }
+        }
+      }
+
+      // No existing session found, create a new one
       const response = await fetch('/api/chat/sessions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-workspace-id': 'default', // TODO: Get from auth context
-          'x-user-id': 'default', // TODO: Get from auth context
         },
         credentials: 'include',
         body: JSON.stringify({
@@ -70,13 +192,14 @@ export function useChatConversation({
 
       const data = await response.json()
       if (data.success) {
-        setState(prev => ({ ...prev, sessionId: data.session.id }))
+        setState(prev => ({ ...prev, sessionId: data.session.id, needsPersonaGeneration: false }))
         
         // Load existing messages if any
         await loadChatHistory(data.session.id)
       }
     } catch (error) {
       console.error('Failed to initialize chat session:', error)
+      setState(prev => ({ ...prev, isLoading: false }))
       onError?.('Failed to start conversation')
     }
   }
@@ -84,10 +207,7 @@ export function useChatConversation({
   const loadChatHistory = async (sessionId: string) => {
     try {
       const response = await fetch(`/api/chat/messages?sessionId=${sessionId}`, {
-        headers: {
-          'x-workspace-id': 'default',
-          'x-user-id': 'default',
-        },
+        headers: {},
         credentials: 'include',
       })
 
@@ -139,8 +259,6 @@ export function useChatConversation({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-workspace-id': 'default',
-          'x-user-id': 'default',
         },
         credentials: 'include',
         body: JSON.stringify({
@@ -166,60 +284,107 @@ export function useChatConversation({
 
       let assistantMessage: ConversationMessage | null = null
       let fullContent = ''
+      let sseBuffer = ''
+
+      const processSseEvent = async (eventBlock: string) => {
+        const lines = eventBlock
+          .split('\n')
+          .map((line) => line.trimEnd())
+          .filter(Boolean)
+
+        const dataLines = lines
+          .filter((line) => line.startsWith('data: '))
+          .map((line) => line.slice(6))
+
+        if (dataLines.length === 0) {
+          return
+        }
+
+        const data = JSON.parse(dataLines.join('\n'))
+
+        if (data.type === 'start') {
+          assistantMessage = {
+            id: data.messageId || Date.now().toString(),
+            sender: 'LegacySubject',
+            timestamp: new Date(),
+            content: '',
+            state: 'sent',
+          }
+
+          setState(prev => ({
+            ...prev,
+            messages: [...prev.messages, assistantMessage!],
+            talkState: 'typing',
+          }))
+          return
+        }
+
+        if (data.type === 'chunk' && assistantMessage) {
+          fullContent += data.content
+          assistantMessage.content = fullContent
+
+          setState(prev => ({
+            ...prev,
+            messages: prev.messages.map(msg =>
+              msg.id === assistantMessage!.id ? assistantMessage! : msg
+            ),
+          }))
+          return
+        }
+
+        if (data.type === 'end') {
+          if (data.filteredContent && assistantMessage) {
+            fullContent = data.filteredContent
+            assistantMessage.content = fullContent
+
+            setState(prev => ({
+              ...prev,
+              messages: prev.messages.map(msg =>
+                msg.id === assistantMessage!.id ? assistantMessage! : msg
+              ),
+            }))
+          }
+
+          setState(prev => ({
+            ...prev,
+            isLoading: false,
+            talkState: 'idle',
+          }))
+
+          if (onAssistantMessage && fullContent) {
+            await onAssistantMessage(fullContent)
+          }
+          return
+        }
+
+        if (data.type === 'error') {
+          throw new Error(data.error || 'Stream error')
+        }
+      }
 
       while (true) {
         const { done, value } = await reader.read()
-        if (done) break
-
-        const chunk = decoder.decode(value)
-        const lines = chunk.split('\n')
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            try {
-              const data = JSON.parse(line.slice(6))
-              
-              if (data.type === 'start') {
-                assistantMessage = {
-                  id: data.messageId || Date.now().toString(),
-                  sender: 'LegacySubject',
-                  timestamp: new Date(),
-                  content: '',
-                  state: 'sent',
-                }
-                
-                setState(prev => ({
-                  ...prev,
-                  messages: [...prev.messages, assistantMessage!],
-                  talkState: 'typing',
-                }))
-              } else if (data.type === 'chunk' && assistantMessage) {
-                fullContent += data.content
-                assistantMessage.content = fullContent
-                
-                setState(prev => ({
-                  ...prev,
-                  messages: prev.messages.map(msg => 
-                    msg.id === assistantMessage!.id ? assistantMessage! : msg
-                  ),
-                }))
-              } else if (data.type === 'end') {
-                setState(prev => ({
-                  ...prev,
-                  isLoading: false,
-                  talkState: 'idle',
-                }))
-
-                if (onAssistantMessage && fullContent) {
-                  await onAssistantMessage(fullContent)
-                }
-                break
-              } else if (data.type === 'error') {
-                throw new Error(data.error || 'Stream error')
-              }
-            } catch (parseError) {
-              console.error('Failed to parse chunk:', parseError)
+        if (done) {
+          // Flush any trailing buffered event block (no-op if incomplete/empty)
+          if (sseBuffer.includes('\n\n')) {
+            const events = sseBuffer.split('\n\n')
+            sseBuffer = events.pop() || ''
+            for (const eventBlock of events) {
+              await processSseEvent(eventBlock)
             }
+          }
+          break
+        }
+
+        sseBuffer += decoder.decode(value, { stream: true })
+        const events = sseBuffer.split('\n\n')
+        sseBuffer = events.pop() || ''
+
+        for (const eventBlock of events) {
+          try {
+            await processSseEvent(eventBlock)
+          } catch (parseError) {
+            console.error('Failed to parse chunk:', parseError)
           }
         }
       }
@@ -239,37 +404,45 @@ export function useChatConversation({
   }, [])
 
   const startListening = useCallback(() => {
-    setState(prev => ({
-      ...prev,
-      isListening: true,
-      talkState: 'listening',
-    }))
+    if (!recognitionRef.current) {
+      onError?.('Speech recognition is not supported in your browser.')
+      return
+    }
 
-    // TODO: Integrate with actual speech-to-text
-    setTimeout(() => {
+    try {
+      setState(prev => ({
+        ...prev,
+        isListening: true,
+        talkState: 'listening',
+      }))
+      
+      recognitionRef.current.start()
+    } catch (error) {
+      console.error('Failed to start speech recognition:', error)
       setState(prev => ({
         ...prev,
         isListening: false,
-        talkState: 'processing',
-        inputText: 'Voice input will be integrated with speech-to-text.',
+        talkState: 'idle',
       }))
-
-      setTimeout(() => {
-        setState(prev => ({
-          ...prev,
-          talkState: 'idle',
-        }))
-      }, 1000)
-    }, 3000)
-  }, [])
+      onError?.('Failed to start speech recognition.')
+    }
+  }, [onError])
 
   const stopListening = useCallback(() => {
+    if (recognitionRef.current && state.isListening) {
+      try {
+        recognitionRef.current.stop()
+      } catch (error) {
+        console.error('Failed to stop speech recognition:', error)
+      }
+    }
+    
     setState(prev => ({
       ...prev,
       isListening: false,
       talkState: 'idle',
     }))
-  }, [])
+  }, [state.isListening])
 
   const refreshConversation = useCallback(async () => {
     if (!state.sessionId) return
@@ -298,6 +471,144 @@ export function useChatConversation({
     setState(prev => ({ ...prev, sessionId }))
   }, [])
 
+  const loadSessions = useCallback(async () => {
+    setState(prev => ({ ...prev, isLoadingSessions: true }))
+    try {
+      const response = await fetch('/api/chat/sessions', {
+        method: 'GET',
+        credentials: 'include',
+      })
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success && data.sessions) {
+          setState(prev => ({ ...prev, sessions: data.sessions, isLoadingSessions: false }))
+        } else {
+          setState(prev => ({ ...prev, isLoadingSessions: false }))
+        }
+      } else {
+        setState(prev => ({ ...prev, isLoadingSessions: false }))
+      }
+    } catch (error) {
+      console.error('Failed to load sessions:', error)
+      setState(prev => ({ ...prev, isLoadingSessions: false }))
+    }
+  }, [])
+
+  const switchSession = useCallback(async (sessionId: string) => {
+    setState(prev => ({ ...prev, isLoading: true, messages: [], sessionId }))
+    await loadChatHistory(sessionId)
+    setState(prev => ({ ...prev, isLoading: false }))
+  }, [])
+
+  const deleteSession = useCallback(async (sessionId: string) => {
+    try {
+      const response = await fetch(`/api/chat/sessions/${sessionId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      })
+      if (response.ok) {
+        setState(prev => ({
+          ...prev,
+          sessions: prev.sessions.filter(s => s.id !== sessionId),
+          // If we deleted the active session, clear it
+          sessionId: prev.sessionId === sessionId ? undefined : prev.sessionId,
+          messages: prev.sessionId === sessionId ? [] : prev.messages,
+        }))
+      }
+    } catch (error) {
+      console.error('Failed to delete session:', error)
+      onError?.('Failed to delete conversation')
+    }
+  }, [onError])
+
+  const checkPersonaExists = useCallback(async (): Promise<{ exists: boolean; confidence?: number }> => {
+    if (!subjectId) return { exists: false }
+
+    try {
+      const response = await fetch(`/api/persona/${subjectId}`, {
+        method: 'GET',
+        credentials: 'include',
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success) {
+          setState(prev => ({
+            ...prev,
+            personaExists: true,
+            personaConfidence: data.persona.confidenceScore,
+            needsPersonaGeneration: false
+          }))
+          return { exists: true, confidence: data.persona.confidenceScore }
+        }
+      } else if (response.status === 404) {
+        setState(prev => ({
+          ...prev,
+          personaExists: false,
+          personaConfidence: undefined,
+          needsPersonaGeneration: true
+        }))
+        return { exists: false }
+      }
+    } catch (error) {
+      console.error('Failed to check persona existence:', error)
+      setState(prev => ({
+        ...prev,
+        personaExists: false,
+        personaConfidence: undefined,
+        needsPersonaGeneration: true
+      }))
+    }
+    return { exists: false }
+  }, [subjectId])
+
+  const generatePersona = useCallback(async () => {
+    if (!subjectId) return
+
+    setState(prev => ({ ...prev, isLoading: true }))
+
+    try {
+      const response = await fetch(`/api/persona/${subjectId}/generate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          options: {
+            minDocumentCount: 3,
+            extractStyle: true,
+            extractFacts: true,
+            extractRelationships: true,
+          }
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to generate persona')
+      }
+
+      const data = await response.json()
+      if (data.success) {
+        setState(prev => ({
+          ...prev,
+          personaExists: true,
+          personaConfidence: data.persona.confidenceScore,
+          needsPersonaGeneration: false,
+          isLoading: false
+        }))
+
+        // Now initialize the chat session
+        await initializeChatSession()
+      }
+    } catch (error) {
+      console.error('Failed to generate persona:', error)
+      setState(prev => ({ ...prev, isLoading: false }))
+      onError?.(error instanceof Error ? error.message : 'Failed to generate persona')
+    }
+  }, [subjectId, onError])
+
   return {
     ...state,
     sendMessage,
@@ -306,5 +617,10 @@ export function useChatConversation({
     stopListening,
     refreshConversation,
     setSessionId,
+    generatePersona,
+    checkPersonaExists,
+    loadSessions,
+    switchSession,
+    deleteSession,
   }
 }

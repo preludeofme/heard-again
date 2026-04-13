@@ -8,19 +8,31 @@ import {
   PersonaGenerationOptions,
   ToneAnalysis,
   FormalityLevel,
-  DEFAULT_CUSTOM_INSTRUCTIONS
+  DEFAULT_CUSTOM_INSTRUCTIONS,
+  LLMGateway
 } from '@/types'
 import type { Document } from '@/types'
+import {
+  FACT_EXTRACTION_INFERENCE_SETTINGS,
+  RELEASE_CANDIDATE_MODEL_POLICY,
+} from '@/config/releaseCandidate'
+import { PersonaRepository } from './PersonaRepository'
+import { v4 as uuidv4 } from 'uuid'
+import { PersonService } from './PersonService'
+
+const CANONICAL_REFUSAL_MESSAGE = "I don't have that documented in the materials I was given."
 
 export class PersonaServiceImpl implements PersonaService {
   constructor(
     private personaRepository: PersonaRepository,
     private styleExtractor: StyleExtractor,
-    private documentRepository: DocumentRepository
+    private documentRepository: DocumentRepository,
+    private personService: PersonService,
+    private llmGateway?: LLMGateway
   ) {}
 
-  async getPersonaProfile(personId: string): Promise<PersonaProfile | null> {
-    return await this.personaRepository.getPersonaProfile(personId)
+  async getPersonaProfile(personId: string, workspaceId: string): Promise<PersonaProfile | null> {
+    return await this.personaRepository.getPersonaProfile(personId, workspaceId)
   }
 
   async createPersonaProfile(profile: PersonaProfile): Promise<PersonaProfile> {
@@ -28,7 +40,7 @@ export class PersonaServiceImpl implements PersonaService {
   }
 
   async updatePersonaProfile(personId: string, updates: PersonaUpdateRequest): Promise<PersonaProfile> {
-    return await this.personaRepository.updatePersonaProfile(personId, updates)
+    return await this.personaRepository.updatePersonaProfile(personId, updates as Partial<PersonaProfile>)
   }
 
   async deletePersonaProfile(personId: string): Promise<void> {
@@ -39,9 +51,9 @@ export class PersonaServiceImpl implements PersonaService {
     return await this.personaRepository.listPersonaProfiles(workspaceId)
   }
 
-  async generatePersonaProfile(personId: string, options: PersonaGenerationOptions): Promise<PersonaProfile> {
+  async generatePersonaProfile(personId: string, workspaceId: string, options: PersonaGenerationOptions): Promise<PersonaProfile> {
     // Get documents for analysis
-    const documents = await this.documentRepository.listDocuments('default', { // TODO: Pass workspaceId
+    const documents = await this.documentRepository.listDocuments(workspaceId, {
       personId
     })
 
@@ -70,7 +82,7 @@ export class PersonaServiceImpl implements PersonaService {
     }
 
     if (options.extractFacts) {
-      knownFacts = await this.extractFacts(documents)
+      knownFacts = await this.extractFacts(documents, workspaceId, personId)
     }
 
     if (options.extractRelationships) {
@@ -85,16 +97,21 @@ export class PersonaServiceImpl implements PersonaService {
       contextInstructions: { ...DEFAULT_CUSTOM_INSTRUCTIONS.contextInstructions },
       styleOverrides: { ...DEFAULT_CUSTOM_INSTRUCTIONS.styleOverrides }
     }
-    const systemPrompt = this.generateSystemPrompt(personId, writingStyle, knownFacts, customInstructions)
+    
+    // Try to get person's display name
+    const displayName = await this.getPersonDisplayName(personId, workspaceId)
+    
+    const systemPrompt = await this.generateSystemPrompt(personId, workspaceId, writingStyle, knownFacts, customInstructions, displayName)
 
     // Create persona profile
     const now = new Date()
     const personaProfile: PersonaProfile = {
       id: `persona_${personId}_${Date.now()}`,
       personId,
-      workspaceId: 'default', // TODO: Pass workspaceId
+      workspaceId,
       version: 1,
       status: 'active',
+      displayName,
       writingStyle,
       knownFacts,
       relationships,
@@ -111,12 +128,12 @@ export class PersonaServiceImpl implements PersonaService {
   }
 
   async generatePromptTemplate(persona: PersonaProfile): Promise<string> {
-    return this.generateSystemPrompt(persona.personId, persona.writingStyle, persona.knownFacts)
+    return await this.generateSystemPrompt(persona.personId, persona.workspaceId, persona.writingStyle, persona.knownFacts)
   }
 
-  async extractStyleFromDocuments(personId: string): Promise<StyleProfile> {
+  async extractStyleFromDocuments(personId: string, workspaceId: string): Promise<StyleProfile> {
     // Get all documents for this person
-    const documents = await this.documentRepository.listDocuments('default', { personId })
+    const documents = await this.documentRepository.listDocuments(workspaceId, { personId })
     
     if (documents.length === 0) {
       throw new Error(`No documents found for person ${personId}`)
@@ -136,89 +153,95 @@ export class PersonaServiceImpl implements PersonaService {
     }
   }
 
-  private generateSystemPrompt(
+  private async getPersonDisplayName(personId: string, workspaceId: string): Promise<string> {
+    const person = await this.personService.getPerson(personId, workspaceId)
+    if (person?.fullName?.trim()) {
+      return person.fullName.trim()
+    }
+
+    return this.buildFallbackDisplayName(personId)
+  }
+
+  private async generateSystemPrompt(
     personId: string,
+    workspaceId: string,
     writingStyle: PersonaProfile['writingStyle'],
     knownFacts: PersonaFact[],
-    customInstructions?: PersonaProfile['customInstructions']
-  ): string {
-    const factsText = knownFacts
-      .filter(fact => fact.verified && fact.confidence > 0.7)
+    customInstructions?: PersonaProfile['customInstructions'],
+    displayName?: string
+  ): Promise<string> {
+    // Filter to only high-confidence verified facts
+    const verifiedFacts = knownFacts
+      .filter(fact => fact.verified && fact.confidence >= 0.8)
       .map(fact => fact.fact)
-      .join('\n')
+
+    const partiallyKnownFacts = knownFacts
+      .filter(fact => fact.confidence >= 0.5 && fact.confidence < 0.8)
+      .map(fact => fact.fact)
 
     const toneDescription = this.describeTone(writingStyle.tone)
 
-    let prompt = `You are ${personId}, speaking in your authentic voice based on your life experiences and writings.
+    // Use displayName if provided, otherwise try to fetch it
+    const personName = displayName || await this.getPersonDisplayName(personId, workspaceId)
 
-Your speaking style:
+    const prompt = `You are ${personName}. You are having a conversation with family members who want to learn about your life and memories.
+
+=== YOUR KNOWLEDGE BOUNDARIES (STRICT) ===
+You have EXACTLY ${verifiedFacts.length} verified facts about yourself:
+${verifiedFacts.length > 0 ? verifiedFacts.map(f => `- ${f}`).join('\n') : '- [No verified facts available]'}
+
+${partiallyKnownFacts.length > 0 ? `You have ${partiallyKnownFacts.length} partially-remembered details:\n${partiallyKnownFacts.map(f => `- ${f} (you're not entirely certain about this)`).join('\n')}` : ''}
+
+=== ABSOLUTE RULES (VIOLATION = FAILED RESPONSE) ===
+1. You may ONLY discuss information explicitly listed in your verified facts above.
+2. If asked about ANYTHING not in your verified facts, you MUST respond exactly with: "${CANONICAL_REFUSAL_MESSAGE}".
+3. You are STRICTLY FORBIDDEN from inventing: names, dates, places, relationships, events, memories, or experiences.
+4. You cannot "fill in gaps" or "make reasonable assumptions" about your life.
+5. You cannot say "I think...", "I believe...", or "Perhaps..." about unverified topics.
+6. If someone asks "Do you remember...?" about something not in your facts, respond exactly with "${CANONICAL_REFUSAL_MESSAGE}".
+7. You have no knowledge of: current events, pop culture after your time, technology, or world affairs unless explicitly in your verified facts.
+
+=== REFUSAL FORMAT (USE THIS EXACTLY) ===
+When asked about anything NOT in your verified facts, respond ONLY with:
+"${CANONICAL_REFUSAL_MESSAGE}"
+
+NEVER explain what you think someone else might know.
+NEVER suggest who might have that information.
+NEVER express curiosity about the unverified topic.
+
+=== YOUR SPEAKING STYLE ===
 - Average sentence length: ${writingStyle.averageSentenceLength} words
 - Formality level: ${writingStyle.formality}
-- Common phrases: ${writingStyle.commonPhrases.slice(0, 3).join(', ')}
-- Emotional tone: ${toneDescription}`
+${writingStyle.commonPhrases.length > 0 ? `- Common phrases you use: ${writingStyle.commonPhrases.slice(0, 3).join(', ')}` : ''}
+- Emotional tone: ${toneDescription}
 
-    // Add custom instructions
-    if (customInstructions) {
-      prompt += '\n\nSpecial instructions for your responses:'
-      
-      // Add relationship instructions
-      if (customInstructions.relationshipInstructions && Object.keys(customInstructions.relationshipInstructions).length > 0) {
-        prompt += '\n\nRelationship-specific instructions:'
-        Object.entries(customInstructions.relationshipInstructions).forEach(([person, instruction]) => {
-          prompt += `\n- ${instruction}`
-        })
-      }
-      
-      // Add behavior instructions
-      if (customInstructions.behaviorInstructions && customInstructions.behaviorInstructions.length > 0) {
-        prompt += '\n\nBehavioral guidelines:'
-        customInstructions.behaviorInstructions.forEach(instruction => {
-          prompt += `\n- ${instruction}`
-        })
-      }
-      
-      // Add topic instructions
-      if (customInstructions.topicInstructions && Object.keys(customInstructions.topicInstructions).length > 0) {
-        prompt += '\n\nTopic-specific guidance:'
-        Object.entries(customInstructions.topicInstructions).forEach(([topic, instruction]) => {
-          prompt += `\n- When discussing ${topic}: ${instruction}`
-        })
-      }
-      
-      // Add context instructions
-      if (customInstructions.contextInstructions && Object.keys(customInstructions.contextInstructions).length > 0) {
-        prompt += '\n\nContext-specific responses:'
-        Object.entries(customInstructions.contextInstructions).forEach(([context, instruction]) => {
-          prompt += `\n- In ${context} situations: ${instruction}`
-        })
-      }
-    }
+When discussing verified facts, speak naturally and warmly as ${personName}.
+When asked about unverified topics, use the exact refusal format immediately without elaboration.
 
-    if (factsText) {
-      prompt += `\n\nKnown facts about you:\n${factsText}`
-    }
-
-    prompt += `\n\nAlways respond naturally and warmly, as if you're having a genuine conversation with family. Share memories and emotions authentically. Use language that reflects your background and the era you lived in.`
+=== FINAL GUARDRAIL ===
+If you are uncertain whether a topic is in your verified facts, ASSUME IT IS NOT and respond exactly with "${CANONICAL_REFUSAL_MESSAGE}".
+Better to admit forgetting than to risk fabricating information.
+Your family values truth over completeness.`
 
     return prompt
   }
 
   private generateResponseGuidelines(writingStyle: PersonaProfile['writingStyle']): string[] {
     const guidelines = [
-      'Be warm and authentic',
-      'Share personal memories when relevant',
-      'Use language natural to your era and background',
-      'Maintain emotional honesty'
+      'ONLY discuss verified facts from your knowledge base',
+      `Use exact canonical refusal for any unverified topic: "${CANONICAL_REFUSAL_MESSAGE}"`,
+      'NEVER invent names, dates, places, or relationships',
+      'NEVER say "I think" or "I believe" about unverified information',
+      'NEVER make assumptions to fill gaps in memory',
+      'When uncertain, refuse immediately using the canonical refusal format',
+      'Do not suggest where else information might be found',
+      'Stay strictly within the bounds of verified information'
     ]
 
     if (writingStyle.formality === FormalityLevel.FORMAL) {
       guidelines.push('Maintain a respectful and formal tone')
     } else if (writingStyle.formality === FormalityLevel.INFORMAL) {
       guidelines.push('Use casual, familiar language')
-    }
-
-    if (writingStyle.tone.storytelling > 0.7) {
-      guidelines.push('Share stories and anecdotes when appropriate')
     }
 
     return guidelines
@@ -243,16 +266,132 @@ Your speaking style:
     return descriptions.join(', ')
   }
 
-  private async extractFacts(documents: Document[]): Promise<PersonaFact[]> {
-    // TODO: Implement fact extraction using LLM
-    // For now, return empty array
-    return []
+  private async extractFacts(
+    documents: Document[],
+    workspaceId: string,
+    personId: string
+  ): Promise<PersonaFact[]> {
+    if (!this.llmGateway || documents.length === 0) return []
+
+    // Sample up to 4 documents to stay within context limits
+    const sample = documents.slice(0, 4)
+    const combinedText = sample
+      .map(d => `[${d.title}]\n${d.content.slice(0, 1200)}`)
+      .join('\n\n---\n\n')
+
+    try {
+      const result = await this.llmGateway.generateResponse({
+        systemPrompt: 'You are a careful fact extractor. Output ONLY valid JSON — no prose, no markdown fences.',
+        context: '',
+        history: [],
+        userMessage: `Extract biographical facts from the following texts. Return a JSON array where each element has:\n- "fact": a concise factual statement (string)\n- "type": one of biographical | relationship | preference | experience | achievement\n- "confidence": a number 0-1\n\nTexts:\n${combinedText}\n\nJSON array:`,
+        metadata: {
+          model: RELEASE_CANDIDATE_MODEL_POLICY.primaryModel,
+          temperature: FACT_EXTRACTION_INFERENCE_SETTINGS.temperature,
+          maxTokens: FACT_EXTRACTION_INFERENCE_SETTINGS.maxTokens,
+          topP: FACT_EXTRACTION_INFERENCE_SETTINGS.topP,
+          topK: FACT_EXTRACTION_INFERENCE_SETTINGS.topK,
+          repeatPenalty: FACT_EXTRACTION_INFERENCE_SETTINGS.repeatPenalty,
+          releaseCandidateSpec: RELEASE_CANDIDATE_MODEL_POLICY.specVersion,
+        }
+      })
+
+      const parsed = JSON.parse(result.content.trim())
+      if (!Array.isArray(parsed)) return []
+
+      return parsed
+        .filter((item: any) => typeof item.fact === 'string' && typeof item.confidence === 'number')
+        .map((item: any): PersonaFact => {
+          const normalizedConfidence = Math.min(1, Math.max(0, Number(item.confidence)))
+
+          return {
+            id: uuidv4(),
+            type: (['biographical','relationship','preference','experience','achievement'] as const)
+              .includes(item.type) ? item.type : 'biographical',
+            fact: item.fact,
+            confidence: normalizedConfidence,
+            sources: sample.map(d => d.id),
+            provenance: sample.map(d => ({
+              workspaceId,
+              personId,
+              documentId: d.id,
+              documentTitle: d.title,
+              excerpt: this.createProvenanceExcerpt(d.content),
+              capturedAt: new Date(),
+            })),
+            context: item.context || '',
+            verified: normalizedConfidence >= 0.7,
+          }
+        })
+    } catch (error) {
+      console.warn('[PersonaService] extractFacts LLM parse failed, returning empty:', error)
+      return []
+    }
+  }
+
+  private buildFallbackDisplayName(personId: string): string {
+    const normalized = personId
+      .split(/[-_\s]+/)
+      .filter(part => part.length > 0)
+      .map(part => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
+      .join(' ')
+
+    return normalized || 'This person'
+  }
+
+  private createProvenanceExcerpt(content: string, maxLength: number = 240): string {
+    const normalized = content.replace(/\s+/g, ' ').trim()
+
+    if (normalized.length <= maxLength) {
+      return normalized
+    }
+
+    return `${normalized.slice(0, maxLength)}...`
   }
 
   private async extractRelationships(documents: Document[]): Promise<Relationship[]> {
-    // TODO: Implement relationship extraction using LLM
-    // For now, return empty array
-    return []
+    if (!this.llmGateway || documents.length === 0) return []
+
+    const sample = documents.slice(0, 4)
+    const combinedText = sample
+      .map(d => `[${d.title}]\n${d.content.slice(0, 1200)}`)
+      .join('\n\n---\n\n')
+
+    try {
+      const result = await this.llmGateway.generateResponse({
+        systemPrompt: 'You are a relationship extractor. Output ONLY valid JSON — no prose, no markdown fences.',
+        context: '',
+        history: [],
+        userMessage: `Extract named relationships mentioned in the following texts. Return a JSON array where each element has:\n- "relatedPersonId": the person\'s name as a slug (e.g. "john-smith")\n- "relationshipLabel": how the author refers to them (e.g. "mother", "best friend")\n- "relationshipType": one of parent | child | spouse | sibling | friend | colleague | other\n- "strength": a number 0-1 indicating closeness\n- "context": a brief quote or description\n\nTexts:\n${combinedText}\n\nJSON array:`,
+        metadata: {
+          model: RELEASE_CANDIDATE_MODEL_POLICY.primaryModel,
+          temperature: FACT_EXTRACTION_INFERENCE_SETTINGS.temperature,
+          maxTokens: FACT_EXTRACTION_INFERENCE_SETTINGS.maxTokens,
+          topP: FACT_EXTRACTION_INFERENCE_SETTINGS.topP,
+          topK: FACT_EXTRACTION_INFERENCE_SETTINGS.topK,
+          repeatPenalty: FACT_EXTRACTION_INFERENCE_SETTINGS.repeatPenalty,
+          releaseCandidateSpec: RELEASE_CANDIDATE_MODEL_POLICY.specVersion,
+        }
+      })
+
+      const parsed = JSON.parse(result.content.trim())
+      if (!Array.isArray(parsed)) return []
+
+      const validTypes = ['parent','child','spouse','sibling','friend','colleague','other'] as const
+      return parsed
+        .filter((item: any) => typeof item.relatedPersonId === 'string' && typeof item.relationshipLabel === 'string')
+        .map((item: any): Relationship => ({
+          id: uuidv4(),
+          relatedPersonId: item.relatedPersonId,
+          relationshipType: validTypes.includes(item.relationshipType) ? item.relationshipType : 'other',
+          relationshipLabel: item.relationshipLabel,
+          strength: Math.min(1, Math.max(0, Number(item.strength) || 0.5)),
+          context: item.context || '',
+        }))
+    } catch (error) {
+      console.warn('[PersonaService] extractRelationships LLM parse failed, returning empty:', error)
+      return []
+    }
   }
 
   private calculateConfidenceScore(documentCount: number, factCount: number, relationshipCount: number): number {
@@ -283,13 +422,4 @@ export interface StyleExtractor {
 // Document repository interface
 export interface DocumentRepository {
   listDocuments(workspaceId: string, filters?: { personId?: string }): Promise<Document[]>
-}
-
-// Persona repository interface
-export interface PersonaRepository {
-  getPersonaProfile(personId: string): Promise<PersonaProfile | null>
-  createPersonaProfile(profile: PersonaProfile): Promise<PersonaProfile>
-  updatePersonaProfile(personId: string, updates: PersonaUpdateRequest): Promise<PersonaProfile>
-  deletePersonaProfile(personId: string): Promise<void>
-  listPersonaProfiles(workspaceId: string): Promise<PersonaProfile[]>
 }

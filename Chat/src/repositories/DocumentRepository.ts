@@ -1,8 +1,5 @@
-import { DocumentRepository } from '@/services/retrieval/RetrievalService'
-import { Document, DocumentChunk } from '@/types/retrieval'
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
+import { DocumentRepository, Document, DocumentChunk } from '@/types/retrieval'
+import { prisma } from '@/lib/prisma'
 
 export class PrismaDocumentRepository implements DocumentRepository {
   async getDocument(documentId: string): Promise<Document | null> {
@@ -30,8 +27,10 @@ export class PrismaDocumentRepository implements DocumentRepository {
       data: {
         id: document.id,
         workspaceId: document.workspaceId,
+        assetId: document.assetId ?? null,
+        personId: document.personId ?? null,
         title: document.title,
-        documentType: document.documentType,
+        documentType: document.documentType.toUpperCase(),
         source: document.source,
         metadata: document.metadata
       }
@@ -40,14 +39,39 @@ export class PrismaDocumentRepository implements DocumentRepository {
     return this.mapDbDocumentToDocument(dbDocument)
   }
 
-  async updateDocument(document: Document): Promise<Document> {
+  /**
+   * Upsert a document by assetId. If a record with the same assetId already exists,
+   * update its personId (and title) so re-ingestion of a retroactively-linked asset
+   * corrects the missing personId without creating a duplicate.
+   */
+  async upsertByAssetId(document: Document): Promise<Document> {
+    if (!document.assetId) {
+      return this.createDocument(document)
+    }
+
+    const existing = await (prisma as any).document.findFirst({
+      where: { assetId: document.assetId }
+    })
+
+    if (existing) {
+      return this.updateDocument(document)
+    } else {
+      return this.createDocument(document)
+    }
+  }
+
+  async updateDocument(document: Partial<Document> & { id: string }): Promise<Document> {
     const dbDocument = await (prisma as any).document.update({
       where: { id: document.id },
       data: {
         title: document.title,
-        documentType: document.documentType,
+        content: document.content,
+        personId: document.personId,
+        documentType: document.documentType?.toUpperCase(),
         source: document.source,
         metadata: document.metadata,
+        status: document.status?.toUpperCase(),
+        embeddingStatus: document.embeddingStatus?.toUpperCase(),
         updatedAt: new Date()
       }
     })
@@ -126,10 +150,11 @@ export class PrismaDocumentRepository implements DocumentRepository {
     return dbChunks.map(this.mapDbChunkToDocumentChunk)
   }
 
-  private mapDbDocumentToDocument(dbDocument: any): Document {
+  private mapDbDocumentToDocument = (dbDocument: any): Document => {
     return {
       id: dbDocument.id,
       workspaceId: dbDocument.workspaceId,
+      assetId: dbDocument.assetId ?? undefined,
       personId: dbDocument.personId,
       title: dbDocument.title,
       content: dbDocument.content || '',

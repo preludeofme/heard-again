@@ -155,7 +155,7 @@ export class HealthCheckService {
       const axios = require('axios')
       const chromaUrl = process.env.CHROMA_URL || 'http://localhost:8004'
       
-      const response = await axios.get(`${chromaUrl}/api/v1/heartbeat`, {
+      const response = await axios.get(`${chromaUrl}/api/v2/heartbeat`, {
         timeout: 5000,
       })
 
