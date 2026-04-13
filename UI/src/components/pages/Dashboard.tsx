@@ -314,29 +314,29 @@ export function Dashboard({ legacySubject, memoryWallItems }: DashboardProps) {
 
         <Grid container spacing={3}>
           <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-            <Card
-              onClick={() => router.push('/talk')}
-              sx={{
-                backgroundColor: '#ffffff',
-                borderRadius: 3,
-                p: 3,
-                textAlign: 'center',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                '&:hover': {
-                  transform: 'translateY(-4px)',
-                  boxShadow: '0 10px 40px rgba(28, 28, 25, 0.06)',
-                },
-              }}
-            >
-              <ChatIcon sx={{ fontSize: 48, color: '#16334a', mb: 2 }} />
-              <Typography variant="h6" sx={{ mb: 1 }}>
-                Start Conversation
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Talk with Evelyn and capture new memories
-              </Typography>
-            </Card>
+             <Card
+               onClick={() => router.push('/profile')}
+               sx={{
+                 backgroundColor: '#ffffff',
+                 borderRadius: 3,
+                 p: 3,
+                 textAlign: 'center',
+                 cursor: 'pointer',
+                 transition: 'all 0.2s',
+                 '&:hover': {
+                   transform: 'translateY(-4px)',
+                   boxShadow: '0 10px 40px rgba(28, 28, 25, 0.06)',
+                 },
+               }}
+             >
+               <ChatIcon sx={{ fontSize: 48, color: '#163 ​34a', mb: 2 }} />
+               <Typography variant="h6" sx={{ mb: 1 }}>
+                 Start Conversation
+               </Typography>
+               <Typography variant="body2" color="text.secondary">
+                 Talk with Evelyn and capture new memories
+               </Typography>
+             </Card>
           </Grid>
 
           <Grid size={{ xs: 12, sm: 6, md: 4 }}>

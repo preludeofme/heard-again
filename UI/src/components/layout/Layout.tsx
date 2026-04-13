@@ -61,7 +61,6 @@ const navItems = [
   { label: 'Timeline', href: '/timeline', icon: 'timeline' },
   { label: 'Favorites', href: '/favorites', icon: 'favorite' },
   { label: 'Family Tree', href: '/family-tree', icon: 'account_tree' },
-  { label: 'Talk', href: '/talk', icon: 'forum' },
 ]
 
 const footerNavItems = [
@@ -154,7 +153,6 @@ export function Layout({ children }: LayoutProps) {
       case '/profile/[id]': return 0
       case '/voice-lab': return 1
       case '/stories': return 3
-      case '/talk': return 2
       default: return 0
     }
   }
@@ -208,18 +206,18 @@ export function Layout({ children }: LayoutProps) {
             {children}
           </Box>
 
-          <BottomNavigation
-            value={getMobileNavValue()}
-            onChange={(event, newValue) => {
-              const routes = ['/profile', '/voice-lab', '/talk', '/stories']
-              router.push(routes[newValue])
-            }}
-            sx={{
-              backgroundColor: '#f6f3ee',
-              borderTop: 'none',
-              boxShadow: 'none',
-            }}
-          >
+            <BottomNavigation
+              value={getMobileNavValue()}
+              onChange={(event, newValue) => {
+                const routes = ['/profile', '/voice-lab', '/stories']
+                router.push(routes[newValue])
+              }}
+              sx={{
+                backgroundColor: '#f6f3ee',
+                borderTop: 'none',
+                boxShadow: 'none',
+              }}
+            >
             <BottomNavigationAction label="Home" icon={<HomeIcon />} />
             <BottomNavigationAction label="Lab" icon={<MicIcon />} />
             <BottomNavigationAction
