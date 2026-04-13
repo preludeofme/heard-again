@@ -63,7 +63,7 @@ export const STRICT_CHAT_INFERENCE_SETTINGS: InferenceSettings = {
   topP: parseNumber(process.env.CHAT_TOP_P, 0.08),
   topK: parseNumber(process.env.CHAT_TOP_K, 24),
   repeatPenalty: parseNumber(process.env.CHAT_REPEAT_PENALTY, 1.15),
-  maxTokens: parseNumber(process.env.CHAT_MAX_TOKENS, 800),
+  maxTokens: parseNumber(process.env.CHAT_MAX_TOKENS, 600),
 }
 
 export const STYLE_ANALYSIS_INFERENCE_SETTINGS: InferenceSettings = {

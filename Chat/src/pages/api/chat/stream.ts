@@ -101,31 +101,54 @@ export default async function handler(
       let messageId: string | null = null
 
       for await (const chunk of stream) {
-        if (chunk.type === 'start') {
-          messageId = chunk.messageId || null
-          // Bug-2 fix: include type in data JSON so client can use data.type
-          res.write(`event: start\ndata: ${JSON.stringify({ type: 'start', messageId })}\n\n`)
-        } else if (chunk.type === 'chunk') {
-          fullResponse += chunk.content
-          res.write(`event: chunk\ndata: ${JSON.stringify({ type: 'chunk', content: chunk.content })}\n\n`)
-        } else if (chunk.type === 'metadata') {
-          res.write(`event: metadata\ndata: ${JSON.stringify({ type: 'metadata', ...chunk.metadata })}\n\n`)
-        } else if (chunk.type === 'end') {
-          // Use filteredContent if validation found violations; otherwise use the streamed content
-          const contentToStore = chunk.metadata?.filteredContent || fullResponse
-          if (messageId && contentToStore) {
-            await chatService.updateAssistantMessage(messageId, contentToStore, chunk.metadata || {})
+        try {
+          if (chunk.type === 'start') {
+            messageId = chunk.messageId || null
+            // Bug-2 fix: include type in data JSON so client can use data.type
+            const data = JSON.stringify({ type: 'start', messageId })
+            res.write(`event: start\ndata: ${data}\n\n`)
+            res.flush()
+          } else if (chunk.type === 'chunk') {
+            fullResponse += chunk.content
+            // Sanitize content to prevent JSON parsing errors
+            const sanitizedContent = chunk.content.replace(/[\u0000-\u001F\u007F-\u009F]/g, '')
+            const data = JSON.stringify({ type: 'chunk', content: sanitizedContent })
+            res.write(`event: chunk\ndata: ${data}\n\n`)
+            res.flush()
+          } else if (chunk.type === 'metadata') {
+            const data = JSON.stringify({ type: 'metadata', ...chunk.metadata })
+            res.write(`event: metadata\ndata: ${data}\n\n`)
+            res.flush()
+          } else if (chunk.type === 'end') {
+            // Use filteredContent if validation found violations; otherwise use the streamed content
+            const contentToStore = chunk.metadata?.filteredContent || fullResponse
+            if (messageId && contentToStore) {
+              await chatService.updateAssistantMessage(messageId, contentToStore, chunk.metadata || {})
+            }
+            const data = JSON.stringify({ 
+              type: 'end',
+              messageId,
+              processingTime: chunk.metadata?.totalProcessingTime,
+              tokensUsed: chunk.metadata?.totalTokens,
+              filteredContent: chunk.metadata?.filteredContent || null
+            })
+            res.write(`event: end\ndata: ${data}\n\n`)
+            res.flush()
+            break
+          } else if (chunk.type === 'error') {
+            const data = JSON.stringify({ type: 'error', error: chunk.error })
+            res.write(`event: error\ndata: ${data}\n\n`)
+            res.flush()
+            break
           }
-          res.write(`event: end\ndata: ${JSON.stringify({ 
-            type: 'end',
-            messageId,
-            processingTime: chunk.metadata?.totalProcessingTime,
-            tokensUsed: chunk.metadata?.totalTokens,
-            filteredContent: chunk.metadata?.filteredContent || null
+        } catch (jsonError) {
+          console.error('Failed to serialize chunk:', chunk, jsonError)
+          res.write(`event: error\ndata: ${JSON.stringify({ 
+            type: 'error', 
+            error: 'Failed to serialize response chunk',
+            details: jsonError instanceof Error ? jsonError.message : 'Unknown error'
           })}\n\n`)
-          break
-        } else if (chunk.type === 'error') {
-          res.write(`event: error\ndata: ${JSON.stringify({ type: 'error', error: chunk.error })}\n\n`)
+          res.flush()
           break
         }
       }
@@ -137,6 +160,7 @@ export default async function handler(
         error: 'Failed to stream response',
         details: streamError instanceof Error ? streamError.message : 'Unknown error'
       })}\n\n`)
+      res.flush()
       res.end()
     }
 

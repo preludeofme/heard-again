@@ -221,6 +221,14 @@ Format your response as a detailed analysis with specific examples and insights.
       prompt += `\n- "Dad" or "he" to "I"`
       prompt += `\n- "his" to "my"`
       prompt += `\nExample: "Dad had a dog" becomes "I had a dog"`
+      
+      // Add the actual documents
+      prompt += `\n\n=== DOCUMENT EXCERPTS ===`
+      for (let i = 0; i < retrievedDocuments.length; i++) {
+        const doc = retrievedDocuments[i]
+        prompt += `\n\nDocument ${i + 1}: ${doc.metadata.title}`
+        prompt += `\n${doc.content}`
+      }
     } else {
       prompt += `\n\n=== NO DOCUMENTS RETRIEVED ===`
       prompt += `\nNo relevant documents were found for this question.`
