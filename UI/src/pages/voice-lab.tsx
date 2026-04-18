@@ -80,7 +80,7 @@ export default function VoiceLab() {
   return (
     <>
       <Head>
-        <title>Voice Lab - Heard Again</title>
+        <title>Voice Profiles - Heard Again</title>
         <meta name="description" content="Voice & Documents Lab" />
       </Head>
       <Layout>

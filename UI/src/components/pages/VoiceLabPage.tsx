@@ -55,7 +55,7 @@ export function VoiceLabPage({ voiceModels, controller }: VoiceLabPageProps) {
 
   // ── Local state ──
   const [selectedVoiceId, setSelectedVoiceId] = useState<string | null>(null)
-  const [testText, setTestText] = useState('')
+  const [testText, setTestText] = useState("Hello, I'm just setting up my digital voice. How do I sound?")
   const [isSynthesizing, setIsSynthesizing] = useState(false)
   const [playingAudioUrl, setPlayingAudioUrl] = useState<string | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
@@ -64,7 +64,7 @@ export function VoiceLabPage({ voiceModels, controller }: VoiceLabPageProps) {
   const [showCompare, setShowCompare] = useState(false)
   const [compareA, setCompareA] = useState<string>('')
   const [compareB, setCompareB] = useState<string>('')
-  const [compareText, setCompareText] = useState('')
+  const [compareText, setCompareText] = useState("Hello, I'm just setting up my digital voice. How do I sound?")
   const [isComparing, setIsComparing] = useState(false)
   const [compareResults, setCompareResults] = useState<{ audioA: string | null; audioB: string | null } | null>(null)
 
@@ -162,7 +162,7 @@ export function VoiceLabPage({ voiceModels, controller }: VoiceLabPageProps) {
             {/* Header */}
             <Box sx={{ mb: 4 }}>
               <Typography variant="h4" className="serif-font" sx={{ color: '#16334a', mb: 0.5 }}>
-                Voice Lab
+                Voice Profiles
               </Typography>
               <Typography variant="body2" sx={{ color: '#546669' }}>
                 Create, test, and compare voice clones
@@ -184,7 +184,7 @@ export function VoiceLabPage({ voiceModels, controller }: VoiceLabPageProps) {
                 mb: 4,
               }}
             >
-              Create New Voice
+              Create Voice Profile
             </Button>
 
             {/* ── Test Selected Voice ── */}
@@ -226,7 +226,8 @@ export function VoiceLabPage({ voiceModels, controller }: VoiceLabPageProps) {
                       onClick={playingAudioUrl ? handleStopAudio : handlePlayTest}
                       disabled={!testText.trim() || isSynthesizing}
                       sx={{
-                        background: 'linear-gradient(135deg, #16334a 0%, #2e4a62 100%)',
+                        backgroundColor: '#16334a',
+                        '&:hover': { backgroundColor: '#2e4a62' },
                         fontWeight: 600,
                       }}
                     >
@@ -328,7 +329,7 @@ export function VoiceLabPage({ voiceModels, controller }: VoiceLabPageProps) {
                     fontWeight: 600,
                   }}
                 >
-                  Create New Voice
+                  Create Voice Profile
                 </Button>
               </Box>
             ) : (
@@ -515,7 +516,8 @@ export function VoiceLabPage({ voiceModels, controller }: VoiceLabPageProps) {
             disabled={!compareText.trim() || !compareA || !compareB || isComparing}
             startIcon={isComparing ? <CircularProgress size={18} color="inherit" /> : undefined}
             sx={{
-              background: 'linear-gradient(135deg, #16334a 0%, #2e4a62 100%)',
+              backgroundColor: '#16334a',
+              '&:hover': { backgroundColor: '#2e4a62' },
               py: 1.5,
               fontWeight: 600,
               mb: 2,

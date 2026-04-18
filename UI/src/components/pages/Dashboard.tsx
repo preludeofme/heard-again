@@ -97,10 +97,10 @@ export function Dashboard({ legacySubject, memoryWallItems }: DashboardProps) {
             >
               <MicIcon sx={{ fontSize: 48, color: '#16334a', opacity: 0.4 }} />
               <Typography variant="h5" className="serif-font" sx={{ color: '#16334a', textAlign: 'center' }}>
-                No voice sample recorded yet
+                Bring their stories to life
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', maxWidth: 320 }}>
-                Visit the Voice Lab to upload audio samples and create a voice clone.
+                Upload an old voicemail or record a new greeting to create a voice profile.
               </Typography>
               <Button
                 variant="contained"
@@ -108,7 +108,7 @@ export function Dashboard({ legacySubject, memoryWallItems }: DashboardProps) {
                 onClick={() => router.push('/voice-lab')}
                 sx={{ mt: 1, backgroundColor: '#16334a', '&:hover': { backgroundColor: '#2e4a62' } }}
               >
-                Go to Voice Lab
+                Go to Voice Profiles
               </Button>
             </Card>
           </Grid>

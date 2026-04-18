@@ -58,7 +58,7 @@ interface LayoutProps {
 
 const navItems = [
   { label: 'Profile', href: '/profile', icon: 'person' },
-  { label: 'Voice Lab', href: '/voice-lab', icon: 'settings_voice' },
+  { label: 'Voice Profiles', href: '/voice-lab', icon: 'settings_voice' },
   { label: 'Documents', href: '/documents', icon: 'description' },
   { label: 'Stories', href: '/stories', icon: 'auto_stories' },
   { label: 'Timeline', href: '/timeline', icon: 'timeline' },
@@ -207,6 +207,7 @@ export function Layout({ children }: LayoutProps) {
           </Box>
 
           <BottomNavigation
+            showLabels
             value={getMobileNavValue()}
             onChange={(_, newValue: number) => {
               router.push(bottomNavRoutes[newValue])

@@ -37,7 +37,7 @@ export default function OnboardingPage() {
     if (activeStep === 0) {
       // Validate family name
       if (!formData.familyName.trim()) {
-        setError('Please enter a family name')
+        setError('Every archive needs a name. What should we call yours?')
         return
       }
       setError(null)
