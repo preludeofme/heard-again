@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { NextApiRequest, NextApiResponse } from 'next'
 import { getToken } from 'next-auth/jwt'
 import { prisma } from '@/lib/prisma'
@@ -55,7 +56,7 @@ export async function checkMFAStatus(
 
     return { user: userData, mfaRequired }
   } catch (error) {
-    console.error('Error checking MFA status:', error)
+    logger.error('Error checking MFA status:', error)
     errorResponse(res, 'Internal server error', 500, 'MFA_CHECK_ERROR')
     return { user: null, mfaRequired: false }
   }
@@ -128,7 +129,7 @@ export async function verifyMFAToken(
                        req.headers['x-real-ip'] as string || 
                        'unknown'
       
-      console.warn('[MFA] Failed verification attempt', {
+      logger.warn('[MFA] Failed verification attempt', {
         userId: userData.id,
         timestamp: new Date().toISOString(),
         ip: clientIP
@@ -143,16 +144,12 @@ export async function verifyMFAToken(
                      req.headers['x-real-ip'] as string || 
                      'unknown'
 
-    console.info('[MFA] Successful verification', {
-      userId: userData.id,
-      timestamp: new Date().toISOString(),
-      ip: clientIP
-    })
+    logger.info({ userId: userData.id, ip: clientIP, timestamp: new Date().toISOString() }, '[MFA] Successful verification')
 
     return true
 
   } catch (error) {
-    console.error('[MFA] Verification error:', error)
+    logger.error('[MFA] Verification error:', error)
     errorResponse(res, 'MFA verification failed', 500, 'MFA_ERROR')
     return false
   }

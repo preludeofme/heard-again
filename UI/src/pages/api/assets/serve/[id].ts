@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '@/lib/prisma'
 import { getStorageService } from '@/lib/storage/storage-service'
@@ -43,7 +44,7 @@ export default withSecurityHeaders(withRateLimit('general', async function handl
 
     // Additional tenant verification
     if (asset.workspaceId !== user.workspaceId) {
-      console.error('Tenant isolation violation attempt:', {
+      logger.error('Tenant isolation violation attempt:', {
         assetId: asset.id,
         assetWorkspaceId: asset.workspaceId,
         userWorkspaceId: user.workspaceId,
@@ -77,7 +78,7 @@ export default withSecurityHeaders(withRateLimit('general', async function handl
       res.setHeader('Content-Disposition', `inline; filename="${asset.originalName}"`)
       
       // Log access for audit
-      console.log('Asset served:', {
+      logger.info('Asset served:', {
         assetId: asset.id,
         workspaceId: asset.workspaceId,
         userId: user.id,
@@ -100,7 +101,7 @@ export default withSecurityHeaders(withRateLimit('general', async function handl
     res.setHeader('Cache-Control', 'private, max-age=3600')
     
     // Log access for audit
-    console.log('Asset redirect:', {
+    logger.info('Asset redirect:', {
       assetId: asset.id,
       workspaceId: asset.workspaceId,
       userId: user.id,
@@ -111,7 +112,7 @@ export default withSecurityHeaders(withRateLimit('general', async function handl
     res.redirect(302, publicUrl)
     
   } catch (error) {
-    console.error('File serving error:', error)
+    logger.error('File serving error:', error)
     return errorResponse(res, 'Failed to serve file', 500)
   }
 }))

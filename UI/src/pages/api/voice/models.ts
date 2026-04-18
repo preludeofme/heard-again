@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { ttsRequest } from '@/lib/tts-client'
 
@@ -24,7 +25,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     return res.status(200).json({ success: true, models })
   } catch (error: any) {
-    console.error('[API] List models error:', error.message)
+    logger.error('[API] List models error:', error.message)
     // Return empty models instead of error so UI still works
     return res.status(200).json({ success: true, models: [] })
   }

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { OptimizationOptions, OptimizationResult } from './index'
 
 export class AudioOptimizer {
@@ -89,7 +90,7 @@ export class AudioOptimizer {
       }
 
     } catch (error) {
-      console.error('Audio optimization failed:', error)
+      logger.error('Audio optimization failed:', error)
       // Return original file if optimization fails
       return {
         optimizedFile: file,
@@ -114,20 +115,20 @@ export class AudioOptimizer {
     // 2. Convert to MP3 with specified bitrate
     // 3. Return the converted buffer
     
-    console.log('Audio conversion to MP3 not implemented yet, returning original')
+    logger.info('Audio conversion to MP3 not implemented yet, returning original')
     return file
   }
 
   private async optimizeMp3(file: Buffer, quality: number): Promise<Buffer> {
     // Re-encode MP3 at lower bitrate if it's too large
     // This would use FFmpeg to re-encode at a lower bitrate
-    console.log('MP3 bitrate optimization not implemented yet, returning original')
+    logger.info('MP3 bitrate optimization not implemented yet, returning original')
     return file
   }
 
   private async optimizeM4a(file: Buffer, quality: number): Promise<Buffer> {
     // Optimize M4A bitrate
-    console.log('M4A optimization not implemented yet, returning original')
+    logger.info('M4A optimization not implemented yet, returning original')
     return file
   }
 
@@ -146,13 +147,13 @@ export class AudioOptimizer {
   async generateWaveform(file: Buffer, width: number = 800, height: number = 200): Promise<Buffer> {
     // Generate waveform image data for audio visualization
     // This would typically use Web Audio API or similar
-    console.log('Waveform generation not implemented yet')
+    logger.info('Waveform generation not implemented yet')
     return Buffer.alloc(0)
   }
 
   async trimAudio(file: Buffer, startTime: number, endTime: number): Promise<Buffer> {
     // Trim audio to specified time range
-    console.log('Audio trimming not implemented yet')
+    logger.info('Audio trimming not implemented yet')
     return file
   }
 }

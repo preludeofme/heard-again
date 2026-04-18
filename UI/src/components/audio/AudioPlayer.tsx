@@ -259,6 +259,7 @@ export function AudioPlayer({
           <IconButton
             onClick={togglePlay}
             disabled={isLoading}
+            aria-label={isPlaying ? 'Pause' : 'Play'}
             sx={{
               bgcolor: 'primary.main',
               color: 'white',
@@ -269,7 +270,7 @@ export function AudioPlayer({
             {isPlaying ? <PauseIcon /> : <PlayIcon />}
           </IconButton>
 
-          <IconButton onClick={handleStop} disabled={isLoading || !isPlaying}>
+          <IconButton onClick={handleStop} disabled={isLoading || !isPlaying} aria-label="Stop">
             <StopIcon />
           </IconButton>
 
@@ -277,7 +278,7 @@ export function AudioPlayer({
 
           {/* Volume control */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: 120 }}>
-            <IconButton size="small" onClick={toggleMute}>
+            <IconButton size="small" onClick={toggleMute} aria-label={isMuted || volume === 0 ? 'Unmute' : 'Mute'}>
               {isMuted || volume === 0 ? <VolumeMuteIcon /> : <VolumeIcon />}
             </IconButton>
             <Slider

@@ -1,10 +1,15 @@
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
 import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
+import { withCSRFProtection } from '@/lib/security/csrf'
 
 export default apiHandler({
   // POST /api/stories/[id]/generate-audio - Generate TTS audio for a story
-  POST: async (req, res) => {
+  POST: withCSRFProtection(async (req, res) => {
+    if (process.env.AUDIO_GENERATION_ENABLED !== 'true') {
+      return res.status(503).json({ success: false, error: 'Audio generation is not yet available' })
+    }
+
     const user = await getAuthUserWithWorkspace(req, res)
     const storyId = req.query.id as string
     await requireWorkspaceRole(user.id, user.workspaceId, 'EDITOR')
@@ -57,5 +62,5 @@ export default apiHandler({
       voiceProfileId: profileId,
       textLength: speechText.length,
     }, 201)
-  },
+  }),
 })

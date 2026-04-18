@@ -9,6 +9,7 @@ import {
   Divider,
   IconButton,
   useTheme,
+  useMediaQuery,
 } from '@mui/material'
 import {
   ZoomIn,
@@ -25,11 +26,16 @@ import {
   FullscreenExit,
   ExpandMore,
   ExpandLess,
+  Search as SearchIcon,
+  ArrowBack as ArrowBackIcon,
+  Close as CloseIcon,
 } from '@mui/icons-material'
+import InputBase from '@mui/material/InputBase'
 import { PersonDetailModal } from '@/components/modals/PersonDetailModal'
 import { AddEditPersonModal, PersonFormData } from '@/components/modals/AddEditPersonModal'
 import { FamilyMemberSearch, SearchableFamilyMember } from '@/components/search'
 import { fetchWithCSRFAndJSON, fetchWithCSRF } from '@/lib/api-client'
+import { VoiceTrainingModal } from '@/components/audio/VoiceTrainingModal'
 
 interface TreePerson {
   id: string | number
@@ -122,24 +128,97 @@ function FamilyMemberCard({
   person,
   level,
   isSelf,
+  cardWidth,
+  isMobile,
   onPersonClick,
   onAddPerson,
 }: {
   person: TreePerson
   level: TreeNodeLevel
   isSelf?: boolean
+  cardWidth: number
+  isMobile: boolean
   onPersonClick: (person: TreePerson) => void
   onAddPerson: () => void
 }) {
   const isParentLevel = level === 'parent'
-  const cardWidth = level === 'grandparent' ? GRANDPARENT_CARD_WIDTH : level === 'parent' ? PARENT_CARD_WIDTH : CHILD_CARD_WIDTH
-
   const selfCardColor = '#1a6b5a'
   const selfCardOutline = 'rgba(26, 107, 90, 0.08)'
 
+  // Mobile: compact card — tap opens detail modal; no inline action buttons
+  if (isMobile) {
+    const avatarSize = isParentLevel ? 36 : level === 'grandparent' ? 30 : 28
+    return (
+      <Card
+        tabIndex={0}
+        onClick={() => onPersonClick(person)}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onPersonClick(person) } }}
+        sx={{
+          bgcolor: isParentLevel
+            ? (isSelf ? selfCardColor : 'primary.main')
+            : 'background.paper',
+          p: 1.5,
+          borderRadius: isParentLevel ? 4 : 3,
+          width: cardWidth,
+          cursor: 'pointer',
+          boxShadow: isParentLevel
+            ? '0 8px 20px rgba(0,0,0,0.12)'
+            : '0 4px 12px rgba(28,28,25,0.06)',
+          border: isParentLevel ? 'none' : '1px solid rgba(22,51,74,0.06)',
+          outline: isParentLevel && isSelf ? `4px solid ${selfCardOutline}` : 'none',
+          overflow: 'hidden',
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Avatar
+            src={person.avatar}
+            sx={{
+              width: avatarSize,
+              height: avatarSize,
+              flexShrink: 0,
+              border: isParentLevel ? '1.5px solid rgba(205,229,255,0.4)' : 'none',
+            }}
+          />
+          <Box sx={{ overflow: 'hidden', minWidth: 0 }}>
+            <Typography
+              sx={{
+                fontFamily: 'var(--font-newsreader), serif',
+                fontSize: isParentLevel ? '0.8rem' : '0.72rem',
+                fontWeight: 600,
+                color: isParentLevel ? 'white' : 'primary.main',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                lineHeight: 1.2,
+              }}
+            >
+              {person.name}
+            </Typography>
+            {isParentLevel && (
+              <Typography
+                sx={{
+                  fontSize: '0.65rem',
+                  color: 'rgba(255,255,255,0.6)',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                {person.memories ? `${person.memories} memories` : 'Tap to view'}
+              </Typography>
+            )}
+          </Box>
+        </Box>
+      </Card>
+    )
+  }
+
+  // Desktop: full card with action buttons
   return (
     <Card
+      tabIndex={0}
       onClick={() => onPersonClick(person)}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onPersonClick(person) } }}
       sx={
         isParentLevel
           ? {
@@ -174,12 +253,7 @@ function FamilyMemberCard({
           src={person.avatar}
           sx={
             isParentLevel
-              ? {
-                width: 64,
-                height: 64,
-                border: 2,
-                borderColor: 'rgba(205, 229, 255, 0.5)',
-              }
+              ? { width: 64, height: 64, border: 2, borderColor: 'rgba(205, 229, 255, 0.5)' }
               : { width: level === 'grandparent' ? 56 : 48, height: level === 'grandparent' ? 56 : 48 }
           }
         />
@@ -202,62 +276,26 @@ function FamilyMemberCard({
 
       {isParentLevel && (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-          <Button
-            fullWidth
-            variant="text"
-            startIcon={<AutoStories />}
-            sx={{
-              color: 'white',
-              bgcolor: 'rgba(255,255,255,0.1)',
-              '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' },
-              justifyContent: 'center',
-              py: 1,
-              borderRadius: 2,
-            }}
+          <Button fullWidth variant="text" startIcon={<AutoStories />}
+            sx={{ color: 'white', bgcolor: 'rgba(255,255,255,0.1)', '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' }, justifyContent: 'center', py: 1, borderRadius: 2 }}
           >
             View Archive
           </Button>
           <Box sx={{ display: 'flex', gap: 1 }}>
-            <Button
-              variant="text"
-              startIcon={<Edit />}
-              onClick={(event) => {
-                event.stopPropagation()
-                onPersonClick(person)
-              }}
-              sx={{
-                flex: 1,
-                color: 'white',
-                bgcolor: 'rgba(255,255,255,0.1)',
-                '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' },
-                justifyContent: 'center',
-                py: 1,
-                borderRadius: 2,
-              }}
+            <Button variant="text" startIcon={<Edit />}
+              onClick={(e) => { e.stopPropagation(); onPersonClick(person) }}
+              sx={{ flex: 1, color: 'white', bgcolor: 'rgba(255,255,255,0.1)', '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' }, justifyContent: 'center', py: 1, borderRadius: 2 }}
             >
               Edit
             </Button>
-            <Button
-              variant="text"
-              startIcon={<PersonAdd />}
-              onClick={(event) => {
-                event.stopPropagation()
-                onAddPerson()
-              }}
-              sx={{
-                flex: 1,
-                color: 'white',
-                bgcolor: 'rgba(255,255,255,0.1)',
-                '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' },
-                justifyContent: 'center',
-                py: 1,
-                borderRadius: 2,
-              }}
+            <Button variant="text" startIcon={<PersonAdd />}
+              onClick={(e) => { e.stopPropagation(); onAddPerson() }}
+              sx={{ flex: 1, color: 'white', bgcolor: 'rgba(255,255,255,0.1)', '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' }, justifyContent: 'center', py: 1, borderRadius: 2 }}
             >
               Add
             </Button>
-            </Box>
           </Box>
+        </Box>
       )}
     </Card>
   )
@@ -275,39 +313,46 @@ export function FamilyTreePage({
 }: FamilyTreePageProps) {
   const router = useRouter()
   const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const familyData = people && (people.grandparents.length > 0 || people.parents.length > 0 || people.children.length > 0)
     ? people
     : defaultFamilyData
 
-  const parentRowWidth = getGenerationWidth(
-    familyData.parents.length,
-    PARENT_CARD_WIDTH,
-    PARENT_GAP
-  )
+  // Responsive card dimensions — smaller on mobile so 2 parents fit without horizontal scroll
+  const cardW = {
+    grandparent: isMobile ? 140 : GRANDPARENT_CARD_WIDTH,
+    parent: isMobile ? 160 : PARENT_CARD_WIDTH,
+    child: isMobile ? 130 : CHILD_CARD_WIDTH,
+  }
+  const cardGap = {
+    grandparent: isMobile ? 16 : GRANDPARENT_GAP,
+    parent: isMobile ? 16 : PARENT_GAP,
+    child: isMobile ? 16 : CHILD_GAP,
+  }
 
-  const grandparentRowWidth = getGenerationWidth(
-    familyData.grandparents.length,
-    GRANDPARENT_CARD_WIDTH,
-    GRANDPARENT_GAP
-  )
-
-  const childrenRowWidth = getGenerationWidth(
-    familyData.children.length,
-    CHILD_CARD_WIDTH,
-    CHILD_GAP
-  )
+  const parentRowWidth = getGenerationWidth(familyData.parents.length, cardW.parent, cardGap.parent)
+  const grandparentRowWidth = getGenerationWidth(familyData.grandparents.length, cardW.grandparent, cardGap.grandparent)
+  const childrenRowWidth = getGenerationWidth(familyData.children.length, cardW.child, cardGap.child)
 
   const treeCanvasWidth = Math.max(
     grandparentRowWidth,
     parentRowWidth,
     childrenRowWidth,
-    PARENT_CARD_WIDTH
+    cardW.parent,
   )
 
+  const cardH = {
+    grandparent: isMobile ? 60 : GRANDPARENT_CARD_HEIGHT,
+    parent: isMobile ? 80 : PARENT_CARD_HEIGHT,
+    child: isMobile ? 56 : CHILD_CARD_HEIGHT,
+  }
+
   const GRANDPARENT_ROW_Y = 20
-  const PARENT_ROW_Y = 260
-  const CHILD_ROW_Y = 630
-  const TREE_FLOW_HEIGHT = familyData.children.length > 0 ? 900 : 520
+  const PARENT_ROW_Y = isMobile ? 160 : 260
+  const CHILD_ROW_Y = isMobile ? 300 : 630
+  const TREE_FLOW_HEIGHT = familyData.children.length > 0
+    ? (isMobile ? 480 : 900)
+    : (isMobile ? 280 : 520)
 
   // Modal states
   const [detailModalOpen, setDetailModalOpen] = useState(false)
@@ -317,10 +362,18 @@ export function FamilyTreePage({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [zoomLevel, setZoomLevel] = useState(1)
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 })
+  // On mobile touch defaults to pan — no mode switch needed
   const [toolMode, setToolMode] = useState<'pointer' | 'hand'>('pointer')
+  const touchStart = useRef<{ x: number; y: number } | null>(null)
+  const touchPanStart = useRef({ x: 0, y: 0 })
+  const touchMoved = useRef(false)
   const [legendCollapsed, setLegendCollapsed] = useState(false)
   const [insightCollapsed, setInsightCollapsed] = useState(false)
   const [selectedSearchMemberId, setSelectedSearchMemberId] = useState<string | null>(null)
+  const [voiceTrainingPersonId, setVoiceTrainingPersonId] = useState<string | null>(null)
+  const [searchOverlayOpen, setSearchOverlayOpen] = useState(false)
+  const [overlayQuery, setOverlayQuery] = useState('')
+  const overlayInputRef = useRef<HTMLInputElement>(null)
 
   // Canvas drag state
   const isDragging = useRef(false)
@@ -456,13 +509,11 @@ export function FamilyTreePage({
   }
 
   const handleAddStory = (personId: string) => {
-    console.log('Add story for person:', personId)
-    // TODO: Navigate to story creation with person pre-selected
+    router.push(`/stories?subjectId=${personId}`)
   }
 
   const handleAddVoiceProfile = (personId: string) => {
-    console.log('Add voice profile for person:', personId)
-    // TODO: Open voice training modal with person pre-selected
+    setVoiceTrainingPersonId(personId)
   }
 
   const handleAddRelationship = (personId: string) => {
@@ -501,8 +552,7 @@ export function FamilyTreePage({
   }
 
   const handleStoryClick = (storyId: string) => {
-    console.log('Navigate to story:', storyId)
-    // TODO: Navigate to story detail page
+    if (storyId) router.push(`/stories/${storyId}`)
   }
 
   const handleViewFullProfile = (personId: string) => {
@@ -530,6 +580,34 @@ export function FamilyTreePage({
     isDragging.current = false
   }, [])
 
+  // Touch handlers — single finger always pans, tap (no movement) propagates to card click
+  const handleCanvasTouchStart = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length !== 1) return
+    const touch = e.touches[0]
+    touchStart.current = { x: touch.clientX, y: touch.clientY }
+    touchPanStart.current = { ...panOffset }
+    touchMoved.current = false
+  }, [panOffset])
+
+  const handleCanvasTouchMove = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length !== 1 || !touchStart.current) return
+    e.preventDefault()
+    const touch = e.touches[0]
+    const dx = touch.clientX - touchStart.current.x
+    const dy = touch.clientY - touchStart.current.y
+    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
+      touchMoved.current = true
+    }
+    setPanOffset({
+      x: touchPanStart.current.x + dx,
+      y: touchPanStart.current.y + dy,
+    })
+  }, [])
+
+  const handleCanvasTouchEnd = useCallback(() => {
+    touchStart.current = null
+  }, [])
+
   const cardPositions: CardPosition[] = useMemo(() => {
     const buildRow = (
       generationPeople: TreePerson[],
@@ -554,11 +632,11 @@ export function FamilyTreePage({
     }
 
     return [
-      ...buildRow(familyData.grandparents, 'grandparent', GRANDPARENT_ROW_Y, GRANDPARENT_CARD_WIDTH, GRANDPARENT_GAP, GRANDPARENT_CARD_HEIGHT),
-      ...buildRow(familyData.parents, 'parent', PARENT_ROW_Y, PARENT_CARD_WIDTH, PARENT_GAP, PARENT_CARD_HEIGHT),
-      ...buildRow(familyData.children, 'child', CHILD_ROW_Y, CHILD_CARD_WIDTH, CHILD_GAP, CHILD_CARD_HEIGHT),
+      ...buildRow(familyData.grandparents, 'grandparent', GRANDPARENT_ROW_Y, cardW.grandparent, cardGap.grandparent, cardH.grandparent),
+      ...buildRow(familyData.parents, 'parent', PARENT_ROW_Y, cardW.parent, cardGap.parent, cardH.parent),
+      ...buildRow(familyData.children, 'child', CHILD_ROW_Y, cardW.child, cardGap.child, cardH.child),
     ]
-  }, [familyData.grandparents, familyData.parents, familyData.children, treeCanvasWidth])
+  }, [familyData.grandparents, familyData.parents, familyData.children, treeCanvasWidth, isMobile, cardW.grandparent, cardW.parent, cardW.child, cardGap.grandparent, cardGap.parent, cardGap.child, cardH.grandparent, cardH.parent, cardH.child])
 
   useEffect(() => {
     if (!selectedSearchMemberId) return
@@ -572,6 +650,11 @@ export function FamilyTreePage({
 
     setPanOffset({ x: targetX, y: targetY })
   }, [selectedSearchMemberId, cardPositions, treeCanvasWidth])
+
+  // Set lower initial zoom on mobile so the tree fits without horizontal scroll
+  useEffect(() => {
+    if (isMobile) setZoomLevel(0.75)
+  }, [isMobile])
 
   // Center on self card when entering fullscreen
   useEffect(() => {
@@ -822,29 +905,8 @@ export function FamilyTreePage({
             backdropFilter: 'blur(6px)',
           }}
         >
-          {/* Search Panel */}
-          <Box sx={{ maxWidth: 1200, mx: 'auto', mb: 2 }}>
-            <FamilyMemberSearch
-              members={searchableMembers}
-              selectedId={selectedSearchMemberId}
-              onSelect={(member) => setSelectedSearchMemberId(member?.id || null)}
-              defaultExpanded={initialSearchExpanded}
-              placeholder="Search by name or relationship"
-              title="Family Member Search"
-              showSelectedChip={true}
-              allowClear={true}
-            />
-          </Box>
-
           {/* Control Bar */}
-          <Box
-            sx={{
-              maxWidth: 1200,
-              mx: 'auto',
-              display: 'flex',
-              justifyContent: 'center',
-            }}
-          >
+          <Box sx={{ maxWidth: 1200, mx: 'auto', display: 'flex', justifyContent: 'center' }}>
             <Box
               sx={{
                 display: 'flex',
@@ -857,79 +919,130 @@ export function FamilyTreePage({
                 boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
                 border: '1px solid',
                 borderColor: 'rgba(208, 227, 230, 0.5)',
+                flexWrap: 'nowrap',
+                overflowX: 'auto',
               }}
             >
-            <IconButton
-              size="small"
-              onClick={() => setToolMode('pointer')}
-              sx={{
-                color: toolMode === 'pointer' ? 'white' : 'primary.main',
-                bgcolor: toolMode === 'pointer' ? 'primary.main' : 'transparent',
-                '&:hover': { bgcolor: toolMode === 'pointer' ? 'primary.dark' : 'rgba(22, 51, 74, 0.08)' },
-              }}
-              title="Pointer tool"
-            >
-              <NearMe sx={{ fontSize: 18 }} />
-            </IconButton>
-            <IconButton
-              size="small"
-              onClick={() => setToolMode('hand')}
-              sx={{
-                color: toolMode === 'hand' ? 'white' : 'primary.main',
-                bgcolor: toolMode === 'hand' ? 'primary.main' : 'transparent',
-                '&:hover': { bgcolor: toolMode === 'hand' ? 'primary.dark' : 'rgba(22, 51, 74, 0.08)' },
-              }}
-              title="Hand tool (drag to pan)"
-            >
-              <PanTool sx={{ fontSize: 18 }} />
-            </IconButton>
-            <Divider orientation="vertical" flexItem sx={{ mx: 0.5, borderColor: 'rgba(208, 227, 230, 0.6)' }} />
-            <IconButton size="small" sx={{ color: 'primary.main' }} onClick={handleZoomIn}>
-              <ZoomIn />
-            </IconButton>
-            <IconButton size="small" sx={{ color: 'primary.main' }} onClick={handleZoomOut}>
-              <ZoomOut />
-            </IconButton>
-            <Divider orientation="vertical" flexItem sx={{ mx: 0.5, borderColor: 'rgba(208, 227, 230, 0.6)' }} />
-            <Button
-              startIcon={<PersonAdd />}
-              size="small"
-              onClick={handleOpenRelationshipEditor}
-              sx={{ color: 'primary.main', textTransform: 'none' }}
-            >
-              Edit Relationships
-            </Button>
-            <Button
-              startIcon={<RestartAlt />}
-              size="small"
-              onClick={handleResetView}
-              sx={{ color: 'primary.main', textTransform: 'none' }}
-            >
-              Reset View
-            </Button>
-            {onToggleFullscreen && (
-              <>
-                <Divider orientation="vertical" flexItem sx={{ mx: 0.5, borderColor: 'rgba(208, 227, 230, 0.6)' }} />
-                <IconButton
+              {/* Search button — opens full-screen overlay */}
+              <IconButton
+                size="small"
+                onClick={() => {
+                  setSearchOverlayOpen(true)
+                  setOverlayQuery('')
+                  setTimeout(() => overlayInputRef.current?.focus(), 60)
+                }}
+                sx={{ color: 'primary.main' }}
+                title="Search family members"
+              >
+                <SearchIcon sx={{ fontSize: 18 }} />
+              </IconButton>
+              <Divider orientation="vertical" flexItem sx={{ mx: 0.5, borderColor: 'rgba(208, 227, 230, 0.6)' }} />
+
+              {/* Pointer/hand tool — hidden on mobile (touch always pans) */}
+              {!isMobile && (
+                <>
+                  <IconButton
+                    size="small"
+                    onClick={() => setToolMode('pointer')}
+                    sx={{
+                      color: toolMode === 'pointer' ? 'white' : 'primary.main',
+                      bgcolor: toolMode === 'pointer' ? 'primary.main' : 'transparent',
+                      '&:hover': { bgcolor: toolMode === 'pointer' ? 'primary.dark' : 'rgba(22, 51, 74, 0.08)' },
+                    }}
+                    title="Pointer tool"
+                  >
+                    <NearMe sx={{ fontSize: 18 }} />
+                  </IconButton>
+                  <IconButton
+                    size="small"
+                    onClick={() => setToolMode('hand')}
+                    sx={{
+                      color: toolMode === 'hand' ? 'white' : 'primary.main',
+                      bgcolor: toolMode === 'hand' ? 'primary.main' : 'transparent',
+                      '&:hover': { bgcolor: toolMode === 'hand' ? 'primary.dark' : 'rgba(22, 51, 74, 0.08)' },
+                    }}
+                    title="Hand tool (drag to pan)"
+                  >
+                    <PanTool sx={{ fontSize: 18 }} />
+                  </IconButton>
+                  <Divider orientation="vertical" flexItem sx={{ mx: 0.5, borderColor: 'rgba(208, 227, 230, 0.6)' }} />
+                </>
+              )}
+
+              <IconButton size="small" sx={{ color: 'primary.main' }} onClick={handleZoomIn} title="Zoom in">
+                <ZoomIn />
+              </IconButton>
+              <IconButton size="small" sx={{ color: 'primary.main' }} onClick={handleZoomOut} title="Zoom out">
+                <ZoomOut />
+              </IconButton>
+              <Divider orientation="vertical" flexItem sx={{ mx: 0.5, borderColor: 'rgba(208, 227, 230, 0.6)' }} />
+
+              {/* Icon-only on mobile, text+icon on desktop */}
+              <IconButton
+                size="small"
+                onClick={handleOpenRelationshipEditor}
+                sx={{ color: 'primary.main' }}
+                title="Edit relationships"
+              >
+                <PersonAdd sx={{ fontSize: 18 }} />
+              </IconButton>
+              {!isMobile && (
+                <Button
                   size="small"
-                  onClick={onToggleFullscreen}
-                  sx={{ color: 'primary.main' }}
-                  title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+                  onClick={handleOpenRelationshipEditor}
+                  sx={{ color: 'primary.main', textTransform: 'none', display: { xs: 'none', md: 'flex' } }}
                 >
-                  {isFullscreen ? <FullscreenExit /> : <Fullscreen />}
-                </IconButton>
-              </>
-            )}
+                  Relationships
+                </Button>
+              )}
+
+              <IconButton
+                size="small"
+                onClick={handleResetView}
+                sx={{ color: 'primary.main' }}
+                title="Reset view"
+              >
+                <RestartAlt sx={{ fontSize: 18 }} />
+              </IconButton>
+
+              {onToggleFullscreen && (
+                <>
+                  <Divider orientation="vertical" flexItem sx={{ mx: 0.5, borderColor: 'rgba(208, 227, 230, 0.6)' }} />
+                  <IconButton
+                    size="small"
+                    onClick={onToggleFullscreen}
+                    sx={{ color: 'primary.main' }}
+                    title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+                  >
+                    {isFullscreen ? <FullscreenExit /> : <Fullscreen />}
+                  </IconButton>
+                </>
+              )}
+            </Box>
           </Box>
         </Box>
-      </Box>
 
         {/* Family Tree Visualization */}
         <Box
+          tabIndex={0}
+          role="group"
+          aria-label="Family tree — use arrow keys to pan, + and - to zoom"
           onMouseDown={handleCanvasMouseDown}
           onMouseMove={handleCanvasMouseMove}
           onMouseUp={handleCanvasMouseUp}
           onMouseLeave={handleCanvasMouseUp}
+          onTouchStart={handleCanvasTouchStart}
+          onTouchMove={handleCanvasTouchMove}
+          onTouchEnd={handleCanvasTouchEnd}
+          onKeyDown={(e) => {
+            const PAN_STEP = 40
+            if (e.key === 'ArrowLeft') setPanOffset(p => ({ ...p, x: p.x + PAN_STEP }))
+            else if (e.key === 'ArrowRight') setPanOffset(p => ({ ...p, x: p.x - PAN_STEP }))
+            else if (e.key === 'ArrowUp') setPanOffset(p => ({ ...p, y: p.y + PAN_STEP }))
+            else if (e.key === 'ArrowDown') setPanOffset(p => ({ ...p, y: p.y - PAN_STEP }))
+            else if (e.key === '+' || e.key === '=') setZoomLevel(z => Math.min(z + 0.1, 2))
+            else if (e.key === '-') setZoomLevel(z => Math.max(z - 0.1, 0.3))
+          }}
           sx={{
             position: 'relative',
             minHeight: isFullscreen ? 'calc(100vh - 140px)' : 700,
@@ -944,6 +1057,7 @@ export function FamilyTreePage({
             cursor: toolMode === 'hand' ? 'grab' : 'default',
             '&:active': toolMode === 'hand' ? { cursor: 'grabbing' } : {},
             userSelect: toolMode === 'hand' ? 'none' : 'auto',
+            touchAction: 'none', // let JS handle all touch gestures
             backgroundImage: `
               radial-gradient(circle, rgba(22, 51, 74, 0.06) 1px, transparent 1px)
             `,
@@ -1007,6 +1121,8 @@ export function FamilyTreePage({
                     person={card.person}
                     level={card.level}
                     isSelf={card.person.selected}
+                    cardWidth={card.width}
+                    isMobile={isMobile}
                     onPersonClick={handlePersonClick}
                     onAddPerson={handleAddPerson}
                   />
@@ -1226,6 +1342,173 @@ export function FamilyTreePage({
         </Card>
         </Box>
 
+      {/* Full-screen search overlay — covers Layout header + canvas entirely */}
+      {searchOverlayOpen && (
+        <Box
+          sx={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 1400,
+            bgcolor: '#fcf9f4',
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          {/* Overlay header */}
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1.5,
+              px: 2,
+              py: 1.5,
+              borderBottom: '1px solid rgba(22,51,74,0.08)',
+              bgcolor: '#ffffff',
+            }}
+          >
+            <IconButton
+              size="small"
+              onClick={() => {
+                setSearchOverlayOpen(false)
+                setOverlayQuery('')
+              }}
+              aria-label="Close search"
+              sx={{ color: '#16334a' }}
+            >
+              <ArrowBackIcon />
+            </IconButton>
+            <Box
+              sx={{
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+                bgcolor: '#f0ede8',
+                borderRadius: 3,
+                px: 2,
+                py: 1,
+              }}
+            >
+              <SearchIcon sx={{ fontSize: 18, color: '#546669', flexShrink: 0 }} />
+              <InputBase
+                inputRef={overlayInputRef}
+                value={overlayQuery}
+                onChange={(e) => setOverlayQuery(e.target.value)}
+                placeholder="Search family members…"
+                fullWidth
+                sx={{ fontSize: '0.95rem', color: '#1c1c19' }}
+                autoFocus
+              />
+              {overlayQuery && (
+                <IconButton size="small" onClick={() => setOverlayQuery('')} sx={{ p: 0.25 }}>
+                  <CloseIcon sx={{ fontSize: 16, color: '#546669' }} />
+                </IconButton>
+              )}
+            </Box>
+          </Box>
+
+          {/* Results list */}
+          <Box sx={{ flex: 1, overflowY: 'auto', px: 2, py: 1 }}>
+            {(() => {
+              const q = overlayQuery.trim().toLowerCase()
+              const results = q
+                ? searchableMembers.filter(
+                    (m) =>
+                      m.name.toLowerCase().includes(q) ||
+                      (m.relationship?.toLowerCase().includes(q) ?? false),
+                  )
+                : searchableMembers
+
+              if (results.length === 0) {
+                return (
+                  <Typography
+                    variant="body2"
+                    sx={{ color: '#546669', textAlign: 'center', py: 6, fontStyle: 'italic' }}
+                  >
+                    No family members match "{overlayQuery}"
+                  </Typography>
+                )
+              }
+
+              return results.map((member) => (
+                <Box
+                  key={member.id}
+                  component="button"
+                  onClick={() => {
+                    setSelectedSearchMemberId(member.id)
+                    setSearchOverlayOpen(false)
+                    setOverlayQuery('')
+                  }}
+                  sx={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 2,
+                    px: 2,
+                    py: 1.5,
+                    border: 'none',
+                    borderRadius: 2,
+                    bgcolor: member.id === selectedSearchMemberId ? 'rgba(22,51,74,0.07)' : 'transparent',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    '&:hover': { bgcolor: 'rgba(22,51,74,0.05)' },
+                    transition: 'background-color 0.15s',
+                  }}
+                >
+                  <Avatar
+                    src={member.avatar}
+                    sx={{
+                      width: 44,
+                      height: 44,
+                      flexShrink: 0,
+                      bgcolor: member.id === selectedSearchMemberId ? '#16334a' : '#d0e3e6',
+                      color: member.id === selectedSearchMemberId ? '#fff' : '#16334a',
+                      border: member.id === selectedSearchMemberId ? '2px solid #16334a' : '2px solid transparent',
+                    }}
+                  >
+                    {member.name[0]}
+                  </Avatar>
+                  <Box sx={{ overflow: 'hidden' }}>
+                    <Typography
+                      variant="body1"
+                      sx={{
+                        fontWeight: member.id === selectedSearchMemberId ? 600 : 400,
+                        color: '#16334a',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                      }}
+                    >
+                      {member.name}
+                    </Typography>
+                    {member.relationship && (
+                      <Typography
+                        variant="caption"
+                        sx={{ color: '#546669', display: 'block' }}
+                      >
+                        {member.relationship}
+                      </Typography>
+                    )}
+                  </Box>
+                  {member.id === selectedSearchMemberId && (
+                    <Box
+                      sx={{
+                        ml: 'auto',
+                        width: 8,
+                        height: 8,
+                        borderRadius: '50%',
+                        bgcolor: '#16334a',
+                        flexShrink: 0,
+                      }}
+                    />
+                  )}
+                </Box>
+              ))
+            })()}
+          </Box>
+        </Box>
+      )}
+
       {/* Person Detail Modal */}
       <PersonDetailModal
         open={detailModalOpen}
@@ -1262,6 +1545,20 @@ export function FamilyTreePage({
           } : undefined}
           onSubmit={handleSubmitPerson}
           isSubmitting={isSubmitting}
+        />
+      )}
+
+      {voiceTrainingPersonId !== null && (
+        <VoiceTrainingModal
+          open={voiceTrainingPersonId !== null}
+          onClose={() => setVoiceTrainingPersonId(null)}
+          trainingSamples={[]}
+          onUploadSample={async () => {}}
+          onRemoveSample={() => {}}
+          onCreateVoice={async () => {}}
+          isUploading={false}
+          isTraining={false}
+          trainingJob={null}
         />
       )}
     </Box>

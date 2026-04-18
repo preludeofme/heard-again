@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import sharp from 'sharp'
 import { OptimizationOptions, OptimizationResult } from './index'
 
@@ -123,7 +124,7 @@ export class ImageOptimizer {
       }
 
     } catch (error) {
-      console.error('Image optimization failed:', error)
+      logger.error('Image optimization failed:', error)
       // Return original file if optimization fails
       return {
         optimizedFile: file,
@@ -157,7 +158,7 @@ export class ImageOptimizer {
         
         thumbnails.push({ size, buffer: thumbnail })
       } catch (error) {
-        console.error(`Failed to create ${size}px thumbnail:`, error)
+        logger.error(`Failed to create ${size}px thumbnail:`, error)
       }
     }
     
@@ -168,7 +169,7 @@ export class ImageOptimizer {
     try {
       return await sharp(file).metadata()
     } catch (error) {
-      console.error('Failed to extract image metadata:', error)
+      logger.error('Failed to extract image metadata:', error)
       throw error
     }
   }

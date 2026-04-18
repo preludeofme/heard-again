@@ -1,65 +1,74 @@
+import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
 
 // ============================================
 // Secure Response Transformers
 // ============================================
 
+type AssetRecord = Record<string, unknown> & { storagePath?: string }
+type StoryAssetRecord = Record<string, unknown> & { asset?: AssetRecord }
+type StoryRecord = Record<string, unknown> & {
+  generatedAudio?: AssetRecord | null
+  assets?: StoryAssetRecord[]
+}
+type DocumentRecord = Record<string, unknown> & { asset?: AssetRecord }
+
 /**
  * Remove storagePath from asset objects to prevent information disclosure
  */
-export function sanitizeAssetResponse(asset: any) {
+export function sanitizeAssetResponse(asset: AssetRecord | null | undefined): Omit<AssetRecord, 'storagePath'> | null | undefined {
   if (!asset) return asset
-  
-  const { storagePath, ...sanitized } = asset
+
+  const { storagePath: _storagePath, ...sanitized } = asset
   return sanitized
 }
 
 /**
  * Remove storagePath from arrays of assets
  */
-export function sanitizeAssetsResponse(assets: any[]) {
+export function sanitizeAssetsResponse(assets: AssetRecord[]): Omit<AssetRecord, 'storagePath'>[] {
   if (!Array.isArray(assets)) return assets
-  
-  return assets.map(asset => sanitizeAssetResponse(asset))
+
+  return assets.map(asset => sanitizeAssetResponse(asset) ?? asset)
 }
 
 /**
  * Remove storagePath from story responses (including nested assets)
  */
-export function sanitizeStoryResponse(story: any) {
+export function sanitizeStoryResponse(story: StoryRecord | null | undefined): StoryRecord | null | undefined {
   if (!story) return story
-  
-  const sanitized = { ...story }
-  
+
+  const sanitized: StoryRecord = { ...story }
+
   // Remove storagePath from generatedAudioAsset if present
   if (sanitized.generatedAudio) {
-    sanitized.generatedAudio = sanitizeAssetResponse(sanitized.generatedAudio)
+    sanitized.generatedAudio = sanitizeAssetResponse(sanitized.generatedAudio) ?? {}
   }
-  
+
   // Remove storagePath from nested assets
   if (sanitized.assets && Array.isArray(sanitized.assets)) {
-    sanitized.assets = sanitized.assets.map((storyAsset: any) => ({
+    sanitized.assets = sanitized.assets.map((storyAsset: StoryAssetRecord) => ({
       ...storyAsset,
-      asset: sanitizeAssetResponse(storyAsset.asset)
+      asset: sanitizeAssetResponse(storyAsset.asset) ?? {}
     }))
   }
-  
+
   return sanitized
 }
 
 /**
  * Remove storagePath from document responses (including nested assets)
  */
-export function sanitizeDocumentResponse(document: any) {
+export function sanitizeDocumentResponse(document: DocumentRecord | null | undefined): DocumentRecord | null | undefined {
   if (!document) return document
-  
-  const sanitized = { ...document }
-  
+
+  const sanitized: DocumentRecord = { ...document }
+
   // Remove storagePath from asset if present
   if (sanitized.asset) {
-    sanitized.asset = sanitizeAssetResponse(sanitized.asset)
+    sanitized.asset = sanitizeAssetResponse(sanitized.asset) ?? {}
   }
-  
+
   return sanitized
 }
 
@@ -172,11 +181,11 @@ export function apiHandler(handlers: RouteHandlers): ApiHandler {
     try {
       await handlers[method]!(req, res)
       const duration = Date.now() - startTime
-      console.log(`[API] ${endpoint} - ${res.statusCode} (${duration}ms)`)
+      logger.info(`[API] ${endpoint} - ${res.statusCode} (${duration}ms)`)
     } catch (error: unknown) {
       const duration = Date.now() - startTime
       const err = error instanceof Error ? error : new Error(String(error))
-      console.error(`[API ERROR] ${endpoint} (${duration}ms):`, err.message)
+      logger.error(`[API ERROR] ${endpoint} (${duration}ms):`, err.message)
 
       if (error instanceof AppError) {
         return errorResponse(res, error.message, error.statusCode, error.code, error.details)

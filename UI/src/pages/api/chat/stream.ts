@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { NextApiRequest, NextApiResponse } from 'next'
 import { getAuthUserWithWorkspace } from '@/lib/auth-helpers'
 import { AppError } from '@/lib/api-helpers'
@@ -107,7 +108,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         // Pipe upstream chunks to the browser in real-time
         upstreamRes.on('data', (chunk: Buffer) => {
-          console.log('UPSTREAM DATA chunk length:', chunk.length)
+          logger.info('UPSTREAM DATA chunk length:', chunk.length)
           res.write(chunk)
           if (typeof (res as any).flush === 'function') {
             (res as any).flush()
@@ -115,7 +116,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         })
 
         upstreamRes.on('end', () => {
-          console.log('UPSTREAM END received')
+          logger.info('UPSTREAM END received')
           res.end()
           cleanup()
           resolve()
@@ -125,7 +126,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           if (isClosed) {
             return
           }
-          console.error('Upstream stream error:', err)
+          logger.error('Upstream stream error:', err)
           res.write(`event: error\ndata: ${JSON.stringify({ error: 'Upstream stream error' })}\n\n`)
           res.end()
           cleanup()
@@ -146,7 +147,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (isClosed) {
         return
       }
-      console.error('Chat system streaming proxy error:', err)
+      logger.error('Chat system streaming proxy error:', err)
       res.write(`event: error\ndata: ${JSON.stringify({ error: 'Failed to connect to chat system' })}\n\n`)
       res.end()
       cleanup()
@@ -155,7 +156,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     proxyReq.on('timeout', () => {
       // Timeout disabled (timeout: 0). Keep handler for safety in case runtime forces one.
-      console.error('Chat system streaming proxy TIMEOUT')
+      logger.error('Chat system streaming proxy TIMEOUT')
       if (!isClosed) {
         res.write(`event: error\ndata: ${JSON.stringify({ error: 'Upstream request timeout' })}\n\n`)
         res.end()

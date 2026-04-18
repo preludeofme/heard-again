@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '@/lib/prisma'
 import { getStorageService } from '@/lib/storage/storage-service'
@@ -70,7 +71,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const result = await mammoth.convertToHtml({ buffer })
       const warnings = result.messages.filter(m => m.type === 'warning')
       if (warnings.length > 0) {
-        console.warn('mammoth warnings for', asset.originalName, warnings.map(w => w.message))
+        logger.warn({ name: asset.originalName, warnings: warnings.map(w => w.message) }, 'mammoth warnings')
       }
       bodyHtml = result.value
     } else {
@@ -91,7 +92,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           .map((p: string) => `<p>${p.replace(/\r?\n/g, '<br/>')}</p>`)
           .join('\n')
       } catch (docErr) {
-        console.warn('word-extractor failed for', asset.originalName, docErr)
+        logger.warn({ name: asset.originalName, error: docErr }, 'word-extractor failed')
         // Graceful fallback — show download prompt inside the iframe
         bodyHtml = `<div style="text-align:center;padding:40px">
           <p style="font-size:16px;color:#555">Preview is not available for this legacy .doc file.</p>
@@ -135,7 +136,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(200).send(html)
 
   } catch (error) {
-    console.error('Document preview error:', error)
+    logger.error('Document preview error:', error)
     return res.status(500).json({ error: 'Failed to generate preview' })
   }
 }

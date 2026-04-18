@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { NextApiRequest, NextApiResponse } from 'next'
 import { getAuthUserWithWorkspace } from '@/lib/auth-helpers'
 
@@ -35,7 +36,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     return res.status(response.status).json(data)
   } catch (error) {
-    console.error('Persona proxy error:', error)
+    logger.error('Persona proxy error:', error)
     return res.status(500).json({
       success: false,
       error: 'Internal server error'

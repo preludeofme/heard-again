@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { fileTypeFromBuffer } from 'file-type'
 import path from 'path'
 
@@ -170,7 +171,7 @@ export async function validateFileContent(
 
     // Check for MIME type spoofing
     if (declaredMimeType && declaredMimeType !== resolvedMime) {
-      console.warn(`MIME type mismatch for ${originalName}: declared=${declaredMimeType}, detected=${resolvedMime}`)
+      logger.warn(`MIME type mismatch for ${originalName}: declared=${declaredMimeType}, detected=${resolvedMime}`)
     }
 
     // Additional checks for specific file types
@@ -185,7 +186,7 @@ export async function validateFileContent(
     }
 
   } catch (error) {
-    console.error('File validation error:', error)
+    logger.error('File validation error:', error)
     return {
       isValid: false,
       error: 'File validation failed due to processing error',
@@ -332,7 +333,7 @@ function validateZIP(buffer: Buffer): FileValidationResult {
   // If the zip is very small but claims to contain large files, be suspicious
   if (currentSize < 1024 * 100) { // Less than 100KB
     // This is a basic heuristic - in practice you'd parse the zip central directory
-    console.warn('Small ZIP file detected - potential zip bomb')
+    logger.warn('Small ZIP file detected - potential zip bomb')
   }
 
   return { isValid: true }

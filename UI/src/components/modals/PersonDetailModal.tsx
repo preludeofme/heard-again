@@ -343,6 +343,7 @@ export function PersonDetailModal({
       onClose={onClose}
       maxWidth="md"
       fullWidth
+      aria-labelledby="person-detail-dialog-title"
       PaperProps={{
         sx: {
           borderRadius: 4,
@@ -352,7 +353,7 @@ export function PersonDetailModal({
       }}
     >
       {/* Header */}
-      <DialogTitle sx={{ p: 0 }}>
+      <DialogTitle id="person-detail-dialog-title" sx={{ p: 0 }}>
         <Box
           sx={{
             background: 'linear-gradient(135deg, #16334a 0%, #2e4a62 100%)',
@@ -363,6 +364,7 @@ export function PersonDetailModal({
         >
           <IconButton
             onClick={onClose}
+            aria-label="Close dialog"
             sx={{
               position: 'absolute',
               right: 16,

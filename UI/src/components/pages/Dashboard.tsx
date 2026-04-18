@@ -1,9 +1,9 @@
-import { Box, Typography, Card, CardContent, IconButton, Button, Grid, Chip, Avatar } from '@mui/material'
-import { useState } from 'react'
-import { PlayArrow as PlayIcon, Favorite as HeartIcon, ArrowForward as ArrowForwardIcon, Mic as MicIcon, Edit as EditIcon, Upload as UploadIcon, Forum as ChatIcon, Pause as PauseIcon } from '@mui/icons-material'
+import { Box, Typography, Card, Button, Grid, Chip, Avatar } from '@mui/material'
+import { PlayArrow as PlayIcon, Favorite as HeartIcon, ArrowForward as ArrowForwardIcon, Mic as MicIcon, Edit as EditIcon, Upload as UploadIcon, Forum as ChatIcon } from '@mui/icons-material'
 import { LegacySubject, MemoryWallItem } from '@/types'
 import { formatDistanceToNow } from 'date-fns'
 import { useRouter } from 'next/router'
+import Image from 'next/image'
 
 interface DashboardProps {
   legacySubject: LegacySubject
@@ -12,7 +12,6 @@ interface DashboardProps {
 
 export function Dashboard({ legacySubject, memoryWallItems }: DashboardProps) {
   const router = useRouter()
-  const [isPlaying, setIsPlaying] = useState(false)
   return (
     <Box sx={{ p: { xs: 2, md: 4 }, maxWidth: 1400, mx: 'auto' }}>
       {/* Hero Area with Two Primary Cards */}
@@ -35,13 +34,23 @@ export function Dashboard({ legacySubject, memoryWallItems }: DashboardProps) {
             >
               <Box sx={{ position: 'relative', mb: 3 }}>
                 <Avatar
-                  src={legacySubject.avatarUrl}
-                  sx={{ 
-                    width: 128, 
-                    height: 128, 
-                    border: '4px solid #f0ede8'
+                  sx={{
+                    width: 128,
+                    height: 128,
+                    border: '4px solid #f0ede8',
+                    overflow: 'hidden',
                   }}
-                />
+                >
+                  {legacySubject.avatarUrl && (
+                    <Image
+                      src={legacySubject.avatarUrl}
+                      alt={legacySubject.fullName}
+                      width={128}
+                      height={128}
+                      style={{ objectFit: 'cover' }}
+                    />
+                  )}
+                </Avatar>
                 <Box
                   sx={{
                     position: 'absolute',
@@ -81,73 +90,26 @@ export function Dashboard({ legacySubject, memoryWallItems }: DashboardProps) {
                 height: '100%',
                 display: 'flex',
                 flexDirection: 'column',
-                position: 'relative',
-                overflow: 'hidden',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 2,
               }}
             >
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-                <Box>
-                  <Typography variant="h4" className="serif-font" sx={{ color: '#16334a' }}>
-                    Voice Sample
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Generated Legacy Clone — High Fidelity
-                  </Typography>
-                </Box>
-                <IconButton
-                  onClick={() => setIsPlaying(!isPlaying)}
-                  sx={{
-                    backgroundColor: '#16334a',
-                    color: 'white',
-                    width: 56,
-                    height: 56,
-                    boxShadow: '0 4px 12px rgba(22, 51, 74, 0.3)',
-                    '&:hover': {
-                      backgroundColor: '#2e4a62',
-                      transform: 'scale(1.05)',
-                    },
-                  }}
-                >
-                  {isPlaying ? <PauseIcon sx={{ fontSize: 32 }} /> : <PlayIcon sx={{ fontSize: 32 }} />}
-                </IconButton>
-              </Box>
-              
-              {/* Waveform Visualization */}
-              <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                <Box sx={{ display: 'flex', alignItems: 'end', gap: 0.75, height: 96, mb: 2 }}>
-                  {/* Matching mockup waveform pattern exactly - 22 bars */}
-                  <Box sx={{ width: 6, height: '50%', backgroundColor: '#16334a', borderRadius: 1, opacity: 0.4 }} />
-                  <Box sx={{ width: 6, height: '75%', backgroundColor: '#16334a', borderRadius: 1, opacity: 0.6 }} />
-                  <Box sx={{ width: 6, height: '67%', backgroundColor: '#16334a', borderRadius: 1 }} />
-                  <Box sx={{ width: 6, height: '25%', backgroundColor: '#e0c29a', borderRadius: 1 }} />
-                  <Box sx={{ width: 6, height: '83%', backgroundColor: '#16334a', borderRadius: 1 }} />
-                  <Box sx={{ width: 6, height: '100%', backgroundColor: '#16334a', borderRadius: 1 }} />
-                  <Box sx={{ width: 6, height: '67%', backgroundColor: '#16334a', borderRadius: 1 }} />
-                  <Box sx={{ width: 6, height: '50%', backgroundColor: '#e0c29a', borderRadius: 1 }} />
-                  <Box sx={{ width: 6, height: '75%', backgroundColor: '#16334a', borderRadius: 1 }} />
-                  <Box sx={{ width: 6, height: '50%', backgroundColor: '#16334a', borderRadius: 1, opacity: 0.8 }} />
-                  <Box sx={{ width: 6, height: '33%', backgroundColor: '#16334a', borderRadius: 1, opacity: 0.6 }} />
-                  <Box sx={{ width: 6, height: '50%', backgroundColor: '#16334a', borderRadius: 1 }} />
-                  <Box sx={{ width: 6, height: '75%', backgroundColor: '#16334a', borderRadius: 1 }} />
-                  <Box sx={{ width: 6, height: '100%', backgroundColor: '#16334a', borderRadius: 1 }} />
-                  <Box sx={{ width: 6, height: '93%', backgroundColor: '#16334a', borderRadius: 1, opacity: 0.9 }} />
-                  <Box sx={{ width: 6, height: '25%', backgroundColor: '#e0c29a', borderRadius: 1 }} />
-                  <Box sx={{ width: 6, height: '50%', backgroundColor: '#16334a', borderRadius: 1 }} />
-                  <Box sx={{ width: 6, height: '67%', backgroundColor: '#16334a', borderRadius: 1 }} />
-                  <Box sx={{ width: 6, height: '75%', backgroundColor: '#16334a', borderRadius: 1, opacity: 0.7 }} />
-                  <Box sx={{ width: 6, height: '50%', backgroundColor: '#16334a', borderRadius: 1, opacity: 0.5 }} />
-                  <Box sx={{ width: 6, height: '25%', backgroundColor: '#e0c29a', borderRadius: 1 }} />
-                  <Box sx={{ width: 6, height: '50%', backgroundColor: '#16334a', borderRadius: 1, opacity: 0.4 }} />
-                </Box>
-                
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', typography: 'caption', color: '#73777d', fontWeight: 'bold', letterSpacing: '0.05em' }}>
-                  <span>0:00</span>
-                  <Typography variant="caption" className="serif-font" sx={{ fontStyle: 'italic', color: '#546669' }}>
-                    "The story of the blue house..."
-                  </Typography>
-                  <span>2:45</span>
-                </Box>
-              </Box>
+              <MicIcon sx={{ fontSize: 48, color: '#16334a', opacity: 0.4 }} />
+              <Typography variant="h5" className="serif-font" sx={{ color: '#16334a', textAlign: 'center' }}>
+                No voice sample recorded yet
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', maxWidth: 320 }}>
+                Visit the Voice Lab to upload audio samples and create a voice clone.
+              </Typography>
+              <Button
+                variant="contained"
+                startIcon={<MicIcon />}
+                onClick={() => router.push('/voice-lab')}
+                sx={{ mt: 1, backgroundColor: '#16334a', '&:hover': { backgroundColor: '#2e4a62' } }}
+              >
+                Go to Voice Lab
+              </Button>
             </Card>
           </Grid>
         </Grid>
@@ -221,12 +183,20 @@ export function Dashboard({ legacySubject, memoryWallItems }: DashboardProps) {
                         width: 120,
                         height: 120,
                         borderRadius: 2,
-                        backgroundImage: `url(${item.imageUrl})`,
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center',
                         flexShrink: 0,
+                        overflow: 'hidden',
+                        position: 'relative',
                       }}
-                    />
+                    >
+                      {item.imageUrl && (
+                        <Image
+                          src={item.imageUrl}
+                          alt={item.title ?? 'Memory thumbnail'}
+                          fill
+                          style={{ objectFit: 'cover' }}
+                        />
+                      )}
+                    </Box>
                     <Box sx={{ flex: 1 }}>
                       <Typography variant="h6" sx={{ mb: 1 }}>
                         {item.title}
@@ -237,6 +207,7 @@ export function Dashboard({ legacySubject, memoryWallItems }: DashboardProps) {
                       <Button
                         variant="contained"
                         startIcon={<PlayIcon />}
+                        onClick={() => router.push(item.storyId ? `/stories/${item.storyId}` : '/stories')}
                         sx={{ textTransform: 'none' }}
                       >
                         Listen to Legacy

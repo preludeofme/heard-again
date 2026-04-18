@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
 import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
 import { validate, rules } from '@/lib/validation'
@@ -46,7 +47,7 @@ export default apiHandler({
       marriagePlace,
     } = req.body
 
-    console.log('Creating relationship:', {
+    logger.info('Creating relationship:', {
       workspaceId: user.workspaceId,
       sourcePersonId: personId,
       targetPersonId,
@@ -71,10 +72,10 @@ export default apiHandler({
         marriagePlace,
       })
 
-      console.log('Relationship created successfully:', result)
+      logger.info('Relationship created successfully:', result)
       return successResponse(res, result, 201)
     } catch (error) {
-      console.error('Relationship creation failed:', error)
+      logger.error('Relationship creation failed:', error)
       if (error instanceof AppError) {
         throw error
       }

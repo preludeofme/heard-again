@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { OptimizationOptions, OptimizationResult } from './index'
 
 export class VideoOptimizer {
@@ -67,7 +68,7 @@ export class VideoOptimizer {
       }
 
     } catch (error) {
-      console.error('Video optimization failed:', error)
+      logger.error('Video optimization failed:', error)
       return {
         optimizedFile: file,
         originalSize,
@@ -86,13 +87,13 @@ export class VideoOptimizer {
   private async convertToMp4(file: Buffer, quality: number): Promise<Buffer> {
     // This would typically use FFmpeg to convert to MP4
     // For now, return original as placeholder
-    console.log('Video conversion to MP4 not implemented yet, returning original')
+    logger.info('Video conversion to MP4 not implemented yet, returning original')
     return file
   }
 
   private async optimizeMp4(file: Buffer, quality: number): Promise<Buffer> {
     // Optimize MP4 by adjusting bitrate, resolution, or codec
-    console.log('MP4 optimization not implemented yet, returning original')
+    logger.info('MP4 optimization not implemented yet, returning original')
     return file
   }
 
@@ -111,7 +112,7 @@ export class VideoOptimizer {
 
   async generateThumbnail(file: Buffer, timestamp: number = 1): Promise<Buffer> {
     // Extract thumbnail frame at specified timestamp
-    console.log('Video thumbnail generation not implemented yet')
+    logger.info('Video thumbnail generation not implemented yet')
     return Buffer.alloc(0)
   }
 
@@ -125,13 +126,13 @@ export class VideoOptimizer {
     } = {}
   ): Promise<Buffer> {
     // Advanced video compression options
-    console.log('Advanced video compression not implemented yet')
+    logger.info('Advanced video compression not implemented yet')
     return file
   }
 
   async trimVideo(file: Buffer, startTime: number, endTime: number): Promise<Buffer> {
     // Trim video to specified time range
-    console.log('Video trimming not implemented yet')
+    logger.info('Video trimming not implemented yet')
     return file
   }
 }

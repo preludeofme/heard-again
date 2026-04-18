@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { ttsRequest } from '@/lib/tts-client'
 
@@ -30,7 +31,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       instruct: data.instruct,
     })
   } catch (error: any) {
-    console.error('[API] Design-and-clone error:', error.message)
+    logger.error('[API] Design-and-clone error:', error.message)
     return res.status(503).json({
       success: false,
       error: error.message,

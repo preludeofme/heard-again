@@ -12,10 +12,8 @@ async function fetchCSRFToken(): Promise<string> {
     throw new Error('Failed to fetch CSRF token')
   }
   const data = await response.json()
-  console.log('CSRF token response:', data)
   // Handle both wrapped {success, data} and direct {csrfToken} formats
   const csrfToken = data.data?.csrfToken || data.csrfToken
-  console.log('CSRF token value:', csrfToken)
   return csrfToken
 }
 
@@ -62,16 +60,10 @@ export async function fetchWithCSRF(
   if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
     try {
       const token = await getCSRFToken()
-      console.log('=== Client CSRF Debug ===')
-      console.log('Fetched token:', token)
-      console.log('Token type:', typeof token)
-      console.log('Token length:', token?.length)
-      console.log('======================')
-      
+
       // If token is undefined or invalid, throw an error
       if (!token || token === 'undefined' || token.length !== 64) {
-        console.error('Invalid CSRF token:', token)
-        throw new Error(`Invalid CSRF token: ${token}`)
+        throw new Error(`Invalid CSRF token received`)
       }
       
       // Add CSRF token to headers
@@ -80,7 +72,6 @@ export async function fetchWithCSRF(
         'x-csrf-token': token,
       }
     } catch (error) {
-      console.error('Failed to get CSRF token:', error)
       // For development, continue without token (will be rejected by server)
       if (process.env.NODE_ENV === 'production') {
         throw new Error('CSRF protection failed')

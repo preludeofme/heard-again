@@ -30,6 +30,7 @@ export const SuccessModal: React.FC<SuccessModalProps> = ({
       onClose={onClose}
       maxWidth="sm"
       fullWidth
+      aria-labelledby="success-dialog-title"
       PaperProps={{
         sx: {
           borderRadius: 4,
@@ -37,7 +38,7 @@ export const SuccessModal: React.FC<SuccessModalProps> = ({
         },
       }}
     >
-      <DialogTitle sx={{ pb: 1 }}>
+      <DialogTitle id="success-dialog-title" sx={{ pb: 1 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <CheckCircle sx={{ color: '#4caf50', fontSize: 28 }} />
@@ -45,7 +46,7 @@ export const SuccessModal: React.FC<SuccessModalProps> = ({
               {title}
             </Typography>
           </Box>
-          <IconButton onClick={onClose} sx={{ color: '#546669' }}>
+          <IconButton onClick={onClose} aria-label="Close dialog" sx={{ color: '#546669' }}>
             <Close />
           </IconButton>
         </Box>

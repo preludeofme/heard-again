@@ -1,11 +1,13 @@
+import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { apiHandler, successResponse, errorResponse } from '@/lib/api-helpers'
 import { getAuthUserWithWorkspace } from '@/lib/auth-helpers'
 import { voiceService } from '@/services'
 import { AppError } from '@/lib/api-helpers'
+import { withCSRFProtection } from '@/lib/security/csrf'
 
 export default apiHandler({
-  POST: async (req: NextApiRequest, res: NextApiResponse) => {
+  POST: withCSRFProtection(async (req: NextApiRequest, res: NextApiResponse) => {
     const user = await getAuthUserWithWorkspace(req, res)
     const { modelId, text, language = 'en' } = req.body
 
@@ -35,9 +37,9 @@ export default apiHandler({
         return errorResponse(res, error.message, error.statusCode, error.code)
       }
 
-      console.error('[API] Synthesize error:', error)
+      logger.error('[API] Synthesize error:', error)
       const message = error instanceof Error ? error.message : 'Voice synthesis failed'
       return errorResponse(res, message, 503, 'SYNTHESIS_FAILED')
     }
-  },
+  }),
 })

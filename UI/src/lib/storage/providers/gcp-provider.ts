@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { StorageProvider } from './index'
 import { Storage } from '@google-cloud/storage'
 import { v4 as uuidv4 } from 'uuid'
@@ -85,7 +86,7 @@ export class GCPStorageProvider implements StorageProvider {
       const fileObject = bucket.file(storagePath)
       await fileObject.delete()
     } catch (error) {
-      console.error('Failed to delete GCP file:', error)
+      logger.error('Failed to delete GCP file:', error)
       throw error
     }
   }
@@ -107,7 +108,7 @@ export class GCPStorageProvider implements StorageProvider {
       
       return signedUrl
     } catch (error) {
-      console.error('Failed to generate signed URL:', error)
+      logger.error('Failed to generate signed URL:', error)
       throw error
     }
   }
@@ -119,7 +120,7 @@ export class GCPStorageProvider implements StorageProvider {
       const [buffer] = await fileObject.download()
       return buffer
     } catch (error) {
-      console.error('Failed to read GCP file:', error)
+      logger.error('Failed to read GCP file:', error)
       throw error
     }
   }
@@ -131,10 +132,10 @@ export class GCPStorageProvider implements StorageProvider {
       const [exists] = await bucket.exists()
       if (!exists) {
         await bucket.create()
-        console.log(`Created GCS bucket: ${this.bucketName}`)
+        logger.info(`Created GCS bucket: ${this.bucketName}`)
       }
     } catch (error) {
-      console.error('Failed to ensure GCS bucket:', error)
+      logger.error('Failed to ensure GCS bucket:', error)
       throw error
     }
   }
@@ -154,9 +155,9 @@ export class GCPStorageProvider implements StorageProvider {
       ]
 
       await bucket.setCorsConfiguration(corsConfiguration)
-      console.log('CORS configuration set for bucket:', this.bucketName)
+      logger.info('CORS configuration set for bucket:', this.bucketName)
     } catch (error) {
-      console.error('Failed to set CORS configuration:', error)
+      logger.error('Failed to set CORS configuration:', error)
       // Don't throw here - this is not critical for basic functionality
     }
   }

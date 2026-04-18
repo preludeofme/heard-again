@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { StorageProvider } from './index'
 import fs from 'fs/promises'
 import path from 'path'
@@ -170,7 +171,7 @@ export class LocalStorageProvider implements StorageProvider {
     try {
       await fs.unlink(fullPath)
     } catch (error) {
-      console.error('Failed to delete local file:', error)
+      logger.error('Failed to delete local file:', error)
       throw error
     }
   }
@@ -184,7 +185,7 @@ export class LocalStorageProvider implements StorageProvider {
     try {
       return await fs.readFile(fullPath)
     } catch (error) {
-      console.error('Failed to read local file:', error)
+      logger.error('Failed to read local file:', error)
       throw error
     }
   }

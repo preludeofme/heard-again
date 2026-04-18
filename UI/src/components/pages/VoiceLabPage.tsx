@@ -22,7 +22,7 @@ interface VoiceLabPageProps {
   controller: {
     isUploading: boolean
     showRecordingModal: boolean
-    trainingJob: any
+    trainingJob: { status?: string; modelId?: string } | null
     isTraining: boolean
     trainingSamples: any[]
     toggleRecordingModal: () => void

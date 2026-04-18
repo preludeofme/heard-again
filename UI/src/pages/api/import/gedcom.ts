@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import fs from 'fs/promises'
 import path from 'path'
 import formidable from 'formidable'
@@ -301,7 +302,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     )
 
     if (!validationResult.isValid) {
-      console.error('GEDCOM file validation failed:', {
+      logger.error('GEDCOM file validation failed:', {
         filename: file.originalFilename,
         error: validationResult.error,
         securityRisk: validationResult.securityRisk,

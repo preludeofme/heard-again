@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
 import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
@@ -85,7 +86,7 @@ export default apiHandler({
       try {
         cloudflareService = createCloudflareService()
       } catch (err) {
-        console.warn('Cloudflare API not configured:', err)
+        logger.warn('Cloudflare API not configured:', err)
       }
     }
 
@@ -120,7 +121,7 @@ export default apiHandler({
             try {
               dnsRecordId = await cloudflareService.createDnsRecord(hostname, tunnel.id)
             } catch (err) {
-              console.warn('Failed to create DNS record:', err)
+              logger.warn('Failed to create DNS record:', err)
               // Continue without DNS - user can manually configure
             }
           }
@@ -175,7 +176,7 @@ export default apiHandler({
             ],
           })
         } catch (err: any) {
-          console.error('Failed to create named tunnel:', err)
+          logger.error('Failed to create named tunnel:', err)
           throw Errors.internal(`Failed to create Cloudflare tunnel: ${err.message}`)
         }
 
@@ -188,7 +189,7 @@ export default apiHandler({
           // Delete tunnel from Cloudflare
           await cloudflareService.deleteTunnel(instance.tunnelId)
         } catch (err) {
-          console.warn('Failed to delete tunnel from Cloudflare:', err)
+          logger.warn('Failed to delete tunnel from Cloudflare:', err)
           // Continue to clean up local state
         }
 
@@ -358,7 +359,7 @@ export default apiHandler({
           try {
             await cloudflareService.deleteTunnel(instance.tunnelId)
           } catch (err) {
-            console.warn('Failed to delete named tunnel from Cloudflare:', err)
+            logger.warn('Failed to delete named tunnel from Cloudflare:', err)
           }
         }
 

@@ -1,5 +1,12 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 
+declare global {
+  // eslint-disable-next-line no-var
+  var createMockRequest: (overrides?: Partial<NextApiRequest>) => Partial<NextApiRequest>
+  // eslint-disable-next-line no-var
+  var createMockResponse: () => NextApiResponse
+}
+
 // Mock NextAuth for testing
 jest.mock('next-auth/jwt', () => ({
   getToken: jest.fn(),

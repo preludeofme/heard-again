@@ -56,6 +56,7 @@ export interface ConversationMessage {
 export interface MemoryWallItem {
   id: string
   type: 'quote' | 'audio-memory' | 'short-quote' | 'archive-stats'
+  storyId?: string
   content?: string
   author?: string
   authorRole?: string

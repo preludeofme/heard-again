@@ -2,8 +2,10 @@ import Head from 'next/head'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { useEffect, useRef, useState } from 'react'
-import { Avatar, Box, CircularProgress, Typography } from '@mui/material'
+import { Avatar, Box, CircularProgress, IconButton, Typography } from '@mui/material'
+import { Replay10, Forward30, PlayArrow } from '@mui/icons-material'
 import { Layout } from '@/components/layout/Layout'
+import { useSelectedFamilyMember } from '@/contexts/SelectedFamilyMemberContext'
 
 const C = {
   primary: '#16334a',
@@ -68,6 +70,14 @@ export default function PersonProfilePage() {
   const router = useRouter()
   const { id } = router.query
   const personId = typeof id === 'string' ? id : ''
+  const { selectedFamilyMember } = useSelectedFamilyMember()
+
+  // When the active member changes via the header switcher, navigate to their profile
+  useEffect(() => {
+    if (selectedFamilyMember && selectedFamilyMember.id !== personId && personId) {
+      router.push(`/profile/${selectedFamilyMember.id}`)
+    }
+  }, [selectedFamilyMember?.id])
 
   const [person, setPerson] = useState<PersonDetails | null>(null)
   const [stories, setStories] = useState<Story[]>([])
@@ -408,9 +418,9 @@ export default function PersonProfilePage() {
 
                 {/* Controls */}
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3 }}>
-                  <Box sx={{ fontFamily: '"Material Symbols Outlined"', fontSize: 28, color: C.primary, opacity: 0.35, userSelect: 'none' }}>
-                    replay_10
-                  </Box>
+                  <IconButton sx={{ color: C.primary, opacity: 0.35 }} aria-label="Replay 10 seconds">
+                    <Replay10 sx={{ fontSize: 28 }} />
+                  </IconButton>
                   <Box
                     component={Link}
                     href={`/voice-lab?personId=${personId}`}
@@ -429,12 +439,13 @@ export default function PersonProfilePage() {
                       '&:hover': { opacity: 0.9 },
                       '&:active': { transform: 'scale(0.92)' },
                     }}
+                    aria-label="Play voice sample"
                   >
-                    <span style={{ fontFamily: '"Material Symbols Outlined"', fontSize: 34, lineHeight: 1 }}>play_arrow</span>
+                    <PlayArrow sx={{ fontSize: 34 }} />
                   </Box>
-                  <Box sx={{ fontFamily: '"Material Symbols Outlined"', fontSize: 28, color: C.primary, opacity: 0.35, userSelect: 'none' }}>
-                    forward_30
-                  </Box>
+                  <IconButton sx={{ color: C.primary, opacity: 0.35 }} aria-label="Forward 30 seconds">
+                    <Forward30 sx={{ fontSize: 28 }} />
+                  </IconButton>
                 </Box>
               </Box>
 

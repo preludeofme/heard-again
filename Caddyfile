@@ -1,0 +1,15 @@
+{
+	auto_https off
+	admin off
+}
+
+trubuck-design-ai-beast.stern-mulley.ts.net:4777 {
+	tls /etc/ssl/tailscale/trubuck-design-ai-beast.stern-mulley.ts.net.crt /etc/ssl/tailscale/trubuck-design-ai-beast.stern-mulley.ts.net.key
+
+	reverse_proxy localhost:4776 {
+		header_up X-Real-IP {remote_host}
+		header_up X-Forwarded-For {remote_host}
+		header_up X-Forwarded-Proto https
+		header_up X-Forwarded-Host {host}
+	}
+}

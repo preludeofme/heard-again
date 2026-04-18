@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { prisma } from '@/lib/prisma'
 import { successResponse, errorResponse } from '@/lib/api-helpers'
 import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
@@ -79,7 +80,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     )
 
     if (!validationResult.isValid) {
-      console.error('Avatar file validation failed:', {
+      logger.error('Avatar file validation failed:', {
         filename: file.originalFilename,
         error: validationResult.error,
         securityRisk: validationResult.securityRisk,

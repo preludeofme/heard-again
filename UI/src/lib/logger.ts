@@ -26,7 +26,7 @@ const sensitiveFields = [
 
 const redactionPaths = sensitiveFields.map(f => `*.${f}`)
 
-export const logger = pino({
+const _pinoLogger = pino({
   level: process.env.LOG_LEVEL || (isDevelopment ? 'debug' : 'info'),
   redact: {
     paths: redactionPaths,
@@ -42,12 +42,47 @@ export const logger = pino({
   },
 })
 
+/**
+ * Thin wrapper around pino that accepts console-style (msg, extra?) call
+ * signatures, for easy migration from console.*.
+ */
+/**
+ * Wrapper accepting both:
+ *   - console-style:  logger.error('msg', someValue?)
+ *   - pino-style:     logger.error({ obj }, 'msg')
+ */
+function makeLogMethod(pinoMethod: (...args: any[]) => void) {
+  return (msgOrObj: string | object, msgOrExtra?: unknown): void => {
+    if (typeof msgOrObj === 'string') {
+      // Console-style: (msg, extra?)
+      if (msgOrExtra === undefined) {
+        pinoMethod(msgOrObj)
+      } else if (msgOrExtra !== null && typeof msgOrExtra === 'object') {
+        pinoMethod(msgOrExtra, msgOrObj)
+      } else {
+        pinoMethod({ value: msgOrExtra }, msgOrObj)
+      }
+    } else {
+      // Pino-style: (obj, msg?)
+      pinoMethod(msgOrObj, msgOrExtra ?? '')
+    }
+  }
+}
+
+export const logger = {
+  error: makeLogMethod(_pinoLogger.error.bind(_pinoLogger) as any),
+  warn:  makeLogMethod(_pinoLogger.warn.bind(_pinoLogger) as any),
+  info:  makeLogMethod(_pinoLogger.info.bind(_pinoLogger) as any),
+  debug: makeLogMethod(_pinoLogger.debug.bind(_pinoLogger) as any),
+  child: (bindings: object) => _pinoLogger.child(bindings),
+}
+
 // Security event logging helper
 export function logSecurityEvent(
   eventType: string,
   details: Record<string, unknown>
 ) {
-  logger.warn({ eventType, ...details }, 'Security event detected')
+  _pinoLogger.warn({ eventType, ...details }, 'Security event detected')
 }
 
 // Audit logging helper (for compliance)
@@ -60,7 +95,7 @@ export function logAuditEvent(
   success: boolean,
   details?: Record<string, unknown>
 ) {
-  logger.info({
+  _pinoLogger.info({
     audit: true,
     action,
     workspaceId,
@@ -70,5 +105,5 @@ export function logAuditEvent(
     success,
     timestamp: new Date().toISOString(),
     ...details,
-  })
+  }, 'Audit event')
 }

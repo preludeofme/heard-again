@@ -75,7 +75,7 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse) {
     )
 
     if (!validationResult.isValid) {
-      console.error('File validation failed:', {
+      logger.error('File validation failed:', {
         filename: file.originalFilename,
         error: validationResult.error,
         securityRisk: validationResult.securityRisk,
@@ -98,7 +98,7 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse) {
       validationResult.detectedType!
     )
 
-    console.log(`File validated successfully:`, {
+    logger.info(`File validated successfully:`, {
       originalName: file.originalFilename,
       secureFilename,
       detectedType: validationResult.detectedType,
@@ -106,11 +106,11 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse) {
     })
 
     // CRITICAL: Scan for malware
-    console.log('Starting malware scan...')
+    logger.info('Starting malware scan...')
     const { scanResult, quarantined } = await scanAndQuarantineFile(file.filepath)
     
     if (!scanResult.isClean) {
-      console.error('Malware detected:', {
+      logger.error('Malware detected:', {
         filename: file.originalFilename,
         threats: scanResult.threats,
         quarantined,
@@ -130,7 +130,7 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse) {
       )
     }
     
-    console.log('Malware scan passed:', {
+    logger.info('Malware scan passed:', {
       filename: file.originalFilename,
       scanTime: scanResult.scanTime,
       engine: scanResult.engine
@@ -157,14 +157,14 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse) {
         )
         optimizedBuffer = optimizationResult.optimizedFile
         
-        console.log(`File optimization completed:`, {
+        logger.info(`File optimization completed:`, {
           originalSize: (originalSize / 1024 / 1024).toFixed(2) + 'MB',
           optimizedSize: (optimizationResult.optimizedSize / 1024 / 1024).toFixed(2) + 'MB',
           compressionRatio: (1 - optimizationResult.compressionRatio).toFixed(2) + '% reduction',
           method: optimizationResult.optimizationMethod
         })
       } catch (error) {
-        console.error('File optimization failed, using original:', error)
+        logger.error('File optimization failed, using original:', error)
         // Continue with original file if optimization fails
       }
     }
@@ -238,14 +238,14 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse) {
     try {
       require('fs').unlinkSync(file.filepath)
     } catch (error) {
-      console.warn('Failed to clean up temporary file:', error)
+      logger.warn('Failed to clean up temporary file:', error)
     }
 
     // Clean up temporary directory
     try {
       fs.rmSync(tempDir, { recursive: true, force: true })
     } catch (error) {
-      console.warn('Failed to clean up temporary directory:', error)
+      logger.warn('Failed to clean up temporary directory:', error)
     }
 
     // Trigger RAG ingestion in the Chat service for text-extractable document types.
@@ -319,14 +319,14 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse) {
     }, 201)
 
   } catch (error: any) {
-    console.error('Upload error:', error)
+    logger.error('Upload error:', error)
     
     // Clean up temporary file on error
     if (fileArray && fileArray.length > 0) {
       try {
         require('fs').unlinkSync(fileArray[0].filepath)
       } catch (cleanupError) {
-        console.warn('Failed to clean up temporary file on error:', cleanupError)
+        logger.warn('Failed to clean up temporary file on error:', cleanupError)
       }
     }
     
@@ -336,7 +336,7 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse) {
         fs.rmSync(tempDir, { recursive: true, force: true })
       }
     } catch (cleanupError) {
-      console.warn('Failed to clean up temporary directory on error:', cleanupError)
+      logger.warn('Failed to clean up temporary directory on error:', cleanupError)
     }
     
     if (error.statusCode) {

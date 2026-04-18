@@ -5,7 +5,7 @@ from fastapi import HTTPException, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import Optional, Dict, Any
 import os
-import requests
+import httpx
 
 logger = logging.getLogger(__name__)
 
@@ -39,15 +39,16 @@ async def validate_token(credentials: HTTPAuthorizationCredentials = Depends(sec
     """
     try:
         session_token = credentials.credentials
-        
+
         # Validate with NextAuth session endpoint
         try:
-            session_response = requests.get(
-                f"{NEXTAUTH_URL}/api/auth/session",
-                headers={"Cookie": f"next-auth.session-token={session_token}"},
-                timeout=10
-            )
-            
+            async with httpx.AsyncClient() as client:
+                session_response = await client.get(
+                    f"{NEXTAUTH_URL}/api/auth/session",
+                    headers={"Cookie": f"next-auth.session-token={session_token}"},
+                    timeout=10
+                )
+
             if session_response.status_code != 200:
                 logger.warning(f"NextAuth session validation failed: {session_response.status_code}")
                 raise HTTPException(
@@ -55,9 +56,9 @@ async def validate_token(credentials: HTTPAuthorizationCredentials = Depends(sec
                     detail="Invalid session",
                     headers={"WWW-Authenticate": "Bearer"},
                 )
-            
+
             session_data = session_response.json()
-            
+
             if not session_data.get('user'):
                 logger.warning("No user in session data")
                 raise HTTPException(
@@ -65,23 +66,23 @@ async def validate_token(credentials: HTTPAuthorizationCredentials = Depends(sec
                     detail="Invalid session",
                     headers={"WWW-Authenticate": "Bearer"},
                 )
-            
-        except requests.RequestException as e:
+
+        except httpx.RequestError as e:
             logger.error(f"Failed to validate session with NextAuth: {e}")
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Authentication service unavailable",
             )
-        
+
         # Extract user info from session
         user = session_data['user']
         user_id = user.get('id')
         email = user.get('email')
-        
+
         # For workspace, we'll use a default or extract from user data
         # The main app handles workspace authorization
         workspace_id = user.get('defaultWorkspaceId') or 'default'
-        
+
         if not user_id:
             logger.error(f"Invalid session: missing user id - {session_data}")
             raise HTTPException(
@@ -89,14 +90,15 @@ async def validate_token(credentials: HTTPAuthorizationCredentials = Depends(sec
                 detail="Invalid session: missing user id",
                 headers={"WWW-Authenticate": "Bearer"},
             )
-        
+
         return {
             'user_id': user_id,
             'workspace_id': workspace_id,
             'email': email,
-            'token': session_token
+            'token': session_token,
+            'session_data': session_data,
         }
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -113,49 +115,38 @@ async def require_workspace_role(
 ) -> Dict[str, Any]:
     """
     Ensure user has required role in workspace.
-    Uses NextAuth session to get user role from session data.
+    Reads role from the session_data already fetched by validate_token — no second HTTP call.
     """
     try:
-        # Get fresh session data to check role
-        session_response = requests.get(
-            f"{NEXTAUTH_URL}/api/auth/session",
-            headers={"Cookie": f"next-auth.session-token={auth_data['token']}"},
-            timeout=10
-        )
-        
-        if session_response.status_code != 200:
-            logger.error(f"Role check failed: session endpoint returned {session_response.status_code}")
-            raise HTTPException(status_code=403, detail="Authorization check failed")
-        
-        session_data = session_response.json()
+        session_data = auth_data['session_data']
         user = session_data.get('user', {})
-        
+
         # Get role from session (NextAuth includes this in user object)
         user_role = user.get('role', 'VIEWER')
-        
+
         # Role hierarchy check
         role_hierarchy = ['VIEWER', 'LEGACY', 'EDITOR', 'ADMIN', 'OWNER']
-        
+
         if user_role not in role_hierarchy:
             logger.error(f"Unknown role '{user_role}' for user {auth_data['user_id']}")
             raise HTTPException(status_code=403, detail="Invalid role")
-        
+
         user_index = role_hierarchy.index(user_role)
         required_index = role_hierarchy.index(required_role)
-        
+
         if user_index < required_index:
             await log_auth_event('INSUFFICIENT_ROLE', auth_data, {
                 'required': required_role,
                 'actual': user_role
             })
             raise HTTPException(
-                status_code=403, 
+                status_code=403,
                 detail=f"Requires {required_role} role or higher"
             )
-        
+
         logger.info(f"User {auth_data['user_id']} authorized with role {user_role}")
         return auth_data
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -191,7 +182,7 @@ async def log_auth_event(event_type: str, auth_data: Dict[str, Any], details: Di
         'workspace_id': auth_data['workspace_id'],
         'details': details or {}
     }
-    
+
     if event_type in ['AUTH_FAILURE', 'TENANT_VIOLATION']:
         logger.error(f"Security event: {event_type}", extra=log_data)
     else:

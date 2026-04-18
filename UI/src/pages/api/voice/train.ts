@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { ttsRequest } from '@/lib/tts-client'
 import { prisma } from '@/lib/prisma'
@@ -75,7 +76,7 @@ async function trainVoiceHandler(req: NextApiRequest, res: NextApiResponse) {
       styleParams: data.styleParams,
     })
   } catch (error: any) {
-    console.error('[API] Train/create-profile error:', error.message)
+    logger.error('[API] Train/create-profile error:', error.message)
     return res.status(503).json({
       success: false,
       error: error.message,

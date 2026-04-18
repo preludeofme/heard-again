@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { ttsRequest } from '@/lib/tts-client'
 
@@ -19,7 +20,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     return res.status(200).json({ success: true, ...data })
   } catch (error: any) {
-    console.error('[API] Delete profile error:', error.message)
+    logger.error('[API] Delete profile error:', error.message)
     return res.status(503).json({
       success: false,
       error: error.message,

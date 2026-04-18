@@ -732,6 +732,7 @@ export function AddEditPersonModal({
       onClose={!isSubmitting ? onClose : undefined}
       maxWidth="sm"
       fullWidth
+      aria-labelledby="add-edit-person-dialog-title"
       PaperProps={{
         sx: {
           borderRadius: 4,
@@ -739,13 +740,13 @@ export function AddEditPersonModal({
         },
       }}
     >
-      <DialogTitle sx={{ pb: 1 }}>
+      <DialogTitle id="add-edit-person-dialog-title" sx={{ pb: 1 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Typography variant="h5" sx={{ color: '#16334a', fontWeight: 600, fontFamily: 'var(--font-newsreader), serif' }}>
             {mode === 'create' ? 'Add New Person' : 'Edit Person'}
           </Typography>
           {!isSubmitting && (
-            <IconButton onClick={onClose} sx={{ color: '#546669' }}>
+            <IconButton onClick={onClose} aria-label="Close dialog" sx={{ color: '#546669' }}>
               <CloseIcon />
             </IconButton>
           )}

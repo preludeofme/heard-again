@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { NextApiRequest, NextApiResponse } from 'next'
 import { generateCspPolicy, generateNonce } from './csp-nonce'
 
@@ -239,7 +240,7 @@ export function reportCSPViolation(
     const violation = req.body
     
     // Log CSP violations for security monitoring
-    console.error('CSP Violation:', {
+    logger.error('CSP Violation:', {
       userAgent: req.headers['user-agent'],
       ip: req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || req.connection.remoteAddress,
       timestamp: new Date().toISOString(),
@@ -254,7 +255,7 @@ export function reportCSPViolation(
 
     res.status(204).end()
   } catch (error) {
-    console.error('Error processing CSP violation report:', error)
+    logger.error('Error processing CSP violation report:', error)
     res.status(400).json({ error: 'Invalid report' })
   }
 }

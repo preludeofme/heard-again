@@ -124,13 +124,13 @@ export function VoiceConsentModal({
   }
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
-      <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, pr: 6 }}>
+    <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth aria-labelledby="voice-consent-dialog-title">
+      <DialogTitle id="voice-consent-dialog-title" sx={{ display: 'flex', alignItems: 'center', gap: 1, pr: 6 }}>
         <VoiceIcon color="primary" />
         <Typography variant="h6" sx={{ fontWeight: 600 }}>
           Voice Consent & Authorization
         </Typography>
-        <IconButton onClick={handleClose} sx={{ position: 'absolute', right: 8, top: 8 }}>
+        <IconButton onClick={handleClose} aria-label="Close dialog" sx={{ position: 'absolute', right: 8, top: 8 }}>
           <CloseIcon />
         </IconButton>
       </DialogTitle>

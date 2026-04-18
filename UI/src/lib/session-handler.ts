@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { useRouter } from 'next/router'
 import { useEffect, useRef } from 'react'
 import { ApiError } from './errors'
@@ -77,7 +78,7 @@ export function isSessionExpiredError(error: any): boolean {
  */
 export function useSessionExpiration() {
   const router = useRouter()
-  const redirectTimeoutRef = useRef<NodeJS.Timeout>()
+  const redirectTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
 
   useEffect(() => {
     // Reset redirect flag when component mounts
@@ -145,7 +146,7 @@ export function handleApiError(error: any, currentPath?: string): void {
   }
   
   // For other errors, you might want to show a toast or notification
-  console.error('API Error:', error)
+  logger.error('API Error:', error)
 }
 
 /**

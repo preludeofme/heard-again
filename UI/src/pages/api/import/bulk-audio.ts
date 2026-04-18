@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import fs from 'fs/promises'
 import path from 'path'
 import formidable from 'formidable'
@@ -76,7 +77,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       )
 
       if (!validationResult.isValid) {
-        console.error('File validation failed:', {
+        logger.error('File validation failed:', {
           filename: file.originalFilename,
           error: validationResult.error,
           securityRisk: validationResult.securityRisk,

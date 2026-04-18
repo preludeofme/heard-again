@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { TTS_SERVICE_URL } from '@/lib/tts-client'
 import { prisma } from '@/lib/prisma'
@@ -5,6 +6,11 @@ import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpe
 import { validateFileContent } from '@/lib/security/file-validator'
 import { scanAndQuarantineFile } from '@/lib/security/malware-scanner'
 import fs from 'fs/promises'
+
+const TTS_SERVICE_TOKEN = process.env.TTS_SERVICE_TOKEN
+if (!TTS_SERVICE_TOKEN) {
+  throw new Error('TTS_SERVICE_TOKEN environment variable is required for the voice upload pipeline')
+}
 
 /**
  * POST /api/voice/upload-sample
@@ -83,7 +89,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       method: 'POST',
       headers: { 
         'Content-Type': contentType,
-        'Authorization': `Bearer ${process.env.TTS_SERVICE_TOKEN || 'default-token'}` // Add service auth
+        'Authorization': `Bearer ${TTS_SERVICE_TOKEN}`
       },
       body: fileBuffer,
     })
@@ -126,7 +132,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       },
     })
   } catch (error: any) {
-    console.error('[API] Upload sample error:', error.message)
+    logger.error('[API] Upload sample error:', error.message)
     return res.status(503).json({
       success: false,
       error: error.message,

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '@/lib/prisma'
 import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
@@ -121,7 +122,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ),
     })
   } catch (error: any) {
-    console.error('[API] List training data error:', error.message)
+    logger.error('[API] List training data error:', error.message)
     return res.status(500).json({
       success: false,
       error: error.message,

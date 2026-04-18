@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
@@ -34,7 +35,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(405).json({ success: false, error: 'Method not allowed' })
     }
   } catch (error: any) {
-    console.error('Document API error:', error)
+    logger.error('Document API error:', error)
     
     // Handle authorization errors specifically
     if (error.statusCode === 401 || error.statusCode === 403) {

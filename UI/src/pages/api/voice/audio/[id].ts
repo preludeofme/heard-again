@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { TTS_SERVICE_URL } from '@/lib/tts-client'
 import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
@@ -65,7 +66,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (!response.ok) {
       // Log security-relevant failures
-      console.error('[AUDIO_PROXY] TTS service error:', {
+      logger.error('[AUDIO_PROXY] TTS service error:', {
         status: response.status,
         audioId,
         workspaceId: user.workspaceId,
@@ -94,7 +95,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.send(buffer)
 
   } catch (error: any) {
-    console.error('[AUDIO_PROXY] Error:', error)
+    logger.error('[AUDIO_PROXY] Error:', error)
     
     // Handle authorization errors specifically
     if (error.statusCode === 401 || error.statusCode === 403) {

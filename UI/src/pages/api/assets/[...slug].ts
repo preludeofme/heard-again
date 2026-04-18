@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { NextApiRequest, NextApiResponse } from 'next'
 import { getStorageService } from '@/lib/storage/storage-service'
 import { getAuthUserWithWorkspace } from '@/lib/auth-helpers'
@@ -103,7 +104,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(404).json({ error: 'File not found' })
     }
     
-    console.error('File serving error:', error)
+    logger.error('File serving error:', error)
     res.status(500).json({ error: 'Failed to serve file' })
   }
 }

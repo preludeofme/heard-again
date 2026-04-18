@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { getAuthUserWithWorkspace } from '@/lib/auth-helpers'
 import { prisma } from '@/lib/prisma'
@@ -46,7 +47,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(405).json({ success: false, error: 'Method not allowed' })
     }
   } catch (error) {
-    console.error('Timeline API error:', error)
+    logger.error('Timeline API error:', error)
     return res.status(500).json({ success: false, error: 'Internal server error' })
   }
 }

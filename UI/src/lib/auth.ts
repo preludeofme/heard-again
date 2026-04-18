@@ -89,7 +89,7 @@ export const authOptions: NextAuthOptions = {
           })
           token.role = membership?.role || 'VIEWER'
         } catch (e) {
-          console.error('Failed to fetch user role:', e)
+          logger.error('Failed to fetch user role:', e)
           token.role = 'VIEWER'
         }
       }
@@ -124,7 +124,7 @@ export const authOptions: NextAuthOptions = {
           data: { lastLoginAt: new Date() },
         })
       } catch (e) {
-        console.error('Failed to update lastLoginAt:', e)
+        logger.error('Failed to update lastLoginAt:', e)
       }
 
       // Auto-create workspace for users who don't have one
@@ -135,7 +135,7 @@ export const authOptions: NextAuthOptions = {
         })
 
         if (!existingMembership) {
-          console.log(`No workspace found for user ${user.id}, creating one...`)
+          logger.info(`No workspace found for user ${user.id}, creating one...`)
 
           // Create default workspace
           const workspace = await prisma.workspace.create({
@@ -160,10 +160,10 @@ export const authOptions: NextAuthOptions = {
             data: { defaultWorkspaceId: workspace.id },
           })
 
-          console.log(`Auto-created workspace ${workspace.id} for user ${user.id}`)
+          logger.info(`Auto-created workspace ${workspace.id} for user ${user.id}`)
         }
       } catch (e) {
-        console.error('Failed to auto-create workspace:', e)
+        logger.error('Failed to auto-create workspace:', e)
       }
     },
   },

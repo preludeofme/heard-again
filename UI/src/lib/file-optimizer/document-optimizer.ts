@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { OptimizationOptions, OptimizationResult } from './index'
 
 export class DocumentOptimizer {
@@ -87,7 +88,7 @@ export class DocumentOptimizer {
       }
 
     } catch (error) {
-      console.error('Document optimization failed:', error)
+      logger.error('Document optimization failed:', error)
       return {
         optimizedFile: file,
         originalSize,
@@ -115,7 +116,7 @@ export class DocumentOptimizer {
     // 2. Compress embedded images
     // 3. Optimize font embedding
     // 4. Remove unused objects
-    console.log('PDF optimization not implemented yet, returning original')
+    logger.info('PDF optimization not implemented yet, returning original')
     return file
   }
 
@@ -124,7 +125,7 @@ export class DocumentOptimizer {
     // - docx for DOCX manipulation
     // - mammoth for older Word formats
     
-    console.log('Word document optimization not implemented yet, returning original')
+    logger.info('Word document optimization not implemented yet, returning original')
     return file
   }
 
@@ -133,7 +134,7 @@ export class DocumentOptimizer {
     // - xlsx for XLSX manipulation
     // - xlsjs for older Excel formats
     
-    console.log('Excel optimization not implemented yet, returning original')
+    logger.info('Excel optimization not implemented yet, returning original')
     return file
   }
 
@@ -141,7 +142,7 @@ export class DocumentOptimizer {
     // PowerPoint optimization would use libraries like:
     // - pptxgenjs for PPTX manipulation
     
-    console.log('PowerPoint optimization not implemented yet, returning original')
+    logger.info('PowerPoint optimization not implemented yet, returning original')
     return file
   }
 
@@ -154,7 +155,7 @@ export class DocumentOptimizer {
   private async convertRtf(file: Buffer): Promise<Buffer> {
     // Convert RTF to plain text
     // This would use an RTF parser library
-    console.log('RTF conversion not implemented yet, returning original')
+    logger.info('RTF conversion not implemented yet, returning original')
     return file
   }
 
@@ -175,13 +176,13 @@ export class DocumentOptimizer {
 
   async convertToPdf(file: Buffer, mimeType: string): Promise<Buffer> {
     // Convert various document formats to PDF
-    console.log('Document to PDF conversion not implemented yet')
+    logger.info('Document to PDF conversion not implemented yet')
     return file
   }
 
   async extractText(file: Buffer, mimeType: string): Promise<string> {
     // Extract text content from documents
-    console.log('Text extraction not implemented yet')
+    logger.info('Text extraction not implemented yet')
     return ''
   }
 }

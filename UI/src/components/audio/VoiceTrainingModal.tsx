@@ -21,8 +21,10 @@ import {
   CheckCircle as CheckCircleIcon,
   AudioFile as AudioFileIcon,
   RecordVoiceOver as VoiceIcon,
+  Mic as MicIcon,
 } from '@mui/icons-material'
 import { AudioTrimmer } from './AudioTrimmer'
+import { AudioRecorder } from './AudioRecorder'
 
 interface VoiceTrainingModalProps {
   open: boolean
@@ -33,7 +35,7 @@ interface VoiceTrainingModalProps {
   onCreateVoice: (modelName: string, language: string, styleInstruct?: string) => Promise<void>
   isUploading: boolean
   isTraining: boolean
-  trainingJob: any
+  trainingJob: { status?: string; modelId?: string } | null
 }
 
 const STYLE_SUGGESTIONS = [
@@ -59,6 +61,9 @@ export function VoiceTrainingModal({
   const [voiceName, setVoiceName] = useState('')
   const [voiceDescription, setVoiceDescription] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // ── Source tab: upload a file vs. record in-browser ──
+  const [sourceTab, setSourceTab] = useState<'upload' | 'record'>('upload')
 
   // ── Local file state (before trimming / upload) ──
   const [rawFile, setRawFile] = useState<File | null>(null)
@@ -115,6 +120,12 @@ export function VoiceTrainingModal({
     setVoiceDescription(suggestion)
   }
 
+  const handleRecordingComplete = async (audioBlob: Blob, _duration: number) => {
+    const ext = audioBlob.type.includes('mp4') ? 'm4a' : 'webm'
+    const file = new File([audioBlob], `recording-${Date.now()}.${ext}`, { type: audioBlob.type })
+    await onUploadSample(file)
+  }
+
   const isComplete = trainingJob?.status === 'completed'
   const hasAudio = trainingSamples.length > 0
   const canCreate = hasAudio && voiceName.trim().length > 0 && !isTraining
@@ -125,6 +136,7 @@ export function VoiceTrainingModal({
       onClose={handleClose}
       maxWidth="sm"
       fullWidth
+      aria-labelledby="voice-training-dialog-title"
       PaperProps={{
         sx: {
           borderRadius: 3,
@@ -132,7 +144,7 @@ export function VoiceTrainingModal({
         },
       }}
     >
-      <DialogTitle sx={{ pb: 1 }}>
+      <DialogTitle id="voice-training-dialog-title" sx={{ pb: 1 }}>
         <Box display="flex" justifyContent="space-between" alignItems="center">
           <Box>
             <Typography variant="h5" className="serif-font" sx={{ color: '#16334a', fontWeight: 600 }}>
@@ -168,11 +180,55 @@ export function VoiceTrainingModal({
             {/* ── Step 1: Pick & Trim Audio ── */}
             <Box sx={{ mb: 3 }}>
               <Typography variant="subtitle2" sx={{ color: '#16334a', mb: 1.5, fontWeight: 600 }}>
-                1. Upload a recording of their voice
+                1. Add a voice recording
               </Typography>
 
-              {/* State A: No file selected yet */}
-              {!rawFile && !hasAudio && (
+              {/* Source tab toggle — only visible before audio is locked in */}
+              {!hasAudio && (
+                <Box
+                  sx={{
+                    display: 'flex',
+                    gap: 0.5,
+                    mb: 2,
+                    p: 0.5,
+                    bgcolor: '#f0ede8',
+                    borderRadius: 2,
+                  }}
+                >
+                  {(['upload', 'record'] as const).map((tab) => (
+                    <Button
+                      key={tab}
+                      size="small"
+                      onClick={() => { setSourceTab(tab); setRawFile(null); setIsTrimming(false) }}
+                      startIcon={tab === 'upload' ? <UploadIcon sx={{ fontSize: 16 }} /> : <MicIcon sx={{ fontSize: 16 }} />}
+                      sx={{
+                        flex: 1,
+                        textTransform: 'none',
+                        borderRadius: 1.5,
+                        fontWeight: sourceTab === tab ? 600 : 400,
+                        bgcolor: sourceTab === tab ? '#ffffff' : 'transparent',
+                        color: sourceTab === tab ? '#16334a' : '#546669',
+                        boxShadow: sourceTab === tab ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                        '&:hover': { bgcolor: sourceTab === tab ? '#ffffff' : 'rgba(22,51,74,0.05)' },
+                      }}
+                    >
+                      {tab === 'upload' ? 'Upload file' : 'Record now'}
+                    </Button>
+                  ))}
+                </Box>
+              )}
+
+              {/* Record tab */}
+              {sourceTab === 'record' && !hasAudio && (
+                <AudioRecorder
+                  onRecordingComplete={handleRecordingComplete}
+                  onCancel={() => setSourceTab('upload')}
+                  maxDuration={300}
+                />
+              )}
+
+              {/* Upload tab — State A: No file selected yet */}
+              {sourceTab === 'upload' && !rawFile && !hasAudio && (
                 <Box>
                   <input
                     accept="audio/*"

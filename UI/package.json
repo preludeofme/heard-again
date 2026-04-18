@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 4777 -H 0.0.0.0 --webpack",
-    "dev:debug": "NODE_ENV=development DEBUG=* next dev -p 4777 -H 0.0.0.0 --webpack",
+    "dev": "next dev -p 4776 -H 127.0.0.1 --webpack",
+    "dev:debug": "NODE_ENV=development DEBUG=* next dev -p 4776 -H 127.0.0.1 --webpack",
     "build": "next build --webpack",
-    "start": "next build && next start -p 4777 -H 0.0.0.0",
+    "start": "next build && next start -p 4776 -H 127.0.0.1",
     "start:tts": "cd ../TTS && ./start.sh",
     "start:voice": "docker compose -f docker-compose.voice.yml up -d",
     "stop:voice": "docker compose -f docker-compose.voice.yml down",
@@ -81,6 +81,7 @@
     "@types/word-extractor": "^1.0.6",
     "babel-jest": "^30.3.0",
     "jest": "^30.3.0",
+    "jest-environment-jsdom": "^30.3.0",
     "prisma": "^6.6.0",
     "ts-jest": "^29.4.6",
     "tsx": "^4.19.0"

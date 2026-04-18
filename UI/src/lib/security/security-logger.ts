@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '@/lib/prisma'
 import { randomBytes, createHash, randomUUID } from 'crypto'
@@ -110,7 +111,7 @@ class SecurityLogger {
       // For now, store in database and log to file
       await this.persistSecurityEvents(eventsToFlush)
     } catch (error) {
-      console.error('Failed to flush security logs:', error)
+      logger.error('Failed to flush security logs:', error)
       // Add events back to buffer for retry
       this.logBuffer.unshift(...eventsToFlush)
     }
@@ -123,7 +124,7 @@ class SecurityLogger {
     if (criticalEvents.length > 0) {
       try {
         // For now, just log to console - in production would integrate with audit system
-        console.error('CRITICAL SECURITY EVENTS:', criticalEvents.map(e => ({
+        logger.error('CRITICAL SECURITY EVENTS:', criticalEvents.map(e => ({
           type: e.type,
           userId: e.userId,
           workspaceId: e.workspaceId,
@@ -131,7 +132,7 @@ class SecurityLogger {
           timestamp: e.timestamp
         })))
       } catch (error) {
-        console.error('Failed to persist audit logs:', error)
+        logger.error('Failed to persist audit logs:', error)
       }
     }
 
@@ -176,7 +177,7 @@ class SecurityLogger {
       sessionId: event.sessionId,
     }
 
-    console.log(JSON.stringify(logEntry))
+    logger.info(JSON.stringify(logEntry))
   }
 
   private formatLogMessage(event: SecurityEvent): string {

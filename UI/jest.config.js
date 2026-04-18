@@ -2,7 +2,8 @@ module.exports = {
   // Use the Jest environment for Next.js
   testEnvironment: 'jsdom',
   
-  // Setup files
+  // Setup files — env.ts runs before modules load; setup.ts runs after the test framework
+  setupFiles: ['<rootDir>/src/__tests__/setup/env.ts'],
   setupFilesAfterEnv: ['<rootDir>/src/__tests__/setup/setup.ts'],
   
   // Test file patterns
@@ -12,7 +13,7 @@ module.exports = {
   ],
   
   // Module path mapping
-  moduleNameMapping: {
+  moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
   
@@ -37,5 +38,6 @@ module.exports = {
     '<rootDir>/node_modules/',
     '<rootDir>/TTS/',
     '<rootDir>/src/pages/api/',
+    '<rootDir>/src/__tests__/setup/',
   ],
 }

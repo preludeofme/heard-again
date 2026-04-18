@@ -7,9 +7,10 @@ import {
   TextField, Divider, CircularProgress, Grid,
 } from '@mui/material'
 import {
-  ArrowBack, PlayArrow, Pause, Favorite, FavoriteBorder,
-  Edit, Schedule, VolumeUp, Send, Person, Comment as CommentIcon,
+  ArrowBack, Favorite, FavoriteBorder,
+  Edit, Schedule, Send, Person, Comment as CommentIcon,
 } from '@mui/icons-material'
+import { AudioPlayer } from '@/components/audio/AudioPlayer'
 import { formatDistanceToNow, format } from 'date-fns'
 
 interface StoryDetail {
@@ -58,7 +59,6 @@ export default function StoryDetailPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isFavorited, setIsFavorited] = useState(false)
-  const [isPlayingAudio, setIsPlayingAudio] = useState(false)
   const [commentText, setCommentText] = useState('')
   const [isSubmittingComment, setIsSubmittingComment] = useState(false)
 
@@ -243,34 +243,21 @@ export default function StoryDetailPage() {
 
             {/* Generated Audio Player */}
             {story.generatedAudio && (
-              <Card sx={{ backgroundColor: '#2e4a62', p: 3, borderRadius: 4, mb: 4 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <IconButton
-                    onClick={() => setIsPlayingAudio(!isPlayingAudio)}
-                    sx={{ backgroundColor: 'white', color: '#16334a', '&:hover': { backgroundColor: '#f0f0f0' } }}
-                  >
-                    {isPlayingAudio ? <Pause /> : <PlayArrow />}
-                  </IconButton>
-                  <Box sx={{ flexGrow: 1 }}>
-                    <Box sx={{ height: 4, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 1, overflow: 'hidden' }}>
-                      <Box sx={{ width: isPlayingAudio ? '45%' : '0%', height: '100%', backgroundColor: 'white', transition: 'width 0.3s' }} />
-                    </Box>
-                  </Box>
-                  {story.generatedAudio.durationSeconds && (
-                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', fontFamily: 'monospace' }}>
-                      {Math.floor(story.generatedAudio.durationSeconds / 60)}:{String(Math.floor(story.generatedAudio.durationSeconds % 60)).padStart(2, '0')}
-                    </Typography>
-                  )}
-                  {story.voiceProfile && (
-                    <Chip
-                      icon={<VolumeUp sx={{ fontSize: 14, color: '#2e4a62 !important' }} />}
-                      label={story.voiceProfile.name}
-                      size="small"
-                      sx={{ backgroundColor: 'rgba(255,255,255,0.2)', color: 'white' }}
-                    />
-                  )}
-                </Box>
-              </Card>
+              <Box sx={{ mb: 4 }}>
+                <AudioPlayer
+                  audioUrl={`/api/voice/audio/${story.generatedAudio.id}`}
+                  title={story.title}
+                  voiceName={story.voiceProfile?.name}
+                  isAiGenerated
+                  showTranscript={false}
+                  onDownload={() => {
+                    const a = document.createElement('a')
+                    a.href = `/api/voice/audio/${story.generatedAudio!.id}`
+                    a.download = `${story.title}.mp3`
+                    a.click()
+                  }}
+                />
+              </Box>
             )}
 
             {/* Story Content */}

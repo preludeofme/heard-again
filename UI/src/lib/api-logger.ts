@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { NextRequest, NextResponse } from 'next/server'
 
 export class ApiError extends Error {
@@ -30,31 +31,31 @@ export function logApiError(error: unknown, context: {
   const { endpoint, method, userId, requestId, body } = context
   const err = error instanceof Error ? error : new Error(String(error))
   
-  console.error(`\n=== API ERROR LOG ===`)
-  console.error(`Timestamp: ${timestamp}`)
-  console.error(`Endpoint: ${method} ${endpoint}`)
-  console.error(`Request ID: ${requestId || 'N/A'}`)
-  console.error(`User ID: ${userId || 'N/A'}`)
+  logger.error(`\n=== API ERROR LOG ===`)
+  logger.error(`Timestamp: ${timestamp}`)
+  logger.error(`Endpoint: ${method} ${endpoint}`)
+  logger.error(`Request ID: ${requestId || 'N/A'}`)
+  logger.error(`User ID: ${userId || 'N/A'}`)
   
   if (error instanceof ApiError) {
-    console.error(`Error Type: ApiError`)
-    console.error(`Status Code: ${error.statusCode}`)
-    console.error(`Error Code: ${error.code}`)
-    console.error(`Message: ${error.message}`)
+    logger.error(`Error Type: ApiError`)
+    logger.error(`Status Code: ${error.statusCode}`)
+    logger.error(`Error Code: ${error.code}`)
+    logger.error(`Message: ${error.message}`)
     if (error.details) {
-      console.error(`Details:`, error.details)
+      logger.error(`Details:`, error.details)
     }
   } else {
-    console.error(`Error Type: ${err.constructor.name}`)
-    console.error(`Message: ${err.message}`)
+    logger.error(`Error Type: ${err.constructor.name}`)
+    logger.error(`Message: ${err.message}`)
   }
   
   if (body && typeof body === 'object' && Object.keys(body).length > 0) {
-    console.error(`Request Body:`, JSON.stringify(body, null, 2))
+    logger.error(`Request Body:`, JSON.stringify(body, null, 2))
   }
   
-  console.error(`Stack Trace:\n${err.stack}`)
-  console.error(`=== END ERROR LOG ===\n`)
+  logger.error(`Stack Trace:\n${err.stack}`)
+  logger.error(`=== END ERROR LOG ===\n`)
 }
 
 export function createApiResponse(success: boolean, data?: unknown, error?: string, statusCode: number = 200) {
@@ -81,14 +82,14 @@ export function handleApiRoute(handler: (req: Request, context?: unknown) => Pro
     
     try {
       // Log request start
-      console.log(`[${new Date().toISOString()}] Processing: ${endpoint} (Request ID: ${requestId})`)
+      logger.info(`[${new Date().toISOString()}] Processing: ${endpoint} (Request ID: ${requestId})`)
       
       // Execute handler
       const result = await handler(req, context)
       
       // Log success
       const duration = Date.now() - startTime
-      console.log(`[${new Date().toISOString()}] Success: ${endpoint} (${duration}ms)`)
+      logger.info(`[${new Date().toISOString()}] Success: ${endpoint} (${duration}ms)`)
       
       return result
     } catch (error: unknown) {

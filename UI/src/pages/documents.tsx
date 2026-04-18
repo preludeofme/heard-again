@@ -2,7 +2,8 @@ import Head from 'next/head'
 import { Layout } from '@/components/layout/Layout'
 import { DocumentsPage } from '@/components/pages/DocumentsPage'
 import { useDocumentsController } from '@/controllers/useDocumentsController'
-import { Box, CircularProgress, Typography, Button, Card, FormControl, InputLabel, MenuItem, Select } from '@mui/material'
+import { Box, CircularProgress, Typography, Button, Card, TextField } from '@mui/material'
+import Autocomplete from '@mui/material/Autocomplete'
 import { useEffect, useMemo, useState } from 'react'
 import { useSelectedFamilyMember } from '@/contexts/SelectedFamilyMemberContext'
 import { useRouter } from 'next/router'
@@ -118,19 +119,20 @@ export default function Documents() {
                 </Typography>
               </Box>
 
-              <FormControl size="small" sx={{ minWidth: 260, bgcolor: '#fff', borderRadius: 2 }}>
-                <InputLabel>Family Member</InputLabel>
-                <Select
-                  label="Family Member"
-                  value={effectivePersonId || ''}
-                  onChange={(event) => handleSubjectChange(event.target.value)}
-                >
-                  <MenuItem value="">All family documents</MenuItem>
-                  {people.map((person) => (
-                    <MenuItem key={person.id} value={person.id}>{personName(person)}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+              <Autocomplete
+                size="small"
+                options={people}
+                getOptionLabel={personName}
+                value={selectedPersonLabel}
+                onChange={(_, newValue) => handleSubjectChange(newValue?.id ?? '')}
+                isOptionEqualToValue={(option, value) => option.id === value.id}
+                sx={{ minWidth: 260, bgcolor: '#fff', borderRadius: 2 }}
+                renderInput={(params) => (
+                  <TextField {...params} label="Family Member" placeholder="Search…" />
+                )}
+                noOptionsText="No family members found"
+                clearText="View all documents"
+              />
             </Box>
           </Card>
         </Box>

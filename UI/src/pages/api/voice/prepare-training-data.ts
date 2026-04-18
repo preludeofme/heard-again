@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '@/lib/prisma'
 import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
@@ -123,7 +124,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       try {
         fs.copyFileSync(asset.storagePath, trainingPath)
       } catch (err) {
-        console.warn(`Failed to copy ${asset.storagePath} to ${trainingPath}`)
+        logger.warn(`Failed to copy ${asset.storagePath} to ${trainingPath}`)
         continue
       }
 
@@ -184,7 +185,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       },
     })
   } catch (error: any) {
-    console.error('[API] Prepare training data error:', error.message)
+    logger.error('[API] Prepare training data error:', error.message)
     return res.status(500).json({
       success: false,
       error: error.message,

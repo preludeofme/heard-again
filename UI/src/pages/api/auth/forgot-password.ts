@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
@@ -13,8 +14,8 @@ async function sendPasswordResetEmail(params: {
   const fromEmail = process.env.EMAIL_FROM
 
   if (!apiKey || !fromEmail) {
-    console.warn('[auth/forgot-password] Email service not configured; logging reset URL for development')
-    console.log(`Password reset URL for ${params.to}: ${params.resetUrl}`)
+    logger.warn('[auth/forgot-password] Email service not configured; logging reset URL for development')
+    logger.info(`Password reset URL for ${params.to}: ${params.resetUrl}`)
     return
   }
 
@@ -106,7 +107,7 @@ export default apiHandler({
         userName: user.displayName || user.email,
       })
     } catch (emailError) {
-      console.error('[auth/forgot-password] Failed to send reset email:', emailError)
+      logger.error('[auth/forgot-password] Failed to send reset email:', emailError)
     }
 
     return successResponse(res, {

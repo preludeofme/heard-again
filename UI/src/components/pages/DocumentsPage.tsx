@@ -16,7 +16,7 @@ interface DocumentsPageProps {
 
 export function DocumentsPage({ documents, onUploadSuccess, onDelete, onLink, personId }: DocumentsPageProps) {
   const [selectedFilter, setSelectedFilter] = useState('All')
-  const [selectedDocument, setSelectedDocument] = useState<any>(null)
+  const [selectedDocument, setSelectedDocument] = useState<DocumentArtifact | null>(null)
   const [viewerOpen, setViewerOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<DocumentArtifact | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)

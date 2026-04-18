@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { ttsRequest } from '@/lib/tts-client'
 
@@ -31,7 +32,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       blendMode: data.blendMode,
     })
   } catch (error: any) {
-    console.error('[API] Blend-voice error:', error.message)
+    logger.error('[API] Blend-voice error:', error.message)
     return res.status(503).json({
       success: false,
       error: error.message,

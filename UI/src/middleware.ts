@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { getToken } from 'next-auth/jwt'
 
 // Define allowed origins - add your Tailscale domain here
 const ALLOWED_ORIGINS = [
   'https://trubuck-design-ai-beast.stern-mulley.ts.net:4777',
-  'http://trubuck-design-ai-beast.stern-mulley.ts.net:4777',
 ]
 
 // Helper to add CORS headers
@@ -24,9 +24,6 @@ function addCorsHeaders(response: NextResponse, request: NextRequest): NextRespo
 }
 
 export async function middleware(request: NextRequest) {
-  const token = request.cookies.get('next-auth.session-token')?.value ||
-                request.cookies.get('__Secure-next-auth.session-token')?.value
-  
   const { pathname } = request.nextUrl
   
   // Handle CORS preflight requests
@@ -52,6 +49,7 @@ export async function middleware(request: NextRequest) {
   }
   
   // Redirect to login if not authenticated
+  const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
   if (!token) {
     const loginUrl = new URL('/login', request.url)
     loginUrl.searchParams.set('callbackUrl', pathname)

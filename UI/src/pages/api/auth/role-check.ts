@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { NextApiRequest, NextApiResponse } from 'next'
 import { getSession } from 'next-auth/react'
 import { prisma } from '@/lib/prisma'
@@ -49,7 +50,7 @@ export default async function handler(
     })
 
   } catch (error) {
-    console.error('Role check error:', error)
+    logger.error('Role check error:', error)
     return res.status(500).json({ error: 'Internal server error' })
   }
 }

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '@/lib/prisma'
 import { errorResponse, successResponse } from '@/lib/api-helpers'
@@ -44,7 +45,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
   if (!webhookSecret) {
-    console.error('[Billing] STRIPE_WEBHOOK_SECRET not configured')
+    logger.error('[Billing] STRIPE_WEBHOOK_SECRET not configured')
     return errorResponse(res, 'Webhook not configured', 500)
   }
 
@@ -84,7 +85,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const stripeSubscriptionId = session.subscription as string
         
         if (!workspaceId) {
-          console.error('[Billing] No workspaceId in checkout session')
+          logger.error('[Billing] No workspaceId in checkout session')
           break
         }
 
@@ -98,7 +99,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           },
         })
         
-        console.log(`[Billing] Checkout completed for workspace ${workspaceId}`)
+        logger.info(`[Billing] Checkout completed for workspace ${workspaceId}`)
         break
       }
 
@@ -125,7 +126,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           })
         }
         
-        console.log(`[Billing] Invoice paid for subscription ${stripeSubscriptionId}`)
+        logger.info(`[Billing] Invoice paid for subscription ${stripeSubscriptionId}`)
         break
       }
 
@@ -144,7 +145,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           })
         }
         
-        console.log(`[Billing] Payment failed for subscription ${stripeSubscriptionId}`)
+        logger.info(`[Billing] Payment failed for subscription ${stripeSubscriptionId}`)
         break
       }
 
@@ -194,7 +195,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           }
         }
         
-        console.log(`[Billing] Subscription ${stripeSubscriptionId} deleted`)
+        logger.info(`[Billing] Subscription ${stripeSubscriptionId} deleted`)
         break
       }
 
@@ -242,17 +243,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           }
         }
         
-        console.log(`[Billing] Subscription ${stripeSubscriptionId} updated`)
+        logger.info(`[Billing] Subscription ${stripeSubscriptionId} updated`)
         break
       }
 
       default:
-        console.log(`[Billing] Unhandled event type: ${event.type}`)
+        logger.info(`[Billing] Unhandled event type: ${event.type}`)
     }
 
     return successResponse(res, { received: true })
   } catch (error: any) {
-    console.error('[Billing] Webhook error:', error.message)
+    logger.error('[Billing] Webhook error:', error.message)
     return errorResponse(res, 'Webhook processing failed', 500)
   }
 }

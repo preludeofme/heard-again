@@ -16,7 +16,6 @@ import {
   DialogTitle,
   Divider,
   FormControl,
-  FormControlLabel,
   Grid,
   InputLabel,
   LinearProgress,
@@ -29,7 +28,6 @@ import {
   Paper,
   Select,
   Stack,
-  Switch,
   Tab,
   Tabs,
   TextField,
@@ -40,7 +38,6 @@ import {
   CreditCard,
   Cloud,
   Computer,
-  Shield,
   ArrowForward,
   Check,
   Warning,
@@ -111,13 +108,6 @@ interface Instance {
   lastHeartbeatAt: string | null
 }
 
-interface TestOverrides {
-  bypassPermissionChecks: boolean
-  mockPaidPlan: boolean
-  unlimitedUsage: boolean
-  debugMode: boolean
-}
-
 function TabPanel({ children, value, index }: { children: React.ReactNode; value: number; index: number }) {
   return value === index ? <Box sx={{ pt: 3 }}>{children}</Box> : null
 }
@@ -144,26 +134,9 @@ export default function AccountPage() {
   const [instance, setInstance] = useState<Instance | null>(null)
   const [tunnelStatus, setTunnelStatus] = useState<TunnelStatus | null>(null)
 
-  // Test overrides
-  const [overrides, setOverrides] = useState<TestOverrides>({
-    bypassPermissionChecks: false,
-    mockPaidPlan: false,
-    unlimitedUsage: false,
-    debugMode: false,
-  })
-
   // Load all data
   useEffect(() => {
     loadData()
-    // Load saved test overrides from localStorage
-    const savedOverrides = localStorage.getItem('testOverrides')
-    if (savedOverrides) {
-      try {
-        setOverrides(JSON.parse(savedOverrides))
-      } catch {
-        // ignore parse error
-      }
-    }
   }, [])
 
   const loadData = async () => {
@@ -258,26 +231,6 @@ export default function AccountPage() {
     }
   }
 
-  const updateOverride = async (key: keyof TestOverrides, value: boolean) => {
-    const newOverrides = { ...overrides, [key]: value }
-    setOverrides(newOverrides)
-    localStorage.setItem('testOverrides', JSON.stringify(newOverrides))
-    
-    // Sync with server
-    try {
-      await fetch('/api/test-overrides', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ [key]: value }),
-      })
-      setSuccess(`${key} ${value ? 'enabled' : 'disabled'} for testing`)
-    } catch {
-      // Local override is still active even if server sync fails
-      setSuccess(`${key} ${value ? 'enabled' : 'disabled'} locally (server sync failed)`)
-    }
-  }
-
   const formatBytes = (bytes: number): string => {
     if (bytes === 0) return '0 B'
     const k = 1024
@@ -323,7 +276,6 @@ export default function AccountPage() {
               <Tab icon={<Person />} label="Profile" />
               <Tab icon={<CreditCard />} label="Subscription" />
               <Tab icon={<Cloud />} label="Instance & Tunnel" />
-              <Tab icon={<Shield />} label="Test Overrides" />
             </Tabs>
           </Box>
 
@@ -712,125 +664,6 @@ export default function AccountPage() {
                 </CardContent>
               </Card>
             </Stack>
-          </TabPanel>
-
-          {/* Test Overrides Tab */}
-          <TabPanel value={activeTab} index={3}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" sx={{ mb: 2 }}>
-                  Testing Overrides
-                </Typography>
-                <Alert severity="warning" sx={{ mb: 3 }}>
-                  These settings bypass normal permission and quota checks. Only use for testing!
-                </Alert>
-
-                <Stack spacing={2}>
-                  <Paper sx={{ p: 2 }}>
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          checked={overrides.bypassPermissionChecks}
-                          onChange={(e) => updateOverride('bypassPermissionChecks', e.target.checked)}
-                        />
-                      }
-                      label={
-                        <Box>
-                          <Typography variant="subtitle1">Bypass Permission Checks</Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            Allows all actions regardless of workspace role or ownership
-                          </Typography>
-                        </Box>
-                      }
-                    />
-                  </Paper>
-
-                  <Paper sx={{ p: 2 }}>
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          checked={overrides.mockPaidPlan}
-                          onChange={(e) => updateOverride('mockPaidPlan', e.target.checked)}
-                        />
-                      }
-                      label={
-                        <Box>
-                          <Typography variant="subtitle1">Mock Paid Plan</Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            Pretend to have a paid plan (tunnel, cloud GPU, etc.)
-                          </Typography>
-                        </Box>
-                      }
-                    />
-                  </Paper>
-
-                  <Paper sx={{ p: 2 }}>
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          checked={overrides.unlimitedUsage}
-                          onChange={(e) => updateOverride('unlimitedUsage', e.target.checked)}
-                        />
-                      }
-                      label={
-                        <Box>
-                          <Typography variant="subtitle1">Unlimited Usage</Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            Bypass storage and generation minute quotas
-                          </Typography>
-                        </Box>
-                      }
-                    />
-                  </Paper>
-
-                  <Paper sx={{ p: 2 }}>
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          checked={overrides.debugMode}
-                          onChange={(e) => updateOverride('debugMode', e.target.checked)}
-                        />
-                      }
-                      label={
-                        <Box>
-                          <Typography variant="subtitle1">Debug Mode</Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            Enable verbose logging and debug information
-                          </Typography>
-                        </Box>
-                      }
-                    />
-                  </Paper>
-                </Stack>
-
-                <Box sx={{ mt: 3, p: 2, bgcolor: '#f5f5f5', borderRadius: 1 }}>
-                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                    Current Override Status
-                  </Typography>
-                  <pre style={{ margin: 0, fontSize: 12 }}>
-                    {JSON.stringify(overrides, null, 2)}
-                  </pre>
-                </Box>
-
-                <Button
-                  variant="outlined"
-                  color="error"
-                  sx={{ mt: 2 }}
-                  onClick={() => {
-                    setOverrides({
-                      bypassPermissionChecks: false,
-                      mockPaidPlan: false,
-                      unlimitedUsage: false,
-                      debugMode: false,
-                    })
-                    localStorage.removeItem('testOverrides')
-                    setSuccess('All overrides cleared')
-                  }}
-                >
-                  Clear All Overrides
-                </Button>
-              </CardContent>
-            </Card>
           </TabPanel>
 
           {/* Cancel Dialog */}

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { NextApiRequest, NextApiResponse } from 'next'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
@@ -20,7 +21,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       where: {
         id: personId,
         workspace: {
-          memberships: {
+          members: {
             some: {
               userId: session.user.id,
             },
@@ -156,7 +157,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     return res.status(405).json({ error: 'Method not allowed' })
   } catch (error) {
-    console.error('Relationships API error:', error)
+    logger.error('Relationships API error:', error)
     return res.status(500).json({ error: 'Internal server error' })
   }
 }

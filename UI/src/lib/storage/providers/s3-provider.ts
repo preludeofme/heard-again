@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { StorageProvider } from './index'
 import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
@@ -100,7 +101,7 @@ export class S3StorageProvider implements StorageProvider {
       })
       await this.client.send(command)
     } catch (error) {
-      console.error('Failed to delete S3 file:', error)
+      logger.error('Failed to delete S3 file:', error)
       throw error
     }
   }
@@ -140,7 +141,7 @@ export class S3StorageProvider implements StorageProvider {
       
       return Buffer.concat(chunks)
     } catch (error) {
-      console.error('Failed to read S3 file:', error)
+      logger.error('Failed to read S3 file:', error)
       throw error
     }
   }

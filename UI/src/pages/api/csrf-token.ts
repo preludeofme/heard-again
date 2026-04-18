@@ -1,9 +1,12 @@
+import { logger } from '@/lib/logger'
 import crypto from 'crypto'
 import { NextApiRequest, NextApiResponse } from 'next'
 import { getToken } from 'next-auth/jwt'
 import { successResponse, errorResponse } from '@/lib/api-helpers'
 
-const CSRF_SECRET = process.env.NEXTAUTH_SECRET || 'csrf-fallback-secret'
+const _csrfSecret = process.env.NEXTAUTH_SECRET
+if (!_csrfSecret) throw new Error('NEXTAUTH_SECRET is required for CSRF protection')
+const CSRF_SECRET: string = _csrfSecret
 
 function deriveToken(sessionId: string, userId?: string): string {
   const payload = userId ? `${userId}:${sessionId}` : sessionId
@@ -30,7 +33,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     return successResponse(res, { csrfToken: token })
   } catch (error) {
-    console.error('CSRF token generation error:', error)
+    logger.error('CSRF token generation error:', error)
     return errorResponse(res, 'Failed to generate CSRF token', 500, 'CSRF_ERROR')
   }
 }

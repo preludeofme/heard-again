@@ -18,25 +18,28 @@ import {
   Menu,
   MenuItem,
   Button,
+  Divider,
 } from '@mui/material'
 import {
   Search as SearchIcon,
   Notifications as NotificationsIcon,
-  Settings as SettingsIcon,
-  Mic as MicIcon,
-  Add as AddIcon,
-  Home as HomeIcon,
-  Person as PersonIcon,
   Logout as LogoutIcon,
+  Home as HomeIcon,
+  Mic as MicIcon,
+  AutoStories as StoriesIcon,
+  AccountTree as FamilyTreeIcon,
+  Settings as SettingsIcon,
 } from '@mui/icons-material'
 import Link from 'next/link'
 import { useState } from 'react'
-import { SelectedFamilyMemberChip } from './SelectedFamilyMemberChip'
+import { ActiveMemberHeader } from './ActiveMemberHeader'
+import { WorkspaceSwitcher } from './WorkspaceSwitcher'
 
 // Material Symbols Outlined icons matching the mockup
-const MaterialSymbolsIcon = ({ children, sx }: { children: string; sx?: any }) => (
+const MaterialSymbolsIcon = ({ children, sx }: { children: string; sx?: Record<string, unknown> }) => (
   <Typography
     component="span"
+    aria-hidden="true"
     sx={{
       fontFamily: '"Material Symbols Outlined", sans-serif',
       fontSize: 24,
@@ -67,6 +70,9 @@ const footerNavItems = [
   { label: 'Support', href: '/support', icon: 'help' },
   { label: 'Privacy Settings', href: '/privacy', icon: 'shield_lock' },
 ]
+
+// Mobile bottom nav — 5 highest-priority destinations
+const bottomNavRoutes = ['/profile', '/stories', '/family-tree', '/voice-lab', '/account']
 
 function UserMenu() {
   const { data: session, status } = useSession()
@@ -107,9 +113,9 @@ function UserMenu() {
 
   return (
     <>
-      <IconButton size="large" onClick={handleClick}>
-        <Avatar 
-          sx={{ width: 32, height: 32 }} 
+      <IconButton size="large" onClick={handleClick} aria-label="Open user menu">
+        <Avatar
+          sx={{ width: 32, height: 32 }}
           src={session.user.avatarUrl || undefined}
         >
           {session.user.displayName?.[0] || session.user.email?.[0]}
@@ -140,21 +146,15 @@ export function Layout({ children }: LayoutProps) {
   const router = useRouter()
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
-  const [mobileNavValue, setMobileNavValue] = useState(0)
 
   const currentPath = router.pathname
   const showAdvancedSearchButton = currentPath !== '/family-tree'
 
-
   const getMobileNavValue = () => {
-    switch (currentPath) {
-      case '/': return 0
-      case '/profile': return 0
-      case '/profile/[id]': return 0
-      case '/voice-lab': return 1
-      case '/stories': return 3
-      default: return 0
-    }
+    const exactIdx = bottomNavRoutes.indexOf(currentPath)
+    if (exactIdx >= 0) return exactIdx
+    const prefixIdx = bottomNavRoutes.findIndex((r) => currentPath.startsWith(r + '/'))
+    return prefixIdx >= 0 ? prefixIdx : false
   }
 
   return (
@@ -171,12 +171,12 @@ export function Layout({ children }: LayoutProps) {
             }}
           >
             <Toolbar>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Typography variant="h6" component="div" sx={{ fontFamily: "'Newsreader', serif" }}>
-                  Heard Again
-                </Typography>
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, marginLeft: 'auto' }}>
+              <Typography variant="h6" component="div" sx={{ fontFamily: "'Newsreader', serif" }}>
+                Heard Again
+              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 'auto' }}>
+                {/* Single active member indicator — clickable, opens flyout */}
+                <ActiveMemberHeader compact />
                 {showAdvancedSearchButton && (
                   <Button
                     component={Link}
@@ -185,15 +185,14 @@ export function Layout({ children }: LayoutProps) {
                     variant="outlined"
                     sx={{ textTransform: 'none', borderRadius: 2 }}
                   >
-                    Advanced Search
+                    Search
                   </Button>
                 )}
-                <IconButton size="large">
+                <IconButton size="large" aria-label="Search">
                   <SearchIcon />
                 </IconButton>
-                <SelectedFamilyMemberChip />
-                <IconButton size="large">
-                  <Badge badgeContent={3} color="primary">
+                <IconButton size="large" aria-label="Notifications">
+                  <Badge color="primary" invisible>
                     <NotificationsIcon />
                   </Badge>
                 </IconButton>
@@ -202,35 +201,32 @@ export function Layout({ children }: LayoutProps) {
             </Toolbar>
           </AppBar>
 
-          <Box component="main" sx={{ flexGrow: 1, p: 2, backgroundColor: theme.palette.background.default }}>
+          {/* pb: 7 (56px) reserves space so content isn't hidden behind the fixed bottom nav */}
+          <Box component="main" sx={{ flexGrow: 1, p: 2, pb: 9, backgroundColor: theme.palette.background.default }}>
             {children}
           </Box>
 
-            <BottomNavigation
-              value={getMobileNavValue()}
-              onChange={(event, newValue) => {
-                const routes = ['/profile', '/voice-lab', '/stories']
-                router.push(routes[newValue])
-              }}
-              sx={{
-                backgroundColor: '#f6f3ee',
-                borderTop: 'none',
-                boxShadow: 'none',
-              }}
-            >
+          <BottomNavigation
+            value={getMobileNavValue()}
+            onChange={(_, newValue: number) => {
+              router.push(bottomNavRoutes[newValue])
+            }}
+            sx={{
+              position: 'fixed',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              zIndex: theme.zIndex.appBar,
+              backgroundColor: '#f6f3ee',
+              borderTop: '1px solid rgba(22,51,74,0.08)',
+              boxShadow: '0 -1px 8px rgba(22,51,74,0.06)',
+            }}
+          >
             <BottomNavigationAction label="Home" icon={<HomeIcon />} />
-            <BottomNavigationAction label="Lab" icon={<MicIcon />} />
-            <BottomNavigationAction
-              label="Add"
-              icon={<AddIcon />}
-              sx={{
-                '& .MuiBottomNavigationAction-label': {
-                  fontSize: '0.6rem',
-                },
-              }}
-            />
-            <BottomNavigationAction label="Stories" icon={<PersonIcon />} />
-            <BottomNavigationAction label="Profile" icon={<Avatar sx={{ width: 24, height: 24 }} />} />
+            <BottomNavigationAction label="Stories" icon={<StoriesIcon />} />
+            <BottomNavigationAction label="Tree" icon={<FamilyTreeIcon />} />
+            <BottomNavigationAction label="Voice" icon={<MicIcon />} />
+            <BottomNavigationAction label="Account" icon={<SettingsIcon />} />
           </BottomNavigation>
         </Box>
       ) : (
@@ -252,27 +248,38 @@ export function Layout({ children }: LayoutProps) {
             }}
           >
             {/* Logo/Brand */}
-            <Box sx={{ p: 3, mb: 2 }}>
+            <Box sx={{ p: 3, mb: 1 }}>
               <Typography variant="h4" component="div" className="serif-font" sx={{ color: '#16334a', fontWeight: 600 }}>
-                The Living Archive
+                Heard Again
               </Typography>
               <Typography variant="caption" sx={{ color: '#73777d', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
                 Memory Preservation
               </Typography>
             </Box>
 
+            {/* Workspace switcher */}
+            <Box sx={{ px: 1, mb: 2 }}>
+              <WorkspaceSwitcher />
+            </Box>
+
+            <Divider sx={{ mx: 3, mb: 2 }} />
+
             {/* Navigation Items */}
-            <Box sx={{ flexGrow: 1, px: 2 }}>
+            <Box sx={{ flexGrow: 1, px: 2, overflowY: 'auto' }}>
               {navItems.map((item) => {
                 const isActive =
-                  currentPath === item.href
-                  || (item.href === '/profile' && currentPath.startsWith('/profile'))
-                  || (item.href === '/stories' && currentPath.startsWith('/stories'))
-                
+                  currentPath === item.href ||
+                  (item.href === '/profile' && currentPath.startsWith('/profile')) ||
+                  (item.href === '/stories' && currentPath.startsWith('/stories'))
+
                 return (
-                  <Link key={item.href} href={item.href} passHref legacyBehavior>
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    style={{ textDecoration: 'none' }}
+                    aria-label={item.label}
+                  >
                     <Box
-                      component="a"
                       sx={{
                         display: 'flex',
                         alignItems: 'center',
@@ -284,7 +291,6 @@ export function Layout({ children }: LayoutProps) {
                         backgroundColor: isActive ? '#ffffff' : 'transparent',
                         color: isActive ? '#16334a' : '#546669',
                         boxShadow: isActive ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                        textDecoration: 'none',
                         transition: 'all 0.3s ease',
                         '&:hover': {
                           backgroundColor: '#ebe8e3',
@@ -302,12 +308,18 @@ export function Layout({ children }: LayoutProps) {
               })}
             </Box>
 
+            <Divider sx={{ mx: 3, mb: 2 }} />
+
+            {/* Active family member — full-width sidebar block */}
+            <Box sx={{ px: 2, mb: 2 }}>
+              <ActiveMemberHeader compact={false} />
+            </Box>
+
             {/* Footer Links */}
             <Box sx={{ px: 2, pb: 3 }}>
               {footerNavItems.map((item) => (
-                <Link key={item.href} href={item.href} passHref legacyBehavior>
+                <Link key={item.href} href={item.href} style={{ textDecoration: 'none' }} aria-label={item.label}>
                   <Box
-                    component="a"
                     sx={{
                       display: 'flex',
                       alignItems: 'center',
@@ -316,7 +328,6 @@ export function Layout({ children }: LayoutProps) {
                       py: 1.5,
                       borderRadius: 2,
                       color: theme.palette.text.primary,
-                      textDecoration: 'none',
                       opacity: 0.7,
                       transition: 'all 0.2s ease-in-out',
                       '&:hover': {
@@ -326,9 +337,7 @@ export function Layout({ children }: LayoutProps) {
                     }}
                   >
                     <MaterialSymbolsIcon sx={{ fontSize: 20 }}>{item.icon}</MaterialSymbolsIcon>
-                    <Typography variant="body2">
-                      {item.label}
-                    </Typography>
+                    <Typography variant="body2">{item.label}</Typography>
                   </Box>
                 </Link>
               ))}
@@ -337,8 +346,6 @@ export function Layout({ children }: LayoutProps) {
 
           {/* Main Content Area */}
           <Box sx={{ flexGrow: 1, ml: '256px' }}>
-
-            {/* Page Content */}
             <Box component="main" sx={{ flexGrow: 1, backgroundColor: theme.palette.background.default }}>
               {children}
             </Box>

@@ -5,10 +5,22 @@ uploads/
 *.log
 output/
 
-# Environment files
+# Environment files — never commit real env files
 .env
 .env.local
 .env.*.local
+UI/.env
+Chat/.env
+Chat/.env.bak
+TTS/.env
+TTS/tts-service/.env
+
+# Analysis reports — internal only, not for source control
+sonar-reports/
+
+# Playwright E2E
+playwright-report/
+test-results/
 
 # TTS service
 TTS/data/
@@ -16,7 +28,6 @@ TTS/__pycache__/
 TTS/app/__pycache__/
 *.pyc
 venv/
-.env
 generated/
 generated/**
 data

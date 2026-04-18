@@ -1,0 +1,24 @@
+{
+  "name": "Heard Again",
+  "short_name": "Heard Again",
+  "description": "Preserve and share the voices and stories of the people you love.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fcf9f4",
+  "theme_color": "#16334a",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
