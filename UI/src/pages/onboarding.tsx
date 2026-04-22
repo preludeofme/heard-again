@@ -32,6 +32,9 @@ export default function OnboardingPage() {
     firstName: '',
     lastName: '',
   })
+  const [ahaName, setAhaName] = useState('')
+  const [ahaMemory, setAhaMemory] = useState('')
+  const [isAhaGenerated, setIsAhaGenerated] = useState(false)
 
   const handleNext = async () => {
     if (activeStep === 0) {
@@ -237,30 +240,59 @@ export default function OnboardingPage() {
                   fontFamily: 'var(--font-newsreader), serif',
                 }}
               >
-                You&apos;re all set!
+                You're all set! Let's make some magic.
               </Typography>
               <Typography variant="body1" sx={{ color: 'secondary.main', mb: 4 }}>
-                Welcome to <strong>{formData.familyName}</strong>.<br />
-                We&apos;ve created your profile as the foundation of your family tree.
+                Welcome to <strong>{formData.familyName}</strong>. Who are you preserving memories for today?
               </Typography>
 
-              <Box
-                sx={{
-                  bgcolor: 'rgba(208, 227, 230, 0.2)',
-                  p: 3,
-                  borderRadius: 3,
-                  mb: 4,
-                }}
-              >
-                <Typography variant="body2" sx={{ color: 'secondary.main', mb: 1 }}>
-                  <strong>What&apos;s next?</strong>
-                </Typography>
-                <Typography variant="body2" sx={{ color: 'secondary.main' }}>
-                  • Add family members to your tree<br />
-                  • Record or upload stories and memories<br />
-                  • Create voice profiles for oral history
-                </Typography>
-              </Box>
+              {!isAhaGenerated ? (
+                <Box sx={{ textAlign: 'left' }}>
+                  <TextField
+                    fullWidth label="Their Name (e.g., Grandpa Joe)"
+                    value={ahaName} onChange={e => setAhaName(e.target.value)}
+                    sx={{ mb: 2 }}
+                  />
+                  <TextField
+                    fullWidth label="Share one brief memory about them..." multiline rows={2}
+                    value={ahaMemory} onChange={e => setAhaMemory(e.target.value)}
+                    sx={{ mb: 2 }}
+                  />
+                  <Button 
+                    variant="contained" 
+                    fullWidth 
+                    disabled={!ahaName || !ahaMemory}
+                    onClick={() => {
+                      setIsAhaGenerated(true);
+                      const utterance = new SpeechSynthesisUtterance(ahaMemory);
+                      // Try to pick a decent voice if available
+                      const voices = window.speechSynthesis.getVoices();
+                      const goodVoice = voices.find(v => v.lang.includes('en') && v.name.includes('Google'));
+                      if (goodVoice) utterance.voice = goodVoice;
+                      window.speechSynthesis.speak(utterance);
+                    }}
+                    sx={{ backgroundColor: '#16334a', py: 1.5, '&:hover': { backgroundColor: '#2e4a62' } }}
+                  >
+                    Generate Magic
+                  </Button>
+                </Box>
+              ) : (
+                <Fade in>
+                  <Box>
+                    <Card sx={{ p: 3, mb: 3, backgroundColor: '#f6f3ee', textAlign: 'left', border: '1px solid #d0e3e6', borderRadius: 3 }}>
+                      <Typography variant="caption" sx={{ color: '#16334a', fontWeight: 600 }}>Memory of {ahaName}</Typography>
+                      <Typography variant="body1" sx={{ mt: 1, fontStyle: 'italic', color: '#546669' }}>"{ahaMemory}"</Typography>
+                      <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <CircularProgress size={16} sx={{ color: '#adcae6' }} />
+                        <Typography variant="caption" sx={{ color: '#8a9a9d' }}>Simulating Voice Synthesis for {ahaName}...</Typography>
+                      </Box>
+                    </Card>
+                    <Typography variant="body2" sx={{ color: 'secondary.main', mb: 3 }}>
+                      This is just a glimpse of what's possible. Let's head to your dashboard to start building their legacy.
+                    </Typography>
+                  </Box>
+                </Fade>
+              )}
             </Box>
           </Fade>
         )

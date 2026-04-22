@@ -41,6 +41,7 @@ export interface StoryContribution {
   content: string
   createdAt: Date
   type: 'text' | 'audio'
+  audioUrl?: string
   audioDurationSeconds?: number
   category?: string
 }

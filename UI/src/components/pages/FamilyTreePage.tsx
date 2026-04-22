@@ -19,7 +19,7 @@ import {
   AutoFixHigh,
   AutoStories,
   Edit,
-  PersonAdd,
+  PersonAddOutlined as PersonAdd,
   PanTool,
   NearMe,
   Fullscreen,
@@ -36,6 +36,7 @@ import { AddEditPersonModal, PersonFormData } from '@/components/modals/AddEditP
 import { FamilyMemberSearch, SearchableFamilyMember } from '@/components/search'
 import { fetchWithCSRFAndJSON, fetchWithCSRF } from '@/lib/api-client'
 import { VoiceTrainingModal } from '@/components/audio/VoiceTrainingModal'
+import { EmptyState } from '@/components/feedback/UIStates'
 
 interface TreePerson {
   id: string | number
@@ -1024,25 +1025,6 @@ export function FamilyTreePage({
 
         {/* Family Tree Visualization */}
         <Box
-          tabIndex={0}
-          role="group"
-          aria-label="Family tree — use arrow keys to pan, + and - to zoom"
-          onMouseDown={handleCanvasMouseDown}
-          onMouseMove={handleCanvasMouseMove}
-          onMouseUp={handleCanvasMouseUp}
-          onMouseLeave={handleCanvasMouseUp}
-          onTouchStart={handleCanvasTouchStart}
-          onTouchMove={handleCanvasTouchMove}
-          onTouchEnd={handleCanvasTouchEnd}
-          onKeyDown={(e) => {
-            const PAN_STEP = 40
-            if (e.key === 'ArrowLeft') setPanOffset(p => ({ ...p, x: p.x + PAN_STEP }))
-            else if (e.key === 'ArrowRight') setPanOffset(p => ({ ...p, x: p.x - PAN_STEP }))
-            else if (e.key === 'ArrowUp') setPanOffset(p => ({ ...p, y: p.y + PAN_STEP }))
-            else if (e.key === 'ArrowDown') setPanOffset(p => ({ ...p, y: p.y - PAN_STEP }))
-            else if (e.key === '+' || e.key === '=') setZoomLevel(z => Math.min(z + 0.1, 2))
-            else if (e.key === '-') setZoomLevel(z => Math.max(z - 0.1, 0.3))
-          }}
           sx={{
             position: 'relative',
             minHeight: isFullscreen ? 'calc(100vh - 140px)' : 700,
@@ -1064,15 +1046,42 @@ export function FamilyTreePage({
             backgroundSize: '24px 24px',
           }}
         >
-          <Box
-            sx={{
-              transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel})`,
-              transformOrigin: 'center center',
-              transition: isDragging.current ? 'none' : 'transform 0.2s ease',
-              width: `max(${treeCanvasWidth + 80}px, 100%)`,
-              minHeight: TREE_FLOW_HEIGHT,
-            }}
-          >
+          {(!familyData.grandparents.length && !familyData.parents.length && !familyData.children.length) ? (
+            <Box sx={{ m: 'auto', p: 4, textAlign: 'center' }}>
+              <EmptyState 
+                type="documents" // Reusing UI for general adding
+                onAction={handleAddPerson}
+              />
+              {/* Override the text since we're using a generic type */}
+              <Box sx={{ mt: -12, position: 'relative', zIndex: 1 }}>
+                <Typography variant="h4" className="serif-font" sx={{ color: '#16334a', mb: 2 }}>
+                  Begin your family legacy
+                </Typography>
+                <Typography variant="body1" sx={{ color: '#546669', mb: 4, maxWidth: 400, mx: 'auto' }}>
+                  Your tree is currently a blank canvas. Add your first family member to start building a living archive for the generations to come.
+                </Typography>
+                <Button 
+                  variant="contained" 
+                  size="large"
+                  onClick={handleAddPerson}
+                  startIcon={<PersonAdd />}
+                  sx={{ bgcolor: '#16334a', borderRadius: 2, px: 4, py: 1.5 }}
+                >
+                  Add First Family Member
+                </Button>
+              </Box>
+            </Box>
+          ) : (
+            <Box
+              sx={{
+                transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel})`,
+                transformOrigin: 'center center',
+                transition: isDragging.current ? 'none' : 'transform 0.2s ease',
+                width: `max(${treeCanvasWidth + 80}px, 100%)`,
+                minHeight: TREE_FLOW_HEIGHT,
+              }}
+            >
+
             <Box
               sx={{
                 position: 'relative',

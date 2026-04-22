@@ -5,7 +5,7 @@ from fastapi import HTTPException, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import Optional, Dict, Any
 import os
-import requests
+import httpx
 
 logger = logging.getLogger(__name__)
 
@@ -42,11 +42,12 @@ async def validate_token(credentials: HTTPAuthorizationCredentials = Depends(sec
         
         # Validate with NextAuth session endpoint
         try:
-            session_response = requests.get(
-                f"{NEXTAUTH_URL}/api/auth/session",
-                headers={"Cookie": f"next-auth.session-token={session_token}"},
-                timeout=10
-            )
+            async with httpx.AsyncClient() as client:
+                session_response = await client.get(
+                    f"{NEXTAUTH_URL}/api/auth/session",
+                    headers={"Cookie": f"next-auth.session-token={session_token}"},
+                    timeout=10.0
+                )
             
             if session_response.status_code != 200:
                 logger.warning(f"NextAuth session validation failed: {session_response.status_code}")
@@ -66,7 +67,7 @@ async def validate_token(credentials: HTTPAuthorizationCredentials = Depends(sec
                     headers={"WWW-Authenticate": "Bearer"},
                 )
             
-        except requests.RequestException as e:
+        except httpx.RequestError as e:
             logger.error(f"Failed to validate session with NextAuth: {e}")
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -77,6 +78,7 @@ async def validate_token(credentials: HTTPAuthorizationCredentials = Depends(sec
         user = session_data['user']
         user_id = user.get('id')
         email = user.get('email')
+        role = user.get('role', 'VIEWER')
         
         # For workspace, we'll use a default or extract from user data
         # The main app handles workspace authorization
@@ -94,6 +96,7 @@ async def validate_token(credentials: HTTPAuthorizationCredentials = Depends(sec
             'user_id': user_id,
             'workspace_id': workspace_id,
             'email': email,
+            'role': role,
             'token': session_token
         }
         
@@ -113,25 +116,10 @@ async def require_workspace_role(
 ) -> Dict[str, Any]:
     """
     Ensure user has required role in workspace.
-    Uses NextAuth session to get user role from session data.
+    Uses cached role from validate_token to avoid double-fetching.
     """
     try:
-        # Get fresh session data to check role
-        session_response = requests.get(
-            f"{NEXTAUTH_URL}/api/auth/session",
-            headers={"Cookie": f"next-auth.session-token={auth_data['token']}"},
-            timeout=10
-        )
-        
-        if session_response.status_code != 200:
-            logger.error(f"Role check failed: session endpoint returned {session_response.status_code}")
-            raise HTTPException(status_code=403, detail="Authorization check failed")
-        
-        session_data = session_response.json()
-        user = session_data.get('user', {})
-        
-        # Get role from session (NextAuth includes this in user object)
-        user_role = user.get('role', 'VIEWER')
+        user_role = auth_data.get('role', 'VIEWER')
         
         # Role hierarchy check
         role_hierarchy = ['VIEWER', 'LEGACY', 'EDITOR', 'ADMIN', 'OWNER']

@@ -5,6 +5,7 @@
 
 import type { PrismaClient } from '@prisma/client'
 import { AppError } from '@/lib/api-helpers'
+import { logger } from '@/lib/logger'
 
 export type RelationshipType = 'SPOUSE' | 'PARENT' | 'CHILD'
 
@@ -426,7 +427,7 @@ export class RelationshipService {
       })).id
 
     // Create or update child link
-    console.log('Creating child link with data:', {
+    logger.info('Creating child link with data:', {
       familyId,
       childId,
       relationshipType: childRelationshipType,
@@ -452,7 +453,7 @@ export class RelationshipService {
       },
     })
 
-    console.log('Child link created/updated:', childLink)
+    logger.info('Child link created/updated:', childLink)
 
     return {
       id: `fc:${familyId}:${childLink.childId}:child`,

@@ -1,10 +1,11 @@
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
 import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
+import { withCSRFProtection } from '@/lib/security/csrf'
 
 export default apiHandler({
   // POST /api/billing/cancel - Cancel subscription
-  POST: async (req, res) => {
+  POST: withCSRFProtection(async (req, res) => {
     const user = await getAuthUserWithWorkspace(req, res)
     await requireWorkspaceRole(user.id, user.workspaceId, 'OWNER')
 

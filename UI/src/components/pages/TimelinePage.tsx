@@ -355,15 +355,27 @@ export function TimelinePageComponent({ events, isLoading, hasMore, onLoadMore, 
                     </TimelineSeparator>
                     <TimelineContent>
                       <Card
-                        sx={{
-                          borderRadius: 3,
-                          bgcolor: '#ffffff',
-                          transition: 'transform 0.2s, box-shadow 0.2s',
-                          '&:hover': {
-                            transform: 'translateY(-2px)',
-                            boxShadow: 3,
-                          },
-                        }}
+                        sx={
+                          event.type === 'story'
+                            ? {
+                                borderRadius: 3,
+                                bgcolor: '#ffffff',
+                                boxShadow: 3,
+                                border: '1px solid #e0e0e0',
+                                transition: 'transform 0.2s, box-shadow 0.2s',
+                                '&:hover': {
+                                  transform: 'translateY(-2px)',
+                                  boxShadow: 6,
+                                },
+                              }
+                            : {
+                                borderRadius: 2,
+                                bgcolor: 'transparent',
+                                boxShadow: 'none',
+                                border: 'none',
+                                '& .MuiCardContent-root': { padding: 1 },
+                              }
+                        }
                       >
                         <CardContent>
                           {/* Date */}
@@ -380,13 +392,27 @@ export function TimelinePageComponent({ events, isLoading, hasMore, onLoadMore, 
                           </Typography>
 
                           {/* Title */}
-                          <Typography variant="h6" sx={{ color: '#16334a', mb: 1 }}>
+                          <Typography 
+                            variant="h6" 
+                            sx={
+                              event.type === 'story' 
+                                ? { color: '#16334a', mb: 1, fontWeight: 700 } 
+                                : { color: '#546669', mb: 0.5, fontSize: '1rem', fontWeight: 500 }
+                            }
+                          >
                             {event.title}
                           </Typography>
 
                           {/* Description */}
                           {event.description && (
-                            <Typography variant="body2" sx={{ color: '#546669', mb: 2 }}>
+                            <Typography 
+                              variant="body2" 
+                              sx={
+                                event.type === 'story' 
+                                  ? { color: '#546669', mb: 2, lineHeight: 1.6 } 
+                                  : { color: '#88989b', mb: 1, fontSize: '0.85rem' }
+                              }
+                            >
                               {event.description}
                             </Typography>
                           )}

@@ -15,6 +15,7 @@ import {
 } from '@mui/icons-material'
 import { useState, useEffect, useRef } from 'react'
 import { VoiceTrainingModal } from '@/components/audio/VoiceTrainingModal'
+import { useSelectedFamilyMember } from '@/contexts/SelectedFamilyMemberContext'
 import type { VoiceModel } from '@/types'
 
 interface VoiceLabPageProps {
@@ -52,6 +53,9 @@ export function VoiceLabPage({ voiceModels, controller }: VoiceLabPageProps) {
     deleteVoiceProfile,
     refreshData,
   } = controller
+
+  const { selectedFamilyMember } = useSelectedFamilyMember()
+  const memberName = selectedFamilyMember?.firstName || 'this person'
 
   // ── Local state ──
   const [selectedVoiceId, setSelectedVoiceId] = useState<string | null>(null)
@@ -184,7 +188,7 @@ export function VoiceLabPage({ voiceModels, controller }: VoiceLabPageProps) {
                 mb: 4,
               }}
             >
-              Create Voice Profile
+              {`Add a sample of ${memberName}'s voice`}
             </Button>
 
             {/* ── Test Selected Voice ── */}
@@ -329,7 +333,7 @@ export function VoiceLabPage({ voiceModels, controller }: VoiceLabPageProps) {
                     fontWeight: 600,
                   }}
                 >
-                  Create Voice Profile
+                  {`Add a sample of ${memberName}'s voice`}
                 </Button>
               </Box>
             ) : (

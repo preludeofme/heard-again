@@ -138,7 +138,7 @@ wait_for_service() {
 
     echo -n "  Waiting for $name..."
     while [ $attempt -le $max_attempts ]; do
-        if curl -s "$url" >/dev/null 2>&1; then
+        if curl -sk "$url" >/dev/null 2>&1; then
             echo -e " ${GREEN}✓ Ready${NC}"
             return 0
         fi
@@ -308,6 +308,27 @@ if [ ! -f "$CHAT_SYSTEM_DIR/.env" ]; then
     fi
 fi
 echo -e "  ${GREEN}✓ Environment files ready${NC}"
+
+echo ""
+
+# Setup HTTPS certificates
+echo -e "${YELLOW}Setting up HTTPS Local CA...${NC}"
+MKCERT_BIN=$(ls ~/.cache/mkcert/mkcert-*-linux-amd64 2>/dev/null | head -n 1)
+if [ -z "$MKCERT_BIN" ] && command -v mkcert &> /dev/null; then
+    MKCERT_BIN="mkcert"
+fi
+if [ -n "$MKCERT_BIN" ]; then
+    CA_ROOT=$($MKCERT_BIN -CAROOT 2>/dev/null)
+    if [ ! -f "$CA_ROOT/rootCA.pem" ]; then
+        echo -e "  ${YELLOW}⚠ Local CA is not installed. Installing now... (This may prompt for your sudo password)${NC}"
+        $MKCERT_BIN -install
+        echo -e "  ${GREEN}✓ Local CA installed successfully${NC}"
+    else
+        echo -e "  ${GREEN}✓ Local CA is already installed${NC}"
+    fi
+else
+    echo -e "  ${YELLOW}⚠ mkcert not found. Next.js will attempt to install it during startup.${NC}"
+fi
 
 echo ""
 
@@ -521,7 +542,7 @@ fi
 
 # Wait for Chat System to be healthy before starting Main App
 echo -n "  Waiting for Chat System health..."
-if wait_for_service "Chat System" "http://localhost:$CHAT_SYSTEM_PORT/api/health" 60; then
+if wait_for_service "Chat System" "https://localhost:$CHAT_SYSTEM_PORT/api/health" 60; then
     :
 else
     echo -e "  ${YELLOW}⚠ Chat System may need more time (continuing anyway)${NC}"
@@ -545,7 +566,7 @@ fi
 
 # Wait for Main App to be healthy before starting TTS
 echo -n "  Waiting for Main App health..."
-if wait_for_service "Main App" "http://localhost:$MAIN_APP_PORT/api/instance/health" 60; then
+if wait_for_service "Main App" "https://localhost:$MAIN_APP_PORT/api/instance/health" 60; then
     :
 else
     echo -e "  ${YELLOW}⚠ Main App may need more time (continuing anyway)${NC}"
@@ -568,7 +589,7 @@ if command -v python3 &> /dev/null && [ -d "$TTS_SERVICE_DIR" ]; then
         
         # Use the wrapper start.sh script which handles flash-attn installation
         export TTS_PORT=$TTS_SERVICE_PORT
-        export NEXTAUTH_URL=http://localhost:$MAIN_APP_PORT
+        export NEXTAUTH_URL=https://localhost:$MAIN_APP_PORT
         
         if [ "$LOG_MODE" = "live" ]; then
             ./start.sh 2>&1 | tee "$MAIN_APP_DIR/logs/tts-service.log" &
@@ -609,14 +630,14 @@ if [ "$CHROMA_STARTED" = true ]; then
 fi
 
 # Check Chat System
-if curl -s http://localhost:$CHAT_SYSTEM_PORT/api/health >/dev/null 2>&1 || curl -s http://localhost:$CHAT_SYSTEM_PORT >/dev/null 2>&1; then
+if curl -sk https://localhost:$CHAT_SYSTEM_PORT/api/health >/dev/null 2>&1 || curl -sk https://localhost:$CHAT_SYSTEM_PORT >/dev/null 2>&1; then
     echo -e "  ${GREEN}✓ Chat System is responding${NC}"
 else
     echo -e "  ${YELLOW}⚠ Chat System may still be starting (check logs)${NC}"
 fi
 
 # Check Main App
-if wait_for_service "Main App" "http://localhost:$MAIN_APP_PORT/api/instance/health" 15; then
+if wait_for_service "Main App" "https://localhost:$MAIN_APP_PORT/api/instance/health" 15; then
     echo -e "  ${GREEN}✓ Main App is healthy${NC}"
 else
     echo -e "  ${YELLOW}⚠ Main App may still be starting (check logs)${NC}"
@@ -636,8 +657,8 @@ echo -e "${GREEN}═════════════════════
 echo -e "${GREEN}  All services started successfully!${NC}"
 echo -e "${GREEN}═══════════════════════════════════════════════════════════════${NC}"
 echo ""
-echo -e "  ${BLUE}Main App:${NC}      http://localhost:$MAIN_APP_PORT"
-echo -e "  ${BLUE}Chat System:${NC}   http://localhost:$CHAT_SYSTEM_PORT"
+echo -e "  ${BLUE}Main App:${NC}      https://localhost:$MAIN_APP_PORT"
+echo -e "  ${BLUE}Chat System:${NC}   https://localhost:$CHAT_SYSTEM_PORT"
 if [ "$CHROMA_STARTED" = true ]; then
     echo -e "  ${BLUE}ChromaDB:${NC}      http://localhost:8004"
 fi

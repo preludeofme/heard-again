@@ -83,7 +83,7 @@ export function DocumentsPage({ documents, onUploadSuccess, onDelete, onLink, pe
           <Typography variant="h3" className="serif-font" sx={{ color: '#16334a' }}>
             Document Archive
           </Typography>
-          <IconButton sx={{ color: '#546669' }}>
+          <IconButton aria-label="Filter documents" sx={{ color: '#546669' }}>
             <FilterIcon />
           </IconButton>
         </Box>
@@ -118,6 +118,9 @@ export function DocumentsPage({ documents, onUploadSuccess, onDelete, onLink, pe
           {filteredDocuments.map((doc) => (
             <Grid key={doc.id} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
               <Card
+                role="button"
+                aria-label={`View document: ${doc.title}`}
+                onClick={() => handleDocumentClick(doc)}
                 sx={{
                   backgroundColor: '#f6f3ee',
                   border: 'none',
@@ -172,6 +175,7 @@ export function DocumentsPage({ documents, onUploadSuccess, onDelete, onLink, pe
                   <IconButton
                     className="doc-delete-btn"
                     size="small"
+                    aria-label={`Delete document: ${doc.title}`}
                     onClick={(e) => handleDeleteClick(e, doc)}
                     sx={{
                       position: 'absolute',

@@ -79,6 +79,7 @@ services:
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - REQUIRE_SIGNED_URLS=true
       - NODE_ENV=production
+      - AUDIO_GENERATION_ENABLED=false
     networks:
       - internal
     depends_on:

@@ -1,5 +1,13 @@
 import { Box, Typography, Card, Button, Grid, Chip, Avatar } from '@mui/material'
-import { PlayArrow as PlayIcon, Favorite as HeartIcon, ArrowForward as ArrowForwardIcon, Mic as MicIcon, Edit as EditIcon, Upload as UploadIcon, Forum as ChatIcon } from '@mui/icons-material'
+import { 
+  PlayArrowOutlined as PlayIcon, 
+  FavoriteBorder as HeartIcon, 
+  ArrowForwardOutlined as ArrowForwardIcon, 
+  MicNoneOutlined as MicIcon, 
+  EditOutlined as EditIcon, 
+  CloudUploadOutlined as UploadIcon, 
+  ChatOutlined as ChatIcon 
+} from '@mui/icons-material'
 import { LegacySubject, MemoryWallItem } from '@/types'
 import { formatDistanceToNow } from 'date-fns'
 import { useRouter } from 'next/router'
@@ -132,146 +140,167 @@ export function Dashboard({ legacySubject, memoryWallItems }: DashboardProps) {
         </Box>
 
         {/* Bento Grid */}
-        <Grid container spacing={3}>
-          {memoryWallItems.map((item, index) => (
-            <Grid
-              key={item.id}
-              size={{
-                xs: 12,
-                sm: item.type === 'audio-memory' ? 12 : 6,
-                md: item.type === 'audio-memory' ? 8 : item.type === 'archive-stats' ? 4 : 6
-              }}
+        {memoryWallItems.length === 0 ? (
+          <Box sx={{ textAlign: 'center', p: 8, backgroundColor: '#ffffff', borderRadius: 3, mb: 4, border: '1px dashed #d0e3e6' }}>
+            <Typography variant="h6" className="serif-font" sx={{ color: '#16334a', mb: 1 }}>
+              The wall is empty
+            </Typography>
+            <Typography variant="body2" sx={{ color: '#546669', mb: 3 }}>
+              Every legacy starts with a single memory.
+            </Typography>
+            <Button
+              variant="contained"
+              onClick={() => router.push('/stories')}
+              sx={{ backgroundColor: '#16334a', '&:hover': { backgroundColor: '#2e4a62' }, px: 4 }}
             >
-              <Card
-                sx={{
-                  backgroundColor: '#ffffff',
-                  borderRadius: 3,
-                  p: 3,
-                  height: '100%',
-                  cursor: 'pointer',
-                  transition: 'transform 0.2s, box-shadow 0.2s',
-                  '&:hover': {
-                    transform: 'translateY(-2px)',
-                    boxShadow: '0 10px 40px rgba(28, 28, 25, 0.06)',
-                  },
+              Tell the first story about {legacySubject.fullName.split(' ')[0]}
+            </Button>
+          </Box>
+        ) : (
+          <Grid container spacing={3}>
+            {memoryWallItems.map((item, index) => (
+              <Grid
+                key={item.id}
+                size={{
+                  xs: 12,
+                  sm: item.type === 'audio-memory' ? 12 : 6,
+                  md: item.type === 'audio-memory' ? 8 : item.type === 'archive-stats' ? 4 : 6
                 }}
               >
-                {item.type === 'quote' && (
-                  <Box>
-                    <Chip label={item.category} size="small" sx={{ mb: 2 }} />
-                    <Typography variant="h6" className="serif-font" sx={{ mb: 2, fontStyle: 'italic' }}>
-                      "{item.content}"
-                    </Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <Avatar src={item.authorAvatarUrl} sx={{ width: 32, height: 32 }} />
-                      <Box>
-                        <Typography variant="body2" fontWeight={600}>
-                          {item.author}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {item.authorRole}
-                        </Typography>
+                <Card
+                  role="button"
+                  aria-label={`View story: ${item.title || item.content}`}
+                  sx={{
+                    backgroundColor: '#ffffff',
+                    borderRadius: 3,
+                    p: 3,
+                    height: '100%',
+                    cursor: 'pointer',
+                    transition: 'transform 0.2s, box-shadow 0.2s',
+                    '&:hover': {
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 10px 40px rgba(28, 28, 25, 0.06)',
+                    },
+                  }}
+                >
+
+                  {item.type === 'quote' && (
+                    <Box>
+                      <Chip label={item.category} size="small" sx={{ mb: 2 }} />
+                      <Typography variant="h6" className="serif-font" sx={{ mb: 2, fontStyle: 'italic' }}>
+                        "{item.content}"
+                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Avatar src={item.authorAvatarUrl} sx={{ width: 32, height: 32 }} />
+                        <Box>
+                          <Typography variant="body2" fontWeight={600}>
+                            {item.author}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {item.authorRole}
+                          </Typography>
+                        </Box>
                       </Box>
                     </Box>
-                  </Box>
-                )}
+                  )}
 
-                {item.type === 'audio-memory' && (
-                  <Box sx={{ display: 'flex', gap: 3 }}>
-                    <Box
-                      sx={{
-                        width: 120,
-                        height: 120,
-                        borderRadius: 2,
-                        flexShrink: 0,
-                        overflow: 'hidden',
-                        position: 'relative',
-                      }}
-                    >
-                      {item.imageUrl && (
-                        <Image
-                          src={item.imageUrl}
-                          alt={item.title ?? 'Memory thumbnail'}
-                          fill
-                          style={{ objectFit: 'cover' }}
-                        />
-                      )}
-                    </Box>
-                    <Box sx={{ flex: 1 }}>
-                      <Typography variant="h6" sx={{ mb: 1 }}>
-                        {item.title}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        {item.description}
-                      </Typography>
-                      <Button
-                        variant="contained"
-                        startIcon={<PlayIcon />}
-                        onClick={() => router.push(item.storyId ? `/stories/${item.storyId}` : '/stories')}
-                        sx={{ textTransform: 'none' }}
+                  {item.type === 'audio-memory' && (
+                    <Box sx={{ display: 'flex', gap: 3 }}>
+                      <Box
+                        sx={{
+                          width: 120,
+                          height: 120,
+                          borderRadius: 2,
+                          flexShrink: 0,
+                          overflow: 'hidden',
+                          position: 'relative',
+                        }}
                       >
-                        Listen to Legacy
-                      </Button>
+                        {item.imageUrl && (
+                          <Image
+                            src={item.imageUrl}
+                            alt={item.title ?? 'Memory thumbnail'}
+                            fill
+                            style={{ objectFit: 'cover' }}
+                          />
+                        )}
+                      </Box>
+                      <Box sx={{ flex: 1 }}>
+                        <Typography variant="h6" sx={{ mb: 1 }}>
+                          {item.title}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                          {item.description}
+                        </Typography>
+                        <Button
+                          variant="contained"
+                          startIcon={<PlayIcon />}
+                          onClick={() => router.push(item.storyId ? `/stories/${item.storyId}` : '/stories')}
+                          sx={{ textTransform: 'none' }}
+                        >
+                          Listen to Legacy
+                        </Button>
+                      </Box>
                     </Box>
-                  </Box>
-                )}
+                  )}
 
-                {item.type === 'short-quote' && (
-                  <Box sx={{ textAlign: 'center' }}>
-                    <Typography variant="body1" sx={{ mb: 2, fontStyle: 'italic' }}>
-                      {item.content}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {item.author} • {item.timeAgo}
-                    </Typography>
-                  </Box>
-                )}
+                  {item.type === 'short-quote' && (
+                    <Box sx={{ textAlign: 'center' }}>
+                      <Typography variant="body1" sx={{ mb: 2, fontStyle: 'italic' }}>
+                        {item.content}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {item.author} • {item.timeAgo}
+                      </Typography>
+                    </Box>
+                  )}
 
-                {item.type === 'archive-stats' && (
-                  <Box>
-                    <Typography variant="h6" sx={{ mb: 3 }}>
-                      The Archive Collection
-                    </Typography>
-                    <Grid container spacing={2}>
-                      <Grid size={{ xs: 6 }}>
-                        <Typography variant="h4" color="primary">
-                          {item.stats?.stories}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Stories
-                        </Typography>
+                  {item.type === 'archive-stats' && (
+                    <Box>
+                      <Typography variant="h6" sx={{ mb: 3 }}>
+                        The Archive Collection
+                      </Typography>
+                      <Grid container spacing={2}>
+                        <Grid size={{ xs: 6 }}>
+                          <Typography variant="h4" color="primary">
+                            {item.stats?.stories}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            Stories
+                          </Typography>
+                        </Grid>
+                        <Grid size={{ xs: 6 }}>
+                          <Typography variant="h4" color="primary">
+                            {item.stats?.documents}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            Documents
+                          </Typography>
+                        </Grid>
+                        <Grid size={{ xs: 6 }}>
+                          <Typography variant="h4" color="primary">
+                            {item.stats?.recordings}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            Recordings
+                          </Typography>
+                        </Grid>
+                        <Grid size={{ xs: 6 }}>
+                          <Typography variant="h4" color="primary">
+                            +{item.stats?.additional}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            More
+                          </Typography>
+                        </Grid>
                       </Grid>
-                      <Grid size={{ xs: 6 }}>
-                        <Typography variant="h4" color="primary">
-                          {item.stats?.documents}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Documents
-                        </Typography>
-                      </Grid>
-                      <Grid size={{ xs: 6 }}>
-                        <Typography variant="h4" color="primary">
-                          {item.stats?.recordings}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Recordings
-                        </Typography>
-                      </Grid>
-                      <Grid size={{ xs: 6 }}>
-                        <Typography variant="h4" color="primary">
-                          +{item.stats?.additional}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          More
-                        </Typography>
-                      </Grid>
-                    </Grid>
-                  </Box>
-                )}
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
+                    </Box>
+                  )}
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        )}
       </Box>
 
       {/* Preserve the Present Section */}
@@ -286,7 +315,9 @@ export function Dashboard({ legacySubject, memoryWallItems }: DashboardProps) {
         <Grid container spacing={3}>
           <Grid size={{ xs: 12, sm: 6, md: 4 }}>
              <Card
-               onClick={() => router.push('/profile')}
+               role="button"
+               aria-label="Start AI conversation"
+               onClick={() => router.push(legacySubject.id === 'global' ? '/profile' : `/chat/${legacySubject.id}`)}
                sx={{
                  backgroundColor: '#ffffff',
                  borderRadius: 3,
@@ -300,18 +331,20 @@ export function Dashboard({ legacySubject, memoryWallItems }: DashboardProps) {
                  },
                }}
              >
-               <ChatIcon sx={{ fontSize: 48, color: '#163 ​34a', mb: 2 }} />
+               <ChatIcon sx={{ fontSize: 48, color: '#16334a', mb: 2 }} />
                <Typography variant="h6" sx={{ mb: 1 }}>
                  Start Conversation
                </Typography>
                <Typography variant="body2" color="text.secondary">
-                 Talk with Evelyn and capture new memories
+                 Talk with {legacySubject.fullName.split(' ')[0]} and capture new memories
                </Typography>
              </Card>
           </Grid>
 
           <Grid size={{ xs: 12, sm: 6, md: 4 }}>
             <Card
+              role="button"
+              aria-label="Create new story"
               onClick={() => router.push('/stories')}
               sx={{
                 backgroundColor: '#ffffff',
@@ -338,6 +371,8 @@ export function Dashboard({ legacySubject, memoryWallItems }: DashboardProps) {
 
           <Grid size={{ xs: 12, sm: 6, md: 4 }}>
             <Card
+              role="button"
+              aria-label="Upload recording"
               onClick={() => router.push('/voice-lab')}
               sx={{
                 backgroundColor: '#ffffff',

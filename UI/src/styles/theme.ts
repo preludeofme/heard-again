@@ -12,7 +12,7 @@ const theme = createTheme({
       main: '#16334a',
     },
     secondary: {
-      main: '#546669',
+      main: '#445558',
     },
     tertiary: {
       main: '#6d5f44',
@@ -22,7 +22,7 @@ const theme = createTheme({
     },
     text: {
       primary: '#1c1c19', // on-surface
-      secondary: '#546669',
+      secondary: '#445558',
     },
     // Custom properties for Material Design 3 colors
     // Using type assertion to avoid TypeScript errors
@@ -113,7 +113,7 @@ const theme = createTheme({
         },
         outlined: {
           borderColor: '#c3c7cd',
-          color: '#546669',
+          color: '#445558',
           '&:hover': {
             backgroundColor: '#f6f3ee',
             borderColor: '#adcae6',

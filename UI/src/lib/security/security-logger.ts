@@ -146,7 +146,7 @@ class SecurityLogger {
     const logLevel = this.getLogLevel(event.severity)
     const message = this.formatLogMessage(event)
     
-    console[logLevel](`[SECURITY] ${message}`, {
+    logger[logLevel](`[SECURITY] ${message}`, {
       type: event.type,
       severity: event.severity,
       userId: event.userId,
@@ -160,7 +160,7 @@ class SecurityLogger {
 
   private logToFile(event: SecurityEvent): void {
     // In production, this would write to a secure log file or send to a log service
-    // For now, we'll just use console logging with structured format
+    // For now, we'll just use the structured logger
     const logEntry = {
       timestamp: event.timestamp.toISOString(),
       level: 'SECURITY',
@@ -177,7 +177,7 @@ class SecurityLogger {
       sessionId: event.sessionId,
     }
 
-    logger.info(JSON.stringify(logEntry))
+    logger.info(logEntry)
   }
 
   private formatLogMessage(event: SecurityEvent): string {
@@ -191,7 +191,7 @@ class SecurityLogger {
     return message
   }
 
-  private getLogLevel(severity: string): 'log' | 'warn' | 'error' {
+  private getLogLevel(severity: string): 'info' | 'warn' | 'error' {
     switch (severity) {
       case 'CRITICAL':
       case 'HIGH':
@@ -200,7 +200,7 @@ class SecurityLogger {
         return 'warn'
       case 'LOW':
       default:
-        return 'log'
+        return 'info'
     }
   }
 

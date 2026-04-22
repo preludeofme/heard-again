@@ -1,5 +1,10 @@
 import { Box, Typography, CircularProgress, Button } from '@mui/material'
-import { CloudUpload as UploadIcon, Mic as MicIcon, Edit as EditIcon, ErrorOutline as ErrorIcon } from '@mui/icons-material'
+import { 
+  CloudUploadOutlined as UploadIcon, 
+  MicNoneOutlined as MicIcon, 
+  EditOutlined as EditIcon, 
+  ErrorOutlineOutlined as ErrorIcon 
+} from '@mui/icons-material'
 
 interface EmptyStateProps {
   type: 'documents' | 'samples' | 'stories' | 'recordings'

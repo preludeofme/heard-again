@@ -529,6 +529,8 @@ export function PersonDetailModal({
                     <Grid key={story.id} size={12}>
                       <Card
                         onClick={() => onStoryClick?.(story.id)}
+                        role="button"
+                        aria-label={`View story: ${story.title}`}
                         sx={{
                           p: 3,
                           borderRadius: 3,
@@ -676,7 +678,10 @@ export function PersonDetailModal({
                               </Typography>
                             )}
                           </Box>
-                          <IconButton sx={{ color: '#546669' }}>
+                          <IconButton 
+                            aria-label={`Play voice sample for ${profile.name}`}
+                            sx={{ color: '#546669' }}
+                          >
                             <PlayIcon />
                           </IconButton>
                         </Box>

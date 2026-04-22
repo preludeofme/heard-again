@@ -1,8 +1,19 @@
-import { Box, Typography, Card, CardContent, Button, Grid, TextField, IconButton, Avatar, Chip, Dialog, Collapse } from '@mui/material'
-import { Mic as MicIcon, AutoStories as AutoStoriesIcon, AttachFile as AttachFileIcon, AddPhotoAlternate as AddPhotoIcon, PlayArrow as PlayIcon, Schedule as ScheduleIcon, ArrowForward as ArrowForwardIcon, Close as CloseIcon, KeyboardArrowDown as ArrowDownIcon } from '@mui/icons-material'
+import { Box, Typography, Card, CardContent, Button, Grid, TextField, IconButton, Avatar, Chip, Dialog, Collapse, Slider } from '@mui/material'
+import { 
+  MicNoneOutlined as MicIcon, 
+  AutoStoriesOutlined as AutoStoriesIcon, 
+  AttachFileOutlined as AttachFileIcon, 
+  AddPhotoAlternateOutlined as AddPhotoIcon, 
+  PlayArrowOutlined as PlayIcon, 
+  PauseOutlined as PauseIcon,
+  ScheduleOutlined as ScheduleIcon, 
+  ArrowForwardOutlined as ArrowForwardIcon, 
+  CloseOutlined as CloseIcon, 
+  KeyboardArrowDownOutlined as ArrowDownIcon 
+} from '@mui/icons-material'
 import { StoryContribution } from '@/types'
 import { formatDistanceToNow } from 'date-fns'
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import { EmptyState } from '@/components/feedback/UIStates'
 import { AudioRecorder } from '@/components/audio/AudioRecorder'
@@ -33,7 +44,50 @@ export function StoriesPage({ stories, selectedFamilyMember, onSubmitStory, onSu
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showAudioDialog, setShowAudioDialog] = useState(false)
   const [isSubmittingAudio, setIsSubmittingAudio] = useState(false)
+  
+  // Audio playback state
+  const [currentlyPlaying, setCurrentlyPlaying] = useState<string | null>(null)
+  const [audioProgress, setAudioProgress] = useState(0)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+  
   const router = useRouter()
+
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause()
+        audioRef.current = null
+      }
+    }
+  }, [])
+
+  const handleTogglePlay = (story: StoryContribution) => {
+    if (!story.audioUrl) return
+
+    if (currentlyPlaying === story.id) {
+      audioRef.current?.pause()
+      setCurrentlyPlaying(null)
+    } else {
+      if (audioRef.current) {
+        audioRef.current.pause()
+      }
+      
+      const audio = new Audio(story.audioUrl)
+      audioRef.current = audio
+      setCurrentlyPlaying(story.id)
+      
+      audio.play()
+      
+      audio.ontimeupdate = () => {
+        setAudioProgress((audio.currentTime / audio.duration) * 100)
+      }
+      
+      audio.onended = () => {
+        setCurrentlyPlaying(null)
+        setAudioProgress(0)
+      }
+    }
+  }
 
   const handlePostMemory = async () => {
     if (!storyContent.trim() || !onSubmitStory) return
@@ -187,6 +241,7 @@ export function StoriesPage({ stories, selectedFamilyMember, onSubmitStory, onSu
             Scroll to explore
           </Typography>
           <IconButton
+            aria-label="Scroll to contribution hub"
             sx={{
               color: '#16334a',
               backgroundColor: 'rgba(22, 51, 74, 0.1)',
@@ -315,6 +370,30 @@ export function StoriesPage({ stories, selectedFamilyMember, onSubmitStory, onSu
                     }}
                   />
 
+                  {/* Starter Templates */}
+                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                    {[
+                      `My earliest memory of ${getDisplayName(selectedFamilyMember)} is...`,
+                      `${getDisplayName(selectedFamilyMember)} always used to say...`,
+                      `A funny time with ${getDisplayName(selectedFamilyMember)} was when...`
+                    ].map((template) => (
+                      <Chip
+                        key={template}
+                        label={template.substring(0, 30) + '...'}
+                        onClick={() => {
+                          setStoryContent(prev => prev ? prev + '\n\n' + template : template)
+                        }}
+                        size="small"
+                        sx={{ 
+                          backgroundColor: '#f6f3ee', 
+                          color: '#546669',
+                          cursor: 'pointer',
+                          '&:hover': { backgroundColor: '#ebe8e3' }
+                        }}
+                      />
+                    ))}
+                  </Box>
+
                   {/* Optional date + location toggle */}
                   <Box>
                     <Button
@@ -366,10 +445,10 @@ export function StoriesPage({ stories, selectedFamilyMember, onSubmitStory, onSu
 
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pt: 1 }}>
                     <Box sx={{ display: 'flex', gap: 1 }}>
-                      <IconButton sx={{ color: '#546669' }}>
+                      <IconButton aria-label="Attach file" sx={{ color: '#546669' }}>
                         <AttachFileIcon />
                       </IconButton>
-                      <IconButton sx={{ color: '#546669' }}>
+                      <IconButton aria-label="Add photo" sx={{ color: '#546669' }}>
                         <AddPhotoIcon />
                       </IconButton>
                     </Box>
@@ -385,7 +464,7 @@ export function StoriesPage({ stories, selectedFamilyMember, onSubmitStory, onSu
                         }
                       }}
                     >
-                      {isSubmitting ? 'Posting...' : 'Post Memory'}
+                      {isSubmitting ? 'Posting...' : `Save ${getDisplayName(selectedFamilyMember)}'s Story`}
                     </Button>
                   </Box>
                 </Box>
@@ -435,6 +514,8 @@ export function StoriesPage({ stories, selectedFamilyMember, onSubmitStory, onSu
             >
               <Card
                 onClick={() => router.push(`/stories/${story.id}`)}
+                role="button"
+                aria-label={`View story by ${story.authorName}`}
                 sx={{
                   backgroundColor: story.type === 'audio' ? '#2e4a62' : '#ffffff',
                   color: story.type === 'audio' ? 'white' : 'inherit',
@@ -493,14 +574,37 @@ export function StoriesPage({ stories, selectedFamilyMember, onSubmitStory, onSu
                       alignItems: 'center',
                       gap: 2
                     }}>
-                      <IconButton sx={{ backgroundColor: 'white', color: '#16334a' }}>
-                        <PlayIcon />
+                      <IconButton 
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleTogglePlay(story)
+                        }}
+                        sx={{ backgroundColor: 'white', color: '#16334a', '&:hover': { backgroundColor: '#f0f0f0' } }}
+                      >
+                        {currentlyPlaying === story.id ? <PauseIcon /> : <PlayIcon />}
                       </IconButton>
-                      <Box sx={{ flexGrow: 1, height: 4, backgroundColor: 'rgba(255, 255, 255, 0.2)', borderRadius: 1, overflow: 'hidden' }}>
-                        <Box sx={{ width: '33%', height: '100%', backgroundColor: 'white' }} />
+                      <Box sx={{ flexGrow: 1, px: 1 }}>
+                        <Slider
+                          size="small"
+                          value={currentlyPlaying === story.id ? audioProgress : 0}
+                          sx={{
+                            color: 'white',
+                            height: 4,
+                            '& .MuiSlider-thumb': {
+                              display: currentlyPlaying === story.id ? 'block' : 'none',
+                              width: 8,
+                              height: 8,
+                            },
+                            '& .MuiSlider-track': { border: 'none' },
+                            '& .MuiSlider-rail': { opacity: 0.5 },
+                          }}
+                        />
                       </Box>
                       <Typography variant="caption" sx={{ fontFamily: 'monospace' }}>
-                        1:42
+                        {currentlyPlaying === story.id ? 
+                          `${Math.floor((audioProgress / 100) * (story.audioDurationSeconds || 0))}:${String(Math.floor(((audioProgress / 100) * (story.audioDurationSeconds || 0)) % 60)).padStart(2, '0')}` : 
+                          `${Math.floor((story.audioDurationSeconds || 0) / 60)}:${String((story.audioDurationSeconds || 0) % 60).padStart(2, '0')}`
+                        }
                       </Typography>
                     </Box>
                   </Box>

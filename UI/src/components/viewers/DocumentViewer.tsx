@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import Image from 'next/image'
 import { 
   Box, 
   Typography, 
@@ -90,14 +91,15 @@ export function DocumentViewer({ open, onClose, document }: DocumentViewerProps)
             alignItems: 'center', 
             height: '100%',
             overflow: 'auto',
-            p: 2
+            p: 2,
+            position: 'relative'
           }}>
-            <img
+            <Image
               src={url}
               alt={document.originalName}
+              fill
               style={{
-                maxWidth: '100%',
-                maxHeight: '100%',
+                objectFit: 'contain',
                 transform: `scale(${zoom})`,
                 transition: 'transform 0.2s',
                 cursor: zoom > 1 ? 'move' : 'default'
@@ -107,6 +109,7 @@ export function DocumentViewer({ open, onClose, document }: DocumentViewerProps)
                 setIsLoading(false)
                 console.error('Failed to load image')
               }}
+              unoptimized
             />
           </Box>
         )
@@ -354,17 +357,19 @@ export function DocumentThumbnail({
 
     if (viewerType === 'image' && !imageError) {
       return (
-        <img
-          src={url}
-          alt={document.originalName}
-          style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            borderRadius: '8px'
-          }}
-          onError={() => setImageError(true)}
-        />
+        <Box sx={{ position: 'relative', width: '100%', height: '100%' }}>
+          <Image
+            src={url}
+            alt={document.originalName}
+            fill
+            style={{
+              objectFit: 'cover',
+              borderRadius: '8px'
+            }}
+            onError={() => setImageError(true)}
+            unoptimized
+          />
+        </Box>
       )
     }
 

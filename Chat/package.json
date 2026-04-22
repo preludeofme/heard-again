@@ -4,7 +4,7 @@
   "description": "Phase 1 Family-History Conversational AI System",
   "main": "dist/index.js",
   "scripts": {
-    "dev": "next dev -p 4778",
+    "dev": "next dev -p 4778 --experimental-https",
     "build": "next build",
     "start": "next start -p 4778",
     "lint": "next lint",

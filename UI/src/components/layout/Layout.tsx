@@ -19,6 +19,9 @@ import {
   MenuItem,
   Button,
   Divider,
+  SpeedDial,
+  SpeedDialAction,
+  SpeedDialIcon,
 } from '@mui/material'
 import {
   Search as SearchIcon,
@@ -29,6 +32,14 @@ import {
   AutoStories as StoriesIcon,
   AccountTree as FamilyTreeIcon,
   Settings as SettingsIcon,
+  MoreHoriz as MoreIcon,
+  Description as DocumentsIcon,
+  Timeline as TimelineIcon,
+  Favorite as FavoriteIcon,
+  Add as AddIcon,
+  PersonAdd as PersonAddIcon,
+  PostAdd as PostAddIcon,
+  CloudUpload as UploadIcon,
 } from '@mui/icons-material'
 import Link from 'next/link'
 import { useState } from 'react'
@@ -57,7 +68,9 @@ interface LayoutProps {
 }
 
 const navItems = [
+  { label: 'Dashboard', href: '/dashboard', icon: 'dashboard' },
   { label: 'Profile', href: '/profile', icon: 'person' },
+  { label: 'Conversations', href: '/chat', icon: 'forum' },
   { label: 'Voice Profiles', href: '/voice-lab', icon: 'settings_voice' },
   { label: 'Documents', href: '/documents', icon: 'description' },
   { label: 'Stories', href: '/stories', icon: 'auto_stories' },
@@ -71,8 +84,14 @@ const footerNavItems = [
   { label: 'Privacy Settings', href: '/privacy', icon: 'shield_lock' },
 ]
 
-// Mobile bottom nav — 5 highest-priority destinations
-const bottomNavRoutes = ['/profile', '/stories', '/family-tree', '/voice-lab', '/account']
+// Mobile bottom nav — 5 slots. 4 fixed + 1 "More" overflow.
+const bottomNavRoutes = ['/profile', '/stories', '/family-tree', '/voice-lab', 'more']
+const moreMenuRoutes = [
+  { label: 'Documents', href: '/documents', icon: <DocumentsIcon /> },
+  { label: 'Timeline', href: '/timeline', icon: <TimelineIcon /> },
+  { label: 'Favorites', href: '/favorites', icon: <FavoriteIcon /> },
+  { label: 'Account', href: '/account', icon: <SettingsIcon /> },
+]
 
 function UserMenu() {
   const { data: session, status } = useSession()
@@ -146,15 +165,47 @@ export function Layout({ children }: LayoutProps) {
   const router = useRouter()
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
+  const [moreMenuAnchor, setMoreMenuAnchor] = useState<null | HTMLElement>(null)
+  const [speedDialOpen, setSpeedDialOpen] = useState(false)
 
   const currentPath = router.pathname
   const showAdvancedSearchButton = currentPath !== '/family-tree'
+
+  const handleMoreOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setMoreMenuAnchor(event.currentTarget)
+  }
+
+  const handleMoreClose = () => {
+    setMoreMenuAnchor(null)
+  }
+
+  const handleMoreNavigate = (path: string) => {
+    handleMoreClose()
+    router.push(path)
+  }
+
+  const handleAction = (action: string) => {
+    setSpeedDialOpen(false)
+    if (action === 'story') {
+      router.push('/stories#contribution-hub')
+    } else if (action === 'document') {
+      router.push('/documents')
+    } else if (action === 'person') {
+      router.push('/family-tree?add=1')
+    }
+  }
 
   const getMobileNavValue = () => {
     const exactIdx = bottomNavRoutes.indexOf(currentPath)
     if (exactIdx >= 0) return exactIdx
     const prefixIdx = bottomNavRoutes.findIndex((r) => currentPath.startsWith(r + '/'))
-    return prefixIdx >= 0 ? prefixIdx : false
+    if (prefixIdx >= 0) return prefixIdx
+
+    // Check if current path is in "More" menu
+    const isInMore = moreMenuRoutes.some((r) => currentPath.startsWith(r.href))
+    if (isInMore) return 4 // Index of "More" tab
+
+    return false
   }
 
   return (
@@ -206,10 +257,48 @@ export function Layout({ children }: LayoutProps) {
             {children}
           </Box>
 
+          {/* Creation FAB for Mobile */}
+          <SpeedDial
+            ariaLabel="Creation SpeedDial"
+            sx={{ position: 'fixed', bottom: 72, right: 16 }}
+            icon={<SpeedDialIcon icon={<AddIcon />} openIcon={<CloseIcon />} />}
+            onClose={() => setSpeedDialOpen(false)}
+            onOpen={() => setSpeedDialOpen(true)}
+            open={speedDialOpen}
+            FabProps={{
+              sx: {
+                bgcolor: '#16334a',
+                '&:hover': {
+                  bgcolor: '#2e4a62',
+                }
+              }
+            }}
+          >
+            <SpeedDialAction
+              icon={<PostAddIcon />}
+              tooltipTitle="Add Story"
+              onClick={() => handleAction('story')}
+            />
+            <SpeedDialAction
+              icon={<UploadIcon />}
+              tooltipTitle="Upload Artifact"
+              onClick={() => handleAction('document')}
+            />
+            <SpeedDialAction
+              icon={<PersonAddIcon />}
+              tooltipTitle="Add Person"
+              onClick={() => handleAction('person')}
+            />
+          </SpeedDial>
+
           <BottomNavigation
             showLabels
             value={getMobileNavValue()}
             onChange={(_, newValue: number) => {
+              if (bottomNavRoutes[newValue] === 'more') {
+                // Handled by handleMoreOpen via onClick on the action below
+                return
+              }
               router.push(bottomNavRoutes[newValue])
             }}
             sx={{
@@ -221,14 +310,54 @@ export function Layout({ children }: LayoutProps) {
               backgroundColor: '#f6f3ee',
               borderTop: '1px solid rgba(22,51,74,0.08)',
               boxShadow: '0 -1px 8px rgba(22,51,74,0.06)',
+              '& .MuiBottomNavigationAction-root': {
+                minWidth: 'auto',
+                padding: '8px',
+                minHeight: '56px',
+                '& .MuiSvgIcon-root': {
+                  fontSize: 28,
+                }
+              }
             }}
           >
             <BottomNavigationAction label="Home" icon={<HomeIcon />} />
             <BottomNavigationAction label="Stories" icon={<StoriesIcon />} />
             <BottomNavigationAction label="Tree" icon={<FamilyTreeIcon />} />
             <BottomNavigationAction label="Voice" icon={<MicIcon />} />
-            <BottomNavigationAction label="Account" icon={<SettingsIcon />} />
+            <BottomNavigationAction label="More" icon={<MoreIcon />} onClick={handleMoreOpen} />
           </BottomNavigation>
+
+          <Menu
+            anchorEl={moreMenuAnchor}
+            open={Boolean(moreMenuAnchor)}
+            onClose={handleMoreClose}
+            anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+            transformOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            PaperProps={{
+              sx: {
+                width: 200,
+                borderRadius: 3,
+                boxShadow: '0 -4px 20px rgba(0,0,0,0.1)',
+                mb: 1,
+              }
+            }}
+          >
+            {moreMenuRoutes.map((route) => (
+              <MenuItem
+                key={route.href}
+                onClick={() => handleMoreNavigate(route.href)}
+                sx={{
+                  py: 1.5,
+                  gap: 2,
+                  color: currentPath.startsWith(route.href) ? '#16334a' : 'inherit',
+                  fontWeight: currentPath.startsWith(route.href) ? 600 : 400,
+                }}
+              >
+                {route.icon}
+                <Typography variant="body2">{route.label}</Typography>
+              </MenuItem>
+            ))}
+          </Menu>
         </Box>
       ) : (
         <Box sx={{ display: 'flex', minHeight: '100vh' }}>

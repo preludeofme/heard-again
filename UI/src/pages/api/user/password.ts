@@ -4,8 +4,9 @@ import { authOptions } from '@/lib/auth'
 import { validatePassword, hashPassword, verifyPassword } from '@/lib/security/password-policy'
 import { prisma } from '@/lib/prisma'
 import { logger } from '@/lib/logger'
+import { withCSRFProtection } from '@/lib/security/csrf'
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   const session = await getServerSession(req, res, authOptions)
   
   if (!session?.user?.id) {
@@ -73,3 +74,4 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(500).json({ error: 'Failed to update password' })
   }
 }
+export default withCSRFProtection(handler)
