@@ -104,7 +104,7 @@ const steps = [
       '# Or start voice service separately',
       'npm run start:tts',
       '',
-      '# Access at http://localhost:3002',
+      '# Access at http://localhost:4777',
     ],
   },
 ]
@@ -232,7 +232,7 @@ export default function SelfHostingTutorial() {
                 🎉 Setup Complete!
               </Typography>
               <Typography variant="body1" sx={{ color: '#546669', mb: 3 }}>
-                Your Heard Again instance is now ready. Visit http://localhost:3002 to start preserving your family stories.
+                Your Heard Again instance is now ready. Visit http://localhost:4777 to start preserving your family stories.
               </Typography>
               <Button variant="outlined" onClick={handleReset}>
                 Restart Tutorial

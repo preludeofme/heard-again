@@ -21,9 +21,10 @@ DTYPE = os.getenv("QWEN_TTS_DTYPE", "bfloat16")
 # Server configuration
 HOST = os.getenv("TTS_HOST", "0.0.0.0")
 PORT = int(os.getenv("TTS_PORT", "4779"))
+TTS_SERVICE_TOKEN = os.getenv("TTS_SERVICE_TOKEN")
 
 # Audio settings
 SAMPLE_RATE = 24000
 MAX_REFERENCE_DURATION_SEC = 30
 MIN_REFERENCE_DURATION_SEC = 3
-ALLOWED_AUDIO_EXTENSIONS = {".wav", ".mp3", ".flac", ".ogg", ".m4a"}
+ALLOWED_AUDIO_EXTENSIONS = {".wav", ".mp3", ".flac", ".ogg", ".m4a", ".webm"}

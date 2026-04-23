@@ -42,7 +42,7 @@ Browser → Next.js API Routes (/api/voice/*) → Python TTS Service (:8100)
 ```
 
 The Next.js app proxies voice requests to this service. Both must be running:
-- `npm run dev` — Next.js on port 3002
+- `npm run dev` — Next.js on port 4777
 - `npm run start:tts` — TTS service on port 8100
 
 ## Environment Variables

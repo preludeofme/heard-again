@@ -2,10 +2,11 @@ import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
 import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
 import { validate, rules } from '@/lib/validation'
+import { withCSRFProtection } from '@/lib/security/csrf'
 
 export default apiHandler({
   // POST /api/voice/consent - Record voice consent
-  POST: async (req, res) => {
+  POST: withCSRFProtection(async (req, res) => {
     const user = await getAuthUserWithWorkspace(req, res)
     await requireWorkspaceRole(user.id, user.workspaceId, 'EDITOR')
 
@@ -53,5 +54,5 @@ export default apiHandler({
       consentType: consent.consentType,
       recordedAt: consent.recordedAt,
     }, 201)
-  },
+  }),
 })

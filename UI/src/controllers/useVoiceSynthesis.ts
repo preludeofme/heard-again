@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
 import { useSnackbar } from 'notistack'
+import { useCSRF } from '@/hooks/useCSRF'
 
 interface SynthesisCache {
   [key: string]: {
@@ -34,6 +35,7 @@ export function useVoiceSynthesis(): VoiceSynthesisState & VoiceSynthesisActions
   })
 
   const { enqueueSnackbar } = useSnackbar()
+  const { fetchToken } = useCSRF()
 
   const getCachedAudio = useCallback((modelId: string, text: string): string | undefined => {
     const cacheKey = getSynthesisCacheKey(modelId, text)
@@ -59,9 +61,15 @@ export function useVoiceSynthesis(): VoiceSynthesisState & VoiceSynthesisActions
     setState(prev => ({ ...prev, isSynthesizing: true }))
 
     try {
+      // Fetch CSRF token for the request
+      const csrfToken = await fetchToken()
+
       const response = await fetch('/api/voice/synthesize', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-csrf-token': csrfToken
+        },
         credentials: 'include',
         body: JSON.stringify({
           modelId,
@@ -109,7 +117,7 @@ export function useVoiceSynthesis(): VoiceSynthesisState & VoiceSynthesisActions
       enqueueSnackbar(message, { variant: 'error' })
       throw error
     }
-  }, [getCachedAudio, enqueueSnackbar])
+  }, [getCachedAudio, enqueueSnackbar, fetchToken])
 
   const clearSynthesisCache = useCallback(() => {
     setState(prev => ({ ...prev, synthesisCache: {} }))

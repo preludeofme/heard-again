@@ -28,7 +28,7 @@ npm run migration:dev
 npm run dev
 ```
 
-The chat system will run on port 3002, separate from the main app.
+The chat system will run on port 4777, separate from the main app.
 
 ## Services
 

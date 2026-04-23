@@ -1,19 +1,24 @@
 import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { ttsRequest } from '@/lib/tts-client'
+import { getAuthUserWithWorkspace } from '@/lib/auth-helpers'
+import { withCSRFProtection } from '@/lib/security/csrf'
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
   try {
-    const data = await ttsRequest('/api/tts/voice-profiles')
+    const user = await getAuthUserWithWorkspace(req, res)
+    const data = await ttsRequest('/api/tts/voice-profiles', {
+      workspaceId: user.workspaceId,
+    })
 
     // Map TTS service profiles to the VoiceModel shape expected by the frontend
     const models = (data.profiles || []).map((profile: any) => ({
       id: profile.id,
-      userId: 'user123',
+      userId: user.id,
       name: profile.id,
       displayName: profile.name,
       status: 'ready',
@@ -30,3 +35,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(200).json({ success: true, models: [] })
   }
 }
+
+export default withCSRFProtection(handler)

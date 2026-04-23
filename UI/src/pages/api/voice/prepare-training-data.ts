@@ -2,6 +2,7 @@ import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '@/lib/prisma'
 import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
+import { withCSRFProtection } from '@/lib/security/csrf'
 import fs from 'fs'
 import path from 'path'
 
@@ -16,7 +17,7 @@ import path from 'path'
  * The .list file format is compatible with Qwen3-TTS training:
  *   /path/to/audio.wav|transcript text here
  */
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
@@ -192,3 +193,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
   }
 }
+
+export default withCSRFProtection(handler)

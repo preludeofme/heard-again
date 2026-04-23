@@ -83,7 +83,7 @@ docker-compose up -d chat-app
 echo "✅ Infrastructure setup complete!"
 echo ""
 echo "🌐 Service URLs:"
-echo "   - Chat App:        http://localhost:3002"
+echo "   - Chat App:        http://localhost:4777"
 echo "   - Ollama API:      http://localhost:11434"
 echo "   - ChromaDB:        http://localhost:8000"
 echo "   - Database:        localhost:5432"

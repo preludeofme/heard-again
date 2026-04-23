@@ -129,7 +129,7 @@ DATABASE_URL=postgresql://postgres:postgres@localhost:5432/heard_again
 
 # Authentication
 NEXTAUTH_SECRET=change-this-in-production
-NEXTAUTH_URL=http://localhost:3002
+NEXTAUTH_URL=http://localhost:4777
 
 # Services
 TTS_SERVICE_URL=http://localhost:8100
@@ -158,7 +158,7 @@ if [ ! -f "$UI_DIR/.env" ]; then
         cat > "$UI_DIR/.env" << EOF
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/heard_again
 NEXTAUTH_SECRET=change-this-in-production
-NEXTAUTH_URL=http://localhost:3002
+NEXTAUTH_URL=http://localhost:4777
 TTS_SERVICE_URL=http://localhost:8100
 CHAT_SYSTEM_URL=http://localhost:3001
 REDIS_URL=redis://localhost:6379
@@ -375,7 +375,7 @@ echo -e "  2. Start the application:"
 echo -e "     ${YELLOW}./Scripts/start-dev.sh --live${NC}"
 echo ""
 echo -e "  Or start services individually:"
-echo -e "     ${YELLOW}cd UI && npm run dev${NC}     # Main UI on http://localhost:3002"
+echo -e "     ${YELLOW}cd UI && npm run dev${NC}     # Main UI on http://localhost:4777"
 echo -e "     ${YELLOW}cd Chat && npm run dev${NC}  # Chat system on http://localhost:3001"
 echo ""
 echo -e "${BLUE}Documentation:${NC}"

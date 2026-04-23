@@ -282,6 +282,7 @@ export class VoiceService {
       }>('/api/tts/synthesize', {
         method: 'POST',
         authToken: request.authToken,
+        workspaceId,
         body: {
           profileId: profile.name,
           text,
@@ -290,17 +291,25 @@ export class VoiceService {
         },
       })
 
-      // Fetch audio with auth token
+      // Fetch audio with appropriate auth
+      // Use provided token or fallback to service-to-service token
+      const authHeader = request.authToken 
+        ? `Bearer ${request.authToken}`
+        : `Bearer ${process.env.TTS_SERVICE_TOKEN}`
+
       const audioResponse = await fetch(
         `${TTS_SERVICE_URL}/api/tts/audio/${ttsData.audioId}`,
         {
           headers: {
-            'Authorization': `Bearer ${request.authToken}`,
+            'Authorization': authHeader,
+            'X-Workspace-Id': workspaceId,
           },
         }
       )
+      
       if (!audioResponse.ok) {
-        throw new AppError('Synthesized audio retrieval failed', 503, 'TTS_AUDIO_FETCH_FAILED')
+        const errorText = await audioResponse.text()
+        throw new AppError(`Synthesized audio retrieval failed (${audioResponse.status}): ${errorText}`, 503, 'TTS_AUDIO_FETCH_FAILED')
       }
 
       const audioBuffer = Buffer.from(await audioResponse.arrayBuffer())

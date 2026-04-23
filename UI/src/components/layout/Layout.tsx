@@ -37,6 +37,7 @@ import {
   Timeline as TimelineIcon,
   Favorite as FavoriteIcon,
   Add as AddIcon,
+  Close as CloseIcon,
   PersonAdd as PersonAddIcon,
   PostAdd as PostAddIcon,
   CloudUpload as UploadIcon,

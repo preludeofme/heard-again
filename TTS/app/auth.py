@@ -22,7 +22,7 @@ if not JWT_SECRET:
 JWT_ALGORITHM = 'HS256'
 
 # NextAuth API endpoint for token validation
-NEXTAUTH_URL = os.getenv('NEXTAUTH_URL', 'http://localhost:3002')
+NEXTAUTH_URL = os.getenv('NEXTAUTH_URL', 'http://localhost:4777')
 
 class AuthError(Exception):
     """Custom authentication error"""

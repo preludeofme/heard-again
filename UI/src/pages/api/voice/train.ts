@@ -4,6 +4,7 @@ import { ttsRequest } from '@/lib/tts-client'
 import { prisma } from '@/lib/prisma'
 import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
 import { withMFAProtection, SENSITIVE_OPERATIONS } from '@/lib/security/mfa'
+import { withCSRFProtection } from '@/lib/security/csrf'
 
 async function trainVoiceHandler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -36,6 +37,7 @@ async function trainVoiceHandler(req: NextApiRequest, res: NextApiResponse) {
 
     const data = await ttsRequest('/api/tts/create-voice-profile', {
       method: 'POST',
+      workspaceId: user.workspaceId,
       body: {
         fileId: primaryFileId,
         refText: null,
@@ -84,5 +86,7 @@ async function trainVoiceHandler(req: NextApiRequest, res: NextApiResponse) {
   }
 }
 
-// Export with MFA protection for voice training (sensitive operation)
-export default withMFAProtection(SENSITIVE_OPERATIONS.VOICE_TRAINING, trainVoiceHandler)
+// Export with CSRF and MFA protection for voice training (sensitive operation)
+export default withCSRFProtection(
+  withMFAProtection(SENSITIVE_OPERATIONS.VOICE_TRAINING, trainVoiceHandler)
+)

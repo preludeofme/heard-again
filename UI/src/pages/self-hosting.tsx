@@ -584,7 +584,7 @@ export default function SelfHostingPage() {
                         2. Run the tunnel:
                       </Typography>
                       <CodeBlock>
-                        cloudflared tunnel --url http://localhost:3002 \\\n  --hostname {tunnelConfig.subdomain}.heardagain.com
+                        cloudflared tunnel --url http://localhost:4777 \\\n  --hostname {tunnelConfig.subdomain}.heardagain.com
                       </CodeBlock>
                     </Paper>
 
@@ -616,7 +616,7 @@ export default function SelfHostingPage() {
                     
                     <Typography variant="body1" sx={{ color: '#546669', mb: 2 }}>
                       Your Heard Again instance is now running locally on{' '}
-                      <strong>http://localhost:3002</strong>
+                      <strong>http://localhost:4777</strong>
                     </Typography>
 
                     <Button

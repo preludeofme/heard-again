@@ -1,13 +1,16 @@
 import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { ttsRequest } from '@/lib/tts-client'
+import { getAuthUserWithWorkspace } from '@/lib/auth-helpers'
+import { withCSRFProtection } from '@/lib/security/csrf'
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'DELETE') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
   try {
+    const user = await getAuthUserWithWorkspace(req, res)
     const { profileId } = req.query
 
     if (!profileId || typeof profileId !== 'string') {
@@ -16,6 +19,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const data = await ttsRequest(`/api/tts/voice-profiles/${profileId}`, {
       method: 'DELETE',
+      workspaceId: user.workspaceId,
     })
 
     return res.status(200).json({ success: true, ...data })
@@ -27,3 +31,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
   }
 }
+
+export default withCSRFProtection(handler)

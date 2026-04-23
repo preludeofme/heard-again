@@ -1,11 +1,12 @@
 import jwt
 import logging
 import time
-from fastapi import HTTPException, status, Depends
+from fastapi import HTTPException, status, Depends, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import Optional, Dict, Any
 import os
 import httpx
+from app.config import TTS_SERVICE_TOKEN
 
 logger = logging.getLogger(__name__)
 
@@ -32,20 +33,49 @@ class TenantIsolationError(Exception):
     """Custom tenant isolation error"""
     pass
 
-async def validate_token(credentials: HTTPAuthorizationCredentials = Depends(security)) -> Dict[str, Any]:
+async def validate_token(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+) -> Dict[str, Any]:
     """
-    Validate session token via NextAuth session endpoint.
-    NextAuth uses encrypted session cookies, not JWT tokens.
+    Validate session token via NextAuth session endpoint or 
+    service-to-service token for internal requests.
     """
     try:
-        session_token = credentials.credentials
+        bearer_token = credentials.credentials
         
-        # Validate with NextAuth session endpoint
+        # 1. Check for Service-to-Service Token
+        if TTS_SERVICE_TOKEN and bearer_token == TTS_SERVICE_TOKEN:
+            workspace_id = request.headers.get('X-Workspace-Id')
+            if not workspace_id:
+                logger.error("Service-to-service request missing X-Workspace-Id header")
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="X-Workspace-Id header is required for service-to-service authentication"
+                )
+            
+            return {
+                'user_id': 'system-service',
+                'workspace_id': workspace_id,
+                'email': 'service@heardagain.internal',
+                'role': 'ADMIN', # Service token has admin privileges
+                'token': bearer_token,
+                'is_service_token': True
+            }
+
+        # 2. Validate with NextAuth session endpoint (User session)
         try:
             async with httpx.AsyncClient() as client:
+                # Support both standard and secure cookie names
+                cookies = {
+                    "next-auth.session-token": bearer_token,
+                    "__Secure-next-auth.session-token": bearer_token
+                }
+                cookie_header = "; ".join([f"{k}={v}" for k, v in cookies.items()])
+                
                 session_response = await client.get(
                     f"{NEXTAUTH_URL}/api/auth/session",
-                    headers={"Cookie": f"next-auth.session-token={session_token}"},
+                    headers={"Cookie": cookie_header},
                     timeout=10.0
                 )
             
@@ -97,7 +127,8 @@ async def validate_token(credentials: HTTPAuthorizationCredentials = Depends(sec
             'workspace_id': workspace_id,
             'email': email,
             'role': role,
-            'token': session_token
+            'token': bearer_token,
+            'is_service_token': False
         }
         
     except HTTPException:

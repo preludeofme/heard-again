@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
 import { useSnackbar } from 'notistack'
+import { useCSRF } from '@/hooks/useCSRF'
 
 interface TrainingSample {
   file: File
@@ -55,16 +56,21 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
   })
 
   const { enqueueSnackbar } = useSnackbar()
+  const { fetchToken } = useCSRF()
 
   const uploadTrainingSample = useCallback(async (file: File) => {
     setState(prev => ({ ...prev, isUploading: true }))
 
     try {
+      const csrfToken = await fetchToken()
       const formData = new FormData()
       formData.append('audio', file)
 
       const response = await fetch('/api/voice/upload-sample', {
         method: 'POST',
+        headers: {
+          'x-csrf-token': csrfToken
+        },
         credentials: 'include',
         body: formData,
       })
@@ -93,7 +99,7 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
       enqueueSnackbar('Failed to upload sample', { variant: 'error' })
       throw error
     }
-  }, [enqueueSnackbar])
+  }, [enqueueSnackbar, fetchToken])
 
   const removeTrainingSample = useCallback((index: number) => {
     setState(prev => ({
@@ -115,6 +121,7 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
     setState(prev => ({ ...prev, isTraining: true }))
 
     try {
+      const csrfToken = await fetchToken()
       const sampleFileIds = state.trainingSamples.map(s => s.fileId).filter(Boolean)
 
       if (sampleFileIds.length === 0) {
@@ -132,7 +139,10 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
 
       const response = await fetch('/api/voice/train', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-csrf-token': csrfToken
+        },
         credentials: 'include',
         body: JSON.stringify(requestBody),
       })
@@ -170,7 +180,7 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
       enqueueSnackbar(message, { variant: 'error' })
       throw error
     }
-  }, [state.trainingSamples, enqueueSnackbar])
+  }, [state.trainingSamples, enqueueSnackbar, fetchToken])
 
   const checkTrainingStatus = useCallback(async (jobId: string) => {
     try {
@@ -223,9 +233,13 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
     }))
 
     try {
+      const csrfToken = await fetchToken()
       const response = await fetch('/api/voice/preprocess', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-csrf-token': csrfToken
+        },
         credentials: 'include',
         body: JSON.stringify({
           jobId: state.trainingJob.id,
@@ -248,7 +262,7 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
       enqueueSnackbar('Failed to preprocess audio')
       throw error
     }
-  }, [state.trainingJob, enqueueSnackbar])
+  }, [state.trainingJob, enqueueSnackbar, fetchToken])
 
   const runASR = useCallback(async (language: string) => {
     if (!state.trainingJob) return
@@ -256,9 +270,13 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
     setState(prev => ({ ...prev, asrStatus: 'processing' }))
 
     try {
+      const csrfToken = await fetchToken()
       const response = await fetch('/api/voice/asr', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-csrf-token': csrfToken
+        },
         credentials: 'include',
         body: JSON.stringify({
           jobId: state.trainingJob.id,
@@ -281,7 +299,7 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
       enqueueSnackbar('Failed to process speech-to-text')
       throw error
     }
-  }, [state.trainingJob, enqueueSnackbar])
+  }, [state.trainingJob, enqueueSnackbar, fetchToken])
 
   const designAndCloneVoice = useCallback(async (
     profileName: string,
@@ -292,9 +310,13 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
     setState(prev => ({ ...prev, isTraining: true }))
 
     try {
+      const csrfToken = await fetchToken()
       const response = await fetch('/api/voice/design-and-clone', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-csrf-token': csrfToken
+        },
         credentials: 'include',
         body: JSON.stringify({ profileName, instruct, refText, language }),
       })
@@ -327,7 +349,7 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
       enqueueSnackbar(message, { variant: 'error' })
       throw error
     }
-  }, [enqueueSnackbar])
+  }, [enqueueSnackbar, fetchToken])
 
   return {
     ...state,

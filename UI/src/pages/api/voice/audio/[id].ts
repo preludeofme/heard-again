@@ -4,6 +4,8 @@ import { TTS_SERVICE_URL } from '@/lib/tts-client'
 import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
 import { prisma } from '@/lib/prisma'
 
+const TTS_SERVICE_TOKEN = process.env.TTS_SERVICE_TOKEN
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' })
@@ -23,18 +25,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Audio ID required' })
     }
 
-    // Get session token for TTS service auth
-    const sessionToken = req.cookies['next-auth.session-token']
-    if (!sessionToken) {
-      return res.status(401).json({ error: 'Authentication required' })
-    }
-
     // Verify audio asset belongs to user's workspace
     // The audioId is the TTS service audio ID, stored in asset metadata
     const audioAsset = await prisma.asset.findFirst({
       where: {
         workspaceId: user.workspaceId,
-        assetType: 'GENERATED_AUDIO',
+        assetType: { in: ['GENERATED_AUDIO', 'AUDIO'] },
         metadata: {
           path: ['ttsAudioId'],
           equals: audioId
@@ -50,17 +46,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
 
     if (!audioAsset) {
-      return res.status(404).json({ error: 'Audio not found' })
+      // Fallback: check if it's a direct file ID from TTS service that we haven't mapped yet
+      // but only if the user is an EDITOR+ (security safeguard)
+      try {
+        await requireWorkspaceRole(user.id, user.workspaceId, 'EDITOR')
+      } catch (err) {
+        return res.status(404).json({ error: 'Audio not found' })
+      }
     }
 
-    // Proxy to TTS service with authentication
+    // Proxy to TTS service using Service-to-Service authentication
+    // This is more reliable than passing the user's session token
     const response = await fetch(`${TTS_SERVICE_URL}/api/tts/audio/${audioId}`, {
       method: 'GET',
       headers: {
-        // Pass session token for TTS service auth
-        'Authorization': `Bearer ${sessionToken}`,
-        'X-Workspace-ID': user.workspaceId,
-        'X-User-ID': user.id,
+        'Authorization': `Bearer ${TTS_SERVICE_TOKEN}`,
+        'X-Workspace-Id': user.workspaceId,
       },
     })
 

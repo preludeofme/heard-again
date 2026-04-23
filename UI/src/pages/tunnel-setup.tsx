@@ -409,14 +409,14 @@ export default function TunnelSetup() {
               </Typography>
               <Paper sx={{ p: 2, bgcolor: '#1e1e1e', color: '#d4d4d4', position: 'relative' }}>
                 <code>
-                  cloudflared tunnel --url http://localhost:3002 --hostname {tunnelStatus.subdomain}.heardagain.com
+                  cloudflared tunnel --url http://localhost:4777 --hostname {tunnelStatus.subdomain}.heardagain.com
                 </code>
                 <Button
                   size="small"
                   sx={{ position: 'absolute', right: 8, top: 8 }}
                   onClick={() =>
                     copyToClipboard(
-                      `cloudflared tunnel --url http://localhost:3002 --hostname ${tunnelStatus.subdomain}.heardagain.com`
+                      `cloudflared tunnel --url http://localhost:4777 --hostname ${tunnelStatus.subdomain}.heardagain.com`
                     )
                   }
                 >
@@ -429,14 +429,14 @@ export default function TunnelSetup() {
               </Typography>
               <Paper sx={{ p: 2, bgcolor: '#1e1e1e', color: '#d4d4d4', position: 'relative' }}>
                 <code>
-                  docker run --net=host cloudflare/cloudflared:latest tunnel --url http://localhost:3002
+                  docker run --net=host cloudflare/cloudflared:latest tunnel --url http://localhost:4777
                 </code>
                 <Button
                   size="small"
                   sx={{ position: 'absolute', right: 8, top: 8 }}
                   onClick={() =>
                     copyToClipboard(
-                      'docker run --net=host cloudflare/cloudflared:latest tunnel --url http://localhost:3002'
+                      'docker run --net=host cloudflare/cloudflared:latest tunnel --url http://localhost:4777'
                     )
                   }
                 >

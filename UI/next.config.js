@@ -1,8 +1,10 @@
 /** @type {import('next').NextConfig} */
+const path = require('path')
 const isDev = process.env.NODE_ENV === 'development'
 
 const nextConfig = {
   reactStrictMode: true,
+  outputFileTracingRoot: path.join(__dirname, '..'),
   // Add empty Turbopack config to avoid webpack conflict
   turbopack: {},
   allowedDevOrigins: ['100.75.138.91', 'trubuck-design-ai-beast.stern-mulley.ts.net', 'localhost', '127.0.0.1'],

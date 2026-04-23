@@ -294,7 +294,7 @@ services:
   app:
     image: heardagain:latest
     ports:
-      - "3002:3002"
+      - "4777:4777"
     networks:
       - heardagain
 

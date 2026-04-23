@@ -124,7 +124,7 @@ This script will:
 ```
 
 This starts all services with live logging:
-- **UI** - http://localhost:3002 (Main web application)
+- **UI** - http://localhost:4777 (Main web application)
 - **Chat** - http://localhost:3001 (AI chat interface)
 - **PostgreSQL** - localhost:5432
 - **Redis** - localhost:6379
@@ -172,7 +172,7 @@ cd UI
 npm run build
 
 # Run services
-cd UI && npm run dev        # Port 3002
+cd UI && npm run dev        # Port 4777
 cd Chat && npm run dev      # Port 3001
 ```
 
@@ -210,7 +210,7 @@ docker compose --profile with-tts --profile with-llm up -d
 
 | Service | URL | Internal Hostname |
 |---------|-----|-------------------|
-| UI | http://localhost:3002 | `app` |
+| UI | http://localhost:4777 | `app` |
 | Chat | http://localhost:3001 | `chat` |
 | TTS API | http://localhost:8101 | `tts` |
 | Ollama | http://localhost:11434 | `ollama` |
@@ -252,7 +252,7 @@ DATABASE_URL=postgresql://postgres:postgres@localhost:5432/heard_again
 
 # Authentication
 NEXTAUTH_SECRET=your-secret-key
-NEXTAUTH_URL=http://localhost:3002
+NEXTAUTH_URL=http://localhost:4777
 
 # Services
 TTS_SERVICE_URL=http://localhost:8100
@@ -339,7 +339,7 @@ npm install package-name
 ## Troubleshooting
 
 **Port Conflicts:**
-- UI runs on port 3002
+- UI runs on port 4777
 - Chat runs on port 3001
 - TTS runs on port 8100/8101
 

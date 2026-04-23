@@ -20,6 +20,8 @@ export const ALLOWED_MIME_TYPES = [
   'audio/flac',
   'audio/aac',
   'audio/x-m4a',
+  'audio/webm',
+  'video/webm',
   
   // Documents
   'application/pdf',
@@ -43,7 +45,7 @@ export const ALLOWED_EXTENSIONS = [
   '.jpg', '.jpeg', '.png', '.gif', '.webp', '.tiff', '.bmp',
   
   // Audio
-  '.mp3', '.wav', '.m4a', '.ogg', '.flac', '.aac',
+  '.mp3', '.wav', '.m4a', '.ogg', '.flac', '.aac', '.webm',
   
   // Documents
   '.pdf', '.txt', '.csv', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
@@ -60,6 +62,8 @@ const MAGIC_BYTE_SIGNATURES: Record<string, RegExp> = {
   'image/webp': /^RIFF....WEBP/,
   'audio/mpeg': /^ID3|^\xff\xfb|^\xff\xf3|^\xff\xf2/,
   'audio/wav': /^RIFF....WAVE/,
+  'audio/webm': /^\x1a\x45\xdf\xa3/,
+  'video/webm': /^\x1a\x45\xdf\xa3/,
   'application/pdf': /^%PDF-/,
   'application/zip': /^PK\x03\x04|^PK\x05\x06|^PK\x07\x08/,
 }
@@ -371,6 +375,8 @@ function getExtensionForMimeType(mimeType: string): string {
     'audio/flac': '.flac',
     'audio/aac': '.aac',
     'audio/x-m4a': '.m4a',
+    'audio/webm': '.webm',
+    'video/webm': '.webm',
     'application/pdf': '.pdf',
     'text/plain': '.txt',
     'text/csv': '.csv',

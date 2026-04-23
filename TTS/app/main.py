@@ -91,9 +91,9 @@ def get_allowed_origins() -> list[str]:
     else:
         # Development: allow localhost with validation
         dev_origins = [
-            "http://localhost:3002",
+            "http://localhost:4777",
             "http://localhost:3000", 
-            "https://localhost:3002",
+            "https://localhost:4777",
             "https://localhost:3000"
         ]
         
