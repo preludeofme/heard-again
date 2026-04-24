@@ -1176,10 +1176,10 @@ export function FamilyTreePage({
                   Add Relative
                 </Typography>
               </Box>
-            </Box>
-          </Box>
-        </Box>
-
+              </Box>
+              </Box>
+              )}
+              </Box>
         {/* Legend + Insights Sidebar */}
         <Box
           sx={{

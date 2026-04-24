@@ -10,7 +10,7 @@ import numpy as np
 import soundfile as sf
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
 from app.config import (
@@ -35,6 +35,8 @@ from app.validators import (
     validate_audio_file_size,
     validate_audio_file_extension
 )
+from app.text_chunker import chunk_text
+from app.audio_encoder import encode_pcm_to_mp3, check_ffmpeg_available
 
 logging.basicConfig(
     level=logging.INFO,
@@ -881,6 +883,118 @@ async def synthesize_speech(
     except Exception as e:
         logger.error(f"Synthesis failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+class SynthesizeStreamRequest(BaseModel):
+    profileId: str
+    text: str
+    language: str = "English"
+    style: Optional[str] = None
+    workspaceId: Optional[str] = None
+
+
+@app.post("/api/tts/synthesize-stream")
+async def synthesize_speech_stream(
+    auth_data: Annotated[dict, Depends(require_workspace_role)],
+    req: SynthesizeStreamRequest,
+):
+    """Stream MP3 audio synthesized sentence-by-sentence.
+
+    The model is not token-streaming, but we split the text into sentences and
+    yield each as it finishes encoding. Time-to-first-byte is roughly one sentence's
+    synthesis time.
+    """
+    if not model_manager.is_loaded:
+        raise HTTPException(status_code=503, detail=MODEL_NOT_LOADED_ERROR)
+
+    if check_ffmpeg_available() is None:
+        raise HTTPException(
+            status_code=503,
+            detail="ffmpeg is required for streaming synthesis but is not available on the server",
+        )
+
+    workspace_id = req.workspaceId or auth_data['workspace_id']
+    workspace_profiles_dir = VOICE_PROFILES_DIR / workspace_id
+
+    safe_profile_id = "".join(c if c.isalnum() or c in "-_ " else "" for c in req.profileId)
+    safe_profile_id = safe_profile_id.strip().replace(" ", "_")
+    profile_path = workspace_profiles_dir / f"{safe_profile_id}.pt"
+
+    if not profile_path.exists():
+        await log_auth_event('PROFILE_ACCESS_DENIED', auth_data, {
+            'profileId': req.profileId,
+            'requestedWorkspace': workspace_id,
+            'authWorkspace': auth_data['workspace_id'],
+            'endpoint': 'synthesize-stream',
+        })
+        raise HTTPException(status_code=404, detail="Voice profile not found")
+
+    # Resolve style params (explicit override > profile metadata).
+    gen_kwargs: dict = {}
+    if req.style:
+        gen_kwargs = resolve_style_params(style=req.style)
+    else:
+        meta_path = workspace_profiles_dir / f"{safe_profile_id}{JSON_EXTENSION}"
+        if meta_path.exists():
+            try:
+                meta = json.loads(meta_path.read_text())
+                saved_params = meta.get("styleParams", {})
+                if saved_params:
+                    gen_kwargs = saved_params
+            except Exception:
+                pass
+
+    sentences = chunk_text(req.text)
+    if not sentences:
+        raise HTTPException(status_code=400, detail="Text contains no speakable content")
+
+    stream_id = str(uuid.uuid4())
+    logger.info(
+        f"[stream {stream_id}] starting: profile={req.profileId} workspace={workspace_id} "
+        f"sentences={len(sentences)} chars={len(req.text)}"
+    )
+
+    def generator():
+        total_start = time.time()
+        sentences_rendered = 0
+        try:
+            for idx, sentence in enumerate(sentences):
+                sentence_start = time.time()
+                audio_data, sr = model_manager.synthesize_from_profile(
+                    profile_path=str(profile_path),
+                    text=sentence,
+                    language=req.language,
+                    gen_kwargs=gen_kwargs if gen_kwargs else None,
+                )
+                mp3 = encode_pcm_to_mp3(audio_data, sr)
+                sentences_rendered += 1
+                elapsed = time.time() - sentence_start
+                logger.info(
+                    f"[stream {stream_id}] sentence {idx+1}/{len(sentences)} "
+                    f"synth+encode {elapsed:.2f}s bytes={len(mp3)}"
+                )
+                yield mp3
+        except Exception as e:
+            logger.error(f"[stream {stream_id}] failed mid-stream: {e}")
+            # Nothing meaningful we can do after headers are flushed; client will get a truncated file.
+            return
+        finally:
+            total_elapsed = time.time() - total_start
+            logger.info(
+                f"[stream {stream_id}] complete: sentences={sentences_rendered}/{len(sentences)} "
+                f"totalSeconds={total_elapsed:.2f}"
+            )
+
+    return StreamingResponse(
+        generator(),
+        media_type="audio/mpeg",
+        headers={
+            "Cache-Control": "no-store",
+            "X-Stream-Id": stream_id,
+            "X-AI-Generated": "true",
+            "X-Sentence-Count": str(len(sentences)),
+        },
+    )
 
 
 class SynthesizeDirectRequest(BaseModel):

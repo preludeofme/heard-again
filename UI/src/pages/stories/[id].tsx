@@ -10,8 +10,21 @@ import {
   ArrowBack, Favorite, FavoriteBorder,
   Edit, Schedule, Send, Person, Comment as CommentIcon,
 } from '@mui/icons-material'
-import { AudioPlayer } from '@/components/audio/AudioPlayer'
 import { formatDistanceToNow, format } from 'date-fns'
+import { NarrationPreparationBanner } from '@/components/stories/NarrationPreparationBanner'
+import { NarrationReviewPanel } from '@/components/stories/NarrationReviewPanel'
+import { StoryNarrationPlayer } from '@/components/stories/StoryNarrationPlayer'
+import { fetchWithCSRF } from '@/lib/api-client'
+
+type NarrationStatus = 'NONE' | 'PENDING' | 'READY' | 'APPROVED' | 'STALE' | 'FAILED'
+
+interface VoiceProfileRow {
+  id: string
+  name: string
+  status: string
+  personId?: string | null
+  person?: { id: string; firstName: string; lastName?: string | null; nickname?: string | null } | null
+}
 
 interface StoryDetail {
   id: string
@@ -27,6 +40,11 @@ interface StoryDetail {
   speaker?: { id: string; firstName: string; lastName?: string; nickname?: string }
   createdBy: { id: string; displayName?: string; email: string; avatarUrl?: string }
   voiceProfile?: { id: string; name: string }
+  narratedContent?: string | null
+  narrationStatus?: NarrationStatus
+  narrationModel?: string | null
+  narrationUpdatedAt?: string | null
+  narrationApprovedAt?: string | null
   generatedAudio?: { id: string; storagePath: string; durationSeconds?: number; mimeType?: string }
   assets: Array<{
     id: string
@@ -61,6 +79,10 @@ export default function StoryDetailPage() {
   const [isFavorited, setIsFavorited] = useState(false)
   const [commentText, setCommentText] = useState('')
   const [isSubmittingComment, setIsSubmittingComment] = useState(false)
+  const [voiceProfiles, setVoiceProfiles] = useState<VoiceProfileRow[]>([])
+  const [isPreparingNarration, setIsPreparingNarration] = useState(false)
+  const [narrationError, setNarrationError] = useState<string | null>(null)
+  const [savedNarration, setSavedNarration] = useState<{ assetId: string; downloadUrl: string } | null>(null)
 
   const fetchStory = useCallback(async () => {
     if (!id) return
@@ -70,6 +92,12 @@ export default function StoryDetailPage() {
       const data = await res.json()
       if (!res.ok || !data.success) throw new Error(data.error || 'Failed to load story')
       setStory(data.data)
+      if (data.data.generatedAudio) {
+        setSavedNarration({
+          assetId: data.data.generatedAudio.id,
+          downloadUrl: `/api/voice/audio/${data.data.generatedAudio.id}`,
+        })
+      }
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -80,6 +108,98 @@ export default function StoryDetailPage() {
   useEffect(() => {
     fetchStory()
   }, [fetchStory])
+
+  useEffect(() => {
+    let cancelled = false
+    const loadProfiles = async () => {
+      try {
+        const res = await fetch('/api/voice/profiles', { credentials: 'include' })
+        const payload = await res.json()
+        if (!res.ok || !payload.success) return
+        if (cancelled) return
+        const ready = (payload.data as Array<any>).filter((p) => p.status === 'READY')
+        setVoiceProfiles(
+          ready.map((p) => ({
+            id: p.id,
+            name: p.name,
+            status: p.status,
+            personId: p.person?.id ?? null,
+            person: p.person ?? null,
+          }))
+        )
+      } catch {
+        // ignore — player will show empty profile state
+      }
+    }
+    loadProfiles()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const handlePrepareNarration = useCallback(async () => {
+    if (!story) return
+    setIsPreparingNarration(true)
+    setNarrationError(null)
+    try {
+      const res = await fetchWithCSRF(`/api/stories/${story.id}/rewrite-first-person`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+      })
+      const payload = await res.json()
+      if (!res.ok || !payload.success) {
+        throw new Error(payload.error || 'Failed to prepare narration')
+      }
+      setStory((prev) =>
+        prev
+          ? {
+              ...prev,
+              narratedContent: payload.data.narratedContent,
+              narrationStatus: payload.data.narrationStatus,
+              narrationModel: payload.data.narrationModel,
+              narrationUpdatedAt: payload.data.narrationUpdatedAt,
+              narrationApprovedAt: null,
+            }
+          : prev
+      )
+    } catch (err) {
+      setNarrationError(err instanceof Error ? err.message : 'Prepare failed')
+    } finally {
+      setIsPreparingNarration(false)
+    }
+  }, [story])
+
+  const patchNarration = useCallback(
+    async (action: 'update' | 'approve' | 'discard', narratedContent?: string) => {
+      if (!story) return
+      const body: Record<string, unknown> = { action }
+      if (narratedContent !== undefined) body.narratedContent = narratedContent
+      const res = await fetchWithCSRF(`/api/stories/${story.id}/narration`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(body),
+      })
+      const payload = await res.json()
+      if (!res.ok || !payload.success) {
+        throw new Error(payload.error || 'Narration update failed')
+      }
+      setStory((prev) =>
+        prev
+          ? {
+              ...prev,
+              narratedContent: payload.data.narratedContent,
+              narrationStatus: payload.data.narrationStatus,
+              narrationModel: payload.data.narrationModel,
+              narrationUpdatedAt: payload.data.narrationUpdatedAt,
+              narrationApprovedAt: payload.data.narrationApprovedAt,
+            }
+          : prev
+      )
+    },
+    [story]
+  )
 
   const handleToggleFavorite = async () => {
     if (!story) return
@@ -241,24 +361,107 @@ export default function StoryDetailPage() {
               </Box>
             )}
 
-            {/* Generated Audio Player */}
-            {story.generatedAudio && (
-              <Box sx={{ mb: 4 }}>
-                <AudioPlayer
-                  audioUrl={`/api/voice/audio/${story.generatedAudio.id}`}
+            {/* Narration */}
+            <Box sx={{ mb: 4 }}>
+              {(!story.narrationStatus || story.narrationStatus === 'NONE') && (
+                <NarrationPreparationBanner
+                  mode="opt-in"
+                  subjectName={personName(story.subject)}
+                  isWorking={isPreparingNarration}
+                  error={narrationError}
+                  onPrepare={handlePrepareNarration}
+                  onDiscardError={() => setNarrationError(null)}
+                />
+              )}
+
+              {story.narrationStatus === 'STALE' && (
+                <NarrationPreparationBanner
+                  mode="stale"
+                  subjectName={personName(story.subject)}
+                  isWorking={isPreparingNarration}
+                  error={narrationError}
+                  onPrepare={handlePrepareNarration}
+                  onKeep={async () => {
+                    await patchNarration('approve')
+                  }}
+                  onDiscardError={() => setNarrationError(null)}
+                />
+              )}
+
+              {(story.narrationStatus === 'FAILED' ||
+                (story.narrationStatus === 'READY' && !story.narratedContent)) && (
+                <NarrationPreparationBanner
+                  mode="failed"
+                  subjectName={personName(story.subject)}
+                  isWorking={isPreparingNarration}
+                  error={narrationError}
+                  onPrepare={handlePrepareNarration}
+                  onDiscardError={() => setNarrationError(null)}
+                />
+              )}
+
+              {story.narrationStatus === 'PENDING' && (
+                <Box
+                  sx={{
+                    backgroundColor: '#eef3f4',
+                    border: '1px solid #d0e3e6',
+                    borderRadius: 3,
+                    p: 3,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 2,
+                  }}
+                >
+                  <CircularProgress size={20} sx={{ color: '#16334a' }} />
+                  <Typography variant="body2" sx={{ color: '#546669' }}>
+                    Preparing first-person narration — this usually takes a few seconds.
+                  </Typography>
+                </Box>
+              )}
+
+              {story.narrationStatus === 'READY' && story.narratedContent && (
+                <NarrationReviewPanel
+                  subjectName={personName(story.subject)}
+                  originalContent={story.content}
+                  initialNarratedContent={story.narratedContent}
+                  narrationModel={story.narrationModel}
+                  onSaveDraft={async (draft) => {
+                    await patchNarration('update', draft)
+                  }}
+                  onApprove={async (draft) => {
+                    await patchNarration('approve', draft)
+                  }}
+                  onDiscard={async () => {
+                    await patchNarration('discard')
+                  }}
+                  onRepolish={handlePrepareNarration}
+                />
+              )}
+
+              {story.narrationStatus === 'APPROVED' && (
+                <StoryNarrationPlayer
+                  storyId={story.id}
                   title={story.title}
-                  voiceName={story.voiceProfile?.name}
-                  isAiGenerated
-                  showTranscript={false}
-                  onDownload={() => {
-                    const a = document.createElement('a')
-                    a.href = `/api/voice/audio/${story.generatedAudio!.id}`
-                    a.download = `${story.title}.mp3`
-                    a.click()
+                  narrationSource="approved"
+                  voiceProfiles={voiceProfiles.map((vp) => ({
+                    id: vp.id,
+                    name: vp.name,
+                    personId: vp.personId,
+                    personName: vp.person
+                      ? vp.person.nickname ||
+                        `${vp.person.firstName}${vp.person.lastName ? ' ' + vp.person.lastName : ''}`
+                      : null,
+                  }))}
+                  defaultVoiceProfileId={story.voiceProfile?.id}
+                  savedNarration={savedNarration}
+                  canSave
+                  onSaved={(saved) => {
+                    setSavedNarration(saved)
+                    fetchStory()
                   }}
                 />
-              </Box>
-            )}
+              )}
+            </Box>
 
             {/* Story Content */}
             <Typography

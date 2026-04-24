@@ -79,6 +79,11 @@ export default apiHandler({
       speaker: story.speaker,
       createdBy: story.createdBy,
       voiceProfile: story.voiceProfile,
+      narratedContent: story.narratedContent,
+      narrationStatus: story.narrationStatus,
+      narrationModel: story.narrationModel,
+      narrationUpdatedAt: story.narrationUpdatedAt,
+      narrationApprovedAt: story.narrationApprovedAt,
       generatedAudio: story.generatedAudioAsset, // Will be sanitized
       assets: story.assets.map((sa) => ({
         id: sa.id,
@@ -111,9 +116,13 @@ export default apiHandler({
     const {
       title, content, storyType, subjectId, speakerId, excerpt,
       storyDate, storyDatePrecision, location, tags, isPinned, status,
+      regenerateNarration,
     } = req.body
 
     const updateData: any = {}
+    const contentChanged =
+      content !== undefined && content.trim() !== existing.content.trim()
+
     if (title !== undefined) updateData.title = title
     if (content !== undefined) {
       updateData.content = content
@@ -132,6 +141,27 @@ export default apiHandler({
       updateData.status = status
     }
 
+    // Narration staleness: when content changes, an existing narration becomes out-of-date.
+    const hasExistingNarration =
+      !!existing.narratedContent &&
+      existing.narrationStatus !== 'NONE' &&
+      existing.narrationStatus !== 'FAILED'
+
+    if (contentChanged && hasExistingNarration) {
+      if (regenerateNarration === true) {
+        // Caller asked to regenerate; mark PENDING and clear text.
+        // The UI is expected to trigger POST /rewrite-first-person after the PUT succeeds.
+        updateData.narrationStatus = 'PENDING'
+        updateData.narratedContent = null
+        updateData.narrationApprovedAt = null
+        updateData.narrationApprovedById = null
+        updateData.narrationUpdatedAt = new Date()
+      } else {
+        updateData.narrationStatus = 'STALE'
+        updateData.narrationUpdatedAt = new Date()
+      }
+    }
+
     const story = await prisma.story.update({
       where: { id: storyId },
       data: updateData,
@@ -141,6 +171,8 @@ export default apiHandler({
       id: story.id,
       title: story.title,
       status: story.status,
+      narrationStatus: story.narrationStatus,
+      narrationContentChanged: contentChanged && hasExistingNarration,
       updatedAt: story.updatedAt,
     })
   }),

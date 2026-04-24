@@ -37,6 +37,7 @@ model User {
   notifications           Notification[]
   createdPeople           Person[]
   createdStories          Story[]               @relation("StoryCreator")
+  narrationApprovals      Story[]               @relation("StoryNarrationApprover")
   comments                StoryComment[]
   defaultWorkspace        Workspace?            @relation("UserDefaultWorkspace", fields: [defaultWorkspaceId], references: [id])
   favorites               UserStoryFavorite[]
@@ -388,11 +389,18 @@ model Story {
   tags                  String[]
   status                StoryStatus          @default(DRAFT)
   isPinned              Boolean              @default(false)
+  narratedContent       String?
+  narrationStatus       NarrationStatus      @default(NONE)
+  narrationModel        String?
+  narrationUpdatedAt    DateTime?
+  narrationApprovedAt   DateTime?
+  narrationApprovedById String?
   createdAt             DateTime             @default(now())
   updatedAt             DateTime             @updatedAt
   createdById           String
   collections           CollectionStory[]
   createdBy             User                 @relation("StoryCreator", fields: [createdById], references: [id])
+  narrationApprovedBy   User?                @relation("StoryNarrationApprover", fields: [narrationApprovedById], references: [id])
   generatedAudioAsset   Asset?               @relation("StoryGeneratedAudio", fields: [generatedAudioAssetId], references: [id])
   speaker               Person?              @relation("StorySpeaker", fields: [speakerId], references: [id])
   subject               Person?              @relation("StorySubject", fields: [subjectId], references: [id])
@@ -408,6 +416,7 @@ model Story {
   @@index([speakerId])
   @@index([storyDate])
   @@index([status])
+  @@index([narrationStatus])
 }
 
 model StoryComment {
@@ -1063,6 +1072,15 @@ enum StoryStatus {
   REVIEW
   PUBLISHED
   ARCHIVED
+}
+
+enum NarrationStatus {
+  NONE
+  PENDING
+  READY
+  APPROVED
+  STALE
+  FAILED
 }
 
 enum DocumentType {

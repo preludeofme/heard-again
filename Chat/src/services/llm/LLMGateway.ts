@@ -47,7 +47,7 @@ export class LLMGatewayImpl implements LLMGateway {
     const preferredModel = prompt.metadata.model || this.defaultModel
 
     try {
-      const request: GenerationRequest = {
+      const request: GenerationRequest & { stream: boolean } = {
         model: preferredModel,
         prompt: this.buildFullPrompt(prompt),
         options: {
@@ -57,7 +57,8 @@ export class LLMGatewayImpl implements LLMGateway {
           repeatPenalty: prompt.metadata.repeatPenalty,
           numPredict: prompt.metadata.maxTokens
         },
-        system: prompt.systemPrompt
+        system: prompt.systemPrompt,
+        stream: false,
       }
 
       let response: { data: GenerationResponse }

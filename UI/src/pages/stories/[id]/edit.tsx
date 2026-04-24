@@ -5,9 +5,12 @@ import { useEffect, useState, useCallback } from 'react'
 import {
   Box, Typography, TextField, Button, CircularProgress,
   ToggleButton, ToggleButtonGroup, Collapse,
+  Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions,
 } from '@mui/material'
-import { ArrowBack, Save, Delete } from '@mui/icons-material'
+import { ArrowBack, Save, Delete, AutoFixHigh as RegenerateIcon } from '@mui/icons-material'
 import { fetchWithCSRF } from '@/lib/api-client'
+
+type NarrationStatus = 'NONE' | 'PENDING' | 'READY' | 'APPROVED' | 'STALE' | 'FAILED'
 
 const C = {
   primary: '#16334a',
@@ -27,6 +30,8 @@ interface StoryEditData {
   location: string | null
   status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'
   subject?: { id: string; firstName: string; lastName?: string | null } | null
+  narratedContent?: string | null
+  narrationStatus?: NarrationStatus
 }
 
 export default function StoryEditPage() {
@@ -43,10 +48,13 @@ export default function StoryEditPage() {
 
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
+  const [originalContent, setOriginalContent] = useState('')
   const [storyDate, setStoryDate] = useState('')
   const [location, setLocation] = useState('')
   const [status, setStatus] = useState<'DRAFT' | 'PUBLISHED'>('PUBLISHED')
   const [showOptional, setShowOptional] = useState(false)
+  const [narrationPromptOpen, setNarrationPromptOpen] = useState(false)
+  const [regeneratingNarration, setRegeneratingNarration] = useState(false)
 
   const fetchStory = useCallback(async () => {
     if (!storyId) return
@@ -59,6 +67,7 @@ export default function StoryEditPage() {
       setStory(s)
       setTitle(s.title || '')
       setContent(s.content || '')
+      setOriginalContent(s.content || '')
       setStoryDate(s.storyDate ? new Date(s.storyDate).toISOString().split('T')[0] : '')
       setLocation(s.location || '')
       setStatus((s.status === 'DRAFT' ? 'DRAFT' : 'PUBLISHED') as 'DRAFT' | 'PUBLISHED')
@@ -72,11 +81,14 @@ export default function StoryEditPage() {
 
   useEffect(() => { fetchStory() }, [fetchStory])
 
-  const handleSave = async () => {
-    if (!title.trim() || !content.trim()) {
-      setSaveError('Title and story content are required.')
-      return
-    }
+  const contentChanged = content.trim() !== originalContent.trim()
+  const hasExistingNarration =
+    !!story?.narratedContent &&
+    story.narrationStatus !== undefined &&
+    story.narrationStatus !== 'NONE' &&
+    story.narrationStatus !== 'FAILED'
+
+  const performSave = async (regenerateNarration: boolean) => {
     setSaveError(null)
     setIsSaving(true)
     try {
@@ -90,16 +102,45 @@ export default function StoryEditPage() {
           storyDate: storyDate || null,
           location: location.trim() || null,
           status,
+          regenerateNarration,
         }),
       })
       const data = await res.json()
       if (!res.ok || !data.success) throw new Error(data.error || 'Failed to save')
+
+      if (regenerateNarration) {
+        setRegeneratingNarration(true)
+        try {
+          await fetchWithCSRF(`/api/stories/${storyId}/rewrite-first-person`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+          })
+        } catch {
+          // Narration failure won't block navigation — detail page shows the FAILED banner.
+        } finally {
+          setRegeneratingNarration(false)
+        }
+      }
+
       router.push(`/stories/${storyId}`)
     } catch (err: any) {
       setSaveError(err.message)
     } finally {
       setIsSaving(false)
     }
+  }
+
+  const handleSave = async () => {
+    if (!title.trim() || !content.trim()) {
+      setSaveError('Title and story content are required.')
+      return
+    }
+    if (contentChanged && hasExistingNarration) {
+      setNarrationPromptOpen(true)
+      return
+    }
+    await performSave(false)
   }
 
   const handleDelete = async () => {
@@ -324,6 +365,71 @@ export default function StoryEditPage() {
             </Box>
           </Box>
         </Box>
+
+        <Dialog
+          open={narrationPromptOpen}
+          onClose={() => !isSaving && !regeneratingNarration && setNarrationPromptOpen(false)}
+          maxWidth="sm"
+          fullWidth
+        >
+          <DialogTitle sx={{ color: C.primary, fontWeight: 600 }}>
+            {story?.narrationStatus === 'APPROVED'
+              ? 'Update the approved narration?'
+              : 'Update the prepared narration?'}
+          </DialogTitle>
+          <DialogContent>
+            <DialogContentText sx={{ color: C.onSecondaryContainer }}>
+              The story text has changed since the first-person narration was prepared.
+              {story?.narrationStatus === 'APPROVED' &&
+                ' Your approved narration will no longer match the story.'}
+              {' '}Would you like to regenerate the narration now, or keep the existing version (it will be marked out-of-date)?
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
+            <Button
+              onClick={() => setNarrationPromptOpen(false)}
+              disabled={isSaving || regeneratingNarration}
+              sx={{ textTransform: 'none', color: C.onSecondaryContainer }}
+            >
+              Cancel
+            </Button>
+            <Box sx={{ flexGrow: 1 }} />
+            <Button
+              onClick={() => {
+                setNarrationPromptOpen(false)
+                performSave(false)
+              }}
+              disabled={isSaving || regeneratingNarration}
+              variant="outlined"
+              sx={{ textTransform: 'none', color: C.primary, borderColor: C.primary }}
+            >
+              Keep existing
+            </Button>
+            <Button
+              onClick={() => {
+                setNarrationPromptOpen(false)
+                performSave(true)
+              }}
+              disabled={isSaving || regeneratingNarration}
+              variant="contained"
+              startIcon={
+                regeneratingNarration ? (
+                  <CircularProgress size={16} sx={{ color: 'white' }} />
+                ) : (
+                  <RegenerateIcon />
+                )
+              }
+              sx={{
+                textTransform: 'none',
+                fontWeight: 600,
+                backgroundColor: C.primary,
+                '&:hover': { backgroundColor: '#2e4a62' },
+              }}
+            >
+              {regeneratingNarration ? 'Regenerating…' : 'Save & regenerate'}
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Layout>
     </>
   )
