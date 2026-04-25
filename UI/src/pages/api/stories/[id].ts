@@ -25,7 +25,13 @@ export default apiHandler({
           select: { id: true, name: true },
         },
         generatedAudioAsset: {
-          select: { id: true, storagePath: true, durationSeconds: true, mimeType: true },
+          select: {
+            id: true,
+            storagePath: true,
+            durationSeconds: true,
+            mimeType: true,
+            metadata: true,
+          },
         },
         assets: {
           include: {
@@ -63,6 +69,20 @@ export default apiHandler({
 
     if (!story) throw Errors.notFound('Story')
 
+    // Surface voiceProfileId from the asset's JSON metadata so the player can
+    // detect cache hits per (storyId, voiceProfileId) pair.
+    const generatedAudio = story.generatedAudioAsset
+      ? {
+          id: story.generatedAudioAsset.id,
+          storagePath: story.generatedAudioAsset.storagePath,
+          durationSeconds: story.generatedAudioAsset.durationSeconds,
+          mimeType: story.generatedAudioAsset.mimeType,
+          voiceProfileId:
+            (story.generatedAudioAsset.metadata as { voiceProfileId?: string } | null)
+              ?.voiceProfileId ?? null,
+        }
+      : null
+
     // Sanitize response to remove storage path information
     const sanitizedStory = sanitizeStoryResponse({
       id: story.id,
@@ -82,9 +102,10 @@ export default apiHandler({
       narratedContent: story.narratedContent,
       narrationStatus: story.narrationStatus,
       narrationModel: story.narrationModel,
+      narrationRenderJobId: story.narrationRenderJobId,
       narrationUpdatedAt: story.narrationUpdatedAt,
       narrationApprovedAt: story.narrationApprovedAt,
-      generatedAudio: story.generatedAudioAsset, // Will be sanitized
+      generatedAudio, // voiceProfileId surfaced; storagePath stripped by sanitizer
       assets: story.assets.map((sa) => ({
         id: sa.id,
         role: sa.assetRole,

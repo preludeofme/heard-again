@@ -19,39 +19,59 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await requireWorkspaceRole(user.id, user.workspaceId, 'VIEWER')
 
     const { id } = req.query
-    const audioId = id as string
+    const inputId = id as string
 
-    if (!audioId) {
+    if (!inputId) {
       return res.status(400).json({ error: 'Audio ID required' })
     }
 
-    // Verify audio asset belongs to user's workspace
-    // The audioId is the TTS service audio ID, stored in asset metadata
-    const audioAsset = await prisma.asset.findFirst({
+    let audioId = inputId
+
+    // 1. Try to find an asset by ID first (if the caller passed the Prisma Asset ID)
+    let audioAsset = await prisma.asset.findFirst({
       where: {
+        id: inputId,
         workspaceId: user.workspaceId,
         assetType: { in: ['GENERATED_AUDIO', 'AUDIO'] },
-        metadata: {
-          path: ['ttsAudioId'],
-          equals: audioId
-        }
       },
       select: {
         id: true,
-        filename: true,
-        mimeType: true,
-        createdAt: true,
-        storagePath: true
+        metadata: true,
       }
     })
 
-    if (!audioAsset) {
-      // Fallback: check if it's a direct file ID from TTS service that we haven't mapped yet
-      // but only if the user is an EDITOR+ (security safeguard)
-      try {
-        await requireWorkspaceRole(user.id, user.workspaceId, 'EDITOR')
-      } catch (err) {
-        return res.status(404).json({ error: 'Audio not found' })
+    if (audioAsset) {
+      // If we found an asset, the real TTS ID is in the metadata
+      const metadata = audioAsset.metadata as any
+      if (metadata && typeof metadata === 'object' && metadata.ttsAudioId) {
+        audioId = metadata.ttsAudioId
+      }
+    } else {
+      // 2. If no asset found by ID, maybe the caller passed the ttsAudioId directly
+      // Verify this ttsAudioId belongs to an asset in the user's workspace
+      audioAsset = await prisma.asset.findFirst({
+        where: {
+          workspaceId: user.workspaceId,
+          assetType: { in: ['GENERATED_AUDIO', 'AUDIO'] },
+          metadata: {
+            path: ['ttsAudioId'],
+            equals: inputId
+          }
+        },
+        select: {
+          id: true,
+          metadata: true
+        }
+      })
+      
+      if (!audioAsset) {
+        // Fallback: check if it's a direct file ID from TTS service that we haven't mapped yet
+        // but only if the user is an EDITOR+ (security safeguard)
+        try {
+          await requireWorkspaceRole(user.id, user.workspaceId, 'EDITOR')
+        } catch (err) {
+          return res.status(404).json({ error: 'Audio not found' })
+        }
       }
     }
 

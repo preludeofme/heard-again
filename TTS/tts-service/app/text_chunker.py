@@ -1,7 +1,8 @@
-"""Sentence-level chunker for streaming TTS.
+"""Sentence-level chunker for batched TTS rendering.
 
 Splits text into reasonably sized utterance chunks so each can be synthesized
-independently and yielded to the caller as it completes.
+independently. The narration worker concatenates the resulting per-sentence
+clips into a single asset before persisting.
 """
 from __future__ import annotations
 

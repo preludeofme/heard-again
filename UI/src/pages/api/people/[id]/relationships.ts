@@ -91,5 +91,5 @@ export default apiHandler({
       }
       throw Errors.internal('Failed to create relationship')
     }
-  },
+  }),
 })

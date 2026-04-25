@@ -1,14 +1,48 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { Readable } from 'stream'
 import { prisma } from '@/lib/prisma'
 import { getAuthUserWithWorkspace } from '@/lib/auth-helpers'
-import { TTS_SERVICE_URL } from '@/lib/tts-client'
 import { logger } from '@/lib/logger'
+import { enqueueNarrationRender } from '@/lib/queues/narrationQueue'
 
-export const config = {
-  api: {
-    responseLimit: false,
-  },
+interface CachedNarrationResponse {
+  success: true
+  status: 'ready'
+  assetId: string
+  assetDownloadUrl: string
+  voiceProfileId: string
+}
+
+interface QueuedNarrationResponse {
+  success: true
+  status: 'queued'
+  narrationJobId: string
+  queueJobId: string
+  voiceProfileId: string
+}
+
+function wantsJson(req: NextApiRequest): boolean {
+  const accept = (req.headers.accept || '').toLowerCase()
+  return accept.includes('application/json')
+}
+
+async function findCachedAsset(
+  workspaceId: string,
+  storyId: string,
+  voiceProfileId: string
+): Promise<{ id: string } | null> {
+  return prisma.asset.findFirst({
+    where: {
+      workspaceId,
+      assetType: 'GENERATED_AUDIO',
+      processingStatus: 'COMPLETED',
+      AND: [
+        { metadata: { path: ['storyId'], equals: storyId } },
+        { metadata: { path: ['voiceProfileId'], equals: voiceProfileId } },
+      ],
+    },
+    select: { id: true },
+    orderBy: { createdAt: 'desc' },
+  })
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -21,12 +55,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(503).json({ success: false, error: 'Audio generation is not yet available' })
   }
 
-  const serviceToken = process.env.TTS_SERVICE_TOKEN
-  if (!serviceToken) {
-    logger.error('[narrate] TTS_SERVICE_TOKEN not configured')
-    return res.status(503).json({ success: false, error: 'TTS service is not configured' })
-  }
-
   let user
   try {
     user = await getAuthUserWithWorkspace(req, res)
@@ -36,7 +64,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const storyId = req.query.id as string
   const voiceProfileIdParam = req.query.voiceProfileId as string | undefined
-  const languageParam = (req.query.language as string | undefined) || 'English'
 
   const story = await prisma.story.findFirst({
     where: { id: storyId, workspaceId: user.workspaceId },
@@ -53,16 +80,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(404).json({ success: false, error: 'Story not found' })
   }
 
-  // Pick narration source text: approved narration > original content.
-  const text =
-    story.narrationStatus === 'APPROVED' && story.narratedContent
-      ? story.narratedContent
-      : story.content
-  if (!text || text.trim().length === 0) {
-    return res.status(400).json({ success: false, error: 'Story has no text to narrate' })
-  }
-
-  // Resolve voice profile.
   let profileId = voiceProfileIdParam || story.voiceProfileId || null
   if (!profileId && story.subjectId) {
     const defaultProfile = await prisma.voiceProfile.findFirst({
@@ -82,17 +99,38 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .json({ success: false, error: 'No voice profile specified or available for this story' })
   }
 
+  const text =
+    story.narrationStatus === 'APPROVED' && story.narratedContent
+      ? story.narratedContent
+      : story.content
+  if (!text || text.trim().length === 0) {
+    return res.status(400).json({ success: false, error: 'Story has no text to narrate' })
+  }
+
+  const cachedAsset = await findCachedAsset(user.workspaceId, storyId, profileId)
+  if (cachedAsset) {
+    res.setHeader('X-Narration-Source', 'cache')
+    if (wantsJson(req)) {
+      const payload: CachedNarrationResponse = {
+        success: true,
+        status: 'ready',
+        assetId: cachedAsset.id,
+        assetDownloadUrl: `/api/assets/${cachedAsset.id}/download`,
+        voiceProfileId: profileId,
+      }
+      return res.status(200).json(payload)
+    }
+    return res.redirect(302, `/api/assets/${cachedAsset.id}/download`)
+  }
+
   const profile = await prisma.voiceProfile.findFirst({
     where: { id: profileId, workspaceId: user.workspaceId, status: 'READY' },
     select: { id: true, name: true, personId: true },
   })
   if (!profile) {
-    return res
-      .status(404)
-      .json({ success: false, error: 'Voice profile not found or not ready' })
+    return res.status(404).json({ success: false, error: 'Voice profile not found or not ready' })
   }
 
-  // Voice consent check.
   if (profile.personId) {
     const consent = await prisma.voiceConsent.findFirst({
       where: {
@@ -111,120 +149,41 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   }
 
-  // Audit row — no outputAssetId since we stream.
-  const job = await prisma.voiceGenerationJob.create({
-    data: {
-      voiceProfileId: profile.id,
-      storyId,
-      text: text.substring(0, 10000),
-      status: 'PROCESSING',
-      startedAt: new Date(),
-      styleOverride: { language: languageParam, streamed: true },
-    },
-    select: { id: true },
-  })
-
-  const startedAt = Date.now()
-  let upstreamResponse: Response
   try {
-    upstreamResponse = await fetch(`${TTS_SERVICE_URL}/api/tts/synthesize-stream`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${serviceToken}`,
-        'X-Workspace-Id': user.workspaceId,
-      },
-      body: JSON.stringify({
-        profileId: profile.name,
-        text,
-        language: languageParam,
-        workspaceId: user.workspaceId,
-      }),
-    })
-  } catch (error) {
-    logger.error('[narrate] TTS fetch failed', { storyId, error })
-    await prisma.voiceGenerationJob.update({
-      where: { id: job.id },
+    const voiceGenerationJob = await prisma.voiceGenerationJob.create({
       data: {
-        status: 'FAILED',
-        completedAt: new Date(),
-        errorMessage: error instanceof Error ? error.message : 'TTS unreachable',
+        voiceProfileId: profile.id,
+        storyId,
+        text: text.substring(0, 10000),
+        status: 'QUEUED',
+        styleOverride: { requestedLanguage: 'English', source: 'narrate.enqueue' },
       },
+      select: { id: true },
     })
-    return res.status(502).json({ success: false, error: 'TTS service unreachable' })
-  }
 
-  if (!upstreamResponse.ok || !upstreamResponse.body) {
-    const errText = await upstreamResponse.text().catch(() => '')
-    logger.error('[narrate] TTS returned error', {
+    const queueJobId = await enqueueNarrationRender({
       storyId,
-      status: upstreamResponse.status,
-      body: errText.slice(0, 500),
+      workspaceId: user.workspaceId,
+      voiceProfileId: profile.id,
+      userId: user.id,
+      voiceGenerationJobId: voiceGenerationJob.id,
     })
-    await prisma.voiceGenerationJob.update({
-      where: { id: job.id },
-      data: {
-        status: 'FAILED',
-        completedAt: new Date(),
-        errorMessage: `TTS ${upstreamResponse.status}: ${errText.slice(0, 500)}`,
-      },
+
+    await prisma.story.update({
+      where: { id: storyId },
+      data: { narrationRenderJobId: voiceGenerationJob.id },
     })
-    return res
-      .status(502)
-      .json({ success: false, error: 'TTS synthesis failed' })
+
+    const payload: QueuedNarrationResponse = {
+      success: true,
+      status: 'queued',
+      narrationJobId: voiceGenerationJob.id,
+      queueJobId,
+      voiceProfileId: profile.id,
+    }
+    return res.status(202).json(payload)
+  } catch (error) {
+    logger.error('[narrate] failed to enqueue render', { storyId, error })
+    return res.status(503).json({ success: false, error: 'Failed to queue narration render' })
   }
-
-  res.setHeader('Content-Type', 'audio/mpeg')
-  res.setHeader('Cache-Control', 'no-store')
-  res.setHeader('X-AI-Generated', 'true')
-  res.setHeader('X-Narration-Source', story.narrationStatus === 'APPROVED' ? 'approved' : 'original')
-  res.setHeader('X-Voice-Profile-Id', profile.id)
-  res.setHeader('X-Narration-Job-Id', job.id)
-
-  const nodeStream = Readable.fromWeb(upstreamResponse.body as any)
-
-  let bytesStreamed = 0
-  nodeStream.on('data', (chunk: Buffer) => {
-    bytesStreamed += chunk.length
-  })
-
-  nodeStream.on('error', async (error) => {
-    logger.error('[narrate] stream error', { storyId, jobId: job.id, error })
-    try {
-      await prisma.voiceGenerationJob.update({
-        where: { id: job.id },
-        data: {
-          status: 'FAILED',
-          completedAt: new Date(),
-          errorMessage: error instanceof Error ? error.message : 'stream error',
-        },
-      })
-    } catch {
-      /* noop */
-    }
-  })
-
-  nodeStream.on('end', async () => {
-    const elapsedSec = (Date.now() - startedAt) / 1000
-    try {
-      await prisma.voiceGenerationJob.update({
-        where: { id: job.id },
-        data: {
-          status: 'COMPLETED',
-          completedAt: new Date(),
-          computeTimeSeconds: elapsedSec,
-          styleOverride: {
-            language: languageParam,
-            streamed: true,
-            bytesStreamed,
-            source: story.narrationStatus === 'APPROVED' ? 'approved' : 'original',
-          },
-        },
-      })
-    } catch (error) {
-      logger.error('[narrate] failed to mark job completed', { jobId: job.id, error })
-    }
-  })
-
-  nodeStream.pipe(res)
 }

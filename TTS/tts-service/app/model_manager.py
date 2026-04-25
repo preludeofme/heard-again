@@ -1,10 +1,12 @@
+import os
 import torch
 import soundfile as sf
 import numpy as np
 import logging
 import time
+import threading
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Callable, List, Optional, Tuple
 
 from app.config import (
     MODEL_NAME,
@@ -42,19 +44,43 @@ class TTSModelManager:
         self.device = DEVICE
         self.dtype = DTYPE_MAP.get(DTYPE, torch.bfloat16)
         self.attn_impl = "sdpa"
+        
+        # Concurrency lock to prevent GPU OOM and contention
+        self._lock = threading.Lock()
+        
+        # Cache for loaded voice profiles
+        self._profile_cache = {}
+        self._cache_lock = threading.Lock()
+
+        # Tracks whether we've paid the first-request kernel compile cost
+        self._warmed_up = False
 
     @property
     def is_loaded(self) -> bool:
         return self.base_loaded
 
     def _detect_attn(self):
+        require_fa = os.getenv("REQUIRE_FLASH_ATTN", "false").lower() in ("1", "true", "yes")
         try:
             import flash_attn  # noqa: F401
             self.attn_impl = "flash_attention_2"
-            logger.info("Using FlashAttention 2")
+            logger.info("=" * 60)
+            logger.info("Attention backend: FlashAttention 2 (optimal)")
+            logger.info("=" * 60)
         except ImportError:
             self.attn_impl = "sdpa"
-            logger.info("FlashAttention not available, using SDPA")
+            if require_fa:
+                logger.error("REQUIRE_FLASH_ATTN=true but flash_attn is not importable.")
+                raise RuntimeError(
+                    "FlashAttention 2 required (REQUIRE_FLASH_ATTN=true) but not available. "
+                    "Install with: pip install flash-attn --no-build-isolation"
+                )
+            logger.warning("=" * 60)
+            logger.warning("Attention backend: SDPA (fallback — slower)")
+            logger.warning("Install flash-attn for ~1.5-2x faster synthesis:")
+            logger.warning("  pip install flash-attn --no-build-isolation")
+            logger.warning("Or set REQUIRE_FLASH_ATTN=true to fail fast instead.")
+            logger.warning("=" * 60)
 
     # ------------------------------------------------------------------
     # Model loading
@@ -62,19 +88,21 @@ class TTSModelManager:
 
     def load_model(self):
         """Load the Base (voice-clone) model."""
-        if self.base_loaded:
-            logger.info("Base model already loaded, skipping.")
-            return
-        self._detect_attn()
-        self._load_one("base")
+        with self._lock:
+            if self.base_loaded:
+                logger.info("Base model already loaded, skipping.")
+                return
+            self._detect_attn()
+            self._load_one("base")
 
     def load_design_model(self):
         """Load the VoiceDesign model."""
-        if self.design_loaded:
-            logger.info("Design model already loaded, skipping.")
-            return
-        self._detect_attn()
-        self._load_one("design")
+        with self._lock:
+            if self.design_loaded:
+                logger.info("Design model already loaded, skipping.")
+                return
+            self._detect_attn()
+            self._load_one("design")
 
     def _load_one(self, which: str):
         from qwen_tts import Qwen3TTSModel
@@ -164,18 +192,19 @@ class TTSModelManager:
 
         Returns (audio_array, sample_rate).
         """
-        if not self.design_loaded:
-            raise RuntimeError("VoiceDesign model is not loaded")
+        with self._lock:
+            if not self.design_loaded:
+                raise RuntimeError("VoiceDesign model is not loaded")
 
-        logger.info(f"Designing voice — instruct: '{instruct[:80]}…'")
+            logger.info(f"Designing voice — instruct: '{instruct[:80]}…'")
 
-        wavs, sr = self.design_model.generate_voice_design(
-            text=text,
-            language=language,
-            instruct=instruct,
-        )
+            wavs, sr = self.design_model.generate_voice_design(
+                text=text,
+                language=language,
+                instruct=instruct,
+            )
 
-        return wavs[0], sr
+            return wavs[0], sr
 
     def design_and_clone_profile(
         self,
@@ -193,45 +222,49 @@ class TTSModelManager:
 
         Returns (profile_path, designed_audio_path).
         """
-        if not self.design_loaded:
-            raise RuntimeError("VoiceDesign model is not loaded")
-        if not self.base_loaded:
-            raise RuntimeError("Base model is not loaded")
+        with self._lock:
+            if not self.design_loaded:
+                raise RuntimeError("VoiceDesign model is not loaded")
+            if not self.base_loaded:
+                raise RuntimeError("Base model is not loaded")
 
-        # Step 1: Generate the designed reference clip
-        logger.info(f"[design→clone] Designing voice for '{profile_name}': {instruct[:80]}…")
-        designed_wav, sr = self.design_voice(
-            text=ref_text,
-            instruct=instruct,
-            language=language,
-        )
+            # Step 1: Generate the designed reference clip
+            logger.info(f"[design→clone] Designing voice for '{profile_name}': {instruct[:80]}…")
+            
+            # Use model directly since we already hold the lock
+            wavs, sr = self.design_model.generate_voice_design(
+                text=ref_text,
+                language=language,
+                instruct=instruct,
+            )
+            designed_wav, sr = wavs[0], sr
 
-        # Save the designed reference audio for records
-        import uuid
-        design_id = str(uuid.uuid4())
-        design_path = GENERATED_AUDIO_DIR / f"design_{design_id}.wav"
-        sf.write(str(design_path), designed_wav, sr)
-        logger.info(f"[design→clone] Designed reference saved: {design_path}")
+            # Save the designed reference audio for records
+            import uuid
+            design_id = str(uuid.uuid4())
+            design_path = GENERATED_AUDIO_DIR / f"design_{design_id}.wav"
+            sf.write(str(design_path), designed_wav, sr)
+            logger.info(f"[design→clone] Designed reference saved: {design_path}")
 
-        # Step 2: Build a clone prompt from the designed audio
-        logger.info(f"[design→clone] Building clone prompt from designed audio…")
-        voice_clone_prompt = self.base_model.create_voice_clone_prompt(
-            ref_audio=(designed_wav, sr),
-            ref_text=ref_text,
-        )
+            # Step 2: Build a clone prompt from the designed audio
+            logger.info(f"[design→clone] Building clone prompt from designed audio…")
+            voice_clone_prompt = self.base_model.create_voice_clone_prompt(
+                ref_audio=(designed_wav, sr),
+                ref_text=ref_text,
+            )
 
-        # Step 3: Save as reusable profile
-        profile_path = VOICE_PROFILES_DIR / f"{profile_name}.pt"
-        torch.save({
-            "items": voice_clone_prompt,
-            "name": profile_name,
-            "instruct": instruct,
-            "ref_text": ref_text,
-            "designed_from": str(design_path),
-        }, profile_path)
+            # Step 3: Save as reusable profile
+            profile_path = VOICE_PROFILES_DIR / f"{profile_name}.pt"
+            torch.save({
+                "items": voice_clone_prompt,
+                "name": profile_name,
+                "instruct": instruct,
+                "ref_text": ref_text,
+                "designed_from": str(design_path),
+            }, profile_path)
 
-        logger.info(f"[design→clone] Profile saved: {profile_path}")
-        return profile_path, str(design_path)
+            logger.info(f"[design→clone] Profile saved: {profile_path}")
+            return profile_path, str(design_path)
 
     # ------------------------------------------------------------------
     # Blended Voice Profile (real identity + designed style)
@@ -249,91 +282,76 @@ class TTSModelManager:
         """
         Create a voice profile that blends a real person's timbre with a
         designed voice's emotion/cadence/style.
-
-        1. Extracts speaker identity (x_vector) from real family member audio.
-        2. Uses VoiceDesign model to generate a styled reference clip.
-        3. Extracts prosodic context (ref_code) from the designed clip.
-        4. Builds a blended VoiceClonePromptItem: real identity + designed style.
-        5. Saves as a reusable .pt profile.
-
-        Args:
-            ref_audio_path: Path to the real person's audio recording.
-            ref_text: Transcript of the real audio.
-            instruct: Natural language description of desired style/emotion/cadence.
-            style_ref_text: Text for the VoiceDesign model to speak (provides
-                            prosodic context; a natural sentence works best).
-            profile_name: Name for the saved profile.
-            language: Target language.
-
-        Returns (profile_path, design_audio_path).
         """
-        if not self.base_loaded:
-            raise RuntimeError("Base model is not loaded")
-        if not self.design_loaded:
-            raise RuntimeError("VoiceDesign model is not loaded")
+        with self._lock:
+            if not self.base_loaded:
+                raise RuntimeError("Base model is not loaded")
+            if not self.design_loaded:
+                raise RuntimeError("VoiceDesign model is not loaded")
 
-        from qwen_tts.inference.qwen3_tts_model import VoiceClonePromptItem
+            from qwen_tts.inference.qwen3_tts_model import VoiceClonePromptItem
 
-        # Step 1: Extract speaker identity from real audio
-        logger.info(f"[blend] Extracting speaker identity from {ref_audio_path}")
-        identity_prompt = self.base_model.create_voice_clone_prompt(
-            ref_audio=ref_audio_path,
-            ref_text=ref_text,
-            x_vector_only_mode=True,
-        )
-        real_spk_embedding = identity_prompt[0].ref_spk_embedding
-        logger.info(f"[blend] Speaker embedding shape: {real_spk_embedding.shape}")
+            # Step 1: Extract speaker identity from real audio
+            logger.info(f"[blend] Extracting speaker identity from {ref_audio_path}")
+            identity_prompt = self.base_model.create_voice_clone_prompt(
+                ref_audio=ref_audio_path,
+                ref_text=ref_text,
+                x_vector_only_mode=True,
+            )
+            real_spk_embedding = identity_prompt[0].ref_spk_embedding
+            logger.info(f"[blend] Speaker embedding shape: {real_spk_embedding.shape}")
 
-        # Step 2: Generate styled reference clip via VoiceDesign
-        logger.info(f"[blend] Designing style: '{instruct[:80]}…'")
-        designed_wav, sr = self.design_voice(
-            text=style_ref_text,
-            instruct=instruct,
-            language=language,
-        )
+            # Step 2: Generate styled reference clip via VoiceDesign
+            logger.info(f"[blend] Designing style: '{instruct[:80]}…'")
+            wavs, sr = self.design_model.generate_voice_design(
+                text=style_ref_text,
+                language=language,
+                instruct=instruct,
+            )
+            designed_wav, sr = wavs[0], sr
 
-        # Save the designed clip for reference
-        import uuid
-        design_id = str(uuid.uuid4())
-        design_path = GENERATED_AUDIO_DIR / f"design_{design_id}.wav"
-        sf.write(str(design_path), designed_wav, sr)
-        logger.info(f"[blend] Designed style clip saved: {design_path}")
+            # Save the designed clip for reference
+            import uuid
+            design_id = str(uuid.uuid4())
+            design_path = GENERATED_AUDIO_DIR / f"design_{design_id}.wav"
+            sf.write(str(design_path), designed_wav, sr)
+            logger.info(f"[blend] Designed style clip saved: {design_path}")
 
-        # Step 3: Extract prosodic context (ref_code) from designed clip
-        logger.info(f"[blend] Extracting style context from designed clip…")
-        style_prompt = self.base_model.create_voice_clone_prompt(
-            ref_audio=(designed_wav, sr),
-            ref_text=style_ref_text,
-            x_vector_only_mode=False,
-        )
-        designed_ref_code = style_prompt[0].ref_code
-        logger.info(f"[blend] Style ref_code shape: {designed_ref_code.shape}")
+            # Step 3: Extract prosodic context (ref_code) from designed clip
+            logger.info(f"[blend] Extracting style context from designed clip…")
+            style_prompt = self.base_model.create_voice_clone_prompt(
+                ref_audio=(designed_wav, sr),
+                ref_text=style_ref_text,
+                x_vector_only_mode=False,
+            )
+            designed_ref_code = style_prompt[0].ref_code
+            logger.info(f"[blend] Style ref_code shape: {designed_ref_code.shape}")
 
-        # Step 4: Build blended prompt — real identity + designed style
-        logger.info(f"[blend] Fusing real identity with designed style…")
-        blended_item = VoiceClonePromptItem(
-            ref_code=designed_ref_code,
-            ref_spk_embedding=real_spk_embedding,
-            x_vector_only_mode=False,
-            icl_mode=True,
-            ref_text=style_ref_text,
-        )
-        blended_prompt = [blended_item]
+            # Step 4: Build blended prompt — real identity + designed style
+            logger.info(f"[blend] Fusing real identity with designed style…")
+            blended_item = VoiceClonePromptItem(
+                ref_code=designed_ref_code,
+                ref_spk_embedding=real_spk_embedding,
+                x_vector_only_mode=False,
+                icl_mode=True,
+                ref_text=style_ref_text,
+            )
+            blended_prompt = [blended_item]
 
-        # Step 5: Save profile
-        profile_path = VOICE_PROFILES_DIR / f"{profile_name}.pt"
-        torch.save({
-            "items": blended_prompt,
-            "name": profile_name,
-            "instruct": instruct,
-            "ref_text": ref_text,
-            "style_ref_text": style_ref_text,
-            "blend_mode": True,
-            "designed_from": str(design_path),
-        }, profile_path)
+            # Step 5: Save profile
+            profile_path = VOICE_PROFILES_DIR / f"{profile_name}.pt"
+            torch.save({
+                "items": blended_prompt,
+                "name": profile_name,
+                "instruct": instruct,
+                "ref_text": ref_text,
+                "style_ref_text": style_ref_text,
+                "blend_mode": True,
+                "designed_from": str(design_path),
+            }, profile_path)
 
-        logger.info(f"[blend] Blended profile saved: {profile_path}")
-        return profile_path, str(design_path)
+            logger.info(f"[blend] Blended profile saved: {profile_path}")
+            return profile_path, str(design_path)
 
     # ------------------------------------------------------------------
     # Speech synthesis
@@ -346,33 +364,135 @@ class TTSModelManager:
         language: str = "English",
         gen_kwargs: Optional[dict] = None,
     ) -> Tuple[np.ndarray, int]:
-        """Generate speech using a saved voice profile (.pt file).
-
-        Args:
-            gen_kwargs: Optional generation parameters (temperature, top_p,
-                        top_k, repetition_penalty) for style control.
-        """
+        """Generate speech using a saved voice profile (.pt file)."""
         if not self.base_loaded:
             raise RuntimeError("Base model is not loaded")
 
         logger.info(f"Synthesizing with profile {profile_path}: '{text[:60]}…'")
-        if gen_kwargs:
-            logger.info(f"Style params: {gen_kwargs}")
+        
+        # Get from cache or load (outside the main GPU lock)
+        with self._cache_lock:
+            if profile_path in self._profile_cache:
+                voice_clone_prompt = self._profile_cache[profile_path]
+            else:
+                voice_data = torch.load(profile_path, map_location=self.device, weights_only=False)
+                voice_clone_prompt = voice_data["items"]
+                # Keep cache small (e.g. 5 profiles)
+                if len(self._profile_cache) >= 5:
+                    self._profile_cache.pop(next(iter(self._profile_cache)))
+                self._profile_cache[profile_path] = voice_clone_prompt
 
-        voice_data = torch.load(profile_path, map_location=self.device, weights_only=False)
-        voice_clone_prompt = voice_data["items"]
+        with self._lock:
+            if gen_kwargs:
+                logger.info(f"Style params: {gen_kwargs}")
 
-        call_kwargs: dict = {
-            "text": text,
-            "language": language,
-            "voice_clone_prompt": voice_clone_prompt,
-        }
-        if gen_kwargs:
-            call_kwargs.update(gen_kwargs)
+            call_kwargs: dict = {
+                "text": text,
+                "language": language,
+                "voice_clone_prompt": voice_clone_prompt,
+            }
+            if gen_kwargs:
+                call_kwargs.update(gen_kwargs)
 
-        wavs, sr = self.base_model.generate_voice_clone(**call_kwargs)
+            wavs, sr = self.base_model.generate_voice_clone(**call_kwargs)
 
-        return wavs[0], sr
+            return wavs[0], sr
+
+    def synthesize_batch_from_profile(
+        self,
+        profile_path: str,
+        sentences: List[str],
+        language: str = "English",
+        gen_kwargs: Optional[dict] = None,
+        progress_cb: Optional[Callable[[int, int, float], None]] = None,
+    ) -> Tuple[List[np.ndarray], int]:
+        """Synthesize a list of sentences with one profile, holding the GPU lock for the whole batch.
+
+        Avoids per-sentence lock/unlock thrash. Calls `progress_cb(done, total, sentence_seconds)`
+        after each sentence if provided.
+
+        Returns (list_of_audio_arrays, sample_rate).
+        """
+        if not self.base_loaded:
+            raise RuntimeError("Base model is not loaded")
+
+        if not sentences:
+            return ([], 24000)
+
+        logger.info(
+            f"Batch synth: profile={profile_path} sentences={len(sentences)} "
+            f"total_chars={sum(len(s) for s in sentences)}"
+        )
+
+        with self._cache_lock:
+            if profile_path in self._profile_cache:
+                voice_clone_prompt = self._profile_cache[profile_path]
+            else:
+                voice_data = torch.load(profile_path, map_location=self.device, weights_only=False)
+                voice_clone_prompt = voice_data["items"]
+                if len(self._profile_cache) >= 5:
+                    self._profile_cache.pop(next(iter(self._profile_cache)))
+                self._profile_cache[profile_path] = voice_clone_prompt
+
+        audio_arrays: List[np.ndarray] = []
+        sample_rate = 24000
+
+        with self._lock:
+            for idx, sentence in enumerate(sentences):
+                s_start = time.time()
+                call_kwargs: dict = {
+                    "text": sentence,
+                    "language": language,
+                    "voice_clone_prompt": voice_clone_prompt,
+                }
+                if gen_kwargs:
+                    call_kwargs.update(gen_kwargs)
+
+                wavs, sr = self.base_model.generate_voice_clone(**call_kwargs)
+                audio_arrays.append(wavs[0])
+                sample_rate = sr
+
+                elapsed = time.time() - s_start
+                logger.info(
+                    f"  [{idx + 1}/{len(sentences)}] chars={len(sentence)} "
+                    f"audio={len(wavs[0]) / sr:.1f}s synth={elapsed:.1f}s"
+                )
+                if progress_cb is not None:
+                    try:
+                        progress_cb(idx + 1, len(sentences), elapsed)
+                    except Exception as e:
+                        logger.warning(f"progress_cb raised (non-fatal): {e}")
+
+        return audio_arrays, sample_rate
+
+    def warmup(self, profile_path: Optional[str] = None) -> bool:
+        """Run a single throwaway synth to pay CUDA kernel compile cost once.
+
+        If a profile_path is given, warms via that profile. Otherwise no-op
+        (base model needs a voice prompt to generate).
+
+        Idempotent — safe to call repeatedly; only runs the first time.
+        """
+        if getattr(self, "_warmed_up", False):
+            return True
+        if not self.base_loaded:
+            return False
+        if not profile_path or not Path(profile_path).exists():
+            return False
+        try:
+            logger.info(f"Warming CUDA kernels via profile {profile_path}…")
+            start = time.time()
+            self.synthesize_from_profile(
+                profile_path=profile_path,
+                text="Hello there.",
+                language="English",
+            )
+            logger.info(f"Warmup complete in {time.time() - start:.1f}s")
+            self._warmed_up = True
+            return True
+        except Exception as e:
+            logger.warning(f"Warmup synth failed (non-fatal): {e}")
+            return False
 
     def synthesize_from_reference(
         self,
@@ -383,23 +503,24 @@ class TTSModelManager:
         gen_kwargs: Optional[dict] = None,
     ) -> Tuple[np.ndarray, int]:
         """Generate speech directly from reference audio (no saved profile)."""
-        if not self.base_loaded:
-            raise RuntimeError("Base model is not loaded")
+        with self._lock:
+            if not self.base_loaded:
+                raise RuntimeError("Base model is not loaded")
 
-        logger.info(f"Synthesizing from reference {ref_audio_path}: '{text[:60]}…'")
+            logger.info(f"Synthesizing from reference {ref_audio_path}: '{text[:60]}…'")
 
-        kwargs: dict = {
-            "text": text,
-            "language": language,
-            "ref_audio": ref_audio_path,
-        }
-        if ref_text:
-            kwargs["ref_text"] = ref_text
-        if gen_kwargs:
-            kwargs.update(gen_kwargs)
+            kwargs: dict = {
+                "text": text,
+                "language": language,
+                "ref_audio": ref_audio_path,
+            }
+            if ref_text:
+                kwargs["ref_text"] = ref_text
+            if gen_kwargs:
+                kwargs.update(gen_kwargs)
 
-        wavs, sr = self.base_model.generate_voice_clone(**kwargs)
-        return wavs[0], sr
+            wavs, sr = self.base_model.generate_voice_clone(**kwargs)
+            return wavs[0], sr
 
     # ------------------------------------------------------------------
     # Utility

@@ -29,6 +29,10 @@ module.exports = {
     '^.+\\.(js|jsx|ts|tsx)$': ['babel-jest', { presets: ['next/babel'] }],
   },
   
+  transformIgnorePatterns: [
+    '/node_modules/(?!(bullmq|msgpackr)/)',
+  ],
+  
   // Module file extensions
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
   
@@ -37,7 +41,6 @@ module.exports = {
     '<rootDir>/.next/',
     '<rootDir>/node_modules/',
     '<rootDir>/TTS/',
-    '<rootDir>/src/pages/api/',
     '<rootDir>/src/__tests__/setup/',
   ],
 }

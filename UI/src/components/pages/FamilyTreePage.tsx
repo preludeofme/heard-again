@@ -1025,6 +1025,14 @@ export function FamilyTreePage({
 
         {/* Family Tree Visualization */}
         <Box
+          onMouseDown={handleCanvasMouseDown}
+          onMouseMove={handleCanvasMouseMove}
+          onMouseUp={handleCanvasMouseUp}
+          onMouseLeave={handleCanvasMouseUp}
+          onTouchStart={handleCanvasTouchStart}
+          onTouchMove={handleCanvasTouchMove}
+          onTouchEnd={handleCanvasTouchEnd}
+          onTouchCancel={handleCanvasTouchEnd}
           sx={{
             position: 'relative',
             minHeight: isFullscreen ? 'calc(100vh - 140px)' : 700,

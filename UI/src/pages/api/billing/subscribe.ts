@@ -100,5 +100,5 @@ export default apiHandler({
       checkoutUrl: null, // In production, this would be the Stripe checkout URL
       message: 'Subscription created successfully. Stripe integration pending for production.',
     }, 201)
-  },
+  }),
 })

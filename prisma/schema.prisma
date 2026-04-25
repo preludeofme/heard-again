@@ -395,6 +395,7 @@ model Story {
   narrationUpdatedAt    DateTime?
   narrationApprovedAt   DateTime?
   narrationApprovedById String?
+  narrationRenderJobId  String?
   createdAt             DateTime             @default(now())
   updatedAt             DateTime             @updatedAt
   createdById           String

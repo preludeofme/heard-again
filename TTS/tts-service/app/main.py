@@ -1,10 +1,14 @@
 import json
 import logging
 import os
+import shutil
+import subprocess
 import time
 import uuid
+import asyncio
 from pathlib import Path
 from typing import Optional, Annotated
+from anyio import to_thread
 
 import numpy as np
 import soundfile as sf
@@ -27,7 +31,6 @@ from app.style_presets import resolve_style_params, list_presets
 from app.auth import validate_token, require_workspace_role, validate_tenant_access, log_auth_event
 from app.rate_limiter import RateLimitMiddleware
 from app.text_chunker import chunk_text
-from app.audio_encoder import encode_pcm_to_mp3, check_ffmpeg_available
 from app.validators import (
     ValidatedCreateProfileRequest,
     ValidatedSynthesizeRequest,
@@ -50,6 +53,30 @@ VOICE_DESIGN_MODEL_NOT_LOADED_ERROR = "VoiceDesign model not loaded"
 BASE_MODEL_NOT_LOADED_ERROR = "Base model not loaded"
 REFERENCE_AUDIO_NOT_FOUND_ERROR = "Reference audio not found"
 JSON_EXTENSION = ".json"
+
+# Narration MP3 encoding settings — speech-tuned, ~12× smaller than 24kHz float WAV.
+NARRATION_MP3_BITRATE = os.getenv("NARRATION_MP3_BITRATE", "64k")
+NARRATION_MP3_SAMPLE_RATE = os.getenv("NARRATION_MP3_SAMPLE_RATE", "24000")
+_FFMPEG_BIN = shutil.which("ffmpeg")
+
+
+def _encode_wav_to_mp3(wav_path: Path, mp3_path: Path) -> None:
+    """Transcode a WAV file to mono MP3 (libmp3lame). Raises on failure."""
+    if not _FFMPEG_BIN:
+        raise RuntimeError("ffmpeg binary not found on PATH; cannot encode MP3")
+
+    cmd = [
+        _FFMPEG_BIN,
+        "-y",
+        "-loglevel", "error",
+        "-i", str(wav_path),
+        "-ac", "1",
+        "-ar", NARRATION_MP3_SAMPLE_RATE,
+        "-codec:a", "libmp3lame",
+        "-b:a", NARRATION_MP3_BITRATE,
+        str(mp3_path),
+    ]
+    subprocess.run(cmd, check=True, timeout=120, capture_output=True)
 
 app = FastAPI(
     title="Heard Again — Qwen3-TTS Service",
@@ -145,6 +172,37 @@ async def startup():
     except Exception as e:
         logger.error(f"Design model failed to load on startup: {e}")
         logger.info("Voice design will be unavailable — use /api/tts/load-design-model to retry.")
+
+    # Pay the CUDA kernel compile cost up front by warming through any existing
+    # voice profile. Without this, the first user-facing render is ~30s slower.
+    if model_manager.base_loaded:
+        warmup_profile = _find_warmup_profile()
+        if warmup_profile is not None:
+            try:
+                ok = await to_thread.run_sync(model_manager.warmup, str(warmup_profile))
+                if ok:
+                    logger.info(f"Warmup synth ran via {warmup_profile}")
+                else:
+                    logger.info("Warmup synth did not run (non-fatal).")
+            except Exception as e:
+                logger.warning(f"Warmup synth failed (non-fatal): {e}")
+        else:
+            logger.info("No existing voice profiles found; skipping warmup. "
+                        "First user render will absorb the kernel-compile cost.")
+
+
+def _find_warmup_profile() -> Optional[Path]:
+    """Pick any existing .pt voice profile across all workspaces for warmup.
+
+    The warmup synthesis is throwaway — we only need the prompt to be valid
+    and from this VOICE_PROFILES_DIR. Returns None if none are found.
+    """
+    if not VOICE_PROFILES_DIR.exists():
+        return None
+    for pt_path in VOICE_PROFILES_DIR.rglob("*.pt"):
+        if pt_path.is_file():
+            return pt_path
+    return None
 
 
 @app.on_event("shutdown")
@@ -967,28 +1025,32 @@ async def synthesize_direct(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-class SynthesizeStreamRequest(BaseModel):
+class SynthesizeBatchRequest(BaseModel):
     profileId: str
-    text: str
+    # Provide either a pre-chunked list of sentences or a raw text blob (the
+    # server will chunk it). Passing `text` keeps the chunker logic in one place.
+    sentences: Optional[list[str]] = None
+    text: Optional[str] = None
     language: str = "English"
     style: Optional[str] = None
     workspaceId: Optional[str] = None
+    silencePaddingMs: int = 150
 
 
-@app.post("/api/tts/synthesize-stream")
-async def synthesize_speech_stream(
+@app.post("/api/tts/synthesize-batch")
+async def synthesize_batch(
     auth_data: Annotated[dict, Depends(require_workspace_role)],
-    req: SynthesizeStreamRequest,
+    req: SynthesizeBatchRequest,
 ):
-    """Stream MP3 audio synthesized sentence-by-sentence."""
+    """Render a full list of sentences into a single audio asset.
+
+    Streams NDJSON progress events during synthesis, then a final `complete`
+    event containing the saved audioId. The caller (BullMQ narration worker)
+    reads the stream line-by-line to update job progress, and on `complete`
+    persists the audioId as an Asset row.
+    """
     if not model_manager.is_loaded:
         raise HTTPException(status_code=503, detail=MODEL_NOT_LOADED_ERROR)
-
-    if check_ffmpeg_available() is None:
-        raise HTTPException(
-            status_code=503,
-            detail="ffmpeg is required for streaming synthesis but is not available on the server",
-        )
 
     workspace_id = req.workspaceId or auth_data['workspace_id']
     workspace_profiles_dir = VOICE_PROFILES_DIR / workspace_id
@@ -1002,9 +1064,22 @@ async def synthesize_speech_stream(
             'profileId': req.profileId,
             'requestedWorkspace': workspace_id,
             'authWorkspace': auth_data['workspace_id'],
-            'endpoint': 'synthesize-stream',
+            'endpoint': 'synthesize-batch',
         })
         raise HTTPException(status_code=404, detail="Voice profile not found")
+
+    if req.sentences is not None:
+        sentences = [s.strip() for s in req.sentences if s and s.strip()]
+    elif req.text is not None:
+        sentences = chunk_text(req.text)
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail="Either `sentences` or `text` is required",
+        )
+
+    if not sentences:
+        raise HTTPException(status_code=400, detail="No speakable sentences provided")
 
     gen_kwargs: dict = {}
     if req.style:
@@ -1020,53 +1095,136 @@ async def synthesize_speech_stream(
             except Exception:
                 pass
 
-    sentences = chunk_text(req.text)
-    if not sentences:
-        raise HTTPException(status_code=400, detail="Text contains no speakable content")
-
-    stream_id = str(uuid.uuid4())
+    batch_id = str(uuid.uuid4())
+    padding_ms = max(0, min(req.silencePaddingMs, 1000))
     logger.info(
-        f"[stream {stream_id}] starting: profile={req.profileId} workspace={workspace_id} "
-        f"sentences={len(sentences)} chars={len(req.text)}"
+        f"[batch {batch_id}] start: profile={req.profileId} workspace={workspace_id} "
+        f"sentences={len(sentences)} chars={sum(len(s) for s in sentences)} "
+        f"paddingMs={padding_ms}"
     )
 
-    def generator():
-        total_start = time.time()
-        sentences_rendered = 0
+    workspace_audio_dir = GENERATED_AUDIO_DIR / auth_data['workspace_id']
+    workspace_audio_dir.mkdir(parents=True, exist_ok=True)
+
+    progress_queue: asyncio.Queue = asyncio.Queue()
+    loop = asyncio.get_event_loop()
+
+    def progress_cb(done: int, total: int, sentence_seconds: float) -> None:
         try:
-            for idx, sentence in enumerate(sentences):
-                sentence_start = time.time()
-                audio_data, sr = model_manager.synthesize_from_profile(
-                    profile_path=str(profile_path),
-                    text=sentence,
-                    language=req.language,
-                    gen_kwargs=gen_kwargs if gen_kwargs else None,
-                )
-                mp3 = encode_pcm_to_mp3(audio_data, sr)
-                sentences_rendered += 1
-                elapsed = time.time() - sentence_start
-                logger.info(
-                    f"[stream {stream_id}] sentence {idx+1}/{len(sentences)} "
-                    f"synth+encode {elapsed:.2f}s bytes={len(mp3)}"
-                )
-                yield mp3
-        except Exception as e:
-            logger.error(f"[stream {stream_id}] failed mid-stream: {e}")
-            return
-        finally:
-            total_elapsed = time.time() - total_start
-            logger.info(
-                f"[stream {stream_id}] complete: sentences={sentences_rendered}/{len(sentences)} "
-                f"totalSeconds={total_elapsed:.2f}"
+            asyncio.run_coroutine_threadsafe(
+                progress_queue.put({
+                    "type": "progress",
+                    "sentencesDone": done,
+                    "sentencesTotal": total,
+                    "lastSentenceSeconds": round(sentence_seconds, 2),
+                }),
+                loop,
             )
+        except Exception as e:
+            logger.warning(f"[batch {batch_id}] failed to enqueue progress: {e}")
+
+    async def worker():
+        try:
+            start = time.time()
+            audio_arrays, sr = await to_thread.run_sync(
+                model_manager.synthesize_batch_from_profile,
+                str(profile_path),
+                sentences,
+                req.language,
+                gen_kwargs if gen_kwargs else None,
+                progress_cb,
+            )
+            synth_elapsed = time.time() - start
+
+            pad_samples = int(sr * (padding_ms / 1000.0))
+            silence = np.zeros(pad_samples, dtype=np.float32) if pad_samples > 0 else None
+
+            parts: list[np.ndarray] = []
+            for i, arr in enumerate(audio_arrays):
+                parts.append(arr.astype(np.float32, copy=False))
+                if silence is not None and i < len(audio_arrays) - 1:
+                    parts.append(silence)
+            full_audio = np.concatenate(parts) if parts else np.zeros(0, dtype=np.float32)
+
+            output_id = str(uuid.uuid4())
+            wav_path = workspace_audio_dir / f"{output_id}.wav"
+            mp3_path = workspace_audio_dir / f"{output_id}.mp3"
+            sf.write(str(wav_path), full_audio, sr)
+
+            duration = len(full_audio) / sr if sr else 0.0
+
+            try:
+                _encode_wav_to_mp3(wav_path, mp3_path)
+                wav_path.unlink(missing_ok=True)
+                output_format = "mp3"
+                output_mime = "audio/mpeg"
+                output_path = mp3_path
+            except Exception as enc_err:
+                logger.warning(
+                    f"[batch {batch_id}] MP3 encode failed, falling back to WAV: {enc_err}"
+                )
+                mp3_path.unlink(missing_ok=True)
+                output_format = "wav"
+                output_mime = "audio/wav"
+                output_path = wav_path
+
+            meta_path = workspace_audio_dir / f"{output_id}{JSON_EXTENSION}"
+            metadata = {
+                "audioId": output_id,
+                "workspaceId": workspace_id,
+                "createdBy": auth_data['user_id'],
+                "profileId": req.profileId,
+                "duration": duration,
+                "sampleRate": sr,
+                "sentenceCount": len(sentences),
+                "source": "synthesize-batch",
+                "format": output_format,
+                "mimeType": output_mime,
+                "fileSize": output_path.stat().st_size,
+                "createdAt": time.time(),
+            }
+            meta_path.write_text(json.dumps(metadata))
+
+            await progress_queue.put({
+                "type": "complete",
+                "audioId": output_id,
+                "audioUrl": f"/api/tts/audio/{output_id}",
+                "duration": round(duration, 2),
+                "sampleRate": sr,
+                "synthesisTime": round(synth_elapsed, 2),
+                "sentenceCount": len(sentences),
+                "format": output_format,
+                "mimeType": output_mime,
+                "fileSize": output_path.stat().st_size,
+            })
+            logger.info(
+                f"[batch {batch_id}] complete: audioId={output_id} "
+                f"duration={duration:.1f}s synth={synth_elapsed:.1f}s"
+            )
+        except Exception as e:
+            logger.error(f"[batch {batch_id}] failed: {e}", exc_info=True)
+            await progress_queue.put({"type": "error", "message": str(e)})
+        finally:
+            await progress_queue.put(None)
+
+    async def stream():
+        task = asyncio.create_task(worker())
+        try:
+            while True:
+                item = await progress_queue.get()
+                if item is None:
+                    break
+                yield (json.dumps(item) + "\n").encode("utf-8")
+        finally:
+            if not task.done():
+                task.cancel()
 
     return StreamingResponse(
-        generator(),
-        media_type="audio/mpeg",
+        stream(),
+        media_type="application/x-ndjson",
         headers={
             "Cache-Control": "no-store",
-            "X-Stream-Id": stream_id,
-            "X-AI-Generated": "true",
+            "X-Batch-Id": batch_id,
             "X-Sentence-Count": str(len(sentences)),
         },
     )
@@ -1083,13 +1241,31 @@ async def serve_audio(
 ):
     """Serve a generated audio file with authentication and workspace verification."""
     user_context = get_user_context(auth_data)
-    
-    # Look for audio file in user's workspace directory
-    workspace_audio_dir = GENERATED_AUDIO_DIR / auth_data['workspace_id']
-    audio_path = workspace_audio_dir / f"{audio_id}.wav"
-    
-    if not audio_path.exists():
-        # Don't leak whether file exists or user lacks permission
+
+    # Reject any traversal attempts in the path parameter.
+    if not audio_id or "/" in audio_id or "\\" in audio_id or ".." in audio_id:
+        await log_auth_event('AUDIO_ACCESS_DENIED', auth_data, {'audioId': audio_id, 'reason': 'invalid_id'})
+        raise HTTPException(status_code=404, detail="Audio file not found")
+
+    workspace_audio_dir = (GENERATED_AUDIO_DIR / auth_data['workspace_id']).resolve()
+
+    audio_path: Optional[Path] = None
+    media_type = "audio/mpeg"
+    extension = "mp3"
+    for ext, mime in (("mp3", "audio/mpeg"), ("wav", "audio/wav")):
+        candidate = (workspace_audio_dir / f"{audio_id}.{ext}").resolve()
+        # Defense-in-depth: candidate must remain inside the workspace dir.
+        try:
+            candidate.relative_to(workspace_audio_dir)
+        except ValueError:
+            continue
+        if candidate.exists():
+            audio_path = candidate
+            media_type = mime
+            extension = ext
+            break
+
+    if audio_path is None:
         await log_auth_event('AUDIO_ACCESS_DENIED', auth_data, {'audioId': audio_id, 'reason': 'not_found'})
         raise HTTPException(status_code=404, detail="Audio file not found")
 
@@ -1111,8 +1287,12 @@ async def serve_audio(
 
     return FileResponse(
         str(audio_path),
-        media_type="audio/wav",
-        headers={"Content-Disposition": f'inline; filename="{audio_id}.wav"'},
+        media_type=media_type,
+        headers={
+            "Content-Disposition": f'inline; filename="{audio_id}.{extension}"',
+            "Cache-Control": "private, max-age=3600",
+            "X-Content-Type-Options": "nosniff",
+        },
     )
 
 

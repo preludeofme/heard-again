@@ -13,7 +13,7 @@ import {
 import { formatDistanceToNow, format } from 'date-fns'
 import { NarrationPreparationBanner } from '@/components/stories/NarrationPreparationBanner'
 import { NarrationReviewPanel } from '@/components/stories/NarrationReviewPanel'
-import { StoryNarrationPlayer } from '@/components/stories/StoryNarrationPlayer'
+import { StoryNarrationPlayer, type SavedNarration } from '@/components/stories/StoryNarrationPlayer'
 import { fetchWithCSRF } from '@/lib/api-client'
 
 type NarrationStatus = 'NONE' | 'PENDING' | 'READY' | 'APPROVED' | 'STALE' | 'FAILED'
@@ -43,9 +43,15 @@ interface StoryDetail {
   narratedContent?: string | null
   narrationStatus?: NarrationStatus
   narrationModel?: string | null
+  narrationRenderJobId?: string | null
   narrationUpdatedAt?: string | null
   narrationApprovedAt?: string | null
-  generatedAudio?: { id: string; storagePath: string; durationSeconds?: number; mimeType?: string }
+  generatedAudio?: {
+    id: string
+    durationSeconds?: number
+    mimeType?: string
+    voiceProfileId?: string | null
+  } | null
   assets: Array<{
     id: string
     role: string
@@ -82,7 +88,7 @@ export default function StoryDetailPage() {
   const [voiceProfiles, setVoiceProfiles] = useState<VoiceProfileRow[]>([])
   const [isPreparingNarration, setIsPreparingNarration] = useState(false)
   const [narrationError, setNarrationError] = useState<string | null>(null)
-  const [savedNarration, setSavedNarration] = useState<{ assetId: string; downloadUrl: string } | null>(null)
+  const [savedNarration, setSavedNarration] = useState<SavedNarration | null>(null)
 
   const fetchStory = useCallback(async () => {
     if (!id) return
@@ -92,11 +98,18 @@ export default function StoryDetailPage() {
       const data = await res.json()
       if (!res.ok || !data.success) throw new Error(data.error || 'Failed to load story')
       setStory(data.data)
-      if (data.data.generatedAudio) {
+      const audio = data.data.generatedAudio
+      // The cache-hit check on the player keys off voiceProfileId. Without it we
+      // can't tell if this asset matches the currently selected voice — bail out
+      // and let the player re-check via /narrate when the user lands on the page.
+      if (audio?.id && audio?.voiceProfileId) {
         setSavedNarration({
-          assetId: data.data.generatedAudio.id,
-          downloadUrl: `/api/voice/audio/${data.data.generatedAudio.id}`,
+          assetId: audio.id,
+          downloadUrl: `/api/assets/${audio.id}/download`,
+          voiceProfileId: audio.voiceProfileId,
         })
+      } else {
+        setSavedNarration(null)
       }
     } catch (err: any) {
       setError(err.message)
@@ -454,7 +467,7 @@ export default function StoryDetailPage() {
                   }))}
                   defaultVoiceProfileId={story.voiceProfile?.id}
                   savedNarration={savedNarration}
-                  canSave
+                  activeJobId={story.narrationRenderJobId}
                   onSaved={(saved) => {
                     setSavedNarration(saved)
                     fetchStory()

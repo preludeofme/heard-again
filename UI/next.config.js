@@ -4,6 +4,8 @@ const isDev = process.env.NODE_ENV === 'development'
 
 const nextConfig = {
   reactStrictMode: true,
+  // instrumentationHook is enabled by default in Next.js 15+ — the experimental
+  // flag was removed. Just keep src/instrumentation.ts at the source root.
   outputFileTracingRoot: path.join(__dirname, '..'),
   // Add empty Turbopack config to avoid webpack conflict
   turbopack: {},
@@ -21,6 +23,47 @@ const nextConfig = {
     fetches: {
       fullUrl: true,
     },
+  },
+  webpack: (config, { isServer, webpack }) => {
+    if (!isServer) {
+      // Mock Node.js modules that server-side libs depend on
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        'fs/promises': false,
+        path: false,
+        crypto: false,
+        stream: false,
+        net: false,
+        tls: false,
+        dns: false,
+        child_process: false,
+        os: false,
+        util: false,
+        url: false,
+      }
+
+      // Aggressively ignore server-side modules on the client
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        'bullmq': false,
+        'ioredis': false,
+        // Match various import patterns for worker/queue/services
+        '@/workers/narrationWorker': false,
+        '@/lib/queues/narrationQueue': false,
+        '@/services/StorageService': false,
+        '@/lib/redis-client': false,
+        '@aws-sdk/client-s3': false,
+      }
+
+      // Forcibly ignore these patterns during client bundling
+      config.plugins.push(
+        new webpack.IgnorePlugin({
+          resourceRegExp: /bullmq|ioredis|narrationWorker|narrationQueue|StorageService|redis-client|aws-sdk/,
+        })
+      )
+    }
+    return config
   },
   // Security headers
   async headers() {

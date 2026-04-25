@@ -74,5 +74,5 @@ export default apiHandler({
       },
       message: 'Subscription cancelled successfully. Your workspace has been downgraded to the free plan.',
     })
-  },
+  }),
 })

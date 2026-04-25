@@ -2,11 +2,96 @@ import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
 import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
 import { withCSRFProtection } from '@/lib/security/csrf'
+import { enqueueNarrationRender } from '@/lib/queues/narrationQueue'
+import { logger } from '@/lib/logger'
 import type { NarrationStatus } from '@prisma/client'
 
 const MAX_NARRATION_CHARS = 20000
 
 const ALLOWED_ACTIONS = new Set(['update', 'approve', 'discard'])
+
+async function enqueueRenderOnApprove(params: {
+  storyId: string
+  workspaceId: string
+  userId: string
+}) {
+  const { storyId, workspaceId, userId } = params
+
+  const story = await prisma.story.findFirst({
+    where: { id: storyId, workspaceId },
+    select: { id: true, voiceProfileId: true, subjectId: true },
+  })
+  if (!story) return null
+
+  let voiceProfileId = story.voiceProfileId
+  if (!voiceProfileId && story.subjectId) {
+    const defaultProfile = await prisma.voiceProfile.findFirst({
+      where: {
+        workspaceId,
+        personId: story.subjectId,
+        isDefault: true,
+        status: 'READY',
+      },
+      select: { id: true },
+    })
+    voiceProfileId = defaultProfile?.id ?? null
+  }
+  if (!voiceProfileId) {
+    logger.info('[narration.approve] no voice profile — skipping render enqueue', { storyId })
+    return null
+  }
+
+  const profile = await prisma.voiceProfile.findFirst({
+    where: { id: voiceProfileId, workspaceId, status: 'READY' },
+    select: { id: true, personId: true },
+  })
+  if (!profile) {
+    logger.info('[narration.approve] voice profile not READY — skipping render enqueue', { storyId })
+    return null
+  }
+
+  if (profile.personId) {
+    const consent = await prisma.voiceConsent.findFirst({
+      where: {
+        workspaceId,
+        revokedAt: null,
+        allowsGeneration: true,
+        OR: [{ voiceProfileId: profile.id }, { personId: profile.personId }],
+      },
+      orderBy: { recordedAt: 'desc' },
+    })
+    if (!consent) {
+      logger.info('[narration.approve] no consent — skipping render enqueue', { storyId })
+      return null
+    }
+  }
+
+  const voiceGenerationJob = await prisma.voiceGenerationJob.create({
+    data: {
+      voiceProfileId: profile.id,
+      storyId,
+      text: '(pending render)',
+      status: 'QUEUED',
+      styleOverride: { source: 'narration.approve' },
+    },
+    select: { id: true },
+  })
+
+  const queueJobId = await enqueueNarrationRender({
+    storyId,
+    workspaceId,
+    voiceProfileId: profile.id,
+    userId,
+    voiceGenerationJobId: voiceGenerationJob.id,
+  })
+
+  await prisma.story.update({
+    where: { id: storyId },
+    data: { narrationRenderJobId: voiceGenerationJob.id, voiceProfileId: profile.id },
+  })
+
+  return { narrationJobId: voiceGenerationJob.id, queueJobId }
+}
 
 export default apiHandler({
   // PATCH /api/stories/[id]/narration
@@ -83,6 +168,23 @@ export default apiHandler({
       },
     })
 
-    return successResponse(res, updated)
+    let renderEnqueue: { narrationJobId: string; queueJobId: string } | null = null
+    if (action === 'approve' && process.env.AUDIO_GENERATION_ENABLED === 'true') {
+      try {
+        renderEnqueue = await enqueueRenderOnApprove({
+          storyId,
+          workspaceId: user.workspaceId,
+          userId: user.id,
+        })
+      } catch (err) {
+        logger.error('[narration] approve-enqueue failed (non-fatal)', { storyId, err })
+      }
+    }
+
+    return successResponse(res, {
+      ...updated,
+      narrationJobId: renderEnqueue?.narrationJobId ?? null,
+      queueJobId: renderEnqueue?.queueJobId ?? null,
+    })
   }),
 })

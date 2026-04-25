@@ -1,8 +1,8 @@
 import { prisma } from '@/lib/prisma'
-import { apiHandler, successResponse, Errors, errorResponse, AppError } from '@/lib/api-helpers'
+import { apiHandler, successResponse, Errors, AppError } from '@/lib/api-helpers'
 import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
 import { withCSRFProtection } from '@/lib/security/csrf'
-import { voiceService } from '@/services'
+import { enqueueNarrationRender } from '@/lib/queues/narrationQueue'
 import { logger } from '@/lib/logger'
 
 export default apiHandler({
@@ -15,7 +15,7 @@ export default apiHandler({
     const storyId = req.query.id as string
     await requireWorkspaceRole(user.id, user.workspaceId, 'EDITOR')
 
-    const { voiceProfileId, language = 'en' } = req.body ?? {}
+    const { voiceProfileId: bodyVoiceProfileId } = req.body ?? {}
 
     const story = await prisma.story.findFirst({
       where: { id: storyId, workspaceId: user.workspaceId },
@@ -38,9 +38,8 @@ export default apiHandler({
       throw Errors.badRequest('Story has no text to narrate')
     }
 
-    // Resolve voice profile.
-    let profileId: string | null = voiceProfileId || story.voiceProfileId || null
-    if (!profileId && story.subjectId) {
+    let voiceProfileId: string | null = bodyVoiceProfileId || story.voiceProfileId || null
+    if (!voiceProfileId && story.subjectId) {
       const defaultProfile = await prisma.voiceProfile.findFirst({
         where: {
           workspaceId: user.workspaceId,
@@ -50,52 +49,95 @@ export default apiHandler({
         },
         select: { id: true },
       })
-      profileId = defaultProfile?.id ?? null
+      voiceProfileId = defaultProfile?.id ?? null
     }
-    if (!profileId) {
+    if (!voiceProfileId) {
       throw Errors.badRequest('No voice profile specified or available for this story')
     }
 
-    try {
-      const synthesis = await voiceService.synthesize({
-        workspaceId: user.workspaceId,
-        userId: user.id,
-        modelId: profileId,
-        text,
-        language,
-        authToken: '',
-      })
+    const profile = await prisma.voiceProfile.findFirst({
+      where: { id: voiceProfileId, workspaceId: user.workspaceId, status: 'READY' },
+      select: { id: true, personId: true },
+    })
+    if (!profile) {
+      throw Errors.notFound('Voice profile')
+    }
 
-      // Link the generated asset to the story and store the voice profile used.
-      await prisma.story.update({
-        where: { id: story.id },
-        data: {
-          generatedAudioAssetId: synthesis.outputAssetId,
-          voiceProfileId: synthesis.voiceProfileId,
+    if (profile.personId) {
+      const consent = await prisma.voiceConsent.findFirst({
+        where: {
+          workspaceId: user.workspaceId,
+          revokedAt: null,
+          allowsGeneration: true,
+          OR: [{ voiceProfileId: profile.id }, { personId: profile.personId }],
         },
+        orderBy: { recordedAt: 'desc' },
+      })
+      if (!consent) {
+        throw Errors.forbidden(
+          'Voice generation is blocked until explicit consent is recorded'
+        )
+      }
+    }
+
+    // Per-(story, voiceProfileId) cache: if we already have a completed render
+    // for this exact pair, short-circuit instead of re-enqueueing.
+    const cachedAsset = await prisma.asset.findFirst({
+      where: {
+        workspaceId: user.workspaceId,
+        assetType: 'GENERATED_AUDIO',
+        processingStatus: 'COMPLETED',
+        AND: [
+          { metadata: { path: ['storyId'], equals: storyId } },
+          { metadata: { path: ['voiceProfileId'], equals: profile.id } },
+        ],
+      },
+      select: { id: true },
+      orderBy: { createdAt: 'desc' },
+    })
+    if (cachedAsset) {
+      return successResponse(res, {
+        alreadyRendered: true,
+        outputAssetId: cachedAsset.id,
+        outputAssetDownloadUrl: `/api/assets/${cachedAsset.id}/download`,
+        voiceProfileId: profile.id,
+      })
+    }
+
+    try {
+      const voiceGenerationJob = await prisma.voiceGenerationJob.create({
+        data: {
+          voiceProfileId: profile.id,
+          storyId,
+          text: text.substring(0, 10000),
+          status: 'QUEUED',
+          styleOverride: { source: 'save-narration' },
+        },
+        select: { id: true },
       })
 
-      // Attach the storyId to the job row (voiceService doesn't know about the story).
-      await prisma.voiceGenerationJob.update({
-        where: { id: synthesis.jobId },
-        data: { storyId: story.id },
+      const queueJobId = await enqueueNarrationRender({
+        storyId,
+        workspaceId: user.workspaceId,
+        voiceProfileId: profile.id,
+        userId: user.id,
+        voiceGenerationJobId: voiceGenerationJob.id,
+      })
+
+      await prisma.story.update({
+        where: { id: storyId },
+        data: { narrationRenderJobId: voiceGenerationJob.id },
       })
 
       return successResponse(res, {
-        jobId: synthesis.jobId,
-        outputAssetId: synthesis.outputAssetId,
-        outputAssetDownloadUrl: synthesis.outputAssetDownloadUrl,
-        audioUrl: synthesis.audioUrl,
-        voiceProfileId: synthesis.voiceProfileId,
-        duration: synthesis.duration,
+        queued: true,
+        narrationJobId: voiceGenerationJob.id,
+        queueJobId,
+        voiceProfileId: profile.id,
       })
     } catch (error) {
-      if (error instanceof AppError) {
-        return errorResponse(res, error.message, error.statusCode, error.code)
-      }
-      logger.error('[save-narration] synthesis failed', { storyId, error })
-      const message = error instanceof Error ? error.message : 'Save narration failed'
-      return errorResponse(res, message, 503, 'SAVE_NARRATION_FAILED')
+      logger.error('[save-narration] enqueue failed', { storyId, error })
+      throw new AppError('Failed to queue narration render', 503, 'ENQUEUE_FAILED')
     }
   }),
 })
