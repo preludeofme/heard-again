@@ -15,6 +15,12 @@ export interface VoiceProfileResponse {
   sampleCount?: number
   createdAt: string | Date
   modelPath?: string | null
+  hasConsent?: boolean
+  person?: {
+    id: string
+    firstName: string
+    lastName?: string | null
+  } | null
 }
 
 /**
@@ -31,6 +37,12 @@ export function toVoiceModel(profile: VoiceProfileResponse): VoiceModel {
     sampleCount: profile.sampleCount ?? 0,
     createdAt: typeof profile.createdAt === 'string' ? profile.createdAt : profile.createdAt.toISOString(),
     modelPath: profile.modelPath ?? undefined,
+    hasConsent: profile.hasConsent,
+    person: profile.person ? {
+      id: profile.person.id,
+      firstName: profile.person.firstName,
+      lastName: profile.person.lastName ?? undefined,
+    } : undefined,
   }
 }
 

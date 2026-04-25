@@ -87,6 +87,12 @@ export interface VoiceModel {
   createdAt: Date | string
   modelPath?: string
   similarityScore?: number
+  hasConsent?: boolean
+  person?: {
+    id: string
+    firstName: string
+    lastName?: string
+  }
   metadata?: {
     trainingTime?: number
     lastUsed?: Date

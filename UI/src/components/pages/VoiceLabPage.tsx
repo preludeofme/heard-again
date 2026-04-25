@@ -12,9 +12,12 @@ import {
   Close as CloseIcon,
   RecordVoiceOver as VoiceIcon,
   CheckCircle as ReadyIcon,
+  Lock as LockIcon,
+  VerifiedUser as VerifiedIcon,
 } from '@mui/icons-material'
 import { useState, useEffect, useRef } from 'react'
 import { VoiceTrainingModal } from '@/components/audio/VoiceTrainingModal'
+import { VoiceConsentModal } from '@/components/audio/VoiceConsentModal'
 import { useSelectedFamilyMember } from '@/contexts/SelectedFamilyMemberContext'
 import type { VoiceModel } from '@/types'
 
@@ -75,6 +78,12 @@ export function VoiceLabPage({ voiceModels, controller }: VoiceLabPageProps) {
   // Delete confirmation
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
 
+  // Consent modal state
+  const [showConsentModal, setShowConsentModal] = useState(false)
+  const [consentPersonId, setConsentPersonId] = useState<string>('')
+  const [consentPersonName, setConsentPersonName] = useState<string>('')
+  const [consentVoiceProfileId, setConsentVoiceProfileId] = useState<string | undefined>()
+
   // Auto-select first voice if none selected
   useEffect(() => {
     if (!selectedVoiceId && voiceModels.length > 0) {
@@ -106,8 +115,19 @@ export function VoiceLabPage({ voiceModels, controller }: VoiceLabPageProps) {
         audioRef.current = null
       }
       audio.play()
-    } catch (err) {
+    } catch (err: any) {
       console.error('Synthesis failed:', err)
+      // Check for consent requirement in error message
+      const errorMsg = err.message || ''
+      if (errorMsg.includes('consent') || errorMsg.includes('blocked')) {
+        const person = selectedVoice?.person || selectedFamilyMember
+        if (person) {
+          setConsentPersonId(person.id)
+          setConsentPersonName(person.firstName + (person.lastName ? ` ${person.lastName}` : ''))
+          setConsentVoiceProfileId(selectedVoiceId)
+          setShowConsentModal(true)
+        }
+      }
     } finally {
       setIsSynthesizing(false)
     }
@@ -153,6 +173,11 @@ export function VoiceLabPage({ voiceModels, controller }: VoiceLabPageProps) {
   const handleCreateVoice = async (modelName: string, language: string, styleInstruct?: string) => {
     await startVoiceTraining(modelName, language, styleInstruct)
     await refreshData() // Refresh the voice list after creation
+  }
+
+  const handleConsentRecorded = () => {
+    setShowConsentModal(false)
+    refreshData()
   }
 
   return (
@@ -352,18 +377,19 @@ export function VoiceLabPage({ voiceModels, controller }: VoiceLabPageProps) {
                         boxShadow: 'none',
                         cursor: 'pointer',
                         transition: 'all 0.2s',
+                        overflow: 'hidden',
                         '&:hover': {
                           backgroundColor: isSelected ? '#edf4f7' : '#ebe8e3',
                           transform: 'none',
                         },
                       }}
                     >
-                      <CardContent sx={{ p: 2.5, display: 'flex', alignItems: 'center', gap: 2, '&:last-child': { pb: 2.5 } }}>
+                      <CardContent sx={{ p: { xs: 1.5, sm: 2.5 }, display: 'flex', alignItems: 'center', gap: { xs: 1.5, sm: 2 }, '&:last-child': { pb: { xs: 1.5, sm: 2.5 } } }}>
                         {/* Avatar / icon */}
                         <Box
                           sx={{
-                            width: 44,
-                            height: 44,
+                            width: { xs: 36, sm: 44 },
+                            height: { xs: 36, sm: 44 },
                             borderRadius: '50%',
                             backgroundColor: isSelected ? '#16334a' : '#d0e3e6',
                             display: 'flex',
@@ -372,7 +398,7 @@ export function VoiceLabPage({ voiceModels, controller }: VoiceLabPageProps) {
                             flexShrink: 0,
                           }}
                         >
-                          <VoiceIcon sx={{ color: isSelected ? '#ffffff' : '#16334a', fontSize: 22 }} />
+                          <VoiceIcon sx={{ color: isSelected ? '#ffffff' : '#16334a', fontSize: { xs: 18, sm: 22 } }} />
                         </Box>
 
                         {/* Info */}
@@ -385,49 +411,77 @@ export function VoiceLabPage({ voiceModels, controller }: VoiceLabPageProps) {
                               overflow: 'hidden',
                               textOverflow: 'ellipsis',
                               whiteSpace: 'nowrap',
+                              fontSize: { xs: '0.9rem', sm: '1rem' }
                             }}
                           >
                             {model.displayName || model.name}
                           </Typography>
-                          <Typography variant="caption" sx={{ color: '#546669' }}>
-                            Created {new Date(model.createdAt).toLocaleDateString()}
+                          <Typography variant="caption" sx={{ color: '#546669', display: 'block' }}>
+                            {new Date(model.createdAt).toLocaleDateString()}
                           </Typography>
                         </Box>
 
-                        {/* Status */}
-                        <ReadyIcon sx={{ color: '#4caf50', fontSize: 20, flexShrink: 0 }} />
+                        {/* Status & Consent */}
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
+                          {model.hasConsent === true ? (
+                            <ReadyIcon sx={{ color: '#4caf50', fontSize: { xs: 18, sm: 20 } }} />
+                          ) : (
+                            <Chip
+                              size="small"
+                              icon={<LockIcon sx={{ fontSize: '12px !important' }} />}
+                              label="Consent"
+                              color="warning"
+                              variant="outlined"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                const person = model.person || selectedFamilyMember
+                                if (person) {
+                                  setConsentPersonId(person.id)
+                                  setConsentPersonName(person.firstName + (person.lastName ? ` ${person.lastName}` : ''))
+                                  setConsentVoiceProfileId(model.id)
+                                  setShowConsentModal(true)
+                                }
+                              }}
+                              sx={{ 
+                                height: 22, 
+                                fontSize: '0.65rem', 
+                                fontWeight: 600, 
+                                cursor: 'pointer',
+                                '& .MuiChip-label': { px: 1 }
+                              }}
+                            />
+                          )}
+                        </Box>
 
                         {/* Delete */}
-                        {isDeleting ? (
-                          <Box sx={{ display: 'flex', gap: 0.5, flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
-                            <Button
-                              size="small"
-                              variant="contained"
-                              color="error"
-                              onClick={() => handleDelete(model.id)}
-                              sx={{ minWidth: 0, px: 1.5, py: 0.5, fontSize: '0.75rem' }}
-                            >
-                              Delete
-                            </Button>
-                            <Button
-                              size="small"
-                              onClick={() => setDeleteConfirmId(null)}
-                              sx={{ minWidth: 0, px: 1, py: 0.5, fontSize: '0.75rem', color: '#546669' }}
-                            >
-                              Cancel
-                            </Button>
-                          </Box>
-                        ) : (
+                        {!isDeleting ? (
                           <IconButton
                             size="small"
                             onClick={(e) => {
                               e.stopPropagation()
                               setDeleteConfirmId(model.id)
                             }}
-                            sx={{ color: '#8a9a9d', '&:hover': { color: '#dc2626' }, flexShrink: 0 }}
+                            sx={{ 
+                              color: '#8a9a9d', 
+                              '&:hover': { color: '#dc2626' }, 
+                              flexShrink: 0,
+                              p: { xs: 0.5, sm: 1 }
+                            }}
                           >
-                            <DeleteIcon fontSize="small" />
+                            <DeleteIcon sx={{ fontSize: { xs: 18, sm: 20 } }} />
                           </IconButton>
+                        ) : (
+                          <Box sx={{ display: 'flex', gap: 0.5, flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
+                            <Button
+                              size="small"
+                              variant="contained"
+                              color="error"
+                              onClick={() => handleDelete(model.id)}
+                              sx={{ minWidth: 0, px: 1, py: 0.25, fontSize: '0.65rem' }}
+                            >
+                              Del
+                            </Button>
+                          </Box>
                         )}
                       </CardContent>
                     </Card>
@@ -450,6 +504,16 @@ export function VoiceLabPage({ voiceModels, controller }: VoiceLabPageProps) {
         isUploading={isUploading}
         isTraining={isTraining}
         trainingJob={trainingJob}
+      />
+
+      {/* ════════ Voice Consent Modal ════════ */}
+      <VoiceConsentModal
+        open={showConsentModal}
+        onClose={() => setShowConsentModal(false)}
+        personId={consentPersonId}
+        personName={consentPersonName}
+        voiceProfileId={consentVoiceProfileId}
+        onConsentRecorded={handleConsentRecorded}
       />
 
       {/* ════════ Compare Voices Dialog ════════ */}

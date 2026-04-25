@@ -71,7 +71,8 @@ export function useVoiceLabController(subjectId?: string) {
     estimatedStartTime: training.estimatedStartTime,
     uploadTrainingSample: training.uploadTrainingSample,
     removeTrainingSample: training.removeTrainingSample,
-    startVoiceTraining: training.startVoiceTraining,
+    startVoiceTraining: (modelName: string, language: string, styleInstruct?: string) => 
+      training.startVoiceTraining(modelName, language, styleInstruct, subjectId),
     checkTrainingStatus: training.checkTrainingStatus,
     cancelTrainingJob: training.cancelTrainingJob,
     preprocessSamples: training.preprocessSamples,

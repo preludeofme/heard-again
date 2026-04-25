@@ -28,6 +28,7 @@ import {
   Close as CloseIcon,
   Info as InfoIcon,
 } from '@mui/icons-material'
+import { useCSRF } from '@/hooks/useCSRF'
 
 interface VoiceConsentModalProps {
   open: boolean
@@ -56,6 +57,7 @@ export function VoiceConsentModal({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [agreedToTerms, setAgreedToTerms] = useState(false)
+  const { fetchToken } = useCSRF()
 
   const handleSubmit = async () => {
     if (!agreedToTerms) {
@@ -67,9 +69,13 @@ export function VoiceConsentModal({
     setError(null)
 
     try {
+      const csrfToken = await fetchToken()
       const response = await fetch('/api/voice/consent', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-csrf-token': csrfToken
+        },
         credentials: 'include',
         body: JSON.stringify({
           personId,

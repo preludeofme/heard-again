@@ -50,9 +50,8 @@ export default function VoiceLab() {
       return controller.voiceModels
     }
 
-    // Show random selection from all voices when no person is selected
-    const shuffled = [...controller.voiceModels].sort(() => Math.random() - 0.5)
-    return shuffled.slice(0, 6)
+    // Show all voices when no person is selected (previously was limited to 6)
+    return controller.voiceModels
   }, [controller.voiceModels, selectedSubjectId])
 
   const selectedPersonLabel = useMemo(() => {

@@ -130,6 +130,14 @@ export function VoiceTrainingModal({
   const hasAudio = trainingSamples.length > 0
   const canCreate = hasAudio && voiceName.trim().length > 0 && !isTraining
 
+  // For navigating to consent from success state
+  const handleRecordConsent = () => {
+    // This is handled by the parent component (VoiceLabPage) 
+    // when it sees the voice list refresh.
+    // For now, we'll just close and let the user click the "Needs Consent" badge.
+    handleClose()
+  }
+
   return (
     <Dialog
       open={open}
@@ -171,9 +179,16 @@ export function VoiceTrainingModal({
             <Typography variant="body1" sx={{ color: '#546669', mb: 1 }}>
               <strong>{voiceName || trainingJob?.modelId}</strong> is ready to use.
             </Typography>
-            <Typography variant="body2" sx={{ color: '#8a9a9d' }}>
-              Head to the Talk page to start a conversation with this voice.
+            <Typography variant="body2" sx={{ color: '#8a9a9d', mb: 3 }}>
+              You need to record consent before you can generate speech with this voice.
             </Typography>
+            <Button
+              variant="outlined"
+              onClick={handleClose}
+              sx={{ color: '#16334a', borderColor: '#16334a', textTransform: 'none' }}
+            >
+              I'll do it later
+            </Button>
           </Box>
         ) : (
           <Box>
@@ -224,6 +239,7 @@ export function VoiceTrainingModal({
                   onRecordingComplete={handleRecordingComplete}
                   onCancel={() => setSourceTab('upload')}
                   maxDuration={300}
+                  showScript={true}
                 />
               )}
 
@@ -494,19 +510,33 @@ export function VoiceTrainingModal({
 
       <DialogActions sx={{ px: 3, pb: 2.5 }}>
         {isComplete ? (
-          <Button
-            onClick={handleClose}
-            variant="contained"
-            fullWidth
-            sx={{
-              background: 'linear-gradient(135deg, #16334a 0%, #2e4a62 100%)',
-              py: 1.5,
-              fontWeight: 600,
-              fontSize: '1rem',
-            }}
-          >
-            Done
-          </Button>
+          <Box sx={{ width: '100%', display: 'flex', gap: 2 }}>
+            <Button
+              onClick={handleClose}
+              variant="outlined"
+              fullWidth
+              sx={{
+                py: 1.5,
+                fontWeight: 600,
+                color: '#16334a',
+                borderColor: '#16334a',
+              }}
+            >
+              Done
+            </Button>
+            <Button
+              onClick={handleRecordConsent}
+              variant="contained"
+              fullWidth
+              sx={{
+                background: 'linear-gradient(135deg, #16334a 0%, #2e4a62 100%)',
+                py: 1.5,
+                fontWeight: 600,
+              }}
+            >
+              Record Consent
+            </Button>
+          </Box>
         ) : (
           <>
             <Button onClick={handleClose} disabled={isTraining} sx={{ color: '#546669' }}>

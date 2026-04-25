@@ -34,7 +34,7 @@ interface VoiceTrainingState {
 interface VoiceTrainingActions {
   uploadTrainingSample: (file: File) => Promise<void>
   removeTrainingSample: (index: number) => void
-  startVoiceTraining: (modelName: string, language: string, styleInstruct?: string) => Promise<void>
+  startVoiceTraining: (modelName: string, language: string, styleInstruct?: string, personId?: string) => Promise<void>
   checkTrainingStatus: (jobId: string) => Promise<void>
   cancelTrainingJob: (jobId: string) => Promise<void>
   preprocessSamples: (options: { noiseReduction: boolean; voiceSeparation: boolean }) => Promise<void>
@@ -111,7 +111,8 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
   const startVoiceTraining = useCallback(async (
     modelName: string,
     language: string,
-    styleInstruct?: string
+    styleInstruct?: string,
+    personId?: string
   ) => {
     if (state.trainingSamples.length === 0) {
       enqueueSnackbar('Please upload at least one audio sample', { variant: 'error' })
@@ -135,6 +136,7 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
         language,
         modelName,
         styleInstruct: styleInstruct || null,
+        personId: personId || null,
       }
 
       const response = await fetch('/api/voice/train', {

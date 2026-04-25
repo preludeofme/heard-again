@@ -7,6 +7,7 @@ import {
   Mic, Stop, PlayArrow, Pause, Delete, Send,
   CheckCircle, Warning, MicOff, Settings,
 } from '@mui/icons-material'
+import { VoiceCloneScript } from './VoiceCloneScript'
 
 type MicPermission = 'checking' | 'prompt' | 'granted' | 'denied' | 'unsupported'
 
@@ -17,12 +18,14 @@ interface AudioRecorderProps {
   onRecordingComplete?: (audioBlob: Blob, duration: number) => void
   onCancel?: () => void
   maxDuration?: number // in seconds, default 300 (5 minutes)
+  showScript?: boolean
 }
 
 export function AudioRecorder({
   onRecordingComplete,
   onCancel,
   maxDuration = 300,
+  showScript = false,
 }: AudioRecorderProps) {
   const [micPermission, setMicPermission] = useState<MicPermission>('checking')
   const [isRequestingPermission, setIsRequestingPermission] = useState(false)
@@ -458,27 +461,7 @@ export function AudioRecorder({
               </Typography>
             </Box>
 
-            {isRecording && (
-              <Box sx={{ mb: 3, px: 4 }}>
-                <LinearProgress
-                  variant="determinate"
-                  value={recordingProgress}
-                  sx={{
-                    height: 4,
-                    borderRadius: 2,
-                    backgroundColor: '#f0f0f0',
-                    '& .MuiLinearProgress-bar': {
-                      backgroundColor: isPaused ? '#999' : '#e53935',
-                    },
-                  }}
-                />
-                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-                  {formatTime(maxDuration - recordingTime)} remaining
-                </Typography>
-              </Box>
-            )}
-
-            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mb: 3 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mb: showScript ? 4 : 3 }}>
               {!isRecording ? (
                 <Button
                   variant="contained"
@@ -529,6 +512,28 @@ export function AudioRecorder({
                 </>
               )}
             </Box>
+
+            {isRecording && (
+              <Box sx={{ mb: 4, px: 4 }}>
+                <LinearProgress
+                  variant="determinate"
+                  value={recordingProgress}
+                  sx={{
+                    height: 4,
+                    borderRadius: 2,
+                    backgroundColor: '#f0f0f0',
+                    '& .MuiLinearProgress-bar': {
+                      backgroundColor: isPaused ? '#999' : '#e53935',
+                    },
+                  }}
+                />
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                  {formatTime(maxDuration - recordingTime)} remaining
+                </Typography>
+              </Box>
+            )}
+
+            {showScript && <VoiceCloneScript />}
           </Box>
         ) : (
           // Review Phase

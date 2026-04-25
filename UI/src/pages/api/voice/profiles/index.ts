@@ -25,6 +25,13 @@ export default apiHandler({
         createdBy: {
           select: { id: true, displayName: true },
         },
+        voiceConsents: {
+          where: {
+            revokedAt: null,
+            allowsGeneration: true,
+          },
+          take: 1,
+        },
         _count: {
           select: { stories: true, generationJobs: true },
         },
@@ -37,6 +44,7 @@ export default apiHandler({
       name: p.name,
       description: p.description,
       person: p.person,
+      hasConsent: p.voiceConsents.length > 0,
       modelType: p.modelType,
       engineName: p.engineName,
       isDefault: p.isDefault,
