@@ -169,29 +169,17 @@ function decryptSensitiveFields(result: any): any {
   
   // Decrypt story content
   if (decrypted.content && typeof decrypted.content === 'string' && isEncrypted(decrypted.content)) {
-    try {
-      decrypted.content = decryptField(decrypted.content)
-    } catch (error) {
-      logger.warn({ field: 'content', error: 'Failed to decrypt field' })
-    }
+    decrypted.content = decryptField(decrypted.content)
   }
   
   // Decrypt transcripts
   if (decrypted.transcript && typeof decrypted.transcript === 'string' && isEncrypted(decrypted.transcript)) {
-    try {
-      decrypted.transcript = decryptField(decrypted.transcript)
-    } catch (error) {
-      logger.warn({ field: 'transcript', error: 'Failed to decrypt field' })
-    }
+    decrypted.transcript = decryptField(decrypted.transcript)
   }
   
   // Decrypt voice profile metadata
   if (decrypted.styleParams && typeof decrypted.styleParams === 'string' && isEncrypted(decrypted.styleParams)) {
-    try {
-      decrypted.styleParams = decryptField(decrypted.styleParams)
-    } catch (error) {
-      logger.warn({ field: 'styleParams', error: 'Failed to decrypt field' })
-    }
+    decrypted.styleParams = decryptField(decrypted.styleParams)
   }
   
   return decrypted

@@ -70,6 +70,7 @@ interface FamilyTreePageProps {
   onPersonClick?: (person: TreePerson) => void
   onAddPerson?: () => void
   onEditRelationships?: (personId: string) => void
+  onPeopleChanged?: () => void
   isFullscreen?: boolean
   onToggleFullscreen?: () => void
   initialSearchExpanded?: boolean
@@ -307,6 +308,7 @@ export function FamilyTreePage({
   onPersonClick,
   onAddPerson,
   onEditRelationships,
+  onPeopleChanged,
   isFullscreen = false,
   onToggleFullscreen,
   initialSearchExpanded = false,
@@ -484,8 +486,7 @@ export function FamilyTreePage({
         if (!res.ok) throw new Error('Failed to update person')
       }
       setAddEditModalOpen(false)
-      // Refresh the page to show updated data
-      window.location.reload()
+      onPeopleChanged?.()
     } catch (err) {
       console.error('Error saving person:', err)
       // Could show an error toast here
@@ -501,8 +502,7 @@ export function FamilyTreePage({
       })
       if (!res.ok) throw new Error('Failed to delete person')
       setDetailModalOpen(false)
-      // Refresh the page to show updated data
-      window.location.reload()
+      onPeopleChanged?.()
     } catch (err) {
       console.error('Error deleting person:', err)
       // Could show an error toast here

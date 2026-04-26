@@ -3,11 +3,9 @@ import path from 'path'
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse } from '@/lib/api-helpers'
 import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
-import { withCSRFProtection } from '@/lib/security/csrf'
-
 export default apiHandler({
   // POST /api/export/json - Export workspace data as JSON
-  POST: withCSRFProtection(async (req, res) => {
+  POST: async (req, res) => {
 
     const user = await getAuthUserWithWorkspace(req, res)
     await requireWorkspaceRole(user.id, user.workspaceId, 'VIEWER')
@@ -176,5 +174,5 @@ export default apiHandler({
       downloadUrl: `/api/assets/${asset.id}/download`,
       summary: exportPayload.summary,
     }, 201)
-  }),
+  },
 })

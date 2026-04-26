@@ -1,5 +1,7 @@
 import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
+import { validateCSRFToken } from '@/lib/security/csrf'
+import { z } from 'zod'
 
 // ============================================
 // Secure Response Transformers
@@ -110,6 +112,15 @@ export function errorResponse(
   return res.status(statusCode).json(response)
 }
 
+function formatZodError(error: z.ZodError): Record<string, string> {
+  const formatted: Record<string, string> = {}
+  for (const issue of error.issues) {
+    const path = issue.path.join('.')
+    formatted[path || 'root'] = issue.message
+  }
+  return formatted
+}
+
 // ============================================
 // API Error Class
 // ============================================
@@ -157,19 +168,41 @@ type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 
 type ApiHandler = (req: NextApiRequest, res: NextApiResponse) => Promise<void>
 
-interface RouteHandlers {
-  GET?: ApiHandler
-  POST?: ApiHandler
-  PUT?: ApiHandler
-  PATCH?: ApiHandler
-  DELETE?: ApiHandler
+interface MethodHandler {
+  handler: ApiHandler
+  schema?: z.ZodSchema<any>
 }
 
-export function apiHandler(handlers: RouteHandlers): ApiHandler {
+interface RouteHandlers {
+  GET?: ApiHandler | MethodHandler
+  POST?: ApiHandler | MethodHandler
+  PUT?: ApiHandler | MethodHandler
+  PATCH?: ApiHandler | MethodHandler
+  DELETE?: ApiHandler | MethodHandler
+}
+
+export interface ApiHandlerOptions {
+  /**
+   * Enforce CSRF on non-safe methods (POST/PUT/PATCH/DELETE). Default `true`.
+   *
+   * Set to `false` only for routes that genuinely cannot have a CSRF token:
+   *   - pre-authentication routes (signup, forgot-password, reset-password)
+   *   - external webhooks (Stripe etc.)
+   *   - token-bearer endpoints invoked outside a session (email invite accept)
+   *
+   * Authenticated state-changing routes must leave this on.
+   */
+  csrf?: boolean
+}
+
+export function apiHandler(handlers: RouteHandlers, options: ApiHandlerOptions = {}): ApiHandler {
+  const csrfEnabled = options.csrf !== false
+
   return async (req: NextApiRequest, res: NextApiResponse) => {
     const method = req.method as HttpMethod
+    const methodConfig = handlers[method]
 
-    if (!handlers[method]) {
+    if (!methodConfig) {
       const allowed = Object.keys(handlers)
       res.setHeader('Allow', allowed.join(', '))
       return errorResponse(res, `Method ${method} not allowed`, 405, 'METHOD_NOT_ALLOWED')
@@ -178,8 +211,31 @@ export function apiHandler(handlers: RouteHandlers): ApiHandler {
     const startTime = Date.now()
     const endpoint = `${method} ${req.url}`
 
+    const actualHandler = typeof methodConfig === 'function' ? methodConfig : methodConfig.handler
+    const schema = typeof methodConfig === 'object' ? methodConfig.schema : undefined
+
     try {
-      await handlers[method]!(req, res)
+      if (csrfEnabled) {
+        const csrfOk = await validateCSRFToken(req, res)
+        if (!csrfOk) {
+          // validateCSRFToken already wrote the error response
+          const duration = Date.now() - startTime
+          logger.warn(`[API] ${endpoint} - ${res.statusCode} CSRF rejected (${duration}ms)`)
+          return
+        }
+      }
+
+      // Validate body against schema if provided
+      if (schema && ['POST', 'PUT', 'PATCH'].includes(method)) {
+        const result = schema.safeParse(req.body)
+        if (!result.success) {
+          throw Errors.badRequest('Validation failed', formatZodError(result.error))
+        }
+        // Replace req.body with parsed/transformed data
+        req.body = result.data
+      }
+
+      await actualHandler(req, res)
       const duration = Date.now() - startTime
       logger.info(`[API] ${endpoint} - ${res.statusCode} (${duration}ms)`)
     } catch (error: unknown) {

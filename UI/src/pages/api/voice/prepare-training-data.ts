@@ -2,7 +2,6 @@ import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '@/lib/prisma'
 import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
-import { withCSRFProtection } from '@/lib/security/csrf'
 import fs from 'fs'
 import path from 'path'
 
@@ -194,4 +193,4 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 }
 
-export default withCSRFProtection(handler)
+export default handler

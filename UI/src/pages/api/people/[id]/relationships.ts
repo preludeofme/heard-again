@@ -5,8 +5,6 @@ import { validate, rules } from '@/lib/validation'
 import { relationshipService } from '@/services'
 import { AppError } from '@/lib/api-helpers'
 import { Prisma } from '@prisma/client'
-import { withCSRFProtection } from '@/lib/security/csrf'
-
 export default apiHandler({
   // GET /api/people/[id]/relationships - Get person's relationships
   GET: async (req, res) => {
@@ -22,7 +20,7 @@ export default apiHandler({
   },
 
   // POST /api/people/[id]/relationships - Create a relationship
-  POST: withCSRFProtection(async (req, res) => {
+  POST: async (req, res) => {
     const user = await getAuthUserWithWorkspace(req, res)
     const personId = req.query.id as string
     await requireWorkspaceRole(user.id, user.workspaceId, 'EDITOR')
@@ -91,5 +89,5 @@ export default apiHandler({
       }
       throw Errors.internal('Failed to create relationship')
     }
-  }),
+  },
 })

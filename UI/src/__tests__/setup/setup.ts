@@ -12,6 +12,10 @@ jest.mock('next-auth/jwt', () => ({
   getToken: jest.fn(),
 }))
 
+jest.mock('next-auth/next', () => ({
+  getServerSession: jest.fn(),
+}))
+
 // Mock Redis for testing
 jest.mock('@/lib/redis-client', () => ({
   redis: {
@@ -34,24 +38,53 @@ jest.mock('@/lib/prisma', () => ({
     },
     person: {
       findFirst: jest.fn(),
+      findUnique: jest.fn(),
+      findMany: jest.fn(),
+      create: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
     },
     story: {
       findFirst: jest.fn(),
+      findUnique: jest.fn(),
+      findMany: jest.fn(),
+      create: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
     },
     voiceProfile: {
       findFirst: jest.fn(),
+      findUnique: jest.fn(),
+      findMany: jest.fn(),
+      create: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
     },
     asset: {
       findFirst: jest.fn(),
+      findUnique: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
       delete: jest.fn(),
     },
+    document: {
+      findFirst: jest.fn(),
+      findUnique: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    },
+    documentPerson: {
+      create: jest.fn(),
+      delete: jest.fn(),
+    },
+    membership: {
+      findFirst: jest.fn(),
+      findUnique: jest.fn(),
+      create: jest.fn(),
+    },
     $transaction: jest.fn(),
+    $queryRaw: jest.fn(),
   },
 }))
 

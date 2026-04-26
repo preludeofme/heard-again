@@ -1,7 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
 import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
-import { withCSRFProtection } from '@/lib/security/csrf'
 import { logger } from '@/lib/logger'
 
 const CHAT_SERVICE_URL =
@@ -13,7 +12,7 @@ if (CHAT_SERVICE_URL.includes('localhost') || CHAT_SERVICE_URL.includes('127.0.0
 }
 
 export default apiHandler({
-  POST: withCSRFProtection(async (req, res) => {
+  POST: async (req, res) => {
     if (process.env.NARRATION_REWRITE_ENABLED === 'false') {
       return res
         .status(503)
@@ -142,7 +141,7 @@ export default apiHandler({
         .status(502)
         .json({ success: false, error: 'Rewrite service unavailable' })
     }
-  }),
+  },
 })
 
 function formatPersonName(

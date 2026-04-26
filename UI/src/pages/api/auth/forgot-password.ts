@@ -114,4 +114,4 @@ export default apiHandler({
       message: 'If an account exists with this email, you will receive password reset instructions.',
     })
   },
-})
+}, { csrf: false })

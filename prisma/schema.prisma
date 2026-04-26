@@ -79,9 +79,11 @@ model Workspace {
   importJobs             ImportJob[]
   instances              Instance[]
   members                Membership[]
+  notifications          Notification[]
   people                 Person[]
   personaProfiles        PersonaProfile[]
   stories                Story[]
+  storyComments          StoryComment[]
   subscription           Subscription?
   defaultForUsers        User[]                @relation("UserDefaultWorkspace")
   voiceConsents          VoiceConsent[]
@@ -362,6 +364,7 @@ model PersonaProfile {
   documentSampleCount      Int       @default(0)
   confidenceScore          Float     @default(0.0)
   lastUpdated              DateTime  @default(now())
+  deletedAt                DateTime?
   createdAt                DateTime  @default(now())
   person                   Person    @relation(fields: [personId], references: [id], onDelete: Cascade)
   workspace                Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
@@ -389,6 +392,7 @@ model Story {
   tags                  String[]
   status                StoryStatus          @default(DRAFT)
   isPinned              Boolean              @default(false)
+  deletedAt             DateTime?
   narratedContent       String?
   narrationStatus       NarrationStatus      @default(NONE)
   narrationModel        String?
@@ -421,18 +425,21 @@ model Story {
 }
 
 model StoryComment {
-  id        String         @id @default(uuid())
-  storyId   String
-  userId    String
-  content   String
-  parentId  String?
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
-  parent    StoryComment?  @relation("CommentThread", fields: [parentId], references: [id])
-  replies   StoryComment[] @relation("CommentThread")
-  story     Story          @relation(fields: [storyId], references: [id], onDelete: Cascade)
-  user      User           @relation(fields: [userId], references: [id])
+  id          String         @id @default(uuid())
+  workspaceId String
+  storyId     String
+  userId      String
+  content     String
+  parentId    String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  parent      StoryComment?  @relation("CommentThread", fields: [parentId], references: [id])
+  replies     StoryComment[] @relation("CommentThread")
+  story       Story          @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  user        User           @relation(fields: [userId], references: [id])
+  workspace   Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
+  @@index([workspaceId])
   @@index([storyId])
   @@index([userId])
   @@index([parentId])
@@ -449,6 +456,7 @@ model Asset {
   storagePath              String
   storageBucket            String?
   assetType                AssetType
+  isAISynthesized          Boolean              @default(false)
   durationSeconds          Float?
   width                    Int?
   height                   Int?
@@ -568,6 +576,7 @@ model VoiceProfile {
   status               VoiceStatus          @default(READY)
   createdAt            DateTime             @default(now())
   updatedAt            DateTime             @updatedAt
+  deletedAt            DateTime?
   externalId           String?
   stories              Story[]
   voiceConsents        VoiceConsent[]
@@ -762,6 +771,7 @@ model VoiceConsent {
   allowsCloudProcessing Boolean       @default(false)
   allowsSharing         Boolean       @default(false)
   recordedAt            DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
   revokedAt             DateTime?
   metadata              Json?
   grantedByUser         User          @relation(fields: [grantedByUserId], references: [id])
@@ -769,6 +779,7 @@ model VoiceConsent {
   voiceProfile          VoiceProfile? @relation(fields: [voiceProfileId], references: [id])
   workspace             Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
+  @@unique([workspaceId, personId, voiceProfileId, consentType])
   @@index([workspaceId])
   @@index([personId])
   @@index([voiceProfileId])
@@ -809,6 +820,7 @@ model CollectionStory {
 
 model Notification {
   id           String           @id @default(uuid())
+  workspaceId  String
   userId       String
   type         NotificationType
   title        String
@@ -818,7 +830,9 @@ model Notification {
   resourceId   String?
   createdAt    DateTime         @default(now())
   user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace    Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
+  @@index([workspaceId])
   @@index([userId, isRead])
 }
 

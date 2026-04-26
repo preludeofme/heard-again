@@ -1,7 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse, Errors, sanitizeAssetResponse } from '@/lib/api-helpers'
 import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
-import { withCSRFProtection } from '@/lib/security/csrf'
 import { logger } from '@/lib/logger'
 
 export default apiHandler({
@@ -54,7 +53,7 @@ export default apiHandler({
   },
 
   // PATCH /api/assets/[id] - Link or unlink a person from the document for this asset
-  PATCH: withCSRFProtection(async (req, res) => {
+  PATCH: async (req, res) => {
     const user = await getAuthUserWithWorkspace(req, res)
     await requireWorkspaceRole(user.id, user.workspaceId, 'EDITOR')
     const assetId = req.query.id as string
@@ -138,10 +137,10 @@ export default apiHandler({
     }
 
     return successResponse(res, { documentId: document.id, personId, action })
-  }),
+  },
 
   // DELETE /api/assets/[id] - Delete asset
-  DELETE: withCSRFProtection(async (req, res) => {
+  DELETE: async (req, res) => {
 
     const user = await getAuthUserWithWorkspace(req, res)
     const assetId = req.query.id as string
@@ -174,5 +173,5 @@ export default apiHandler({
     await prisma.asset.delete({ where: { id: assetId } })
 
     return successResponse(res, { deleted: true })
-  }),
+  },
 })

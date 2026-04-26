@@ -218,6 +218,14 @@ class SecurityLogger {
     return createHash('sha256').update(ip).digest('hex').substring(0, 8)
   }
 
+  /**
+   * Helper to hash sensitive strings like email or filenames for logging
+   */
+  anonymizeString(value?: string): string {
+    if (!value) return 'unknown'
+    return createHash('sha256').update(value).digest('hex').substring(0, 12)
+  }
+
   private generateRequestId(): string {
     return randomBytes(16).toString('hex')
   }
@@ -272,15 +280,15 @@ export const securityEvents = {
   },
 
   async logAuthFailure(email: string, reason: string, ipAddress?: string, userAgent?: string) {
-    const logger = SecurityLogger.getInstance()
-    await logger.logSecurityEvent({
+    const loggerInstance = SecurityLogger.getInstance()
+    await loggerInstance.logSecurityEvent({
       type: 'AUTH_FAILURE',
       severity: 'MEDIUM',
       ipAddress,
       userAgent,
       action: 'LOGIN_ATTEMPT',
       details: {
-        email,
+        emailHash: loggerInstance.anonymizeString(email),
         reason,
       },
     })
@@ -303,8 +311,8 @@ export const securityEvents = {
   },
 
   async logMalwareDetected(userId: string, workspaceId: string, filename: string, threats: string[], ipAddress?: string, userAgent?: string) {
-    const logger = SecurityLogger.getInstance()
-    await logger.logSecurityEvent({
+    const loggerInstance = SecurityLogger.getInstance()
+    await loggerInstance.logSecurityEvent({
       type: 'MALWARE_DETECTED',
       severity: 'CRITICAL',
       userId,
@@ -314,15 +322,15 @@ export const securityEvents = {
       resource: 'FILE',
       action: 'UPLOAD',
       details: {
-        filename,
+        filenameHash: loggerInstance.anonymizeString(filename),
         threats,
       },
     })
   },
 
   async logFileUpload(userId: string, workspaceId: string, filename: string, fileSize: number, ipAddress?: string, userAgent?: string) {
-    const logger = SecurityLogger.getInstance()
-    await logger.logSecurityEvent({
+    const loggerInstance = SecurityLogger.getInstance()
+    await loggerInstance.logSecurityEvent({
       type: 'FILE_UPLOAD',
       severity: 'LOW',
       userId,
@@ -332,7 +340,7 @@ export const securityEvents = {
       resource: 'FILE',
       action: 'UPLOAD',
       details: {
-        filename,
+        filenameHash: loggerInstance.anonymizeString(filename),
         fileSize,
       },
     })

@@ -1,8 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
 import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
-import { withCSRFProtection } from '@/lib/security/csrf'
-
 export default apiHandler({
   // GET /api/voice/profiles - List voice profiles from DB
   GET: async (req, res) => {
@@ -60,7 +58,7 @@ export default apiHandler({
   },
 
   // POST /api/voice/profiles - Create a voice profile (DB record)
-  POST: withCSRFProtection(async (req, res) => {
+  POST: async (req, res) => {
 
     const user = await getAuthUserWithWorkspace(req, res)
     await requireWorkspaceRole(user.id, user.workspaceId, 'EDITOR')
@@ -101,5 +99,5 @@ export default apiHandler({
       status: profile.status,
       createdAt: profile.createdAt,
     }, 201)
-  }),
+  },
 })

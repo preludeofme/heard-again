@@ -52,4 +52,4 @@ export default apiHandler({
       email: user.email,
     })
   },
-})
+}, { csrf: false })

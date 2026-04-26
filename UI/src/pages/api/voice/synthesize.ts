@@ -4,10 +4,8 @@ import { apiHandler, successResponse, errorResponse } from '@/lib/api-helpers'
 import { getAuthUserWithWorkspace } from '@/lib/auth-helpers'
 import { voiceService } from '@/services'
 import { AppError } from '@/lib/api-helpers'
-import { withCSRFProtection } from '@/lib/security/csrf'
-
 export default apiHandler({
-  POST: withCSRFProtection(async (req: NextApiRequest, res: NextApiResponse) => {
+  POST: async (req: NextApiRequest, res: NextApiResponse) => {
     const user = await getAuthUserWithWorkspace(req, res)
     const { modelId, text, language = 'en' } = req.body
 
@@ -38,5 +36,5 @@ export default apiHandler({
       const message = error instanceof Error ? error.message : 'Voice synthesis failed'
       return errorResponse(res, message, 503, 'SYNTHESIS_FAILED')
     }
-  }),
+  },
 })

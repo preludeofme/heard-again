@@ -15,6 +15,8 @@ module.exports = {
   // Module path mapping
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
+    '^file-type$': '<rootDir>/src/__tests__/mocks/file-type.ts',
+    '^uuid$': '<rootDir>/src/__tests__/mocks/uuid.ts',
   },
   
   // Coverage
@@ -30,7 +32,7 @@ module.exports = {
   },
   
   transformIgnorePatterns: [
-    '/node_modules/(?!(bullmq|msgpackr)/)',
+    '/node_modules/(?!(bullmq|msgpackr|uuid|jose|openid-client|file-type)/)',
   ],
   
   // Module file extensions

@@ -281,27 +281,21 @@ export class IngestionWorker {
   }
 
   private async storeDocument(documentData: any): Promise<void> {
-    const { PrismaClient } = require('@prisma/client')
-    const prisma = new PrismaClient()
     const chromaUrl = process.env.CHROMA_URL || 'http://localhost:8004'
 
     try {
       // 1. Update document record with extracted content + mark as completed
-      await prisma.document.update({
-        where: { id: documentData.id },
-        data: {
-          content: documentData.content,
-          status: DocumentStatus.PROCESSED,
-          embeddingStatus: EmbeddingStatus.COMPLETED,
-          metadata: documentData.metadata ?? {},
-          updatedAt: new Date(),
-        },
+      await this.ingestionService.documentRepository.updateDocument({
+        id: documentData.id,
+        content: documentData.content,
+        status: DocumentStatus.PROCESSED,
+        embeddingStatus: EmbeddingStatus.COMPLETED,
+        metadata: documentData.metadata ?? {},
       })
 
       // 2. Persist chunks + embeddings to Postgres
-      const documentRepository = new PrismaDocumentRepository()
       for (const chunk of documentData.chunks) {
-        await documentRepository.createChunk({
+        await this.ingestionService.documentRepository.createChunk({
           id: chunk.id,
           documentId: documentData.id,
           chunkIndex: chunk.index,
@@ -358,8 +352,9 @@ export class IngestionWorker {
       })
 
       logger.info({ documentId: documentData.id, workspaceId: documentData.workspaceId, chunkCount: documentData.chunks.length }, 'Chunks upserted to ChromaDB via client (DefaultEmbeddingFunction)')
-    } finally {
-      await prisma.$disconnect()
+    } catch (error) {
+      logger.error({ documentId: documentData.id, err: error instanceof Error ? error.message : String(error) }, 'Failed to store document in Postgres/Chroma')
+      throw error
     }
   }
 }

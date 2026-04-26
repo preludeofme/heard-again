@@ -1,8 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
 import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
-import { withCSRFProtection } from '@/lib/security/csrf'
-
 export default apiHandler({
   // GET /api/voice/profiles/[id] - Get profile details
   GET: async (req, res) => {
@@ -51,7 +49,7 @@ export default apiHandler({
   },
 
   // PUT /api/voice/profiles/[id] - Update profile metadata
-  PUT: withCSRFProtection(async (req, res) => {
+  PUT: async (req, res) => {
 
     const user = await getAuthUserWithWorkspace(req, res)
     const profileId = req.query.id as string
@@ -95,10 +93,10 @@ export default apiHandler({
       isDefault: profile.isDefault,
       updatedAt: profile.updatedAt,
     })
-  }),
+  },
 
   // DELETE /api/voice/profiles/[id] - Delete profile
-  DELETE: withCSRFProtection(async (req, res) => {
+  DELETE: async (req, res) => {
 
     const user = await getAuthUserWithWorkspace(req, res)
     const profileId = req.query.id as string
@@ -112,5 +110,5 @@ export default apiHandler({
     await prisma.voiceProfile.delete({ where: { id: profileId } })
 
     return successResponse(res, { deleted: true })
-  }),
+  },
 })

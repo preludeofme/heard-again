@@ -174,9 +174,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             }
         elif '/synthesize' in path:
             return {
-                'limit': 100,  # 100 syntheses per 15 minutes
+                'limit': 50,  # 50 syntheses per 15 minutes per profile (R6)
                 'window': 900,  # 15 minutes
-                'key_type': 'user'  # Rate limit by user
+                'key_type': 'profile'  # Rate limit by profile (R6)
             }
         elif '/voice-profiles' in path:
             return {
@@ -200,6 +200,13 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 return f"user:{request.state.auth_data.get('user_id', 'unknown')}"
             # Fallback to IP if no user data
             return f"ip:{self._get_client_ip(request)}"
+        elif key_type == 'profile':
+            # This is tricky as we need to parse the body or get it from query/path
+            # For simplicity in middleware, we might fallback to user if not found
+            # but let's try to get it from request state if available
+            if hasattr(request.state, 'profile_id'):
+                return f"profile:{request.state.profile_id}"
+            return f"user:{request.state.auth_data.get('user_id', 'unknown')}" if hasattr(request.state, 'auth_data') else f"ip:{self._get_client_ip(request)}"
         else:
             return f"ip:{self._get_client_ip(request)}"
     

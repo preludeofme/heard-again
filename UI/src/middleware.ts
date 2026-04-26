@@ -2,10 +2,20 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 
-// Define allowed origins - add your Tailscale domain here
-const ALLOWED_ORIGINS = [
-  'https://trubuck-design-ai-beast.stern-mulley.ts.net:4777',
-]
+// Define allowed origins - read from env in production
+const getAllowedOrigins = () => {
+  const envOrigins = process.env.ALLOWED_ORIGINS
+  if (envOrigins) {
+    return envOrigins.split(',').map(o => o.trim())
+  }
+  return [
+    'https://trubuck-design-ai-beast.stern-mulley.ts.net:4777',
+    'http://localhost:4777',
+    'http://localhost:3000'
+  ]
+}
+
+const ALLOWED_ORIGINS = getAllowedOrigins()
 
 // Helper to add CORS headers
 function addCorsHeaders(response: NextResponse, request: NextRequest): NextResponse {

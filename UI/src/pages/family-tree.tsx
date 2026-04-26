@@ -623,11 +623,12 @@ export default function FamilyTree() {
   }
 
   const treeContent = (
-    <FamilyTreePage 
-      people={treeData ?? undefined} 
+    <FamilyTreePage
+      people={treeData ?? undefined}
       onPersonClick={handlePersonClick}
       onAddPerson={() => setIsAddPersonModalOpen(true)}
       onEditRelationships={handleEditRelationships}
+      onPeopleChanged={fetchPeople}
       isFullscreen={isFullscreen}
       onToggleFullscreen={() => setIsFullscreen((prev) => !prev)}
       initialSearchExpanded={initialSearchExpanded}

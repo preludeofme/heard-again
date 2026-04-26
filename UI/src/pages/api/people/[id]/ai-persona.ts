@@ -1,8 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
 import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
-import { withCSRFProtection } from '@/lib/security/csrf'
-
 export default apiHandler({
   // GET /api/people/[id]/ai-persona - Get person's AI persona
   GET: async (req, res) => {
@@ -44,7 +42,7 @@ export default apiHandler({
   },
 
   // PUT /api/people/[id]/ai-persona - Update or create AI persona
-  PUT: withCSRFProtection(async (req, res) => {
+  PUT: async (req, res) => {
     const user = await getAuthUserWithWorkspace(req, res)
     const personId = req.query.id as string
     await requireWorkspaceRole(user.id, user.workspaceId, 'EDITOR')
@@ -127,10 +125,10 @@ export default apiHandler({
     })
 
     return successResponse(res, persona)
-  }),
+  },
 
   // POST /api/people/[id]/ai-persona/activate - Activate a persona version
-  POST: withCSRFProtection(async (req, res) => {
+  POST: async (req, res) => {
     const user = await getAuthUserWithWorkspace(req, res)
     const personId = req.query.id as string
     await requireWorkspaceRole(user.id, user.workspaceId, 'EDITOR')
@@ -170,5 +168,5 @@ export default apiHandler({
     })
 
     return successResponse(res, activatedPersona)
-  }),
+  },
 })

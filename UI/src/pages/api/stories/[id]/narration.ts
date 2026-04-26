@@ -1,7 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
 import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
-import { withCSRFProtection } from '@/lib/security/csrf'
 import { enqueueNarrationRender } from '@/lib/queues/narrationQueue'
 import { logger } from '@/lib/logger'
 import type { NarrationStatus } from '@prisma/client'
@@ -96,7 +95,7 @@ async function enqueueRenderOnApprove(params: {
 export default apiHandler({
   // PATCH /api/stories/[id]/narration
   // body: { action: 'update' | 'approve' | 'discard', narratedContent?: string }
-  PATCH: withCSRFProtection(async (req, res) => {
+  PATCH: async (req, res) => {
     const user = await getAuthUserWithWorkspace(req, res)
     const storyId = req.query.id as string
     await requireWorkspaceRole(user.id, user.workspaceId, 'EDITOR')
@@ -186,5 +185,5 @@ export default apiHandler({
       narrationJobId: renderEnqueue?.narrationJobId ?? null,
       queueJobId: renderEnqueue?.queueJobId ?? null,
     })
-  }),
+  },
 })

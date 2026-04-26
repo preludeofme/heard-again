@@ -67,4 +67,4 @@ export default apiHandler({
       message: 'Password has been reset successfully. You can now sign in with your new password.',
     })
   },
-})
+}, { csrf: false })

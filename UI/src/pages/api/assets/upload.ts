@@ -346,5 +346,5 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse) {
   }
 }
 
-// Export with CSRF protection
+// Custom handler (not apiHandler) — formidable needs raw body, so wrap explicitly.
 export default withCSRFProtection(uploadHandler)

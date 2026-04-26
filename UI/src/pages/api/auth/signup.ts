@@ -114,4 +114,4 @@ export default apiHandler({
       user: result,
     }, 201)
   },
-})
+}, { csrf: false })

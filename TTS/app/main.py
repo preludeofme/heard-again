@@ -8,7 +8,7 @@ from typing import Optional, Annotated
 
 import numpy as np
 import soundfile as sf
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile, Depends
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel
@@ -37,6 +37,8 @@ from app.validators import (
 )
 from app.text_chunker import chunk_text
 from app.audio_encoder import encode_pcm_to_mp3, check_ffmpeg_available
+from app.services.consent_validator import consent_validator
+from app.services.encryption_service import encryption_service
 
 logging.basicConfig(
     level=logging.INFO,
@@ -269,6 +271,13 @@ async def upload_reference(
         }
         meta_path.write_text(json.dumps(metadata))
 
+        # R12 - Encrypt reference audio at rest
+        try:
+            encryption_service.encrypt_file(save_path, auth_data['workspace_id'])
+            logger.info(f"Encrypted reference audio at rest: {save_path}", extra={'user_context': user_context})
+        except Exception as e:
+            logger.error(f"Failed to encrypt reference audio: {e}")
+
         await log_auth_event('REFERENCE_UPLOADED', auth_data, {
             'fileId': file_id,
             'fileName': audio.filename,
@@ -330,6 +339,20 @@ async def create_voice_profile(
         raise HTTPException(status_code=404, detail=REFERENCE_AUDIO_NOT_FOUND_ERROR)
 
     ref_path = str(ref_files[0])
+    
+    # R12 - Decrypt reference audio for processing
+    import tempfile
+    temp_ref = tempfile.NamedTemporaryFile(suffix=Path(ref_path).suffix, delete=False)
+    try:
+        decrypted_bytes = encryption_service.decrypt_file_to_bytes(Path(ref_path), auth_data['workspace_id'])
+        temp_ref.write(decrypted_bytes)
+        temp_ref.close()
+        ref_path_for_model = temp_ref.name
+    except Exception as e:
+        if os.path.exists(temp_ref.name):
+            os.unlink(temp_ref.name)
+        logger.error(f"Failed to decrypt reference audio: {e}")
+        raise HTTPException(status_code=500, detail="Failed to decrypt reference audio")
 
     # Validate tenant access to the reference file
     try:
@@ -365,11 +388,15 @@ async def create_voice_profile(
     try:
         start = time.time()
         profile_path = model_manager.create_voice_profile(
-            ref_audio_path=ref_path,
+            ref_audio_path=ref_path_for_model,
             ref_text=req.refText,
             profile_name=safe_name,
         )
         elapsed = time.time() - start
+
+        # Cleanup temp decrypted file
+        if os.path.exists(temp_ref.name):
+            os.unlink(temp_ref.name)
 
         # Organize voice profiles by workspace for tenant isolation
         workspace_profiles_dir = VOICE_PROFILES_DIR / auth_data['workspace_id']
@@ -381,9 +408,12 @@ async def create_voice_profile(
             profile_path.rename(workspace_profile_path)
             profile_path = workspace_profile_path
 
+        # Reference metadata path (for auto-deletion)
+        ref_meta_path = workspace_dir / f"{req.fileId}{JSON_EXTENSION}"
+
         # Save style metadata alongside the profile
         if req.styleInstruct or style_params:
-            meta_path = workspace_profiles_dir / f"{safe_name}{JSON_EXTENSION}"
+            style_meta_path = workspace_profiles_dir / f"{safe_name}{JSON_EXTENSION}"
             metadata = {
                 "profileId": safe_name,
                 "styleInstruct": req.styleInstruct or "",
@@ -392,14 +422,26 @@ async def create_voice_profile(
                 "createdBy": auth_data['user_id'],
                 "fileId": req.fileId
             }
-            meta_path.write_text(json.dumps(metadata))
-            logger.info(f"Saved style metadata: {meta_path}", extra={'user_context': user_context})
+            style_meta_path.write_text(json.dumps(metadata))
+            logger.info(f"Saved style metadata: {style_meta_path}", extra={'user_context': user_context})
 
         await log_auth_event('VOICE_PROFILE_CREATED', auth_data, {
             'profileId': safe_name,
             'profileName': req.profileName,
             'processingTime': round(elapsed, 2)
         })
+
+        # R12 - Auto-delete reference .wav after successful training
+        try:
+            if Path(ref_path).exists():
+                Path(ref_path).unlink()
+                logger.info(f"Auto-deleted reference audio after training: {ref_path}", extra={'user_context': user_context})
+                
+            # Also delete reference metadata if exists
+            if ref_meta_path.exists():
+                ref_meta_path.unlink()
+        except Exception as e:
+            logger.warning(f"Failed to auto-delete reference file {ref_path}: {e}")
 
         return {
             "success": True,
@@ -772,15 +814,29 @@ class SynthesizeRequest(BaseModel):
     language: str = "English"
     style: Optional[str] = None
     workspaceId: Optional[str] = None  # Explicit workspace override
+    consentToken: Optional[str] = None
 
-
+from app.rate_limiter import RateLimitMiddleware, rate_limiter
+...
 @app.post("/api/tts/synthesize")
 async def synthesize_speech(
+    request: Request, # Add Request object to access state
     auth_data: Annotated[dict, Depends(require_workspace_role)],
     req: SynthesizeRequest,
 ):
     """Generate speech from text using a saved voice profile."""
+    # R6 - Per-profile rate limiting
+    client_key = f"profile:{req.profileId}"
+    allowed, rate_info = rate_limiter.is_allowed(key=client_key, limit=50, window=900)
+    if not allowed:
+        raise HTTPException(
+            status_code=429, 
+            detail=f"Rate limit exceeded for this voice profile. Try again in {rate_info['retry_after']}s"
+        )
+
     # DEBUG: Confirm we entered the function
+...
+
     logger.info(f"DEBUG: ENTER synthesize_speech - auth_workspace={auth_data.get('workspace_id')}, req_workspace={req.workspaceId}, profile={req.profileId}")
     user_context = get_user_context(auth_data)
     
@@ -790,6 +846,21 @@ async def synthesize_speech(
     # Verify voice profile belongs to user's workspace
     # Use explicit workspaceId from request if provided, otherwise fall back to auth
     workspace_id = req.workspaceId or auth_data['workspace_id']
+
+    # R1 - Validate consent token
+    if not req.consentToken:
+        await log_auth_event('CONSENT_TOKEN_MISSING', auth_data, {
+            'profileId': req.profileId,
+            'workspaceId': workspace_id
+        })
+        raise HTTPException(status_code=403, detail="Voice consent token required")
+    
+    consent_validator.validate_token(
+        req.consentToken, 
+        workspace_id=workspace_id, 
+        profile_id=req.profileId
+    )
+
     workspace_profiles_dir = VOICE_PROFILES_DIR / workspace_id
     
     # Sanitize profileId to match how profiles are saved (spaces -> underscores)
@@ -891,19 +962,25 @@ class SynthesizeStreamRequest(BaseModel):
     language: str = "English"
     style: Optional[str] = None
     workspaceId: Optional[str] = None
+    consentToken: Optional[str] = None
 
 
 @app.post("/api/tts/synthesize-stream")
 async def synthesize_speech_stream(
+    request: Request,
     auth_data: Annotated[dict, Depends(require_workspace_role)],
     req: SynthesizeStreamRequest,
 ):
-    """Stream MP3 audio synthesized sentence-by-sentence.
-
-    The model is not token-streaming, but we split the text into sentences and
-    yield each as it finishes encoding. Time-to-first-byte is roughly one sentence's
-    synthesis time.
-    """
+    """Stream MP3 audio synthesized sentence-by-sentence."""
+    # R6 - Per-profile rate limiting
+    client_key = f"profile:{req.profileId}"
+    allowed, rate_info = rate_limiter.is_allowed(key=client_key, limit=50, window=900)
+    if not allowed:
+        raise HTTPException(
+            status_code=429, 
+            detail=f"Rate limit exceeded for this voice profile. Try again in {rate_info['retry_after']}s"
+        )
+    
     if not model_manager.is_loaded:
         raise HTTPException(status_code=503, detail=MODEL_NOT_LOADED_ERROR)
 
@@ -914,6 +991,22 @@ async def synthesize_speech_stream(
         )
 
     workspace_id = req.workspaceId or auth_data['workspace_id']
+
+    # R1 - Validate consent token
+    if not req.consentToken:
+        await log_auth_event('CONSENT_TOKEN_MISSING', auth_data, {
+            'profileId': req.profileId,
+            'workspaceId': workspace_id,
+            'endpoint': 'synthesize-stream'
+        })
+        raise HTTPException(status_code=403, detail="Voice consent token required")
+    
+    consent_validator.validate_token(
+        req.consentToken, 
+        workspace_id=workspace_id, 
+        profile_id=req.profileId
+    )
+
     workspace_profiles_dir = VOICE_PROFILES_DIR / workspace_id
 
     safe_profile_id = "".join(c if c.isalnum() or c in "-_ " else "" for c in req.profileId)

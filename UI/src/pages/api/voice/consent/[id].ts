@@ -1,11 +1,9 @@
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
 import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
-import { withCSRFProtection } from '@/lib/security/csrf'
-
 export default apiHandler({
   // PUT /api/voice/consent/[id] - Revoke voice consent
-  PUT: withCSRFProtection(async (req, res) => {
+  PUT: async (req, res) => {
     const user = await getAuthUserWithWorkspace(req, res)
     const consentId = req.query.id as string
     await requireWorkspaceRole(user.id, user.workspaceId, 'EDITOR')
@@ -26,5 +24,5 @@ export default apiHandler({
       id: updated.id,
       revokedAt: updated.revokedAt,
     })
-  }),
+  },
 })

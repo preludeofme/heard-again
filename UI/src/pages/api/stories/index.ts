@@ -1,9 +1,7 @@
-import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
 import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
 import { storyService } from '@/services'
-import { validateBody, validateQuery, createStorySchema, listStoriesQuerySchema, formatZodError } from '@/schemas'
-import { withCSRFProtection } from '@/lib/security/csrf'
+import { createStorySchema, listStoriesQuerySchema, validateQuery, formatZodError } from '@/schemas'
 
 export default apiHandler({
   // GET /api/stories - List stories (with filters)
@@ -21,18 +19,14 @@ export default apiHandler({
   },
 
   // POST /api/stories - Create a story
-  POST: withCSRFProtection(async (req, res) => {
+  POST: {
+    schema: createStorySchema,
+    handler: async (req, res) => {
+      const user = await getAuthUserWithWorkspace(req, res)
+      await requireWorkspaceRole(user.id, user.workspaceId, 'EDITOR')
 
-    const user = await getAuthUserWithWorkspace(req, res)
-    await requireWorkspaceRole(user.id, user.workspaceId, 'EDITOR')
-
-    // Validate request body
-    const bodyValidation = validateBody(createStorySchema, req.body)
-    if (!bodyValidation.success) {
-      throw Errors.badRequest('Validation failed', formatZodError(bodyValidation.details))
+      const result = await storyService.createStory(user.workspaceId, user.id, req.body)
+      return successResponse(res, result, 201)
     }
-
-    const result = await storyService.createStory(user.workspaceId, user.id, bodyValidation.data)
-    return successResponse(res, result, 201)
-  }),
+  },
 })

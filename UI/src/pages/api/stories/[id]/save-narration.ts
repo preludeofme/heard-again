@@ -1,12 +1,11 @@
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse, Errors, AppError } from '@/lib/api-helpers'
 import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
-import { withCSRFProtection } from '@/lib/security/csrf'
 import { enqueueNarrationRender } from '@/lib/queues/narrationQueue'
 import { logger } from '@/lib/logger'
 
 export default apiHandler({
-  POST: withCSRFProtection(async (req, res) => {
+  POST: async (req, res) => {
     if (process.env.AUDIO_GENERATION_ENABLED !== 'true') {
       return res.status(503).json({ success: false, error: 'Audio generation is not yet available' })
     }
@@ -139,5 +138,5 @@ export default apiHandler({
       logger.error('[save-narration] enqueue failed', { storyId, error })
       throw new AppError('Failed to queue narration render', 503, 'ENQUEUE_FAILED')
     }
-  }),
+  },
 })

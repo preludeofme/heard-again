@@ -9,8 +9,6 @@ import fs from 'fs/promises'
 import path from 'path'
 import formidable from 'formidable'
 import { v4 as uuidv4 } from 'uuid'
-import { withCSRFProtection } from '@/lib/security/csrf'
-
 const TTS_SERVICE_TOKEN = process.env.TTS_SERVICE_TOKEN
 if (!TTS_SERVICE_TOKEN) {
   throw new Error('TTS_SERVICE_TOKEN environment variable is required for the voice upload pipeline')
@@ -177,4 +175,4 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 }
 
-export default withCSRFProtection(handler)
+export default handler

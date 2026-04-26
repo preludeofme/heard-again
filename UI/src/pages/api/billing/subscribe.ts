@@ -2,11 +2,9 @@ import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
 import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
 import { validate, rules } from '@/lib/validation'
-import { withCSRFProtection } from '@/lib/security/csrf'
-
 export default apiHandler({
   // POST /api/billing/subscribe - Subscribe to a plan
-  POST: withCSRFProtection(async (req, res) => {
+  POST: async (req, res) => {
     const user = await getAuthUserWithWorkspace(req, res)
     await requireWorkspaceRole(user.id, user.workspaceId, 'OWNER')
 
@@ -100,5 +98,5 @@ export default apiHandler({
       checkoutUrl: null, // In production, this would be the Stripe checkout URL
       message: 'Subscription created successfully. Stripe integration pending for production.',
     }, 201)
-  }),
+  },
 })

@@ -3,8 +3,6 @@ import path from 'path'
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse } from '@/lib/api-helpers'
 import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
-import { withCSRFProtection } from '@/lib/security/csrf'
-
 function formatGedcomDate(date: Date | null | undefined): string | null {
   if (!date) return null
   const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
@@ -24,7 +22,7 @@ function familyGedcomId(familyId: string, index: number): string {
 
 export default apiHandler({
   // POST /api/export/gedcom - Export people and families as GEDCOM from normalized genealogy schema
-  POST: withCSRFProtection(async (req, res) => {
+  POST: async (req, res) => {
 
     const user = await getAuthUserWithWorkspace(req, res)
     await requireWorkspaceRole(user.id, user.workspaceId, 'VIEWER')
@@ -285,5 +283,5 @@ export default apiHandler({
         validation: exportValidation,
       },
     }, 201)
-  }),
+  },
 })

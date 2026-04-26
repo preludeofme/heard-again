@@ -1,11 +1,6 @@
-/**
- * PersonService - Business logic for person operations
- * Finding 5.1: Create Service Layer
- */
-
-import type { PrismaClient } from '@prisma/client'
 import type { CreatePersonInput, ListPeopleQuery } from '@/schemas'
 import type { PersonListItem, CreatePersonResponse, PersonType } from '@/contracts'
+import { personRepository, PersonRepository } from '@/server/repositories/PersonRepository'
 
 // Person inclusion type for Prisma queries
 type PersonInclude = {
@@ -23,7 +18,7 @@ const PERSON_INCLUDE: PersonInclude = {
 }
 
 export class PersonService {
-  constructor(private prisma: PrismaClient) {}
+  constructor(private repo: PersonRepository = personRepository) {}
 
   /**
    * List people in a workspace
@@ -49,13 +44,12 @@ export class PersonService {
       where.personType = type.toUpperCase()
     }
 
-    const people = await this.prisma.person.findMany({
+    const people = await this.repo.findMany(workspaceId, {
       where,
       include: PERSON_INCLUDE,
-      orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
     })
 
-    return people.map(this.mapToListItem)
+    return (people as any[]).map(this.mapToListItem)
   }
 
   /**
@@ -65,12 +59,9 @@ export class PersonService {
     personId: string,
     workspaceId: string
   ): Promise<PersonListItem | null> {
-    const person = await this.prisma.person.findFirst({
-      where: { id: personId, workspaceId },
-      include: PERSON_INCLUDE,
-    })
+    const person = await this.repo.findById(personId, workspaceId, PERSON_INCLUDE)
 
-    return person ? this.mapToListItem(person) : null
+    return person ? this.mapToListItem(person as any) : null
   }
 
   /**
@@ -81,25 +72,23 @@ export class PersonService {
     userId: string,
     data: CreatePersonInput
   ): Promise<CreatePersonResponse> {
-    const person = await this.prisma.person.create({
-      data: {
-        workspaceId,
-        createdById: userId,
-        firstName: data.firstName,
-        lastName: data.lastName ?? null,
-        displayName: data.displayName ?? null,
-        nickname: data.nickname ?? null,
-        maidenName: data.maidenName ?? null,
-        suffix: data.suffix ?? null,
-        middleName: data.middleName ?? null,
-        birthDate: data.birthDate ? new Date(data.birthDate) : null,
-        deathDate: data.deathDate ? new Date(data.deathDate) : null,
-        isDeceased: data.isDeceased ?? false,
-        bio: data.bio ?? null,
-        personType: data.personType ?? 'FAMILY',
-        tags: data.tags ?? [],
-      },
-    })
+    const person = await this.repo.create({
+      workspaceId,
+      createdById: userId,
+      firstName: data.firstName,
+      lastName: data.lastName ?? null,
+      displayName: data.displayName ?? null,
+      nickname: data.nickname ?? null,
+      maidenName: data.maidenName ?? null,
+      suffix: data.suffix ?? null,
+      middleName: data.middleName ?? null,
+      birthDate: data.birthDate ? new Date(data.birthDate) : null,
+      deathDate: data.deathDate ? new Date(data.deathDate) : null,
+      isDeceased: data.isDeceased ?? false,
+      bio: data.bio ?? null,
+      personType: data.personType ?? 'FAMILY',
+      tags: data.tags ?? [],
+    }, userId)
 
     return {
       id: person.id,
@@ -117,7 +106,8 @@ export class PersonService {
   async updatePerson(
     personId: string,
     workspaceId: string,
-    data: Partial<CreatePersonInput>
+    data: Partial<CreatePersonInput>,
+    userId: string
   ): Promise<CreatePersonResponse> {
     const updateData: Record<string, unknown> = {}
 
@@ -135,10 +125,7 @@ export class PersonService {
     if (data.personType !== undefined) updateData.personType = data.personType
     if (data.tags !== undefined) updateData.tags = data.tags
 
-    const person = await this.prisma.person.update({
-      where: { id: personId, workspaceId },
-      data: updateData,
-    })
+    const person = await this.repo.update(personId, workspaceId, updateData, userId)
 
     return {
       id: person.id,
@@ -151,50 +138,136 @@ export class PersonService {
   }
 
   /**
+   * Get complex person detail including relationships and voice profiles
+   */
+  async getPersonDetail(
+    personId: string,
+    workspaceId: string
+  ): Promise<any> {
+    const person = await this.repo.findById(personId, workspaceId, {
+      avatarAsset: {
+        select: { id: true, storagePath: true, mimeType: true },
+      },
+      voiceProfiles: {
+        where: { status: 'READY' },
+        select: {
+          id: true,
+          name: true,
+          isDefault: true,
+          isCloned: true,
+          createdAt: true,
+        },
+      },
+      _count: {
+        select: {
+          storiesAsSubject: true,
+          storiesAsSpeaker: true,
+          voiceProfiles: true,
+        },
+      },
+    })
+
+    if (!person) {
+      return null
+    }
+
+    const familyUnits = await (this.repo as any).prisma.familyUnit.findMany({
+      where: {
+        workspaceId,
+        OR: [
+          { parents: { some: { parentId: personId } } },
+          { children: { some: { childId: personId } } },
+        ],
+      },
+      include: {
+        parents: {
+          include: {
+            parent: {
+              select: { id: true, firstName: true, lastName: true, avatarAssetId: true },
+            },
+          },
+          orderBy: { sortOrder: 'asc' },
+        },
+        children: {
+          include: {
+            child: {
+              select: { id: true, firstName: true, lastName: true, avatarAssetId: true },
+            },
+          },
+          orderBy: { sortOrder: 'asc' },
+        },
+      },
+    })
+
+    const relationships: any[] = []
+
+    for (const family of familyUnits) {
+      const isParent = (family.parents as any[]).some((p) => p.parentId === personId)
+      const isChild = (family.children as any[]).some((c) => c.childId === personId)
+
+      if (isParent) {
+        for (const parentLink of (family.parents as any[])) {
+          if (parentLink.parentId !== personId) {
+            relationships.push({
+              id: `fam:${family.id}:spouse:${parentLink.parent.id}`,
+              type: 'SPOUSE',
+              direction: 'outgoing',
+              isBiological: parentLink.relationshipType === 'BIOLOGICAL',
+              person: parentLink.parent,
+            })
+          }
+        }
+        for (const childLink of (family.children as any[])) {
+          relationships.push({
+            id: `fc:${family.id}:${childLink.childId}:child`,
+            type: 'CHILD',
+            direction: 'outgoing',
+            isBiological: childLink.relationshipType === 'BIOLOGICAL',
+            person: childLink.child,
+          })
+        }
+      }
+
+      if (isChild) {
+        for (const parentLink of (family.parents as any[])) {
+          relationships.push({
+            id: `fc:${family.id}:${personId}:parent:${parentLink.parent.id}`,
+            type: 'PARENT',
+            direction: 'incoming',
+            isBiological: parentLink.relationshipType === 'BIOLOGICAL',
+            person: parentLink.parent,
+          })
+        }
+      }
+    }
+
+    return {
+      ...person,
+      displayName: person.displayName || `${person.firstName}${person.lastName ? ' ' + person.lastName : ''}`,
+      avatarUrl: (person as any).avatarAsset ? `/api/assets/serve/${(person as any).avatarAsset.id}` : null,
+      relationships,
+      counts: (person as any)._count,
+    }
+  }
+
+  /**
    * Delete a person
    */
-  async deletePerson(personId: string, workspaceId: string): Promise<void> {
-    await this.prisma.person.delete({
-      where: { id: personId, workspaceId },
-    })
+  async deletePerson(personId: string, workspaceId: string, userId: string): Promise<void> {
+    await this.repo.delete(personId, workspaceId, userId)
   }
 
   /**
    * Map Prisma person to list item DTO
    */
-  private mapToListItem(
-    person: {
-      id: string
-      firstName: string
-      lastName: string | null
-      displayName: string | null
-      nickname: string | null
-      personType: string
-      birthDate: Date | null
-      deathDate: Date | null
-      isDeceased: boolean
-      bio: string | null
-      avatarAsset: { storagePath: string | null } | null
-      tags: string[]
-      _count: { storiesAsSubject: number; voiceProfiles: number }
-      parentInFamilies: { id: string }[]
-      familyChildLinks: { id: string }[]
-      createdAt: Date
-    }
-  ): PersonListItem {
+  private mapToListItem(person: any): PersonListItem {
     return {
       id: person.id,
       firstName: person.firstName,
       lastName: person.lastName,
       displayName: person.displayName || `${person.firstName}${person.lastName ? ' ' + person.lastName : ''}`,
-      nickname: person.nickname,
       personType: person.personType as PersonType,
-      birthDate: person.birthDate,
-      deathDate: person.deathDate,
-      isDeceased: person.isDeceased,
-      bio: person.bio,
-      avatarUrl: person.avatarAsset?.storagePath || null,
-      tags: person.tags,
+      avatarUrl: person.avatarAsset ? `/api/assets/serve/${person.avatarAsset.id}` : null,
       counts: {
         stories: person._count.storiesAsSubject,
         voiceProfiles: person._count.voiceProfiles,

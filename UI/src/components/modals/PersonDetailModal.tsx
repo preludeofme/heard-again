@@ -107,105 +107,13 @@ interface PersonDetailModalProps {
   onViewFullProfile?: (personId: string) => void
 }
 
-// Mock data for initial UI development
-const mockPerson: Person = {
-  id: 'person-1',
-  firstName: 'Eleanor',
-  lastName: 'Emerson',
-  displayName: 'Grandma Eleanor',
-  birthDate: '1945-03-15',
-  deathDate: undefined,
-  bio: 'A devoted mother of three, Eleanor spent her life teaching piano and sharing her love of music with generations of students. Her patience and gentle humor made every lesson memorable.',
-  avatarUrl: undefined,
-  personType: 'ANCESTOR',
-  role: 'Grandmother',
-  storyCount: 12,
-  voiceProfileCount: 2,
-  relationshipCount: 8,
-  createdAt: '2024-01-15T10:00:00Z',
-  updatedAt: '2024-12-20T15:30:00Z',
-}
-
-const mockStories: Story[] = [
-  {
-    id: 'story-1',
-    title: 'The Piano Lesson',
-    excerpt: 'Every Saturday morning, Grandma would wake up early to prepare the house for piano lessons. The smell of fresh coffee and the sound of scales drifting through the halls...',
-    storyType: 'MEMORY',
-    status: 'PUBLISHED',
-    createdAt: '2024-12-10T14:00:00Z',
-    createdBy: { id: 'user-1', displayName: 'Sarah Johnson', email: 'sarah@example.com' },
-    isFavorited: true,
-  },
-  {
-    id: 'story-2',
-    title: 'Christmas Eve Tradition',
-    excerpt: 'She always insisted on playing Silent Night on the old upright piano, even when her arthritis made it difficult. The notes were slower, but the love in them was unmistakable.',
-    storyType: 'TRADITION',
-    status: 'PUBLISHED',
-    createdAt: '2024-12-05T10:30:00Z',
-    createdBy: { id: 'user-2', displayName: 'Michael Chen', email: 'michael@example.com' },
-    isFavorited: false,
-  },
-  {
-    id: 'story-3',
-    title: 'Teaching Moments',
-    excerpt: 'I remember watching her teach a nervous five-year-old their first scale. Her voice was so gentle, so encouraging. "Music is just organized patience," she would say.',
-    storyType: 'REFLECTION',
-    status: 'DRAFT',
-    createdAt: '2024-11-28T16:45:00Z',
-    createdBy: { id: 'user-1', displayName: 'Sarah Johnson', email: 'sarah@example.com' },
-    isFavorited: false,
-  },
-]
-
-const mockVoiceProfiles: VoiceProfile[] = [
-  {
-    id: 'voice-1',
-    name: 'Eleanor - Warm',
-    description: 'Gentle, patient tone for bedtime stories and reminiscing',
-    isDefault: true,
-    audioSampleCount: 5,
-    createdAt: '2024-11-15T09:00:00Z',
-  },
-  {
-    id: 'voice-2',
-    name: 'Eleanor - Teaching',
-    description: 'Clear, instructional voice from lesson recordings',
-    isDefault: false,
-    audioSampleCount: 12,
-    createdAt: '2024-12-01T14:00:00Z',
-  },
-]
-
-const mockRelationships: Relationship[] = [
-  {
-    id: 'rel-1',
-    relatedPerson: { id: 'person-2', firstName: 'Robert', lastName: 'Emerson', avatarUrl: undefined },
-    relationshipType: 'SPOUSE',
-    isMutual: true,
-  },
-  {
-    id: 'rel-2',
-    relatedPerson: { id: 'person-3', firstName: 'Margaret', lastName: 'Emerson', avatarUrl: undefined },
-    relationshipType: 'CHILD',
-    isMutual: true,
-  },
-  {
-    id: 'rel-3',
-    relatedPerson: { id: 'person-4', firstName: 'James', lastName: 'Emerson', avatarUrl: undefined },
-    relationshipType: 'CHILD',
-    isMutual: true,
-  },
-]
-
 export function PersonDetailModal({
   open,
   onClose,
-  person = mockPerson,
-  stories = mockStories,
-  voiceProfiles = mockVoiceProfiles,
-  relationships = mockRelationships,
+  person,
+  stories = [],
+  voiceProfiles = [],
+  relationships = [],
   isLoading,
   error,
   onEdit,

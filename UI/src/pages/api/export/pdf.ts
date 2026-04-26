@@ -3,8 +3,6 @@ import path from 'path'
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse } from '@/lib/api-helpers'
 import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
-import { withCSRFProtection } from '@/lib/security/csrf'
-
 function escapePdfText(text: string): string {
   return text.replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)')
 }
@@ -55,7 +53,7 @@ function buildSimplePdf(lines: string[]): Buffer {
 
 export default apiHandler({
   // POST /api/export/pdf - Generate PDF summary of stories
-  POST: withCSRFProtection(async (req, res) => {
+  POST: async (req, res) => {
 
     const user = await getAuthUserWithWorkspace(req, res)
     await requireWorkspaceRole(user.id, user.workspaceId, 'VIEWER')
@@ -168,5 +166,5 @@ export default apiHandler({
         stories: stories.length,
       },
     }, 201)
-  }),
+  },
 })

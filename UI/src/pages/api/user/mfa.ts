@@ -3,8 +3,6 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { generateMFASecret, verifyAndEnableMFA, disableMFA, isMFAEnabled, regenerateBackupCodes } from '@/lib/security/mfa-service'
 import { logger } from '@/lib/logger'
-import { withCSRFProtection } from '@/lib/security/csrf'
-
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   const session = await getServerSession(req, res, authOptions)
   
@@ -88,4 +86,4 @@ async function getMFAStatus(req: NextApiRequest, res: NextApiResponse, userId: s
   const enabled = await isMFAEnabled(userId)
   return res.status(200).json({ enabled })
 }
-export default withCSRFProtection(handler)
+export default handler

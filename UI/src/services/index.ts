@@ -4,6 +4,11 @@
  */
 
 import { prisma } from '@/lib/prisma'
+import { personRepository } from '@/server/repositories/PersonRepository'
+import { storyRepository } from '@/server/repositories/StoryRepository'
+import { voiceProfileRepository } from '@/server/repositories/VoiceProfileRepository'
+import { voiceConsentRepository } from '@/server/repositories/VoiceConsentRepository'
+import { assetRepository } from '@/server/repositories/AssetRepository'
 import { StoryService } from './StoryService'
 import { PersonService } from './PersonService'
 import { StorageService } from './StorageService'
@@ -13,9 +18,9 @@ import { VoiceService } from './VoiceService'
 import { ImageProcessingService } from './ImageProcessingService'
 
 // Singleton instances for server-side usage
-export const storyService = new StoryService(prisma)
-export const personService = new PersonService(prisma)
-export const voiceService = new VoiceService(prisma)
+export const storyService = new StoryService(storyRepository)
+export const personService = new PersonService(personRepository)
+export const voiceService = new VoiceService(voiceProfileRepository, voiceConsentRepository, assetRepository)
 export const searchService = new SearchService(prisma)
 export const relationshipService = new RelationshipService(prisma)
 export const storageService = new StorageService({
@@ -36,9 +41,9 @@ export { ImageProcessingService } from './ImageProcessingService'
 // Factory for creating fresh instances with custom dependencies
 export function createServices(client = prisma) {
   return {
-    story: new StoryService(client),
-    person: new PersonService(client),
-    voice: new VoiceService(client),
+    story: new StoryService(storyRepository),
+    person: new PersonService(personRepository),
+    voice: new VoiceService(voiceProfileRepository, voiceConsentRepository, assetRepository),
     search: new SearchService(client),
     relationship: new RelationshipService(client),
     storage: storageService,
