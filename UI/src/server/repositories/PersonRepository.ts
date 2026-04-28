@@ -2,14 +2,18 @@ import { BaseRepository } from './BaseRepository'
 import type { Prisma, Person } from '@prisma/client'
 
 export class PersonRepository extends BaseRepository {
-  async findById(id: string, workspaceId: string, include?: Prisma.PersonInclude): Promise<Person | null> {
+  async findById(id: string, familyspaceId?: string, include?: Prisma.PersonInclude): Promise<Person | null> {
+    const where: Prisma.PersonWhereInput = { id }
+    if (familyspaceId) {
+      where.familyspaceId = familyspaceId
+    }
     return this.prisma.person.findFirst({
-      where: { id, workspaceId },
+      where,
       include,
     })
   }
 
-  async findMany(workspaceId: string, options: { 
+  async findMany(familyspaceId: string, options: { 
     skip?: number, 
     take?: number,
     where?: Prisma.PersonWhereInput,
@@ -18,7 +22,7 @@ export class PersonRepository extends BaseRepository {
     return this.prisma.person.findMany({
       where: { 
         ...options.where,
-        workspaceId,
+        familyspaceId,
       },
       skip: options.skip,
       take: options.take,
@@ -31,7 +35,7 @@ export class PersonRepository extends BaseRepository {
     const person = await this.prisma.person.create({ data: data as any })
     
     await this.audit({
-      workspaceId: person.workspaceId,
+      familyspaceId: person.familyspaceId,
       actorId: userId,
       actorType: 'USER',
       action: 'CREATE',
@@ -43,10 +47,10 @@ export class PersonRepository extends BaseRepository {
     return person
   }
 
-  async update(id: string, workspaceId: string, data: Prisma.PersonUncheckedUpdateInput, userId: string): Promise<Person> {
-    // Ensure it belongs to workspace before update
+  async update(id: string, familyspaceId: string, data: Prisma.PersonUncheckedUpdateInput, userId: string): Promise<Person> {
+    // Ensure it belongs to familyspace before update
     const before = await this.prisma.person.findFirstOrThrow({
-      where: { id, workspaceId },
+      where: { id, familyspaceId },
     })
 
     const person = await this.prisma.person.update({
@@ -55,7 +59,7 @@ export class PersonRepository extends BaseRepository {
     })
 
     await this.audit({
-      workspaceId,
+      familyspaceId,
       actorId: userId,
       actorType: 'USER',
       action: 'UPDATE',
@@ -68,10 +72,10 @@ export class PersonRepository extends BaseRepository {
     return person
   }
 
-  async delete(id: string, workspaceId: string, userId: string): Promise<Person> {
-    // Ensure it belongs to workspace before delete
+  async delete(id: string, familyspaceId: string, userId: string): Promise<Person> {
+    // Ensure it belongs to familyspace before delete
     const before = await this.prisma.person.findFirstOrThrow({
-      where: { id, workspaceId },
+      where: { id, familyspaceId },
     })
 
     const person = await this.prisma.person.delete({
@@ -79,7 +83,7 @@ export class PersonRepository extends BaseRepository {
     })
 
     await this.audit({
-      workspaceId,
+      familyspaceId,
       actorId: userId,
       actorType: 'USER',
       action: 'DELETE',
@@ -91,9 +95,9 @@ export class PersonRepository extends BaseRepository {
     return person
   }
 
-  async count(workspaceId: string): Promise<number> {
+  async count(familyspaceId: string): Promise<number> {
     return this.prisma.person.count({
-      where: { workspaceId },
+      where: { familyspaceId },
     })
   }
 }

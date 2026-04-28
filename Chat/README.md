@@ -5,7 +5,7 @@ Isolated conversational AI system for family history interactions, built as a se
 ## Architecture
 
 - **Service-Oriented**: Clean separation of concerns with typed contracts
-- **Tenant Isolation**: Multi-tenant architecture with workspace-scoped data
+- **Tenant Isolation**: Multi-tenant architecture with familyspace-scoped data
 - **RAG-Powered**: Retrieval-augmented generation using ChromaDB
 - **LLM Integration**: Ollama for local model serving
 - **Voice Ready**: Integration points for existing TTS service

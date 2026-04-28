@@ -1,7 +1,7 @@
 import { logger } from '@/lib/logger'
 import { NextApiRequest, NextApiResponse } from 'next'
 import { getStorageService } from '@/lib/storage/storage-service'
-import { getAuthUserWithWorkspace } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace } from '@/lib/auth-helpers'
 import { prisma } from '@/lib/prisma'
 import path from 'path'
 
@@ -25,28 +25,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    let workspaceId: string
+    let familyspaceId: string
     
     // Try service-to-service auth first (for Chat service)
     if (verifyServiceToken(req)) {
-      // Extract workspaceId from path for service requests (format: workspace-{id}/...)
+      // Extract familyspaceId from path for service requests (format: familyspace-{id}/...)
       const pathParts = storagePath.split('/')
-      if (pathParts[0]?.startsWith('workspace-')) {
-        workspaceId = pathParts[0].replace('workspace-', '')
+      if (pathParts[0]?.startsWith('familyspace-')) {
+        familyspaceId = pathParts[0].replace('familyspace-', '')
       } else {
         return res.status(400).json({ error: 'Invalid storage path format' })
       }
     } else {
       // Fall back to user authentication
-      const user = await getAuthUserWithWorkspace(req, res)
-      workspaceId = user.workspaceId
+      const user = await getAuthUserWithFamilyspace(req, res)
+      familyspaceId = user.familyspaceId
     }
     
-    // Look up asset by storagePath and verify workspace ownership
+    // Look up asset by storagePath and verify familyspace ownership
     const asset = await prisma.asset.findFirst({
       where: { 
         storagePath: storagePath,
-        workspaceId: workspaceId
+        familyspaceId: familyspaceId
       },
       select: { id: true, mimeType: true }
     })

@@ -149,7 +149,7 @@ This checklist tracks the implementation of the Phase 1 Family-History Conversat
   - [ ] Text sanitization
   - [ ] Prompt injection detection
 - [ ] Add tenant isolation verification
-  - [ ] Workspace-based data filtering
+  - [ ] Familyspace-based data filtering
   - [ ] Cross-tenant access prevention
   - [ ] Audit logging
 - [ ] Implement rate limiting and protection

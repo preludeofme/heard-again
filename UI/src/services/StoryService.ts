@@ -17,17 +17,17 @@ import { personRepository } from '@/server/repositories/PersonRepository'
 
 // Story inclusion type for Prisma queries
 type StoryInclude = {
-  subject: { select: { id: true; firstName: true; lastName: true } }
-  speaker: { select: { id: true; firstName: true; lastName: true } }
-  createdBy: { select: { id: true; displayName: true; email: true } }
+  subject: { select: { id: true; firstName: true; lastName: true; avatarAssetId: true } }
+  speaker: { select: { id: true; firstName: true; lastName: true; avatarAssetId: true } }
+  createdBy: { select: { id: true; displayName: true; email: true; avatarUrl: true } }
   generatedAudioAsset: { select: { id: true; storagePath: true; durationSeconds: true } }
   _count: { select: { comments: true; assets: true; favorites: true } }
 }
 
 const STORY_INCLUDE: StoryInclude = {
-  subject: { select: { id: true, firstName: true, lastName: true } },
-  speaker: { select: { id: true, firstName: true, lastName: true } },
-  createdBy: { select: { id: true, displayName: true, email: true } },
+  subject: { select: { id: true, firstName: true, lastName: true, avatarAssetId: true } },
+  speaker: { select: { id: true, firstName: true, lastName: true, avatarAssetId: true } },
+  createdBy: { select: { id: true, displayName: true, email: true, avatarUrl: true } },
   generatedAudioAsset: { select: { id: true, storagePath: true, durationSeconds: true } },
   _count: { select: { comments: true, assets: true, favorites: true } },
 }
@@ -36,25 +36,25 @@ export class StoryService {
   constructor(private repo: StoryRepository = storyRepository) {}
 
   /**
-   * List stories for a workspace with filtering and pagination
+   * List stories for a familyspace with filtering and pagination
    */
   async listStories(
-    workspaceId: string,
+    familyspaceId: string,
     query: ListStoriesQuery
   ): Promise<ListStoriesResponse> {
     const { page = 1, limit = 20, search, status, subjectId, speakerId, type } = query
     const skip = (page - 1) * limit
 
-    const where = this.buildListWhereClause(workspaceId, { search, status, subjectId, speakerId, type })
+    const where = this.buildListWhereClause(familyspaceId, { search, status, subjectId, speakerId, type })
 
     const [stories, total] = await Promise.all([
-      this.repo.findMany(workspaceId, {
+      this.repo.findMany(familyspaceId, {
         where,
         include: STORY_INCLUDE,
         skip,
         take: limit,
       }),
-      this.repo.count(workspaceId, where),
+      this.repo.count(familyspaceId, where),
     ])
 
     return {
@@ -73,9 +73,9 @@ export class StoryService {
    */
   async getStory(
     storyId: string,
-    workspaceId: string
+    familyspaceId: string
   ): Promise<StoryListItem | null> {
-    const story = await this.repo.findById(storyId, workspaceId, STORY_INCLUDE)
+    const story = await this.repo.findById(storyId, familyspaceId, STORY_INCLUDE)
 
     return story ? this.mapToListItem(story as any) : null
   }
@@ -84,12 +84,12 @@ export class StoryService {
    * Create a new story
    */
   async createStory(
-    workspaceId: string,
-    userId: string,
+    familyspaceId: string,
+    userId: string | null,
     data: CreateStoryInput
   ): Promise<CreateStoryResponse> {
-    // Validate subject/speaker belong to workspace if provided
-    await this.validateStoryReferences(workspaceId, data.subjectId, data.speakerId)
+    // Validate subject/speaker belong to familyspace if provided
+    await this.validateStoryReferences(familyspaceId, data.subjectId, data.speakerId)
 
     // Handle audio asset for recordings
     let generatedAudioAssetId = null
@@ -97,8 +97,10 @@ export class StoryService {
       generatedAudioAssetId = data.assetIds[0]
     }
 
+    const excerpt = data.excerpt ?? (data.content ? data.content.replace(/<[^>]*>/g, '').substring(0, 200) : '')
+
     const story = await this.repo.create({
-      workspaceId,
+      familyspaceId,
       createdById: userId,
       title: data.title,
       content: data.content,
@@ -106,12 +108,14 @@ export class StoryService {
       subjectId: data.subjectId ?? null,
       speakerId: data.speakerId ?? null,
       generatedAudioAssetId,
-      excerpt: data.excerpt ?? data.content.substring(0, 200),
+      excerpt: excerpt,
       storyDate: data.storyDate ? new Date(data.storyDate) : null,
       storyDatePrecision: data.storyDatePrecision ?? DatePrecision.EXACT,
       location: data.location ?? null,
       tags: data.tags ?? [],
       status: data.status ?? StoryStatus.PUBLISHED,
+      authorRelationship: data.authorRelationship ?? null,
+      isPublic: data.isPublic ?? false,
     }, userId)
 
     // Link other assets if any
@@ -133,13 +137,13 @@ export class StoryService {
    */
   async updateStory(
     storyId: string,
-    workspaceId: string,
+    familyspaceId: string,
     data: Partial<CreateStoryInput>,
     userId: string
   ): Promise<CreateStoryResponse> {
     // Validate subject/speaker if changing
     if (data.subjectId || data.speakerId) {
-      await this.validateStoryReferences(workspaceId, data.subjectId, data.speakerId)
+      await this.validateStoryReferences(familyspaceId, data.subjectId, data.speakerId)
     }
 
     const updateData: Record<string, unknown> = {}
@@ -149,7 +153,7 @@ export class StoryService {
       updateData.content = data.content
       // Update excerpt if content changed and no explicit excerpt provided
       if (!data.excerpt) {
-        updateData.excerpt = data.content.substring(0, 200)
+        updateData.excerpt = data.content.replace(/<[^>]*>/g, '').substring(0, 200)
       }
     }
     if (data.excerpt !== undefined) updateData.excerpt = data.excerpt
@@ -160,11 +164,13 @@ export class StoryService {
     if (data.storyDatePrecision !== undefined) updateData.storyDatePrecision = data.storyDatePrecision
     if (data.tags !== undefined) updateData.tags = data.tags
     if (data.status !== undefined) updateData.status = data.status
+    if (data.authorRelationship !== undefined) updateData.authorRelationship = data.authorRelationship ?? null
+    if (data.isPublic !== undefined) updateData.isPublic = data.isPublic ?? false
 
     // Handle audio asset for recordings if provided
     if (data.assetIds?.length) {
       // Determine if this is currently a recording or being changed to one
-      const currentStory = await this.repo.findById(storyId, workspaceId)
+      const currentStory = await this.repo.findById(storyId, familyspaceId)
       const isRecording = data.storyType === StoryType.RECORDING || 
                          (!data.storyType && currentStory?.storyType === StoryType.RECORDING)
       
@@ -173,7 +179,7 @@ export class StoryService {
       }
     }
 
-    const story = await this.repo.update(storyId, workspaceId, updateData, userId)
+    const story = await this.repo.update(storyId, familyspaceId, updateData, userId)
 
     return {
       id: story.id,
@@ -188,9 +194,9 @@ export class StoryService {
    */
   async getStoryDetail(
     storyId: string,
-    workspaceId: string
+    familyspaceId?: string
   ): Promise<any> {
-    const story = await this.repo.findById(storyId, workspaceId, {
+    const story = await this.repo.findById(storyId, familyspaceId, {
       subject: {
         select: { id: true, firstName: true, lastName: true, nickname: true },
       },
@@ -277,14 +283,20 @@ export class StoryService {
   /**
    * Delete a story
    */
-  async deleteStory(storyId: string, workspaceId: string, userId: string): Promise<void> {
-    await this.repo.delete(storyId, workspaceId, userId)
+  async deleteStory(storyId: string, familyspaceId: string, userId: string): Promise<void> {
+    await this.repo.delete(storyId, familyspaceId, userId)
   }
 
   /**
    * Map Prisma story to list item DTO
    */
   private mapToListItem(story: any): StoryListItem {
+    const subjectAvatarUrl = story.subject?.avatarAssetId
+      ? `/api/assets/serve/${story.subject.avatarAssetId}`
+      : null
+    const speakerAvatarUrl = story.speaker?.avatarAssetId
+      ? `/api/assets/serve/${story.speaker.avatarAssetId}`
+      : null
     return {
       id: story.id,
       title: story.title,
@@ -295,8 +307,10 @@ export class StoryService {
       storyDate: story.storyDate,
       storyDatePrecision: story.storyDatePrecision as DatePrecision,
       tags: story.tags,
-      subject: story.subject,
-      speaker: story.speaker,
+      authorRelationship: story.authorRelationship,
+      isPublic: story.isPublic,
+      subject: story.subject ? { ...story.subject, avatarUrl: subjectAvatarUrl } : null,
+      speaker: story.speaker ? { ...story.speaker, avatarUrl: speakerAvatarUrl } : null,
       createdBy: story.createdBy,
       hasAudio: !!story.generatedAudioAssetId,
       audioUrl: story.generatedAudioAsset?.storagePath || null,
@@ -310,8 +324,8 @@ export class StoryService {
   /**
    * Build Prisma where clause for story listing
    */
-  private buildListWhereClause(workspaceId: string, filters: any): any {
-    const where: any = { workspaceId }
+  private buildListWhereClause(familyspaceId: string, filters: any): any {
+    const where: any = { familyspaceId }
 
     if (filters.search) {
       where.OR = [
@@ -341,22 +355,22 @@ export class StoryService {
   }
 
   /**
-   * Validate that referenced persons exist and belong to the workspace
+   * Validate that referenced persons exist and belong to the familyspace
    */
   private async validateStoryReferences(
-    workspaceId: string,
+    familyspaceId: string,
     subjectId?: string,
     speakerId?: string
   ): Promise<void> {
     if (subjectId) {
-      const subject = await personRepository.findById(subjectId, workspaceId)
+      const subject = await personRepository.findById(subjectId, familyspaceId)
       if (!subject) {
         throw new Error(`Subject person not found: ${subjectId}`)
       }
     }
 
     if (speakerId) {
-      const speaker = await personRepository.findById(speakerId, workspaceId)
+      const speaker = await personRepository.findById(speakerId, familyspaceId)
       if (!speaker) {
         throw new Error(`Speaker person not found: ${speakerId}`)
       }

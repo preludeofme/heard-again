@@ -16,9 +16,9 @@
     "eval:compare": "node scripts/run-eval.cjs --benchmark evals/benchmark.v1.json --baseline evals/responses/baseline.current.json --candidate evals/responses/candidate.example.json --output-dir evals/results",
     "eval:go-no-go": "node scripts/eval-go-no-go.cjs --baseline evals/results/baseline-current.scorecard.json --candidate evals/results/candidate-example.scorecard.json --out evals/results/release-candidate.go-no-go.json",
     "eval:release-candidate": "npm run eval:compare && npm run eval:go-no-go",
-    "migration:dev": "prisma migrate dev",
-    "migration:deploy": "prisma migrate deploy",
-    "migration:generate": "prisma generate",
+    "migration:dev": "prisma migrate dev --schema=../prisma/schema.prisma",
+    "migration:deploy": "prisma migrate deploy --schema=../prisma/schema.prisma",
+    "migration:generate": "prisma generate --schema=../prisma/schema.prisma",
     "ingestion:worker": "tsx -r tsconfig-paths/register src/workers/worker-server.ts",
     "docker:build": "docker build -t chat-system -f docker/Dockerfile .",
     "docker:run": "docker-compose -f docker/docker-compose.yml up"

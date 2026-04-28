@@ -1,15 +1,15 @@
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
-import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 import { validate, rules } from '@/lib/validation'
 
 export default apiHandler({
-  // GET /api/collections - List collections in workspace
+  // GET /api/collections - List collections in familyspace
   GET: async (req, res) => {
-    const user = await getAuthUserWithWorkspace(req, res)
+    const user = await getAuthUserWithFamilyspace(req, res)
 
     const collections = await prisma.collection.findMany({
-      where: { workspaceId: user.workspaceId },
+      where: { familyspaceId: user.familyspaceId },
       include: {
         createdBy: {
           select: { id: true, displayName: true },
@@ -36,8 +36,8 @@ export default apiHandler({
 
   // POST /api/collections - Create a collection
   POST: async (req, res) => {
-    const user = await getAuthUserWithWorkspace(req, res)
-    await requireWorkspaceRole(user.id, user.workspaceId, 'EDITOR')
+    const user = await getAuthUserWithFamilyspace(req, res)
+    await requireFamilyspaceRole(user.id, user.familyspaceId, 'EDITOR')
 
     const { valid, errors } = validate(req.body, {
       name: [rules.required, rules.minLength(1), rules.maxLength(200)],
@@ -48,7 +48,7 @@ export default apiHandler({
 
     const collection = await prisma.collection.create({
       data: {
-        workspaceId: user.workspaceId,
+        familyspaceId: user.familyspaceId,
         createdById: user.id,
         name,
         description: description || null,

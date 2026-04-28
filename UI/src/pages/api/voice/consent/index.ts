@@ -1,12 +1,12 @@
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
-import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 import { validate, rules } from '@/lib/validation'
 export default apiHandler({
   // POST /api/voice/consent - Record voice consent
   POST: async (req, res) => {
-    const user = await getAuthUserWithWorkspace(req, res)
-    await requireWorkspaceRole(user.id, user.workspaceId, 'EDITOR')
+    const user = await getAuthUserWithFamilyspace(req, res)
+    await requireFamilyspaceRole(user.id, user.familyspaceId, 'EDITOR')
 
     const { valid, errors } = validate(req.body, {
       personId: [rules.required, rules.uuid],
@@ -19,9 +19,9 @@ export default apiHandler({
       allowsGeneration = true, allowsCloudProcessing = false, allowsSharing = false,
     } = req.body
 
-    // Verify person belongs to workspace
+    // Verify person belongs to familyspace
     const person = await prisma.person.findFirst({
-      where: { id: personId, workspaceId: user.workspaceId },
+      where: { id: personId, familyspaceId: user.familyspaceId },
     })
     if (!person) throw Errors.notFound('Person')
 
@@ -35,7 +35,7 @@ export default apiHandler({
 
     const consent = await prisma.voiceConsent.create({
       data: {
-        workspaceId: user.workspaceId,
+        familyspaceId: user.familyspaceId,
         personId,
         grantedByUserId: user.id,
         consentType,

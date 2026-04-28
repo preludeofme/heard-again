@@ -109,7 +109,7 @@ Migration name: `add_narration_render_job_tracking`.
 ### TTS service changes
 | Method | Path | Behavior |
 |---|---|---|
-| POST | `/api/tts/synthesize-batch` (new) | Accepts `{ profileId, sentences: string[], language, workspaceId }`. Runs one batched `generate_voice_clone()` over all sentences, concatenates WAVs, returns JSON with `audioId`. Replaces `/synthesize-stream`. |
+| POST | `/api/tts/synthesize-batch` (new) | Accepts `{ profileId, sentences: string[], language, familyspaceId }`. Runs one batched `generate_voice_clone()` over all sentences, concatenates WAVs, returns JSON with `audioId`. Replaces `/synthesize-stream`. |
 
 Keep existing `/api/tts/synthesize` for single-text synthesis (used by preview flows).
 
@@ -120,7 +120,7 @@ Keep existing `/api/tts/synthesize` for single-text synthesis (used by preview f
 ```ts
 Queue name: 'narration'
 Job name: 'render'
-Job data: { storyId, workspaceId, voiceProfileId, userId }
+Job data: { storyId, familyspaceId, voiceProfileId, userId }
 Job key (dedupe): `render:${storyId}:${voiceProfileId}`
 Concurrency: 1 (single GPU — serialize)
 Progress reporting: job.updateProgress({ sentencesDone, sentencesTotal })

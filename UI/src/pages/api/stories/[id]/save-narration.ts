@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse, Errors, AppError } from '@/lib/api-helpers'
-import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 import { enqueueNarrationRender } from '@/lib/queues/narrationQueue'
 import { logger } from '@/lib/logger'
 
@@ -10,14 +10,14 @@ export default apiHandler({
       return res.status(503).json({ success: false, error: 'Audio generation is not yet available' })
     }
 
-    const user = await getAuthUserWithWorkspace(req, res)
+    const user = await getAuthUserWithFamilyspace(req, res)
     const storyId = req.query.id as string
-    await requireWorkspaceRole(user.id, user.workspaceId, 'EDITOR')
+    await requireFamilyspaceRole(user.id, user.familyspaceId, 'EDITOR')
 
     const { voiceProfileId: bodyVoiceProfileId } = req.body ?? {}
 
     const story = await prisma.story.findFirst({
-      where: { id: storyId, workspaceId: user.workspaceId },
+      where: { id: storyId, familyspaceId: user.familyspaceId },
       select: {
         id: true,
         content: true,
@@ -41,7 +41,7 @@ export default apiHandler({
     if (!voiceProfileId && story.subjectId) {
       const defaultProfile = await prisma.voiceProfile.findFirst({
         where: {
-          workspaceId: user.workspaceId,
+          familyspaceId: user.familyspaceId,
           personId: story.subjectId,
           isDefault: true,
           status: 'READY',
@@ -55,7 +55,7 @@ export default apiHandler({
     }
 
     const profile = await prisma.voiceProfile.findFirst({
-      where: { id: voiceProfileId, workspaceId: user.workspaceId, status: 'READY' },
+      where: { id: voiceProfileId, familyspaceId: user.familyspaceId, status: 'READY' },
       select: { id: true, personId: true },
     })
     if (!profile) {
@@ -65,7 +65,7 @@ export default apiHandler({
     if (profile.personId) {
       const consent = await prisma.voiceConsent.findFirst({
         where: {
-          workspaceId: user.workspaceId,
+          familyspaceId: user.familyspaceId,
           revokedAt: null,
           allowsGeneration: true,
           OR: [{ voiceProfileId: profile.id }, { personId: profile.personId }],
@@ -83,7 +83,7 @@ export default apiHandler({
     // for this exact pair, short-circuit instead of re-enqueueing.
     const cachedAsset = await prisma.asset.findFirst({
       where: {
-        workspaceId: user.workspaceId,
+        familyspaceId: user.familyspaceId,
         assetType: 'GENERATED_AUDIO',
         processingStatus: 'COMPLETED',
         AND: [
@@ -117,7 +117,7 @@ export default apiHandler({
 
       const queueJobId = await enqueueNarrationRender({
         storyId,
-        workspaceId: user.workspaceId,
+        familyspaceId: user.familyspaceId,
         voiceProfileId: profile.id,
         userId: user.id,
         voiceGenerationJobId: voiceGenerationJob.id,

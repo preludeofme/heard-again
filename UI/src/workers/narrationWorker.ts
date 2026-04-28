@@ -38,20 +38,20 @@ function audioExtensionFor(mimeType: string): string {
   return NARRATION_DEFAULT_EXT
 }
 
-async function fetchVoiceProfile(workspaceId: string, voiceProfileId: string) {
+async function fetchVoiceProfile(familyspaceId: string, voiceProfileId: string) {
   const profile = await prisma.voiceProfile.findFirst({
-    where: { id: voiceProfileId, workspaceId, status: 'READY' },
+    where: { id: voiceProfileId, familyspaceId, status: 'READY' },
     select: { id: true, name: true, personId: true },
   })
   if (!profile) {
-    throw new Error(`Voice profile ${voiceProfileId} not found or not READY in workspace ${workspaceId}`)
+    throw new Error(`Voice profile ${voiceProfileId} not found or not READY in familyspace ${familyspaceId}`)
   }
   return profile
 }
 
-async function fetchStory(workspaceId: string, storyId: string) {
+async function fetchStory(familyspaceId: string, storyId: string) {
   const story = await prisma.story.findFirst({
-    where: { id: storyId, workspaceId },
+    where: { id: storyId, familyspaceId },
     select: {
       id: true,
       content: true,
@@ -61,16 +61,16 @@ async function fetchStory(workspaceId: string, storyId: string) {
     },
   })
   if (!story) {
-    throw new Error(`Story ${storyId} not found in workspace ${workspaceId}`)
+    throw new Error(`Story ${storyId} not found in familyspace ${familyspaceId}`)
   }
   return story
 }
 
-async function assertConsent(workspaceId: string, voiceProfileId: string, personId: string | null) {
+async function assertConsent(familyspaceId: string, voiceProfileId: string, personId: string | null) {
   if (!personId) return
   const consent = await prisma.voiceConsent.findFirst({
     where: {
-      workspaceId,
+      familyspaceId,
       revokedAt: null,
       allowsGeneration: true,
       OR: [{ voiceProfileId }, { personId }],
@@ -85,7 +85,7 @@ async function assertConsent(workspaceId: string, voiceProfileId: string, person
 async function streamBatchSynth(
   profileName: string,
   text: string,
-  workspaceId: string,
+  familyspaceId: string,
   onProgress: (done: number, total: number, lastSecs?: number) => Promise<void>
 ): Promise<Extract<BatchProgressEvent, { type: 'complete' }>> {
   const response = await fetch(`${TTS_SERVICE_URL}/api/tts/synthesize-batch`, {
@@ -93,13 +93,14 @@ async function streamBatchSynth(
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${TTS_SERVICE_TOKEN}`,
-      'X-Workspace-Id': workspaceId,
+      'X-Familyspace-Id': familyspaceId,
     },
     body: JSON.stringify({
       profileId: profileName,
       text,
       language: 'English',
-      workspaceId,
+      familyspaceId,
+      silencePaddingMs: 50,
     }),
   })
 
@@ -149,11 +150,11 @@ async function streamBatchSynth(
   return finalEvent
 }
 
-async function downloadAudio(audioId: string, workspaceId: string): Promise<Buffer> {
+async function downloadAudio(audioId: string, familyspaceId: string): Promise<Buffer> {
   const response = await fetch(`${TTS_SERVICE_URL}/api/tts/audio/${audioId}`, {
     headers: {
       'Authorization': `Bearer ${TTS_SERVICE_TOKEN}`,
-      'X-Workspace-Id': workspaceId,
+      'X-Familyspace-Id': familyspaceId,
     },
   })
   if (!response.ok) {
@@ -163,7 +164,7 @@ async function downloadAudio(audioId: string, workspaceId: string): Promise<Buff
 }
 
 async function persistAsset(params: {
-  workspaceId: string
+  familyspaceId: string
   userId: string
   storyId: string
   voiceProfileId: string
@@ -176,7 +177,7 @@ async function persistAsset(params: {
   mimeType: string
 }): Promise<string> {
   const {
-    workspaceId,
+    familyspaceId,
     userId,
     storyId,
     voiceProfileId,
@@ -191,14 +192,14 @@ async function persistAsset(params: {
 
   const extension = audioExtensionFor(mimeType)
 
-  const storedFile = await storageService.saveAudio(workspaceId, audioId, audioBuffer, {
+  const storedFile = await storageService.saveAudio(familyspaceId, audioId, audioBuffer, {
     mimeType,
     extension,
   })
 
   const asset = await prisma.asset.create({
     data: {
-      workspaceId,
+      familyspaceId,
       filename: `${audioId}.${extension}`,
       originalName: `${audioId}.${extension}`,
       mimeType,
@@ -245,22 +246,22 @@ async function deleteAssetById(assetId: string): Promise<void> {
 
 /**
  * Per-(storyId, voiceProfileId) retention: after a new render is persisted,
- * find any other GENERATED_AUDIO assets in the same workspace that share both
+ * find any other GENERATED_AUDIO assets in the same familyspace that share both
  * `metadata.storyId` and `metadata.voiceProfileId` with the new one and delete them.
  * Leaves assets for *other* voice profiles intact so re-listening with a
  * different voice can hit the cache.
  */
 async function pruneSiblingAssetsForPair(params: {
-  workspaceId: string
+  familyspaceId: string
   storyId: string
   voiceProfileId: string
   keepAssetId: string
 }): Promise<number> {
-  const { workspaceId, storyId, voiceProfileId, keepAssetId } = params
+  const { familyspaceId, storyId, voiceProfileId, keepAssetId } = params
   try {
     const siblings = await prisma.asset.findMany({
       where: {
-        workspaceId,
+        familyspaceId,
         assetType: 'GENERATED_AUDIO',
         id: { not: keepAssetId },
         AND: [
@@ -285,7 +286,7 @@ async function pruneSiblingAssetsForPair(params: {
 }
 
 async function handleNarrationRender(job: Job<NarrationRenderJobData>): Promise<{ assetId: string; audioId: string }> {
-  const { storyId, workspaceId, voiceProfileId, userId, voiceGenerationJobId } = job.data
+  const { storyId, familyspaceId, voiceProfileId, userId, voiceGenerationJobId } = job.data
 
   const updateProgress = async (patch: Partial<NarrationRenderJobProgress>) => {
     const current = (job.progress as NarrationRenderJobProgress | number | undefined) ?? {}
@@ -303,11 +304,11 @@ async function handleNarrationRender(job: Job<NarrationRenderJobData>): Promise<
   await updateProgress({ phase: 'loading', sentencesDone: 0, sentencesTotal: 0 })
 
   const [story, profile] = await Promise.all([
-    fetchStory(workspaceId, storyId),
-    fetchVoiceProfile(workspaceId, voiceProfileId),
+    fetchStory(familyspaceId, storyId),
+    fetchVoiceProfile(familyspaceId, voiceProfileId),
   ])
 
-  await assertConsent(workspaceId, voiceProfileId, profile.personId)
+  await assertConsent(familyspaceId, voiceProfileId, profile.personId)
 
   const text = (story.narratedContent || story.content || '').trim()
   if (!text) {
@@ -325,7 +326,7 @@ async function handleNarrationRender(job: Job<NarrationRenderJobData>): Promise<
   const completeEvent = await streamBatchSynth(
     profile.name,
     text,
-    workspaceId,
+    familyspaceId,
     async (done, total, lastSecs) => {
       await updateProgress({
         phase: 'synthesizing',
@@ -338,10 +339,10 @@ async function handleNarrationRender(job: Job<NarrationRenderJobData>): Promise<
 
   await updateProgress({ phase: 'saving', sentencesDone: completeEvent.sentenceCount, sentencesTotal: completeEvent.sentenceCount })
 
-  const audioBuffer = await downloadAudio(completeEvent.audioId, workspaceId)
+  const audioBuffer = await downloadAudio(completeEvent.audioId, familyspaceId)
   const mimeType = completeEvent.mimeType || NARRATION_DEFAULT_MIME
   const assetId = await persistAsset({
-    workspaceId,
+    familyspaceId,
     userId,
     storyId,
     voiceProfileId,
@@ -376,7 +377,7 @@ async function handleNarrationRender(job: Job<NarrationRenderJobData>): Promise<
   ])
 
   const prunedCount = await pruneSiblingAssetsForPair({
-    workspaceId,
+    familyspaceId,
     storyId,
     voiceProfileId,
     keepAssetId: assetId,

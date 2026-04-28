@@ -6,7 +6,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { v4 as uuidv4 } from 'uuid'
 import { prisma } from '@/lib/prisma'
 import { errorResponse, successResponse, apiHandler } from '@/lib/api-helpers'
-import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 import { validateFileContent, generateSecureFilename } from '@/lib/security/file-validator'
 import { importQueue } from '@/lib/queues/importQueue'
 
@@ -25,16 +25,16 @@ const ALLOWED_GEDCOM_MIME_TYPES = [
 ] as const
 
 async function uploadGedcom(req: NextApiRequest, res: NextApiResponse) {
-  const user = await getAuthUserWithWorkspace(req, res)
-  await requireWorkspaceRole(user.id, user.workspaceId, 'EDITOR')
+  const user = await getAuthUserWithFamilyspace(req, res)
+  await requireFamilyspaceRole(user.id, user.familyspaceId, 'EDITOR')
 
-  const workspaceDir = path.join(IMPORT_DIR, user.workspaceId, 'gedcom')
-  await fs.mkdir(workspaceDir, { recursive: true })
+  const familyspaceDir = path.join(IMPORT_DIR, user.familyspaceId, 'gedcom')
+  await fs.mkdir(familyspaceDir, { recursive: true })
 
   const form = formidable({
     keepExtensions: false,
     maxFileSize: 100 * 1024 * 1024,
-    uploadDir: workspaceDir,
+    uploadDir: familyspaceDir,
     filename: () => `${uuidv4()}.tmp`,
   })
 
@@ -71,7 +71,7 @@ async function uploadGedcom(req: NextApiRequest, res: NextApiResponse) {
     'text/plain'
   ).replace(/\.[^.]+$/, '.ged')
 
-  const finalPath = path.join(workspaceDir, secureFilename)
+  const finalPath = path.join(familyspaceDir, secureFilename)
   await fs.rename(file.filepath, finalPath)
   const relativePath = path.relative(process.cwd(), finalPath)
 
@@ -79,7 +79,7 @@ async function uploadGedcom(req: NextApiRequest, res: NextApiResponse) {
   const [asset, importJob] = await prisma.$transaction(async (tx) => {
     const createdAsset = await tx.asset.create({
       data: {
-        workspaceId: user.workspaceId,
+        familyspaceId: user.familyspaceId,
         filename: path.basename(finalPath),
         originalName: file.originalFilename || 'import.ged',
         mimeType: 'text/plain',
@@ -98,7 +98,7 @@ async function uploadGedcom(req: NextApiRequest, res: NextApiResponse) {
 
     const createdJob = await tx.importJob.create({
       data: {
-        workspaceId: user.workspaceId,
+        familyspaceId: user.familyspaceId,
         sourceType: 'GEDCOM',
         sourceAssetId: createdAsset.id,
         status: 'PENDING',
@@ -111,7 +111,7 @@ async function uploadGedcom(req: NextApiRequest, res: NextApiResponse) {
 
   // Enqueue the background job
   await importQueue.add(`gedcom-import-${importJob.id}`, {
-    workspaceId: user.workspaceId,
+    familyspaceId: user.familyspaceId,
     userId: user.id,
     filePath: finalPath,
     assetId: asset.id,

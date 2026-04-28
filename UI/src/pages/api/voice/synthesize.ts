@@ -1,12 +1,12 @@
 import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { apiHandler, successResponse, errorResponse } from '@/lib/api-helpers'
-import { getAuthUserWithWorkspace } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace } from '@/lib/auth-helpers'
 import { voiceService } from '@/services'
 import { AppError } from '@/lib/api-helpers'
 export default apiHandler({
   POST: async (req: NextApiRequest, res: NextApiResponse) => {
-    const user = await getAuthUserWithWorkspace(req, res)
+    const user = await getAuthUserWithFamilyspace(req, res)
     const { modelId, text, language = 'en' } = req.body
 
     if (!modelId || !text) {
@@ -15,10 +15,10 @@ export default apiHandler({
 
     try {
       // Use service-to-service authentication for the TTS pipeline.
-      // The user's permission is already verified above by getAuthUserWithWorkspace.
+      // The user's permission is already verified above by getAuthUserWithFamilyspace.
       // We pass null for authToken to trigger the service token fallback in tts-client.
       const result = await voiceService.synthesize({
-        workspaceId: user.workspaceId,
+        familyspaceId: user.familyspaceId,
         userId: user.id,
         modelId,
         text,

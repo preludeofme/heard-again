@@ -1,12 +1,12 @@
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse } from '@/lib/api-helpers'
-import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 
 export default apiHandler({
   // GET /api/billing/plans - List available active plans
   GET: async (req, res) => {
-    const user = await getAuthUserWithWorkspace(req, res)
-    await requireWorkspaceRole(user.id, user.workspaceId, 'VIEWER')
+    const user = await getAuthUserWithFamilyspace(req, res)
+    await requireFamilyspaceRole(user.id, user.familyspaceId, 'VIEWER')
 
     const plans = await prisma.plan.findMany({
       where: {

@@ -4,7 +4,7 @@ import { getQueueConnection } from './narrationQueue'
 export const RETENTION_QUEUE = 'retention-enforcement'
 
 export interface RetentionJobData {
-  workspaceId?: string
+  familyspaceId?: string
   forceAll?: boolean
 }
 

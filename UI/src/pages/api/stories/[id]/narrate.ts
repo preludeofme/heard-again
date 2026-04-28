@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '@/lib/prisma'
-import { getAuthUserWithWorkspace } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace } from '@/lib/auth-helpers'
 import { logger } from '@/lib/logger'
 import { enqueueNarrationRender } from '@/lib/queues/narrationQueue'
 
@@ -26,13 +26,13 @@ function wantsJson(req: NextApiRequest): boolean {
 }
 
 async function findCachedAsset(
-  workspaceId: string,
+  familyspaceId: string,
   storyId: string,
   voiceProfileId: string
 ): Promise<{ id: string } | null> {
   return prisma.asset.findFirst({
     where: {
-      workspaceId,
+      familyspaceId,
       assetType: 'GENERATED_AUDIO',
       processingStatus: 'COMPLETED',
       AND: [
@@ -57,7 +57,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   let user
   try {
-    user = await getAuthUserWithWorkspace(req, res)
+    user = await getAuthUserWithFamilyspace(req, res)
   } catch {
     return
   }
@@ -66,7 +66,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const voiceProfileIdParam = req.query.voiceProfileId as string | undefined
 
   const story = await prisma.story.findFirst({
-    where: { id: storyId, workspaceId: user.workspaceId },
+    where: { id: storyId, familyspaceId: user.familyspaceId },
     select: {
       id: true,
       content: true,
@@ -84,7 +84,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!profileId && story.subjectId) {
     const defaultProfile = await prisma.voiceProfile.findFirst({
       where: {
-        workspaceId: user.workspaceId,
+        familyspaceId: user.familyspaceId,
         personId: story.subjectId,
         isDefault: true,
         status: 'READY',
@@ -107,7 +107,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ success: false, error: 'Story has no text to narrate' })
   }
 
-  const cachedAsset = await findCachedAsset(user.workspaceId, storyId, profileId)
+  const cachedAsset = await findCachedAsset(user.familyspaceId, storyId, profileId)
   if (cachedAsset) {
     res.setHeader('X-Narration-Source', 'cache')
     if (wantsJson(req)) {
@@ -124,7 +124,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const profile = await prisma.voiceProfile.findFirst({
-    where: { id: profileId, workspaceId: user.workspaceId, status: 'READY' },
+    where: { id: profileId, familyspaceId: user.familyspaceId, status: 'READY' },
     select: { id: true, name: true, personId: true },
   })
   if (!profile) {
@@ -134,7 +134,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (profile.personId) {
     const consent = await prisma.voiceConsent.findFirst({
       where: {
-        workspaceId: user.workspaceId,
+        familyspaceId: user.familyspaceId,
         revokedAt: null,
         allowsGeneration: true,
         OR: [{ voiceProfileId: profile.id }, { personId: profile.personId }],
@@ -163,7 +163,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const queueJobId = await enqueueNarrationRender({
       storyId,
-      workspaceId: user.workspaceId,
+      familyspaceId: user.familyspaceId,
       voiceProfileId: profile.id,
       userId: user.id,
       voiceGenerationJobId: voiceGenerationJob.id,

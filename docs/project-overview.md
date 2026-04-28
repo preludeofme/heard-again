@@ -47,8 +47,8 @@ display name
 created at
 last login at
 status
-default workspace id
-Workspace
+default familyspace id
+Familyspace
 
 Represents a family vault, household, or personal archive.
 
@@ -64,12 +64,12 @@ billing customer id
 current subscription id
 Membership
 
-Represents a user’s role in a workspace.
+Represents a user’s role in a familyspace.
 
 Fields:
 
 id
-workspace id
+familyspace id
 user id
 role
 invited by
@@ -82,7 +82,7 @@ Represents a deployed Heard Again application.
 Fields:
 
 id
-workspace id
+familyspace id
 type
 status
 version
@@ -99,7 +99,7 @@ Represents billing plan and entitlements.
 Fields:
 
 id
-workspace id
+familyspace id
 plan id
 billing status
 renewal date
@@ -129,7 +129,7 @@ Setup flow
 User downloads open-source package
 Runs install script or Docker compose
 Creates or signs into Heard Again account
-Creates a workspace
+Creates a familyspace
 Registers local instance with Heard Again control plane optionally
 Uses product on LAN or local machine
 Notes
@@ -185,7 +185,7 @@ best supportability
 highest operating cost
 Setup flow
 User signs up on HeardAgain.com
-Creates workspace
+Creates familyspace
 Chooses hosted plan
 Uploads recordings and stories
 Uses product immediately
@@ -204,7 +204,7 @@ Entry-level user account for local self-hosting and evaluation.
 
 Includes
 Heard Again account
-one workspace
+one familyspace
 self-hosted local use
 local-only access
 no HeardAgain.com tunnel
@@ -223,7 +223,7 @@ Includes
 all free features
 secure tunnel / managed subdomain
 remote access through HeardAgain.com
-workspace identity sync
+familyspace identity sync
 optional family invitations
 optional cloud GPU add-on
 health monitoring for instance
@@ -265,9 +265,9 @@ Good for
 self-hosters without strong GPU
 self-hosters who want faster generation
 privacy-sensitive users who still want convenience
-5. Roles Within a Workspace
+5. Roles Within a Familyspace
 
-Each workspace should support role-based access.
+Each familyspace should support role-based access.
 
 Owner
 
@@ -279,7 +279,7 @@ instance settings
 invite/remove users
 voice permissions
 cloud settings
-export/delete workspace
+export/delete familyspace
 Admin
 
 Can manage:
@@ -349,7 +349,7 @@ support: premium
 Flow 1: Free local user
 Install Heard Again locally
 Create account
-Create workspace
+Create familyspace
 Add stories and voices
 Use only on local machine/LAN
 Upsell path: remote access or cloud generation
@@ -357,7 +357,7 @@ Flow 2: Upgrade to Connected
 User logs into account portal
 Selects Connected plan
 Adds payment method
-Instance is linked to workspace
+Instance is linked to familyspace
 Tunnel agent receives token
 Subdomain is assigned
 Remote access becomes active
@@ -367,15 +367,15 @@ User upgrades to generation plan
 Local instance submits generation jobs to cloud
 Cloud returns generated audio
 Audio stored locally
-Usage minutes tracked against workspace subscription
+Usage minutes tracked against familyspace subscription
 Flow 4: Move to fully hosted
 User selects hosted migration
-Local data exported/imported into cloud workspace
+Local data exported/imported into cloud familyspace
 Cloud instance becomes primary
 Optional local archive remains as backup
 8. Security Model
 For all accounts
-workspace-scoped authorization
+familyspace-scoped authorization
 role-based permissions
 signed session tokens
 audit logging for voice generation and sharing
@@ -385,7 +385,7 @@ For connected self-hosted
 instance makes outbound tunnel connection only
 no direct inbound port exposure required
 instance registration with signed token
-tunnel mapped to workspace and instance
+tunnel mapped to familyspace and instance
 short-lived access sessions validated by control plane
 For hybrid compute
 only required assets sent to cloud for generation
@@ -394,7 +394,7 @@ clear policy for temporary job artifacts
 optional “process only, do not store” mode
 9. Billing & Entitlements
 
-Billing should be attached to the workspace, not the individual instance.
+Billing should be attached to the familyspace, not the individual instance.
 
 Why:
 
@@ -407,14 +407,14 @@ cloud generation enabled
 generation minutes quota
 number of family members
 number of voice profiles
-number of workspaces
+number of familyspaces
 storage quota for hosted users
 priority generation access
 10. Product Recommendations
 Recommended launch structure
 Free
 local self-hosted
-one workspace
+one familyspace
 local-only access
 local compute only
 Connected
@@ -439,7 +439,7 @@ Central Heard Again service handles:
 
 auth
 billing
-workspace management
+familyspace management
 plan entitlements
 instance registry
 tunnel registration
@@ -480,7 +480,7 @@ That flexibility should be a major selling point.
 The cleanest account structure is:
 
 User = login identity
-Workspace = family vault / billing unit
+Familyspace = family vault / billing unit
 Instance = where the app runs
 Plan = what services are enabled
 Role = what each member can do

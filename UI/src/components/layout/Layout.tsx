@@ -45,7 +45,7 @@ import {
 import Link from 'next/link'
 import { useState } from 'react'
 import { ActiveMemberHeader } from './ActiveMemberHeader'
-import { WorkspaceSwitcher } from './WorkspaceSwitcher'
+import { FamilyspaceSwitcher } from './FamilyspaceSwitcher'
 
 // Material Symbols Outlined icons matching the mockup
 const MaterialSymbolsIcon = ({ children, sx }: { children: string; sx?: Record<string, unknown> }) => (
@@ -71,7 +71,6 @@ interface LayoutProps {
 const navItems = [
   { label: 'Dashboard', href: '/dashboard', icon: 'dashboard' },
   { label: 'Profile', href: '/profile', icon: 'person' },
-  { label: 'Conversations', href: '/chat', icon: 'forum' },
   { label: 'Voice Profiles', href: '/voice-lab', icon: 'settings_voice' },
   { label: 'Documents', href: '/documents', icon: 'description' },
   { label: 'Stories', href: '/stories', icon: 'auto_stories' },
@@ -388,9 +387,9 @@ export function Layout({ children }: LayoutProps) {
               </Typography>
             </Box>
 
-            {/* Workspace switcher */}
+            {/* Familyspace switcher */}
             <Box sx={{ px: 1, mb: 2 }}>
-              <WorkspaceSwitcher />
+              <FamilyspaceSwitcher />
             </Box>
 
             <Divider sx={{ mx: 3, mb: 2 }} />

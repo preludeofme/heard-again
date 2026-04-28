@@ -1,15 +1,15 @@
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
-import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 
 export default apiHandler({
   // GET /api/stories/[id]/assets - List assets for a story
   GET: async (req, res) => {
-    const user = await getAuthUserWithWorkspace(req, res)
+    const user = await getAuthUserWithFamilyspace(req, res)
     const storyId = req.query.id as string
 
     const story = await prisma.story.findFirst({
-      where: { id: storyId, workspaceId: user.workspaceId },
+      where: { id: storyId, familyspaceId: user.familyspaceId },
     })
     if (!story) throw Errors.notFound('Story')
 
@@ -43,12 +43,12 @@ export default apiHandler({
 
   // POST /api/stories/[id]/assets - Attach an asset to a story
   POST: async (req, res) => {
-    const user = await getAuthUserWithWorkspace(req, res)
+    const user = await getAuthUserWithFamilyspace(req, res)
     const storyId = req.query.id as string
-    await requireWorkspaceRole(user.id, user.workspaceId, 'EDITOR')
+    await requireFamilyspaceRole(user.id, user.familyspaceId, 'EDITOR')
 
     const story = await prisma.story.findFirst({
-      where: { id: storyId, workspaceId: user.workspaceId },
+      where: { id: storyId, familyspaceId: user.familyspaceId },
     })
     if (!story) throw Errors.notFound('Story')
 
@@ -56,9 +56,9 @@ export default apiHandler({
 
     if (!assetId) throw Errors.badRequest('assetId is required')
 
-    // Verify asset belongs to workspace
+    // Verify asset belongs to familyspace
     const asset = await prisma.asset.findFirst({
-      where: { id: assetId, workspaceId: user.workspaceId },
+      where: { id: assetId, familyspaceId: user.familyspaceId },
     })
     if (!asset) throw Errors.notFound('Asset')
 

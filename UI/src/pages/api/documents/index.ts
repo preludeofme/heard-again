@@ -1,29 +1,29 @@
 import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { getAuthUserWithWorkspace } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace } from '@/lib/auth-helpers'
 import { prisma } from '@/lib/prisma'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  let user: Awaited<ReturnType<typeof getAuthUserWithWorkspace>>
+  let user: Awaited<ReturnType<typeof getAuthUserWithFamilyspace>>
   try {
-    user = await getAuthUserWithWorkspace(req, res)
+    user = await getAuthUserWithFamilyspace(req, res)
   } catch {
     return res.status(401).json({ success: false, error: 'Unauthorized' })
   }
 
   const { method } = req
-  const workspaceId = (req.query.workspaceId as string) || user.workspaceId
+  const familyspaceId = (req.query.familyspaceId as string) || user.familyspaceId
 
-  if (!workspaceId) {
-    return res.status(400).json({ success: false, error: 'Workspace ID required' })
+  if (!familyspaceId) {
+    return res.status(400).json({ success: false, error: 'Familyspace ID required' })
   }
 
   try {
     switch (method) {
       case 'GET':
-        return await getDocuments(req, res, workspaceId)
+        return await getDocuments(req, res, familyspaceId)
       case 'POST':
-        return await createDocument(req, res, workspaceId, user.id)
+        return await createDocument(req, res, familyspaceId, user.id)
       default:
         return res.status(405).json({ success: false, error: 'Method not allowed' })
     }
@@ -33,7 +33,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 }
 
-async function getDocuments(req: NextApiRequest, res: NextApiResponse, workspaceId: string) {
+async function getDocuments(req: NextApiRequest, res: NextApiResponse, familyspaceId: string) {
   const {
     personId,
     documentType,
@@ -48,9 +48,18 @@ async function getDocuments(req: NextApiRequest, res: NextApiResponse, workspace
   const skip = (parseInt(page as string) - 1) * parseInt(limit as string)
   const take = parseInt(limit as string)
 
+  // Hide AI-generated narration audio and voice-training/voice-generation assets
+  // — these get an Asset+Document row but aren't user-curated documents.
   const where: any = {
-    workspaceId,
+    familyspaceId,
     isDeleted: includeDeleted === 'true' ? undefined : false,
+    asset: {
+      isAISynthesized: false,
+      voiceGenerationOutputs: { none: {} },
+      voiceProfileSources: { none: {} },
+      modelArtifactFor: { none: {} },
+      generatedAudioForStories: { none: {} },
+    },
   }
 
   if (personId) {
@@ -140,7 +149,7 @@ async function getDocuments(req: NextApiRequest, res: NextApiResponse, workspace
 async function createDocument(
   req: NextApiRequest,
   res: NextApiResponse,
-  workspaceId: string,
+  familyspaceId: string,
   userId: string
 ) {
   const {
@@ -160,9 +169,9 @@ async function createDocument(
     })
   }
 
-  // Verify asset exists and belongs to workspace
+  // Verify asset exists and belongs to familyspace
   const asset = await prisma.asset.findFirst({
-    where: { id: assetId, workspaceId },
+    where: { id: assetId, familyspaceId },
   })
 
   if (!asset) {
@@ -186,7 +195,7 @@ async function createDocument(
 
   const document = await prisma.document.create({
     data: {
-      workspaceId,
+      familyspaceId,
       assetId,
       title,
       description,

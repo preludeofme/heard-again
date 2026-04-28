@@ -3,14 +3,14 @@ import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
 import { getAuthUser } from '@/lib/auth-helpers'
 
 export default apiHandler({
-  // POST /api/invites/[token]/accept - Accept a workspace invite
+  // POST /api/invites/[token]/accept - Accept a familyspace invite
   POST: async (req, res) => {
     const user = await getAuthUser(req, res)
     const token = req.query.token as string
 
-    const invite = await prisma.workspaceInvite.findUnique({
+    const invite = await prisma.familyspaceInvite.findUnique({
       where: { token },
-      include: { workspace: { select: { id: true, name: true } } },
+      include: { familyspace: { select: { id: true, name: true } } },
     })
 
     if (!invite) throw Errors.notFound('Invite')
@@ -20,7 +20,7 @@ export default apiHandler({
     }
 
     if (new Date() > invite.expiresAt) {
-      await prisma.workspaceInvite.update({
+      await prisma.familyspaceInvite.update({
         where: { id: invite.id },
         data: { status: 'EXPIRED' },
       })
@@ -33,15 +33,15 @@ export default apiHandler({
 
     // Check if already a member
     const existingMembership = await prisma.membership.findUnique({
-      where: { workspaceId_userId: { workspaceId: invite.workspaceId, userId: user.id } },
+      where: { familyspaceId_userId: { familyspaceId: invite.familyspaceId, userId: user.id } },
     })
 
     if (existingMembership && existingMembership.status === 'ACTIVE') {
-      await prisma.workspaceInvite.update({
+      await prisma.familyspaceInvite.update({
         where: { id: invite.id },
         data: { status: 'ACCEPTED' },
       })
-      return successResponse(res, { message: 'Already a member', workspaceId: invite.workspaceId })
+      return successResponse(res, { message: 'Already a member', familyspaceId: invite.familyspaceId })
     }
 
     // Create membership and update invite in a transaction
@@ -54,7 +54,7 @@ export default apiHandler({
       } else {
         await tx.membership.create({
           data: {
-            workspaceId: invite.workspaceId,
+            familyspaceId: invite.familyspaceId,
             userId: user.id,
             role: invite.role,
             status: 'ACTIVE',
@@ -62,7 +62,7 @@ export default apiHandler({
         })
       }
 
-      await tx.workspaceInvite.update({
+      await tx.familyspaceInvite.update({
         where: { id: invite.id },
         data: { status: 'ACCEPTED' },
       })
@@ -70,8 +70,8 @@ export default apiHandler({
 
     return successResponse(res, {
       message: 'Invite accepted',
-      workspaceId: invite.workspaceId,
-      workspaceName: invite.workspace.name,
+      familyspaceId: invite.familyspaceId,
+      familyspaceName: invite.familyspace.name,
       role: invite.role,
     })
   },

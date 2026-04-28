@@ -1,19 +1,19 @@
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
-import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 
 export default apiHandler({
   // GET /api/import/jobs/[id] - Get import job status/details
   GET: async (req, res) => {
-    const user = await getAuthUserWithWorkspace(req, res)
-    await requireWorkspaceRole(user.id, user.workspaceId, 'VIEWER')
+    const user = await getAuthUserWithFamilyspace(req, res)
+    await requireFamilyspaceRole(user.id, user.familyspaceId, 'VIEWER')
 
     const jobId = req.query.id as string
 
     const job = await prisma.importJob.findFirst({
       where: {
         id: jobId,
-        workspaceId: user.workspaceId,
+        familyspaceId: user.familyspaceId,
       },
       include: {
         sourceAsset: {

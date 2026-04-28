@@ -1,6 +1,6 @@
 import handler from '@/pages/api/narration-jobs/[id]'
 import { prisma } from '@/lib/prisma'
-import { getAuthUserWithWorkspace } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace } from '@/lib/auth-helpers'
 
 // Manual mock for node-mocks-http
 function createMocks({ method = 'GET', query = {}, headers = {} }: any = {}) {
@@ -45,8 +45,8 @@ jest.mock('@/lib/prisma', () => ({
 }))
 
 jest.mock('@/lib/auth-helpers', () => ({
-  getAuthUserWithWorkspace: jest.fn(),
-  requireWorkspaceRole: jest.fn(),
+  getAuthUserWithFamilyspace: jest.fn(),
+  requireFamilyspaceRole: jest.fn(),
 }))
 
 jest.mock('@/lib/queues/narrationQueue', () => ({
@@ -66,12 +66,12 @@ jest.mock('@/lib/logger', () => ({
 describe('/api/narration-jobs/[id] API', () => {
   const mockUser = {
     id: 'user-1',
-    workspaceId: 'ws-1',
+    familyspaceId: 'ws-1',
   }
 
   beforeEach(() => {
     jest.clearAllMocks()
-    ;(getAuthUserWithWorkspace as jest.Mock).mockResolvedValue(mockUser)
+    ;(getAuthUserWithFamilyspace as jest.Mock).mockResolvedValue(mockUser)
   })
 
   it('should return 404 if job not found', async () => {

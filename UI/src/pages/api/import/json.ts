@@ -6,7 +6,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { v4 as uuidv4 } from 'uuid'
 import { prisma } from '@/lib/prisma'
 import { errorResponse, successResponse } from '@/lib/api-helpers'
-import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 import { validateFileContent, generateSecureFilename } from '@/lib/security/file-validator'
 
 export const config = {
@@ -30,16 +30,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const user = await getAuthUserWithWorkspace(req, res)
-    await requireWorkspaceRole(user.id, user.workspaceId, 'EDITOR')
+    const user = await getAuthUserWithFamilyspace(req, res)
+    await requireFamilyspaceRole(user.id, user.familyspaceId, 'EDITOR')
 
-    const workspaceDir = path.join(IMPORT_DIR, user.workspaceId, 'json')
-    await fs.mkdir(workspaceDir, { recursive: true })
+    const familyspaceDir = path.join(IMPORT_DIR, user.familyspaceId, 'json')
+    await fs.mkdir(familyspaceDir, { recursive: true })
 
     const form = formidable({
       keepExtensions: false, // Don't trust original extensions
       maxFileSize: 100 * 1024 * 1024,
-      uploadDir: workspaceDir, // Restrict to secure workspace directory
+      uploadDir: familyspaceDir, // Restrict to secure familyspace directory
       filename: () => `${uuidv4()}.tmp`, // Use temporary extension
     })
 
@@ -92,7 +92,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     ).replace(/\.[^.]+$/, '.json') // Force .json extension
 
     // Move to final location with secure name
-    const finalPath = path.join(workspaceDir, secureFilename)
+    const finalPath = path.join(familyspaceDir, secureFilename)
     await fs.rename(file.filepath, finalPath)
 
     const content = await fs.readFile(finalPath, 'utf-8')
@@ -112,7 +112,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const [asset, importJob] = await prisma.$transaction(async (tx) => {
       const createdAsset = await tx.asset.create({
         data: {
-          workspaceId: user.workspaceId,
+          familyspaceId: user.familyspaceId,
           filename: path.basename(finalPath),
           originalName: file.originalFilename || 'backup.json',
           mimeType: 'application/json',
@@ -132,7 +132,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const createdJob = await tx.importJob.create({
         data: {
-          workspaceId: user.workspaceId,
+          familyspaceId: user.familyspaceId,
           sourceType: 'JSON',
           sourceAssetId: createdAsset.id,
           status: 'COMPLETED',

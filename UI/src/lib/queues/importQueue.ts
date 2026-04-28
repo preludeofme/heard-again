@@ -18,7 +18,7 @@ export const importQueue = new Queue(QUEUE_NAME, {
 })
 
 export interface ImportJobData {
-  workspaceId: string
+  familyspaceId: string
   userId: string
   filePath: string
   assetId: string
@@ -30,12 +30,12 @@ export function startImportWorker() {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job<ImportJobData>) => {
-      const { workspaceId, userId, filePath, assetId, jobId, importType } = job.data
+      const { familyspaceId, userId, filePath, assetId, jobId, importType } = job.data
       logger.info(`Starting background import job ${job.id} type=${importType}`)
 
       try {
         if (importType === 'GEDCOM') {
-          await gedcomImportService.importGedcom(workspaceId, userId, filePath, assetId, jobId)
+          await gedcomImportService.importGedcom(familyspaceId, userId, filePath, assetId, jobId)
         } else {
           throw new Error(`Unsupported import type: ${importType}`)
         }

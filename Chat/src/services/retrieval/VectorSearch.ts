@@ -39,7 +39,7 @@ export class VectorSearchImpl {
       const queryEmbedding = queryEmbeddingResult.vector
 
       // Build ChromaDB query
-      const collectionName = this.getCollectionName(context.workspaceId)
+      const collectionName = this.getCollectionName(context.familyspaceId)
       const whereFilters = this.buildWhereFilters(context)
 
       // Search ChromaDB
@@ -345,8 +345,8 @@ export class VectorSearchImpl {
     return filters
   }
 
-  private getCollectionName(workspaceId: string): string {
-    return `workspace_${workspaceId}_documents`
+  private getCollectionName(familyspaceId: string): string {
+    return `familyspace_${familyspaceId}_documents`
   }
 
   private async getDocument(documentId: string): Promise<Document | null> {

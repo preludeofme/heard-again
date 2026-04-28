@@ -1,11 +1,11 @@
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse } from '@/lib/api-helpers'
-import { getAuthUserWithWorkspace } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace } from '@/lib/auth-helpers'
 
 export default apiHandler({
   // GET /api/favorites - Get user's favorited stories
   GET: async (req, res) => {
-    const user = await getAuthUserWithWorkspace(req, res)
+    const user = await getAuthUserWithFamilyspace(req, res)
     const { page = '1', limit = '20' } = req.query
 
     const pageNum = Math.max(1, parseInt(page as string, 10) || 1)

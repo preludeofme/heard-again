@@ -17,12 +17,13 @@ export function useFamilyTree(
   const [addEditModalOpen, setAddEditModalOpen] = useState(false)
   const [addEditMode, setAddEditMode] = useState<'create' | 'edit'>('create')
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null)
+  const [selectedPersonRole, setSelectedPersonRole] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   
   // View states
   const [zoomLevel, setZoomLevel] = useState(1)
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 })
-  const [toolMode, setToolMode] = useState<'pointer' | 'hand'>('pointer')
+  const [toolMode, setToolMode] = useState<'pointer' | 'hand'>('hand')
   
   // Sidebar states
   const [legendCollapsed, setLegendCollapsed] = useState(false)
@@ -54,6 +55,7 @@ export function useFamilyTree(
   // Handlers
   const handlePersonClick = async (person: TreePerson) => {
     setSelectedPersonId(String(person.id))
+    setSelectedPersonRole(person.role)
     setDetailModalOpen(true)
     onPersonClick?.(person)
 
@@ -71,7 +73,10 @@ export function useFamilyTree(
       const relationshipsData = await relationshipsRes.json()
 
       if (personData.success) {
-        setPersonDetail(personData.data)
+        setPersonDetail({
+          ...personData.data,
+          role: personData.data.role || selectedPersonRole
+        })
         setPersonStories(storiesData.data?.stories || [])
         setPersonVoiceProfiles(personData.data.voiceProfiles || [])
         setPersonRelationships(relationshipsData.data || [])
@@ -101,6 +106,7 @@ export function useFamilyTree(
   const handleSubmitPerson = async (data: PersonFormData) => {
     setIsSubmitting(true)
     try {
+      let personId = selectedPersonId
       if (addEditMode === 'create') {
         const res = await fetchWithCSRFAndJSON('/api/people', {
           firstName: data.firstName,
@@ -112,6 +118,8 @@ export function useFamilyTree(
           personType: data.personType,
         })
         if (!res.ok) throw new Error('Failed to create person')
+        const json = await res.json().catch(() => null)
+        personId = json?.data?.id || json?.id || null
       } else {
         if (!selectedPersonId) throw new Error('No person selected')
         const res = await fetchWithCSRFAndJSON(`/api/people/${selectedPersonId}`, {
@@ -125,6 +133,19 @@ export function useFamilyTree(
         })
         if (!res.ok) throw new Error('Failed to update person')
       }
+
+      if ((data as any).avatarFile && personId) {
+        const form = new FormData()
+        form.append('file', (data as any).avatarFile)
+        const avatarRes = await fetchWithCSRF(`/api/people/${personId}/avatar`, {
+          method: 'POST',
+          body: form,
+        })
+        if (!avatarRes.ok) {
+          console.warn('Avatar upload failed', await avatarRes.text())
+        }
+      }
+
       setAddEditModalOpen(false)
       onPeopleChanged?.()
     } catch (err) {
@@ -264,7 +285,7 @@ export function useFamilyTree(
     setInsightCollapsed,
     
     // Detail data
-    personDetail,
+    personDetail: personDetail ? { ...personDetail, role: personDetail.role || selectedPersonRole } : null,
     personStories,
     personVoiceProfiles,
     personRelationships,

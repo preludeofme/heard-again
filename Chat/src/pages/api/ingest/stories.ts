@@ -17,24 +17,24 @@ export default async function handler(
   }
 
   try {
-    const { workspaceId, storyId, action = 'ingest' } = req.body
+    const { familyspaceId, storyId, action = 'ingest' } = req.body
 
-    if (!workspaceId && !storyId && action !== 'sync-all') {
+    if (!familyspaceId && !storyId && action !== 'sync-all') {
       return res.status(400).json({ 
-        error: 'Missing required parameters. Provide workspaceId, storyId, or use action=sync-all' 
+        error: 'Missing required parameters. Provide familyspaceId, storyId, or use action=sync-all' 
       })
     }
 
     const storyIngestion = new StoryIngestionService()
 
     switch (action) {
-      case 'ingest-workspace':
-        if (!workspaceId) {
-          return res.status(400).json({ error: 'workspaceId is required for ingest-workspace action' })
+      case 'ingest-familyspace':
+        if (!familyspaceId) {
+          return res.status(400).json({ error: 'familyspaceId is required for ingest-familyspace action' })
         }
-        await storyIngestion.ingestWorkspaceStories(workspaceId)
+        await storyIngestion.ingestFamilyspaceStories(familyspaceId)
         return res.status(200).json({ 
-          message: `Successfully ingested stories for workspace ${workspaceId}` 
+          message: `Successfully ingested stories for familyspace ${familyspaceId}` 
         })
 
       case 'ingest-story':
@@ -80,12 +80,12 @@ export default async function handler(
       case 'sync-all':
         await storyIngestion.syncAllStories()
         return res.status(200).json({ 
-          message: 'Successfully synced all stories for all workspaces' 
+          message: 'Successfully synced all stories for all familyspaces' 
         })
 
       default:
         return res.status(400).json({ 
-          error: `Invalid action: ${action}. Use ingest-workspace, ingest-story, remove-story, or sync-all` 
+          error: `Invalid action: ${action}. Use ingest-familyspace, ingest-story, remove-story, or sync-all` 
         })
     }
 

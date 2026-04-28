@@ -4,7 +4,7 @@ const { v4: uuidv4 } = require('uuid');
 const fs = require('fs');
 const path = require('path');
 
-const WORKSPACE_ID = '931638b2-8341-41fc-a064-0883a9911d54';
+const FAMILYSPACE_ID = '931638b2-8341-41fc-a064-0883a9911d54';
 const PERSON_ID = '6967b35d-a6fb-46d4-9cb5-4965c8f36c6c';
 
 async function reingest() {
@@ -15,7 +15,7 @@ async function reingest() {
     // Get the two most recent documents with UPLOADED status
     const docs = await prisma.document.findMany({
       where: { 
-        workspaceId: WORKSPACE_ID,
+        familyspaceId: FAMILYSPACE_ID,
         status: 'UPLOADED',
         title: { in: ["Dad's jobs.docx", "Dad Story - addendum.docx"] }
       },
@@ -27,7 +27,7 @@ async function reingest() {
 
     for (const doc of docs) {
       // Find temp file
-      const tempDir = path.join(process.cwd(), 'temp-ingestion', WORKSPACE_ID);
+      const tempDir = path.join(process.cwd(), 'temp-ingestion', FAMILYSPACE_ID);
       const possibleExts = ['.docx', '.pdf', '.txt', '.doc', '.md'];
       let filePath = null;
 
@@ -61,7 +61,7 @@ async function reingest() {
         documentId: doc.id,
         filePath,
         mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        workspaceId: WORKSPACE_ID,
+        familyspaceId: FAMILYSPACE_ID,
         title: doc.title,
         personId: PERSON_ID,
         traceId,

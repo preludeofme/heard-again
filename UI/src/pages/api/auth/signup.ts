@@ -6,7 +6,7 @@ import { validate, rules } from '@/lib/validation'
 
 export default apiHandler({
   POST: async (req, res) => {
-    const { email, password, displayName, workspaceName } = req.body
+    const { email, password, displayName, familyspaceName } = req.body
 
     // Validation
     const { valid, errors } = validate(req.body, {
@@ -30,8 +30,8 @@ export default apiHandler({
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10)
 
-    // Generate a slug from workspace name or email
-    const baseName = workspaceName || displayName || email.split('@')[0]
+    // Generate a slug from familyspace name or email
+    const baseName = familyspaceName || displayName || email.split('@')[0]
     const slug = baseName
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
@@ -39,7 +39,7 @@ export default apiHandler({
       .substring(0, 40)
 
     // Ensure slug uniqueness
-    const existingSlug = await prisma.workspace.findUnique({ where: { slug } })
+    const existingSlug = await prisma.familyspace.findUnique({ where: { slug } })
     const finalSlug = existingSlug ? `${slug}-${Date.now().toString(36)}` : slug
 
     // Get the Free plan
@@ -47,7 +47,7 @@ export default apiHandler({
       where: { planType: 'FREE', isActive: true },
     })
 
-    // Create user, workspace, membership, and subscription in a transaction
+    // Create user, familyspace, membership, and subscription in a transaction
     const result = await prisma.$transaction(async (tx) => {
       // Create the user
       const user = await tx.user.create({
@@ -58,10 +58,10 @@ export default apiHandler({
         },
       })
 
-      // Create default workspace
-      const workspace = await tx.workspace.create({
+      // Create default familyspace
+      const familyspace = await tx.familyspace.create({
         data: {
-          name: workspaceName || `${displayName || email.split('@')[0]}'s Family`,
+          name: familyspaceName || `${displayName || email.split('@')[0]}'s Family`,
           slug: finalSlug,
           ownerId: user.id,
           planType: 'FREE',
@@ -72,7 +72,7 @@ export default apiHandler({
       // Create OWNER membership
       await tx.membership.create({
         data: {
-          workspaceId: workspace.id,
+          familyspaceId: familyspace.id,
           userId: user.id,
           role: 'OWNER',
           status: 'ACTIVE',
@@ -83,28 +83,28 @@ export default apiHandler({
       if (freePlan) {
         await tx.subscription.create({
           data: {
-            workspaceId: workspace.id,
+            familyspaceId: familyspace.id,
             planId: freePlan.id,
             billingStatus: 'ACTIVE',
           },
         })
       }
 
-      // Set default workspace
+      // Set default familyspace
       await tx.user.update({
         where: { id: user.id },
-        data: { defaultWorkspaceId: workspace.id },
+        data: { defaultFamilyspaceId: familyspace.id },
       })
 
       return {
         id: user.id,
         email: user.email,
         displayName: user.displayName,
-        defaultWorkspaceId: workspace.id,
-        workspace: {
-          id: workspace.id,
-          name: workspace.name,
-          slug: workspace.slug,
+        defaultFamilyspaceId: familyspace.id,
+        familyspace: {
+          id: familyspace.id,
+          name: familyspace.name,
+          slug: familyspace.slug,
         },
       }
     })

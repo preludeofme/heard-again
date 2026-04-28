@@ -49,10 +49,10 @@ export interface ChatService {
   sendMessage(request: SendMessageRequest): Promise<StrictChatResponse>
   streamResponse(request: SendMessageRequest): Promise<AsyncIterable<StreamChunk>>
   getHistory(sessionId: string, limit?: number, offset?: number): Promise<ChatMessage[]>
-  getSession(sessionId: string, userId?: string, workspaceId?: string): Promise<ChatSession | null>
+  getSession(sessionId: string, userId?: string, familyspaceId?: string): Promise<ChatSession | null>
   updateSession(sessionId: string, updates: Partial<ChatSession>): Promise<ChatSession>
   deleteSession(sessionId: string): Promise<void>
-  listSessions(workspaceId: string, userId: string): Promise<ChatSession[]>
+  listSessions(familyspaceId: string, userId: string): Promise<ChatSession[]>
   storeUserMessage(sessionId: string, message: string): Promise<ChatMessage>
   updateAssistantMessage(messageId: string, content: string, metadata?: any): Promise<ChatMessage>
 }
@@ -70,7 +70,7 @@ export class ChatServiceImpl implements ChatService {
   async createSession(request: CreateSessionRequest): Promise<ChatSession> {
     const session: ChatSession = {
       id: uuidv4(),
-      workspaceId: request.workspaceId,
+      familyspaceId: request.familyspaceId,
       personId: request.personId,
       userId: request.userId,
       title: request.title,
@@ -93,7 +93,7 @@ export class ChatServiceImpl implements ChatService {
     }
 
     // Get persona profile
-    const personaProfile = await this.personaService.getPersonaProfile(session.personId, session.workspaceId)
+    const personaProfile = await this.personaService.getPersonaProfile(session.personId, session.familyspaceId)
     if (!personaProfile) {
       throw new Error('Persona profile not found')
     }
@@ -114,7 +114,7 @@ export class ChatServiceImpl implements ChatService {
     const retrievedDocuments = await this.retrievalService.searchDocuments(
       request.message,
       {
-        workspaceId: session.workspaceId,
+        familyspaceId: session.familyspaceId,
         personId: session.personId,
         maxResults: request.options?.maxRetrievedDocuments ?? 5
       }
@@ -129,7 +129,7 @@ export class ChatServiceImpl implements ChatService {
     const evidencePacket = this.evidenceGate.buildEvidencePacket(
       request.message,
       {
-        workspaceId: session.workspaceId,
+        familyspaceId: session.familyspaceId,
         personId: session.personId,
         maxResults: request.options?.maxRetrievedDocuments ?? 5
       },
@@ -213,7 +213,7 @@ export class ChatServiceImpl implements ChatService {
       personaProfile,
       evidenceDocuments,
       request.message,
-      await this.getHistory(request.sessionId, 10, 0, session.workspaceId)
+      await this.getHistory(request.sessionId, 10, 0, session.familyspaceId)
     )
 
     // Generate response
@@ -350,14 +350,14 @@ export class ChatServiceImpl implements ChatService {
     }
   }
 
-  async getHistory(sessionId: string, limit?: number, offset?: number, workspaceId?: string): Promise<ChatMessage[]> {
+  async getHistory(sessionId: string, limit?: number, offset?: number, familyspaceId?: string): Promise<ChatMessage[]> {
     const actualLimit = limit ?? 50
     const actualOffset = offset ?? 0
-    return await this.chatRepository.getMessages(sessionId, actualLimit, actualOffset, undefined, workspaceId)
+    return await this.chatRepository.getMessages(sessionId, actualLimit, actualOffset, undefined, familyspaceId)
   }
 
-  async getSession(sessionId: string, userId?: string, workspaceId?: string): Promise<ChatSession | null> {
-    return await this.chatRepository.getSession(sessionId, userId, workspaceId)
+  async getSession(sessionId: string, userId?: string, familyspaceId?: string): Promise<ChatSession | null> {
+    return await this.chatRepository.getSession(sessionId, userId, familyspaceId)
   }
 
   async updateSession(sessionId: string, updates: Partial<ChatSession>): Promise<ChatSession> {
@@ -379,8 +379,8 @@ export class ChatServiceImpl implements ChatService {
     await this.chatRepository.deleteSession(sessionId)
   }
 
-  async listSessions(workspaceId: string, userId: string): Promise<ChatSession[]> {
-    return await this.chatRepository.listSessions(workspaceId, userId)
+  async listSessions(familyspaceId: string, userId: string): Promise<ChatSession[]> {
+    return await this.chatRepository.listSessions(familyspaceId, userId)
   }
 
   async streamResponse(request: SendMessageRequest): Promise<AsyncIterable<StreamChunk>> {
@@ -393,7 +393,7 @@ export class ChatServiceImpl implements ChatService {
     }
 
     // Get persona profile
-    const personaProfile = await this.personaService.getPersonaProfile(session.personId, session.workspaceId)
+    const personaProfile = await this.personaService.getPersonaProfile(session.personId, session.familyspaceId)
     if (!personaProfile) {
       throw new Error('Persona profile not found')
     }
@@ -402,7 +402,7 @@ export class ChatServiceImpl implements ChatService {
     const retrievedDocuments = await this.retrievalService.searchDocuments(
       request.message,
       {
-        workspaceId: session.workspaceId,
+        familyspaceId: session.familyspaceId,
         personId: session.personId,
         maxResults: request.options?.maxRetrievedDocuments ?? 5
       }
@@ -417,7 +417,7 @@ export class ChatServiceImpl implements ChatService {
     const evidencePacket = this.evidenceGate.buildEvidencePacket(
       request.message,
       {
-        workspaceId: session.workspaceId,
+        familyspaceId: session.familyspaceId,
         personId: session.personId,
         maxResults: request.options?.maxRetrievedDocuments ?? 5
       },
@@ -485,7 +485,7 @@ export class ChatServiceImpl implements ChatService {
       personaProfile,
       evidenceDocuments,
       request.message,
-      await this.getHistory(request.sessionId, 10, 0, session.workspaceId)
+      await this.getHistory(request.sessionId, 10, 0, session.familyspaceId)
     )
 
     // Generate streaming response
@@ -971,13 +971,13 @@ export class ChatServiceImpl implements ChatService {
 // Repository interface for data access
 export interface ChatRepository {
   createSession(session: ChatSession): Promise<ChatSession>
-  getSession(sessionId: string, userId?: string, workspaceId?: string): Promise<ChatSession | null>
+  getSession(sessionId: string, userId?: string, familyspaceId?: string): Promise<ChatSession | null>
   updateSession(session: ChatSession): Promise<ChatSession>
   deleteSession(sessionId: string): Promise<void>
-  listSessions(workspaceId: string, userId: string): Promise<ChatSession[]>
+  listSessions(familyspaceId: string, userId: string): Promise<ChatSession[]>
   addMessage(message: ChatMessage): Promise<ChatMessage>
   updateMessage(messageId: string, content: string, metadata?: any): Promise<ChatMessage | null>
-  getMessages(sessionId: string, limit?: number, offset?: number, userId?: string, workspaceId?: string): Promise<ChatMessage[]>
+  getMessages(sessionId: string, limit?: number, offset?: number, userId?: string, familyspaceId?: string): Promise<ChatMessage[]>
 }
 
 // Import types (these will be resolved when we implement the other services)

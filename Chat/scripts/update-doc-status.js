@@ -5,7 +5,7 @@ async function updateStatus() {
   // Find documents with content but wrong status
   const docs = await prisma.document.findMany({
     where: {
-      workspaceId: '931638b2-8341-41fc-a064-0883a9911d54',
+      familyspaceId: '931638b2-8341-41fc-a064-0883a9911d54',
       content: {
         not: ''
       }

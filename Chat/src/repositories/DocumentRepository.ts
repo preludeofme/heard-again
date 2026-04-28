@@ -26,7 +26,7 @@ export class PrismaDocumentRepository implements DocumentRepository {
     const dbDocument = await (prisma as any).document.create({
       data: {
         id: document.id,
-        workspaceId: document.workspaceId,
+        familyspaceId: document.familyspaceId,
         assetId: document.assetId ?? null,
         personId: document.personId ?? null,
         title: document.title,
@@ -85,8 +85,8 @@ export class PrismaDocumentRepository implements DocumentRepository {
     })
   }
 
-  async listDocuments(workspaceId: string, filters?: any): Promise<Document[]> {
-    const whereClause: any = { workspaceId }
+  async listDocuments(familyspaceId: string, filters?: any): Promise<Document[]> {
+    const whereClause: any = { familyspaceId }
     
     if (filters) {
       if (filters.personId) {
@@ -153,7 +153,7 @@ export class PrismaDocumentRepository implements DocumentRepository {
   private mapDbDocumentToDocument = (dbDocument: any): Document => {
     return {
       id: dbDocument.id,
-      workspaceId: dbDocument.workspaceId,
+      familyspaceId: dbDocument.familyspaceId,
       assetId: dbDocument.assetId ?? undefined,
       personId: dbDocument.personId,
       title: dbDocument.title,

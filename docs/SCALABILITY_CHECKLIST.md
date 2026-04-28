@@ -22,7 +22,7 @@ This checklist tracks the work required to bring Heard Again into compliance wit
 ### 1.1 Control Plane (Auth, Billing, Orchestration)
 
 - [x] User identity and authentication (NextAuth)
-- [x] Workspace/tenant isolation in schema
+- [x] Familyspace/tenant isolation in schema
 - [x] Basic subscription/plan models
 - [x] Instance registration API
 - [~] **TODO:** Separate control plane service boundaries (currently mixed in API routes)
@@ -32,7 +32,7 @@ This checklist tracks the work required to bring Heard Again into compliance wit
 
 ### 1.2 Data Plane (Storage, Database)
 
-- [x] Workspace-scoped data models
+- [x] Familyspace-scoped data models
 - [~] **TODO:** Object Storage (GCS Primary)
 - [~] **TODO:** Storage abstraction (GCS implementation incomplete - only LOCAL mode)
 - [ ] **TODO:** Signed URL generation for direct uploads
@@ -128,10 +128,10 @@ This checklist tracks the work required to bring Heard Again into compliance wit
 
 ### 4.3 Multi-Tenancy Enforcement
 
-- [x] Workspace scoping in schema
-- [~] **TODO:** Verify ALL API routes enforce workspace scope
+- [x] Familyspace scoping in schema
+- [~] **TODO:** Verify ALL API routes enforce familyspace scope
 - [~] **TODO:** Centralized authorization layer (currently scattered)
-- [ ] **TODO:** Storage path namespacing by workspace
+- [ ] **TODO:** Storage path namespacing by familyspace
 
 ---
 
@@ -158,7 +158,7 @@ This checklist tracks the work required to bring Heard Again into compliance wit
 
 - [x] Tunnel token expiry (30 days)
 - [~] **TODO:** Short-lived session tokens for tunnel access
-- [ ] **TODO:** Workspace+role aware access checks for tunnel
+- [ ] **TODO:** Familyspace+role aware access checks for tunnel
 - [ ] **TODO:** Access revocation when membership removed
 
 ---
@@ -195,7 +195,7 @@ This checklist tracks the work required to bring Heard Again into compliance wit
 ### 7.1 Database Scalability
 
 - [x] Proper indexing strategy
-- [x] Workspace scoping
+- [x] Familyspace scoping
 - [~] **TODO:** Query plan review for N+1 issues
 - [ ] **TODO:** Read replicas for analytics queries
 - [ ] **TODO:** Connection pooling configuration
@@ -222,7 +222,7 @@ This checklist tracks the work required to bring Heard Again into compliance wit
 
 - [~] **TODO:** Structured logging (JSON format)
 - [ ] **TODO:** Request ID propagation
-- [ ] **TODO:** Workspace ID in all tenant logs
+- [ ] **TODO:** Familyspace ID in all tenant logs
 - [ ] **TODO:** Job ID in worker logs
 - [ ] **TODO:** Secrets redaction
 
@@ -249,7 +249,7 @@ This checklist tracks the work required to bring Heard Again into compliance wit
 
 - [~] **TODO:** Centralized permission service
 - [~] **TODO:** Consistent authorization across all routes
-- [ ] **TODO:** Resource-level permissions (story-level, not just workspace)
+- [ ] **TODO:** Resource-level permissions (story-level, not just familyspace)
 
 ### 9.2 Data Protection
 
@@ -271,9 +271,9 @@ This checklist tracks the work required to bring Heard Again into compliance wit
 ### 10.1 Import/Export
 
 - [x] ImportJob/ExportJob models
-- [~] **TODO:** Complete workspace export functionality
+- [~] **TODO:** Complete familyspace export functionality
 - [~] **TODO:** GEDCOM round-trip verification
-- [ ] **TODO:** Full workspace backup/restore
+- [ ] **TODO:** Full familyspace backup/restore
 
 ### 10.2 Deployment Mode Migration
 

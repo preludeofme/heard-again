@@ -10,11 +10,11 @@
 const { ChromaClient, DefaultEmbeddingFunction } = require('chromadb');
 
 const CHROMA_URL = process.env.CHROMA_URL || 'http://localhost:8004';
-const WORKSPACE_ID = process.env.WORKSPACE_ID || '931638b2-8341-41fc-a064-0883a9911d54';
+const FAMILYSPACE_ID = process.env.FAMILYSPACE_ID || '931638b2-8341-41fc-a064-0883a9911d54';
 
 async function cleanup() {
   const client = new ChromaClient({ path: CHROMA_URL });
-  const collectionName = `workspace_${WORKSPACE_ID}_documents`;
+  const collectionName = `familyspace_${FAMILYSPACE_ID}_documents`;
 
   console.log(`ChromaDB URL: ${CHROMA_URL}`);
   console.log(`Target collection: ${collectionName}\n`);

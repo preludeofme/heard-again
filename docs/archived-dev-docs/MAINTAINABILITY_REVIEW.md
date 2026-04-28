@@ -38,7 +38,7 @@ These issues should block scaling, major feature work, or team velocity:
 **Why it matters:** API routes directly execute complex Prisma queries, embedding business rules in HTTP handlers. This makes unit testing impossible without mocking the entire HTTP stack, and business logic cannot be reused across routes or batch operations.
 
 **Evidence:**
-- `/src/pages/api/stories/index.ts` lines 32-54, 103-131 – Direct story creation with workspace validation logic inline
+- `/src/pages/api/stories/index.ts` lines 32-54, 103-131 – Direct story creation with familyspace validation logic inline
 - `/src/pages/api/voice/synthesize.ts` lines 42-162 – Complex voice synthesis workflow with consent checking, job lifecycle management, and asset creation all in the route handler
 - `/src/pages/api/people/index.ts` lines 28-74 – Person listing with relationship counts computed inline
 
@@ -69,7 +69,7 @@ These issues should block scaling, major feature work, or team velocity:
 ### [x] Finding 1: Missing Service Layer
 **Severity:** HIGH  
 **Affected Area:** `/src/pages/api/**/*.ts`  
-**Issue:** No abstraction layer between API routes and database. Business rules (workspace scoping, consent checks, slug generation) are embedded in route handlers.  
+**Issue:** No abstraction layer between API routes and database. Business rules (familyspace scoping, consent checks, slug generation) are embedded in route handlers.  
 **Long-term Impact:** Cannot unit test business logic; cannot reuse logic for batch operations, background jobs, or CLI tools; changes to data model require  Finding and updating scattered query logic.  
 **Recommended Refactor:**
 ```
@@ -77,7 +77,7 @@ Create /src/services/ directory with domain services:
 - StoryService – createStory(), listStories(), validateStoryAccess()
 - VoiceService – synthesize(), checkConsent(), manageJobLifecycle()
 - PersonService – createPerson(), buildPersonQuery()
-- WorkspaceService – resolveWorkspace(), checkRole()
+- FamilyspaceService – resolveFamilyspace(), checkRole()
 
 Each service receives PrismaClient via constructor injection.
 ```
@@ -212,7 +212,7 @@ Validate at API boundary with schema.parse(req.body).
 **Recommended Refactor:**
 ```
 Create StorageService:
-- saveAudio(workspaceId: string, audioId: string, buffer: Buffer): Promise<string>
+- saveAudio(familyspaceId: string, audioId: string, buffer: Buffer): Promise<string>
 - getAudioUrl(path: string): string
 
 Service handles path construction and storage backend.
@@ -269,7 +269,7 @@ These patterns are worth keeping and extending:
 Centralized error handling, logging, and method routing. Should be extended for all routes consistently.
 
 ### ✅ Auth Helpers (`/src/lib/auth-helpers.ts`)
-Clean workspace resolution and role checking. Extract workspace logic to service layer to reduce duplication.
+Clean familyspace resolution and role checking. Extract familyspace logic to service layer to reduce duplication.
 
 ### ✅ Consistent Response Format (`{ success, data/error }`)
 Predictable structure across API. Add strict typing to data field.
@@ -387,11 +387,11 @@ export class StoryService {
   constructor(private prisma: PrismaClient) {}
 
   async createStory(
-    workspaceId: string,
+    familyspaceId: string,
     userId: string,
     data: CreateStoryInput
   ): Promise<Story> {
-    // Validate workspace access
+    // Validate familyspace access
     // Execute business logic
     // Return domain object
   }

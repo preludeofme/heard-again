@@ -2,13 +2,13 @@ import { BaseRepository } from './BaseRepository'
 import type { Prisma, VoiceProfile } from '@prisma/client'
 
 export class VoiceProfileRepository extends BaseRepository {
-  async findById(id: string, workspaceId: string): Promise<VoiceProfile | null> {
+  async findById(id: string, familyspaceId: string): Promise<VoiceProfile | null> {
     return this.prisma.voiceProfile.findFirst({
-      where: { id, workspaceId },
+      where: { id, familyspaceId },
     })
   }
 
-  async findMany(workspaceId: string, options: { 
+  async findMany(familyspaceId: string, options: { 
     skip?: number, 
     take?: number,
     where?: Prisma.VoiceProfileWhereInput 
@@ -16,7 +16,7 @@ export class VoiceProfileRepository extends BaseRepository {
     return this.prisma.voiceProfile.findMany({
       where: { 
         ...options.where,
-        workspaceId,
+        familyspaceId,
       },
       skip: options.skip,
       take: options.take,
@@ -28,7 +28,7 @@ export class VoiceProfileRepository extends BaseRepository {
     const profile = await this.prisma.voiceProfile.create({ data: data as any })
     
     await this.audit({
-      workspaceId: profile.workspaceId,
+      familyspaceId: profile.familyspaceId,
       actorId: userId,
       actorType: 'USER',
       action: 'CREATE',
@@ -40,9 +40,9 @@ export class VoiceProfileRepository extends BaseRepository {
     return profile
   }
 
-  async update(id: string, workspaceId: string, data: Prisma.VoiceProfileUncheckedUpdateInput, userId: string): Promise<VoiceProfile> {
+  async update(id: string, familyspaceId: string, data: Prisma.VoiceProfileUncheckedUpdateInput, userId: string): Promise<VoiceProfile> {
     const before = await this.prisma.voiceProfile.findFirstOrThrow({
-      where: { id, workspaceId },
+      where: { id, familyspaceId },
     })
 
     const profile = await this.prisma.voiceProfile.update({
@@ -51,7 +51,7 @@ export class VoiceProfileRepository extends BaseRepository {
     })
 
     await this.audit({
-      workspaceId,
+      familyspaceId,
       actorId: userId,
       actorType: 'USER',
       action: 'UPDATE',
@@ -64,9 +64,9 @@ export class VoiceProfileRepository extends BaseRepository {
     return profile
   }
 
-  async delete(id: string, workspaceId: string, userId: string): Promise<VoiceProfile> {
+  async delete(id: string, familyspaceId: string, userId: string): Promise<VoiceProfile> {
     const before = await this.prisma.voiceProfile.findFirstOrThrow({
-      where: { id, workspaceId },
+      where: { id, familyspaceId },
     })
 
     const profile = await this.prisma.voiceProfile.delete({
@@ -74,7 +74,7 @@ export class VoiceProfileRepository extends BaseRepository {
     })
 
     await this.audit({
-      workspaceId,
+      familyspaceId,
       actorId: userId,
       actorType: 'USER',
       action: 'DELETE',

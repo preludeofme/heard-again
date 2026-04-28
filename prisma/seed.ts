@@ -1,4 +1,4 @@
-import { PrismaClient, PlanType, WorkspaceRole, StoryType, GedcomSex } from '@prisma/client';
+import { PrismaClient, PlanType, FamilyspaceRole, StoryType, GedcomSex } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -101,8 +101,8 @@ async function main() {
 
     console.log(`Created demo user: ${demoUser.email}`);
 
-    // Create demo workspace with family data
-    const workspace = await prisma.workspace.upsert({
+    // Create demo familyspace with family data
+    const familyspace = await prisma.familyspace.upsert({
       where: { slug: 'demo-family' },
       update: {},
       create: {
@@ -121,7 +121,7 @@ async function main() {
       update: {},
       create: {
         id: 'cdbbe9ec-0423-4a34-9983-7c5a6f137d65',
-        workspaceId: workspace.id,
+        familyspaceId: familyspace.id,
         firstName: 'Robert',
         lastName: 'Johnson',
         displayName: 'Grandpa Bob',
@@ -140,7 +140,7 @@ async function main() {
       update: {},
       create: {
         id: 'demo-grandmother-001',
-        workspaceId: workspace.id,
+        familyspaceId: familyspace.id,
         firstName: 'Margaret',
         lastName: 'Johnson',
         displayName: 'Grandma Maggie',
@@ -159,7 +159,7 @@ async function main() {
       update: {},
       create: {
         id: 'demo-father-001',
-        workspaceId: workspace.id,
+        familyspaceId: familyspace.id,
         firstName: 'Michael',
         lastName: 'Johnson',
         displayName: 'Mike',
@@ -178,7 +178,7 @@ async function main() {
       update: {},
       create: {
         id: 'demo-mother-001',
-        workspaceId: workspace.id,
+        familyspaceId: familyspace.id,
         firstName: 'Sarah',
         lastName: 'Johnson',
         displayName: 'Sarah',
@@ -197,7 +197,7 @@ async function main() {
       update: {},
       create: {
         id: 'demo-child-001',
-        workspaceId: workspace.id,
+        familyspaceId: familyspace.id,
         firstName: 'Emily',
         lastName: 'Johnson',
         displayName: 'Emily',
@@ -216,7 +216,7 @@ async function main() {
       update: {},
       create: {
         id: 'demo-child-002',
-        workspaceId: workspace.id,
+        familyspaceId: familyspace.id,
         firstName: 'James',
         lastName: 'Johnson',
         displayName: 'Jimmy',
@@ -231,7 +231,7 @@ async function main() {
     // Create family units with marriage dates
     const grandparentsFamily = await prisma.familyUnit.create({
       data: {
-        workspaceId: workspace.id,
+        familyspaceId: familyspace.id,
         marriageDate: new Date('1967-06-10'),
         marriagePlace: 'St. Mary\'s Church, Boston',
       },
@@ -247,7 +247,7 @@ async function main() {
 
     const parentsFamily = await prisma.familyUnit.create({
       data: {
-        workspaceId: workspace.id,
+        familyspaceId: familyspace.id,
         marriageDate: new Date('2000-08-12'),
         marriagePlace: 'Lake Tahoe, California',
       },
@@ -271,7 +271,7 @@ async function main() {
     // Create stories with dates
     const story1 = await prisma.story.create({
       data: {
-        workspaceId: workspace.id,
+        familyspaceId: familyspace.id,
         title: 'The Great Camping Trip of 1985',
         content: 'Robert took the whole family camping in Yellowstone. It was an adventure we\'ll never forget - the bears, the fishing, the campfires...',
         excerpt: 'A memorable family camping adventure in Yellowstone...',
@@ -287,7 +287,7 @@ async function main() {
 
     const story2 = await prisma.story.create({
       data: {
-        workspaceId: workspace.id,
+        familyspaceId: familyspace.id,
         title: 'How We Met at the Dance',
         content: 'It was the summer of 1965. Margaret was wearing a blue dress, and Robert couldn\'t take his eyes off her...',
         excerpt: 'The romantic story of how Robert and Margaret first met...',
@@ -303,7 +303,7 @@ async function main() {
 
     const story3 = await prisma.story.create({
       data: {
-        workspaceId: workspace.id,
+        familyspaceId: familyspace.id,
         title: 'Emily\'s First Steps',
         content: 'She was only 11 months old when she took her first wobbly steps across the living room floor...',
         excerpt: 'Watching Emily take her first steps was magical...',

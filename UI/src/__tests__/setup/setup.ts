@@ -32,7 +32,7 @@ jest.mock('@/lib/prisma', () => ({
       findUnique: jest.fn(),
       update: jest.fn(),
     },
-    workspace: {
+    familyspace: {
       findUnique: jest.fn(),
       update: jest.fn(),
     },

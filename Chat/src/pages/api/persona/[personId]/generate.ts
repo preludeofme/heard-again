@@ -22,13 +22,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const { method } = req
   const { personId } = req.query
-  const workspaceId = req.headers['x-workspace-id'] as string
+  const familyspaceId = req.headers['x-familyspace-id'] as string
   const userId = req.headers['x-user-id'] as string
 
-  if (!workspaceId || !userId) {
+  if (!familyspaceId || !userId) {
     return res.status(400).json({
       success: false,
-      error: 'Missing required headers: x-workspace-id, x-user-id'
+      error: 'Missing required headers: x-familyspace-id, x-user-id'
     })
   }
 
@@ -42,7 +42,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     switch (method) {
       case 'POST':
-        await handleGeneratePersona(req, res, personId, workspaceId)
+        await handleGeneratePersona(req, res, personId, familyspaceId)
         break
       default:
         res.setHeader('Allow', ['POST'])
@@ -64,12 +64,12 @@ async function handleGeneratePersona(
   req: NextApiRequest, 
   res: NextApiResponse, 
   personId: string, 
-  workspaceId: string
+  familyspaceId: string
 ) {
   const { options } = req.body
 
   // Check if persona already exists
-  const existingPersona = await personaService.getPersonaProfile(personId, workspaceId)
+  const existingPersona = await personaService.getPersonaProfile(personId, familyspaceId)
   if (existingPersona) {
     return res.status(409).json({
       success: false,
@@ -78,7 +78,7 @@ async function handleGeneratePersona(
   }
 
   // Check if person has any documents
-  const documents = await documentRepository.listDocuments(workspaceId, { personId })
+  const documents = await documentRepository.listDocuments(familyspaceId, { personId })
   if (documents.length === 0) {
     return res.status(400).json({
       success: false,
@@ -97,14 +97,14 @@ async function handleGeneratePersona(
   }
 
   try {
-    const persona = await personaService.generatePersonaProfile(personId, workspaceId, generationOptions)
+    const persona = await personaService.generatePersonaProfile(personId, familyspaceId, generationOptions)
     
     return res.status(201).json({
       success: true,
       persona: {
         id: persona.id,
         personId: persona.personId,
-        workspaceId: persona.workspaceId,
+        familyspaceId: persona.familyspaceId,
         status: persona.status,
         documentSampleCount: persona.documentSampleCount,
         confidenceScore: persona.confidenceScore,

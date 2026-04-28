@@ -410,7 +410,9 @@ export function PersonDetailModal({
           <Tabs
             value={activeTab}
             onChange={handleTabChange}
-            variant="fullWidth"
+            variant="scrollable"
+            scrollButtons="auto"
+            allowScrollButtonsMobile
             sx={{
               '& .MuiTab-root': {
                 textTransform: 'none',

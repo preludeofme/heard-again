@@ -2,15 +2,15 @@ import { BaseRepository } from './BaseRepository'
 import type { Prisma, PersonaProfile } from '@prisma/client'
 
 export class PersonaProfileRepository extends BaseRepository {
-  async findById(id: string, workspaceId: string): Promise<PersonaProfile | null> {
+  async findById(id: string, familyspaceId: string): Promise<PersonaProfile | null> {
     return this.prisma.personaProfile.findFirst({
-      where: { id, workspaceId },
+      where: { id, familyspaceId },
     })
   }
 
-  async findByPersonId(personId: string, workspaceId: string): Promise<PersonaProfile | null> {
+  async findByPersonId(personId: string, familyspaceId: string): Promise<PersonaProfile | null> {
     return this.prisma.personaProfile.findFirst({
-      where: { personId, workspaceId },
+      where: { personId, familyspaceId },
     })
   }
 
@@ -18,9 +18,9 @@ export class PersonaProfileRepository extends BaseRepository {
     return this.prisma.personaProfile.create({ data })
   }
 
-  async update(id: string, workspaceId: string, data: Prisma.PersonaProfileUpdateInput): Promise<PersonaProfile> {
+  async update(id: string, familyspaceId: string, data: Prisma.PersonaProfileUpdateInput): Promise<PersonaProfile> {
     await this.prisma.personaProfile.findFirstOrThrow({
-      where: { id, workspaceId },
+      where: { id, familyspaceId },
     })
 
     return this.prisma.personaProfile.update({
@@ -29,9 +29,9 @@ export class PersonaProfileRepository extends BaseRepository {
     })
   }
 
-  async delete(id: string, workspaceId: string): Promise<PersonaProfile> {
+  async delete(id: string, familyspaceId: string): Promise<PersonaProfile> {
     await this.prisma.personaProfile.findFirstOrThrow({
-      where: { id, workspaceId },
+      where: { id, familyspaceId },
     })
 
     return this.prisma.personaProfile.delete({

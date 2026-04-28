@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
-import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 
 interface PersonWithRelations {
   id: string
@@ -181,14 +181,14 @@ function calculateParentScore(
 
 // Main matching function
 export async function findPersonMatches(
-  targetWorkspaceId: string,
-  sourceWorkspaceId: string,
+  targetFamilyspaceId: string,
+  sourceFamilyspaceId: string,
   minScore: number = 0.6
 ): Promise<MatchCandidate[]> {
-  // Fetch all people from both workspaces with their relations
+  // Fetch all people from both familyspaces with their relations
   const [targetPeople, sourcePeople] = await Promise.all([
     prisma.person.findMany({
-      where: { workspaceId: targetWorkspaceId },
+      where: { familyspaceId: targetFamilyspaceId },
       include: {
         names: { select: { givenName: true, surname: true } },
         familyChildLinks: {
@@ -203,7 +203,7 @@ export async function findPersonMatches(
       }
     }) as Promise<PersonWithRelations[]>,
     prisma.person.findMany({
-      where: { workspaceId: sourceWorkspaceId },
+      where: { familyspaceId: sourceFamilyspaceId },
       include: {
         names: { select: { givenName: true, surname: true } },
         familyChildLinks: {
@@ -280,34 +280,34 @@ export async function findPersonMatches(
 }
 
 export default apiHandler({
-  // POST /api/family-merge/analyze - Analyze potential matches between workspaces
+  // POST /api/family-merge/analyze - Analyze potential matches between familyspaces
   POST: async (req, res) => {
-    const user = await getAuthUserWithWorkspace(req, res)
-    await requireWorkspaceRole(user.id, user.workspaceId, 'ADMIN')
+    const user = await getAuthUserWithFamilyspace(req, res)
+    await requireFamilyspaceRole(user.id, user.familyspaceId, 'ADMIN')
     
-    const { sourceWorkspaceId, minScore = 0.6 } = req.body
+    const { sourceFamilyspaceId, minScore = 0.6 } = req.body
     
-    if (!sourceWorkspaceId) {
-      throw Errors.badRequest('sourceWorkspaceId is required')
+    if (!sourceFamilyspaceId) {
+      throw Errors.badRequest('sourceFamilyspaceId is required')
     }
     
-    // Verify user has access to source workspace
+    // Verify user has access to source familyspace
     const sourceMembership = await prisma.membership.findFirst({
       where: {
         userId: user.id,
-        workspaceId: sourceWorkspaceId,
+        familyspaceId: sourceFamilyspaceId,
         status: 'ACTIVE'
       }
     })
     
     if (!sourceMembership) {
-      throw Errors.forbidden('You do not have access to the source workspace')
+      throw Errors.forbidden('You do not have access to the source familyspace')
     }
     
     // Find matches
     const matches = await findPersonMatches(
-      user.workspaceId,
-      sourceWorkspaceId,
+      user.familyspaceId,
+      sourceFamilyspaceId,
       minScore
     )
     
@@ -351,12 +351,12 @@ export default apiHandler({
     
     // Calculate summary stats
     const sourcePersonCount = await prisma.person.count({
-      where: { workspaceId: sourceWorkspaceId }
+      where: { familyspaceId: sourceFamilyspaceId }
     })
     
     return successResponse(res, {
-      targetWorkspaceId: user.workspaceId,
-      sourceWorkspaceId,
+      targetFamilyspaceId: user.familyspaceId,
+      sourceFamilyspaceId,
       totalSourcePeople: sourcePersonCount,
       matchedPeopleCount: matches.length,
       overallMatchScore: matches.length > 0

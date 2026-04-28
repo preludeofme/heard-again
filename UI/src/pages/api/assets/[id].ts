@@ -1,16 +1,16 @@
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse, Errors, sanitizeAssetResponse } from '@/lib/api-helpers'
-import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 import { logger } from '@/lib/logger'
 
 export default apiHandler({
   // GET /api/assets/[id] - Get asset details
   GET: async (req, res) => {
-    const user = await getAuthUserWithWorkspace(req, res)
+    const user = await getAuthUserWithFamilyspace(req, res)
     const assetId = req.query.id as string
 
     const asset = await prisma.asset.findFirst({
-      where: { id: assetId, workspaceId: user.workspaceId },
+      where: { id: assetId, familyspaceId: user.familyspaceId },
       include: {
         uploadedBy: {
           select: { id: true, displayName: true, email: true },
@@ -54,8 +54,8 @@ export default apiHandler({
 
   // PATCH /api/assets/[id] - Link or unlink a person from the document for this asset
   PATCH: async (req, res) => {
-    const user = await getAuthUserWithWorkspace(req, res)
-    await requireWorkspaceRole(user.id, user.workspaceId, 'EDITOR')
+    const user = await getAuthUserWithFamilyspace(req, res)
+    await requireFamilyspaceRole(user.id, user.familyspaceId, 'EDITOR')
     const assetId = req.query.id as string
     const { personId, action } = req.body as { personId?: string; action?: 'link' | 'unlink' }
 
@@ -63,15 +63,15 @@ export default apiHandler({
       return res.status(400).json({ success: false, error: 'personId and action (link|unlink) are required' })
     }
 
-    // Find the Document associated with this asset (workspace-scoped)
+    // Find the Document associated with this asset (familyspace-scoped)
     const document = await prisma.document.findFirst({
-      where: { assetId, workspaceId: user.workspaceId },
+      where: { assetId, familyspaceId: user.familyspaceId },
     })
     if (!document) throw Errors.notFound('Document for asset')
 
-    // Verify person belongs to the workspace (IDOR guard)
+    // Verify person belongs to the familyspace (IDOR guard)
     const person = await prisma.person.findFirst({
-      where: { id: personId, workspaceId: user.workspaceId },
+      where: { id: personId, familyspaceId: user.familyspaceId },
       select: { id: true },
     })
     if (!person) throw Errors.notFound('Person')
@@ -86,7 +86,7 @@ export default apiHandler({
       // Trigger RAG re-ingestion for the Chat service so the AI Profile Builder
       // can use this document even though it was linked retroactively.
       const asset = await prisma.asset.findFirst({
-        where: { id: assetId, workspaceId: user.workspaceId },
+        where: { id: assetId, familyspaceId: user.familyspaceId },
         select: { storagePath: true, mimeType: true, originalName: true, filename: true },
       })
       const chatServiceUrl = process.env.CHAT_SERVICE_URL
@@ -119,7 +119,7 @@ export default apiHandler({
             },
             body: JSON.stringify({
               assetId,
-              workspaceId: user.workspaceId,
+              familyspaceId: user.familyspaceId,
               storageUrl,
               mimeType: asset.mimeType,
               title: asset.originalName || asset.filename,
@@ -142,12 +142,12 @@ export default apiHandler({
   // DELETE /api/assets/[id] - Delete asset
   DELETE: async (req, res) => {
 
-    const user = await getAuthUserWithWorkspace(req, res)
+    const user = await getAuthUserWithFamilyspace(req, res)
     const assetId = req.query.id as string
-    await requireWorkspaceRole(user.id, user.workspaceId, 'EDITOR')
+    await requireFamilyspaceRole(user.id, user.familyspaceId, 'EDITOR')
 
     const asset = await prisma.asset.findFirst({
-      where: { id: assetId, workspaceId: user.workspaceId },
+      where: { id: assetId, familyspaceId: user.familyspaceId },
     })
     if (!asset) throw Errors.notFound('Asset')
 
@@ -163,7 +163,7 @@ export default apiHandler({
         },
         body: JSON.stringify({
           assetId,
-          workspaceId: user.workspaceId,
+          familyspaceId: user.familyspaceId,
         }),
       }).catch(err =>
         logger.warn({ assetId, err: err?.message }, 'RAG ingestion delete trigger failed (non-fatal)')

@@ -3,13 +3,13 @@ import { VoiceIntegrationServiceImpl, VoiceIntegrationService } from '@/services
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { method } = req
-  const workspaceId = req.headers['x-workspace-id'] as string
+  const familyspaceId = req.headers['x-familyspace-id'] as string
   const userId = req.headers['x-user-id'] as string
 
-  if (!workspaceId || !userId) {
+  if (!familyspaceId || !userId) {
     return res.status(400).json({
       success: false,
-      error: 'Missing required headers: x-workspace-id, x-user-id'
+      error: 'Missing required headers: x-familyspace-id, x-user-id'
     })
   }
 

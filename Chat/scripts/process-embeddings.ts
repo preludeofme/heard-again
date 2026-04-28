@@ -25,7 +25,7 @@ async function processEmbeddings() {
       const embedding = await embeddingGenerator.generateEmbedding(document.content || '')
       
       // Create or get ChromaDB collection
-      const collectionName = `workspace_${document.workspaceId}_documents`
+      const collectionName = `familyspace_${document.familyspaceId}_documents`
       let collection
       try {
         collection = await chromaClient.getCollection({ name: collectionName } as any)

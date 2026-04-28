@@ -5,11 +5,11 @@ export abstract class BaseRepository {
   protected prisma = prisma
 
   /**
-   * Helper to ensure workspace isolation.
+   * Helper to ensure familyspace isolation.
    */
-  protected async validateWorkspaceAccess(workspaceId: string, resourceWorkspaceId: string) {
-    if (workspaceId !== resourceWorkspaceId) {
-      throw new Error('Unauthorized workspace access')
+  protected async validateFamilyspaceAccess(familyspaceId: string, resourceFamilyspaceId: string) {
+    if (familyspaceId !== resourceFamilyspaceId) {
+      throw new Error('Unauthorized familyspace access')
     }
   }
 
@@ -17,7 +17,7 @@ export abstract class BaseRepository {
    * Helper to log audit events
    */
   protected async audit(params: {
-    workspaceId: string
+    familyspaceId: string
     actorId?: string
     actorType: ActorType
     action: string
@@ -30,7 +30,7 @@ export abstract class BaseRepository {
     try {
       await this.prisma.auditLog.create({
         data: {
-          workspaceId: params.workspaceId,
+          familyspaceId: params.familyspaceId,
           actorId: params.actorId ?? null,
           actorType: params.actorType,
           action: params.action,

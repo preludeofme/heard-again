@@ -1,6 +1,6 @@
 import Head from 'next/head'
 import { Layout } from '@/components/layout/Layout'
-import { WorkspaceDashboard } from '@/components/dashboard/WorkspaceDashboard'
+import { FamilyspaceDashboard } from '@/components/dashboard/FamilyspaceDashboard'
 
 export default function DashboardPage() {
   return (
@@ -8,7 +8,7 @@ export default function DashboardPage() {
       <Head>
         <title>Dashboard | Heard Again</title>
       </Head>
-      <WorkspaceDashboard />
+      <FamilyspaceDashboard />
     </Layout>
   )
 }

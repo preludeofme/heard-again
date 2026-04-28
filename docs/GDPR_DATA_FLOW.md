@@ -14,7 +14,7 @@ This document outlines how personally identifiable information (PII) flows throu
 
 ## 2. Retention Enforcement (R7/S10)
 
-Data retention is enforced by the `RetentionWorker`. The worker runs daily and purges data based on workspace-specific policies:
+Data retention is enforced by the `RetentionWorker`. The worker runs daily and purges data based on familyspace-specific policies:
 
 *   **Audio Retention**: Narrated stories and voice samples are purged after the configured window (default: 10 years).
 *   **Transcript Retention**: Text content in Postgres and ChromaDB is purged after the window.
@@ -29,20 +29,20 @@ Heard Again supports two levels of deletion:
 *   User status marked as `DELETED`.
 *   Email address is redacted (e.g., `deleted+hash@redacted.heard-again.local`).
 *   Password and OAuth links are removed.
-*   **Data Persistence**: If the user was a member of a shared workspace, their contributions (stories, comments) remain, but are attributed to "Deleted User".
+*   **Data Persistence**: If the user was a member of a shared familyspace, their contributions (stories, comments) remain, but are attributed to "Deleted User".
 
 ### 3.2 Permanent Purge / GDPR "Right to be Forgotten"
 When an account is permanently purged or when an **OWNER** deletes their account without transferring ownership:
 
-1.  **Workspace Cascade**: If the user is the sole `OWNER` of a workspace, the entire workspace and all its associated data (People, Stories, Assets, Documents) are permanently deleted from both PostgreSQL and Storage (S3/Local).
-2.  **Asset Cleanup**: All physical files associated with the workspace are unlinked and removed from storage.
-3.  **Vector Purge**: The ChromaDB collection for the workspace is dropped.
-4.  **Audit Log Redaction**: Actor IDs in audit logs for the deleted workspace are anonymized.
+1.  **Familyspace Cascade**: If the user is the sole `OWNER` of a familyspace, the entire familyspace and all its associated data (People, Stories, Assets, Documents) are permanently deleted from both PostgreSQL and Storage (S3/Local).
+2.  **Asset Cleanup**: All physical files associated with the familyspace are unlinked and removed from storage.
+3.  **Vector Purge**: The ChromaDB collection for the familyspace is dropped.
+4.  **Audit Log Redaction**: Actor IDs in audit logs for the deleted familyspace are anonymized.
 
 ## 4. Implementation Details
 
 ### Cascade on Owner Delete
-The `User` to `Workspace` relationship is modeled with a strategic cascade. While Prisma's `onDelete: Cascade` is used for memberships, the workspace deletion for owners is handled in the `permanent-deletion.ts` API handler to ensure no accidental data loss for shared workspaces with multiple admins (if applicable, though currently only one owner is supported).
+The `User` to `Familyspace` relationship is modeled with a strategic cascade. While Prisma's `onDelete: Cascade` is used for memberships, the familyspace deletion for owners is handled in the `permanent-deletion.ts` API handler to ensure no accidental data loss for shared familyspaces with multiple admins (if applicable, though currently only one owner is supported).
 
 ### Retention Worker
 Location: `UI/src/workers/retentionWorker.ts`

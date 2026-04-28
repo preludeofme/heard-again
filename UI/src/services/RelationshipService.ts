@@ -25,7 +25,7 @@ export interface Relationship {
 }
 
 export interface CreateRelationshipInput {
-  workspaceId: string
+  familyspaceId: string
   sourcePersonId: string
   targetPersonId: string
   relationshipType: RelationshipType
@@ -54,12 +54,12 @@ export class RelationshipService {
    * Get all relationships for a person
    */
   async getRelationships(
-    workspaceId: string,
+    familyspaceId: string,
     personId: string
   ): Promise<Relationship[]> {
-    // Verify person exists in workspace
+    // Verify person exists in familyspace
     const person = await this.prisma.person.findFirst({
-      where: { id: personId, workspaceId },
+      where: { id: personId, familyspaceId },
     })
     if (!person) {
       throw new AppError('Person not found', 404, 'PERSON_NOT_FOUND')
@@ -67,7 +67,7 @@ export class RelationshipService {
 
     const familyUnits = await this.prisma.familyUnit.findMany({
       where: {
-        workspaceId,
+        familyspaceId,
         OR: [
           { parents: { some: { parentId: personId } } },
           { children: { some: { childId: personId } } },
@@ -154,7 +154,7 @@ export class RelationshipService {
     input: CreateRelationshipInput
   ): Promise<RelationshipResult> {
     const {
-      workspaceId,
+      familyspaceId,
       sourcePersonId,
       targetPersonId,
       relationshipType,
@@ -170,10 +170,10 @@ export class RelationshipService {
       throw new AppError('Cannot create a relationship with oneself', 400, 'SELF_RELATIONSHIP')
     }
 
-    // Verify both people exist in workspace
+    // Verify both people exist in familyspace
     const [source, target] = await Promise.all([
-      this.prisma.person.findFirst({ where: { id: sourcePersonId, workspaceId } }),
-      this.prisma.person.findFirst({ where: { id: targetPersonId, workspaceId } }),
+      this.prisma.person.findFirst({ where: { id: sourcePersonId, familyspaceId } }),
+      this.prisma.person.findFirst({ where: { id: targetPersonId, familyspaceId } }),
     ])
 
     if (!source) {
@@ -186,7 +186,7 @@ export class RelationshipService {
     // Handle spouse relationship
     if (relationshipType === 'SPOUSE') {
       return this.createSpouseRelationship(
-        workspaceId,
+        familyspaceId,
         sourcePersonId,
         targetPersonId,
         target,
@@ -198,7 +198,7 @@ export class RelationshipService {
 
     // Handle parent/child relationship
     return this.createParentChildRelationship(
-      workspaceId,
+      familyspaceId,
       sourcePersonId,
       targetPersonId,
       relationshipType,
@@ -213,7 +213,7 @@ export class RelationshipService {
    * Create spouse relationship
    */
   private async createSpouseRelationship(
-    workspaceId: string,
+    familyspaceId: string,
     sourceId: string,
     targetId: string,
     target: { id: string; firstName: string; lastName: string | null },
@@ -223,7 +223,7 @@ export class RelationshipService {
   ): Promise<RelationshipResult> {
     const existing = await this.prisma.familyUnit.findFirst({
       where: {
-        workspaceId,
+        familyspaceId,
         AND: [
           { parents: { some: { parentId: sourceId } } },
           { parents: { some: { parentId: targetId } } },
@@ -252,7 +252,7 @@ export class RelationshipService {
     } else {
       const candidateFamilies = await this.prisma.familyUnit.findMany({
         where: {
-          workspaceId,
+          familyspaceId,
           OR: [
             { parents: { some: { parentId: sourceId } } },
             { parents: { some: { parentId: targetId } } },
@@ -318,7 +318,7 @@ export class RelationshipService {
         // Create new family with both parents
         family = await this.prisma.familyUnit.create({
           data: {
-            workspaceId,
+            familyspaceId,
             notes: notes || null,
             marriageDate: marriageDate ? new Date(marriageDate) : undefined,
             marriagePlace: marriagePlace || undefined,
@@ -349,7 +349,7 @@ export class RelationshipService {
    * Create parent/child relationship
    */
   private async createParentChildRelationship(
-    workspaceId: string,
+    familyspaceId: string,
     sourceId: string,
     targetId: string,
     relationshipType: 'PARENT' | 'CHILD',
@@ -367,7 +367,7 @@ export class RelationshipService {
       where: {
         childId,
         family: {
-          workspaceId,
+          familyspaceId,
           parents: { some: { parentId } },
         },
       },
@@ -390,7 +390,7 @@ export class RelationshipService {
     // Find or create family unit for parent (prefer family with children and two parents)
     const candidateFamilies = await this.prisma.familyUnit.findMany({
       where: {
-        workspaceId,
+        familyspaceId,
         parents: { some: { parentId } },
       },
       include: {
@@ -414,7 +414,7 @@ export class RelationshipService {
       ? preferredFamily.id
       : (await this.prisma.familyUnit.create({
         data: {
-          workspaceId,
+          familyspaceId,
           notes: notes || null,
           parents: {
             create: {

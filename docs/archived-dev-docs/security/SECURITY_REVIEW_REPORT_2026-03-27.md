@@ -177,7 +177,7 @@ const profile = await prisma.voiceProfile.create({
 1. Application error occurs in production
 2. Error logging captures full Prisma query with parameters
 3. Logs are stored insecurely or exposed through log aggregation service
-4. Attacker with log access can reconstruct voice profile mappings and workspace relationships
+4. Attacker with log access can reconstruct voice profile mappings and familyspace relationships
 
 **Status:** Informational/Defense in Depth — requires compromised log infrastructure to exploit.
 
@@ -229,7 +229,7 @@ except Exception as e:
 1. Attacker provides malformed audio file causing processing error
 2. Error message contains Python stack trace with internal file paths:
    - `/app/tts-service/app/model_manager.py:245`
-   - `/app/tts-service/data/profiles/workspace-123/`
+   - `/app/tts-service/data/profiles/familyspace-123/`
 3. Information aids attacker in reconnaissance for further attacks
 
 **Remediation:** Return generic error messages to clients; log detailed errors server-side only.
@@ -255,7 +255,7 @@ if (pathname.startsWith('/_next') || pathname.startsWith('/api/')) {
 
 **Risk:** API routes must implement their own authentication. This is architecturally sound but requires that **every** API route properly authenticates.
 
-**Status:** Design decision, not vulnerability — but increases risk of developer error. All examined API routes properly authenticate via `getAuthUserWithWorkspace()`.
+**Status:** Design decision, not vulnerability — but increases risk of developer error. All examined API routes properly authenticate via `getAuthUserWithFamilyspace()`.
 
 ---
 
@@ -263,14 +263,14 @@ if (pathname.startsWith('/_next') || pathname.startsWith('/api/')) {
 
 | Control | Implementation | Location |
 |---------|---------------|----------|
-| **Tenant Isolation** | All database queries filter by `workspaceId` | Throughout API routes |
+| **Tenant Isolation** | All database queries filter by `familyspaceId` | Throughout API routes |
 | **Path Traversal Prevention** | `sanitizePath()` with `path.resolve()` check | `@/lib/storage/providers/local-provider.ts:27-43` |
 | **File Content Validation** | Magic byte + file-type detection | `@/lib/security/file-validator.ts:61-131` |
 | **CSRF Protection** | Server-side token validation with Redis | `@/lib/security/csrf.ts:25-74` |
 | **Rate Limiting** | Middleware applied to asset serving | `@/src/pages/api/assets/serve/[id].ts:10` |
 | **Security Headers** | CSP, X-Content-Type-Options, etc. | `@/lib/security/security-headers.ts` |
 | **TTS Service Auth** | JWT validation with NextAuth | `@/tts-service/app/auth.py:34-103` |
-| **Workspace-scoped File Storage** | Files organized by workspace ID | `@/tts-service/app/main.py:190-192` |
+| **Familyspace-scoped File Storage** | Files organized by familyspace ID | `@/tts-service/app/main.py:190-192` |
 | **Asset Response Sanitization** | `storagePath` removed from responses | `@/lib/api-helpers.ts:10-15` |
 
 ---
@@ -298,7 +298,7 @@ The application demonstrates mature security practices with proper tenant isolat
 2. **Error handling** in TTS service could leak internal paths
 3. **Rate limiting gaps** on health/monitoring endpoints
 
-**No cross-account access vulnerabilities were identified.** The application properly enforces workspace isolation across all examined endpoints.
+**No cross-account access vulnerabilities were identified.** The application properly enforces familyspace isolation across all examined endpoints.
 
 ---
 

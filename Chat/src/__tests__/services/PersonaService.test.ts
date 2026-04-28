@@ -21,10 +21,10 @@ const mockWritingStyle = {
 function createService(overrides?: {
   personName?: string | null
   personId?: string
-  workspaceId?: string
+  familyspaceId?: string
 }) {
   const personId = overrides?.personId ?? 'person-123'
-  const workspaceId = overrides?.workspaceId ?? 'ws-1'
+  const familyspaceId = overrides?.familyspaceId ?? 'ws-1'
 
   const personaRepository = {
     getPersonaProfile: jest.fn(),
@@ -43,7 +43,7 @@ function createService(overrides?: {
     listDocuments: jest.fn(async () => [
       {
         id: 'doc-1',
-        workspaceId,
+        familyspaceId,
         personId,
         title: 'Memoir Draft',
         content: 'I grew up on a farm and later restored old radios for fun.',
@@ -61,7 +61,7 @@ function createService(overrides?: {
         firstName: 'Evelyn',
         lastName: 'Carter',
         fullName: overrides?.personName ?? 'Evelyn Carter',
-        workspaceId,
+        familyspaceId,
       }
     }),
   }
@@ -95,16 +95,16 @@ function createService(overrides?: {
     llmGateway as any
   )
 
-  return { service, personId, workspaceId }
+  return { service, personId, familyspaceId }
 }
 
 describe('PersonaServiceImpl.generatePersonaProfile', () => {
   it('uses person service full name instead of hardcoded identity', async () => {
-    const { service, personId, workspaceId } = createService({
+    const { service, personId, familyspaceId } = createService({
       personName: 'Evelyn Carter',
     })
 
-    const profile = await service.generatePersonaProfile(personId, workspaceId, {
+    const profile = await service.generatePersonaProfile(personId, familyspaceId, {
       documentIds: [],
       extractStyle: true,
       extractFacts: true,
@@ -117,14 +117,14 @@ describe('PersonaServiceImpl.generatePersonaProfile', () => {
     expect(profile.displayName).not.toBe('Keith Buck')
   })
 
-  it('adds workspace/person/document provenance to extracted facts', async () => {
-    const { service, personId, workspaceId } = createService({
+  it('adds familyspace/person/document provenance to extracted facts', async () => {
+    const { service, personId, familyspaceId } = createService({
       personName: null,
       personId: 'john-doe',
-      workspaceId: 'workspace-22',
+      familyspaceId: 'familyspace-22',
     })
 
-    const profile = await service.generatePersonaProfile(personId, workspaceId, {
+    const profile = await service.generatePersonaProfile(personId, familyspaceId, {
       documentIds: [],
       extractStyle: true,
       extractFacts: true,
@@ -135,7 +135,7 @@ describe('PersonaServiceImpl.generatePersonaProfile', () => {
 
     expect(profile.displayName).toBe('John Doe')
     expect(profile.knownFacts[0].provenance?.[0]).toMatchObject({
-      workspaceId,
+      familyspaceId,
       personId,
       documentId: 'doc-1',
       documentTitle: 'Memoir Draft',

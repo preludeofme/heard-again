@@ -4,8 +4,8 @@ CREATE TYPE "MergeStatus" AS ENUM ('PENDING', 'APPROVED', 'REJECTED', 'CONFLICT'
 -- CreateTable
 CREATE TABLE "FamilyMergeProposal" (
     "id" TEXT NOT NULL,
-    "targetWorkspaceId" TEXT NOT NULL,
-    "sourceWorkspaceId" TEXT NOT NULL,
+    "targetFamilyspaceId" TEXT NOT NULL,
+    "sourceFamilyspaceId" TEXT NOT NULL,
     "proposedById" TEXT NOT NULL,
     "status" "MergeStatus" NOT NULL DEFAULT 'PENDING',
     "overallMatchScore" DOUBLE PRECISION,
@@ -43,10 +43,10 @@ CREATE TABLE "FamilyMergePersonMatch" (
 );
 
 -- CreateIndex
-CREATE INDEX "FamilyMergeProposal_targetWorkspaceId_idx" ON "FamilyMergeProposal"("targetWorkspaceId");
+CREATE INDEX "FamilyMergeProposal_targetFamilyspaceId_idx" ON "FamilyMergeProposal"("targetFamilyspaceId");
 
 -- CreateIndex
-CREATE INDEX "FamilyMergeProposal_sourceWorkspaceId_idx" ON "FamilyMergeProposal"("sourceWorkspaceId");
+CREATE INDEX "FamilyMergeProposal_sourceFamilyspaceId_idx" ON "FamilyMergeProposal"("sourceFamilyspaceId");
 
 -- CreateIndex
 CREATE INDEX "FamilyMergeProposal_status_idx" ON "FamilyMergeProposal"("status");
@@ -70,10 +70,10 @@ CREATE INDEX "FamilyMergePersonMatch_status_idx" ON "FamilyMergePersonMatch"("st
 CREATE UNIQUE INDEX "FamilyMergePersonMatch_proposalId_targetPersonId_sourcePers_key" ON "FamilyMergePersonMatch"("proposalId", "targetPersonId", "sourcePersonId");
 
 -- AddForeignKey
-ALTER TABLE "FamilyMergeProposal" ADD CONSTRAINT "FamilyMergeProposal_targetWorkspaceId_fkey" FOREIGN KEY ("targetWorkspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "FamilyMergeProposal" ADD CONSTRAINT "FamilyMergeProposal_targetFamilyspaceId_fkey" FOREIGN KEY ("targetFamilyspaceId") REFERENCES "Familyspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "FamilyMergeProposal" ADD CONSTRAINT "FamilyMergeProposal_sourceWorkspaceId_fkey" FOREIGN KEY ("sourceWorkspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "FamilyMergeProposal" ADD CONSTRAINT "FamilyMergeProposal_sourceFamilyspaceId_fkey" FOREIGN KEY ("sourceFamilyspaceId") REFERENCES "Familyspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "FamilyMergeProposal" ADD CONSTRAINT "FamilyMergeProposal_proposedById_fkey" FOREIGN KEY ("proposedById") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

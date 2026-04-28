@@ -2,7 +2,7 @@ import fs from 'fs/promises'
 import path from 'path'
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse } from '@/lib/api-helpers'
-import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 function formatGedcomDate(date: Date | null | undefined): string | null {
   if (!date) return null
   const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
@@ -24,16 +24,16 @@ export default apiHandler({
   // POST /api/export/gedcom - Export people and families as GEDCOM from normalized genealogy schema
   POST: async (req, res) => {
 
-    const user = await getAuthUserWithWorkspace(req, res)
-    await requireWorkspaceRole(user.id, user.workspaceId, 'VIEWER')
+    const user = await getAuthUserWithFamilyspace(req, res)
+    await requireFamilyspaceRole(user.id, user.familyspaceId, 'VIEWER')
 
-    const [workspace, people, families] = await Promise.all([
-      prisma.workspace.findUnique({
-        where: { id: user.workspaceId },
+    const [familyspace, people, families] = await Promise.all([
+      prisma.familyspace.findUnique({
+        where: { id: user.familyspaceId },
         select: { id: true, name: true, slug: true },
       }),
       prisma.person.findMany({
-        where: { workspaceId: user.workspaceId },
+        where: { familyspaceId: user.familyspaceId },
         include: {
           names: {
             orderBy: [{ isPrimary: 'desc' }, { createdAt: 'asc' }],
@@ -50,7 +50,7 @@ export default apiHandler({
         orderBy: [{ createdAt: 'asc' }],
       }),
       prisma.familyUnit.findMany({
-        where: { workspaceId: user.workspaceId },
+        where: { familyspaceId: user.familyspaceId },
         include: {
           parents: {
             include: { parent: true },
@@ -116,10 +116,10 @@ export default apiHandler({
     lines.push('2 VERS 5.5.1')
     lines.push('2 FORM LINEAGE-LINKED')
     lines.push('1 CHAR UTF-8')
-    if (workspace?.name) {
+    if (familyspace?.name) {
       lines.push('1 SUBM @SUB1@')
       lines.push('0 @SUB1@ SUBM')
-      lines.push(`1 NAME ${workspace.name}`)
+      lines.push(`1 NAME ${familyspace.name}`)
     }
 
     for (const person of people) {
@@ -219,10 +219,10 @@ export default apiHandler({
 
     lines.push('0 TRLR')
 
-    const exportDir = path.join(process.cwd(), 'exports', user.workspaceId)
+    const exportDir = path.join(process.cwd(), 'exports', user.familyspaceId)
     await fs.mkdir(exportDir, { recursive: true })
 
-    const fileName = `workspace-export-${Date.now()}.ged`
+    const fileName = `familyspace-export-${Date.now()}.ged`
     const absoluteFilePath = path.join(exportDir, fileName)
     const gedcomContent = `${lines.join('\n')}\n`
     await fs.writeFile(absoluteFilePath, gedcomContent, 'utf-8')
@@ -233,7 +233,7 @@ export default apiHandler({
     const [asset, exportJob] = await prisma.$transaction(async (tx) => {
       const createdAsset = await tx.asset.create({
         data: {
-          workspaceId: user.workspaceId,
+          familyspaceId: user.familyspaceId,
           filename: fileName,
           originalName: fileName,
           mimeType: 'application/octet-stream',
@@ -246,7 +246,7 @@ export default apiHandler({
           metadata: {
             exportType: 'GEDCOM',
             generatedBy: 'api.export.gedcom',
-            workspaceId: user.workspaceId,
+            familyspaceId: user.familyspaceId,
             peopleCount: people.length,
             familyCount: families.length,
             validation: exportValidation,
@@ -256,7 +256,7 @@ export default apiHandler({
 
       const createdJob = await tx.exportJob.create({
         data: {
-          workspaceId: user.workspaceId,
+          familyspaceId: user.familyspaceId,
           exportType: 'GEDCOM',
           status: 'COMPLETED',
           requestedById: user.id,

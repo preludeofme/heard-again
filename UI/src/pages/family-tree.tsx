@@ -4,11 +4,12 @@ import { PersonModal } from '@/components/modals/PersonModal'
 import { AddEditPersonModal, PersonFormData } from '@/components/modals/AddEditPersonModal'
 import { SuccessModal } from '@/components/modals/SuccessModal'
 import { Layout } from '@/components/layout/Layout'
+import { GedcomImportModal } from '@/components/modals/GedcomImportModal'
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { Box, CircularProgress } from '@mui/material'
 import { useRouter } from 'next/router'
 import { useSelectedFamilyMember } from '@/contexts/SelectedFamilyMemberContext'
-import { fetchWithCSRFAndJSON } from '@/lib/api-client'
+import { fetchWithCSRF, fetchWithCSRFAndJSON } from '@/lib/api-client'
 
 interface ApiPerson {
   id: string
@@ -17,6 +18,7 @@ interface ApiPerson {
   displayName?: string
   avatarUrl?: string
   personType: string
+  sex?: 'M' | 'F' | 'U' | 'X'
   counts?: {
     stories?: number
     voiceProfiles?: number
@@ -36,6 +38,7 @@ interface RelationshipEdge {
     lastName: string | null
     nickname: string | null
     avatarAssetId: string | null
+    sex?: 'M' | 'F' | 'U' | 'X'
   }
 }
 
@@ -52,6 +55,7 @@ interface FamilyTreePerson {
   selected?: boolean
   spouseWithNext?: boolean
   upperGenerationLinkType?: 'biological' | 'nonBiological' | 'none'
+  sex?: 'M' | 'F' | 'U' | 'X'
 }
 
 interface FamilyTreeRelationshipEdge {
@@ -78,6 +82,8 @@ function mapPeopleToTree(people: ApiPersonWithEdges[], activePersonId?: string):
   if (people.length === 0) {
     return { grandparents, parents, children, relationshipEdges: [] }
   }
+
+  const peopleById = new Map(people.map((person) => [person.id, person]))
 
   const spouseIdsByPerson = new Map<string, Set<string>>()
   for (const person of people) {
@@ -170,7 +176,6 @@ function mapPeopleToTree(people: ApiPersonWithEdges[], activePersonId?: string):
     (prev.relationshipEdges.length > current.relationshipEdges.length) ? prev : current
   )
 
-  const peopleById = new Map(people.map((person) => [person.id, person]))
   const generationByPersonId = new Map<string, number>([[subject.id, 0]])
   const queue: string[] = [subject.id]
 
@@ -223,6 +228,65 @@ function mapPeopleToTree(people: ApiPersonWithEdges[], activePersonId?: string):
         queue.push(relatedPersonId)
       }
     }
+  }
+
+  const getRoleLabel = (personId: string, sex?: string): string => {
+    if (personId === subject.id) return 'Self'
+    
+    // Check if spouse of subject
+    if (areSpouses(personId, subject.id)) {
+      if (sex === 'M') return 'Husband'
+      if (sex === 'F') return 'Wife'
+      return 'Spouse'
+    }
+
+    const generation = generationByPersonId.get(personId)
+    if (generation === undefined) return 'Family Member'
+
+    if (generation === 1) {
+      if (sex === 'M') return 'Father'
+      if (sex === 'F') return 'Mother'
+      return 'Parent'
+    }
+
+    if (generation === 2) {
+      if (sex === 'M') return 'Grandfather'
+      if (sex === 'F') return 'Grandmother'
+      return 'Grandparent'
+    }
+
+    if (generation === -1) {
+      if (sex === 'M') return 'Son'
+      if (sex === 'F') return 'Daughter'
+      return 'Child'
+    }
+
+    if (generation === -2) {
+      if (sex === 'M') return 'Grandson'
+      if (sex === 'F') return 'Granddaughter'
+      return 'Grandchild'
+    }
+
+    // Siblings (Generation 0 but not spouse)
+    if (generation === 0) {
+      const currentPerson = peopleById.get(personId)
+      const subjectParents = subject.relationshipEdges
+        .filter(e => e.type === 'PARENT' && e.direction === 'incoming')
+        .map(e => e.relatedPerson.id)
+      
+      const personParents = currentPerson?.relationshipEdges
+        .filter(e => e.type === 'PARENT' && e.direction === 'incoming')
+        .map(e => e.relatedPerson.id) || []
+      
+      const hasSharedParent = personParents.some(id => subjectParents.includes(id))
+      if (hasSharedParent) {
+        if (sex === 'M') return 'Brother'
+        if (sex === 'F') return 'Sister'
+        return 'Sibling'
+      }
+    }
+
+    return 'Family Member'
   }
 
   const parentGenerationIds = people
@@ -328,9 +392,10 @@ function mapPeopleToTree(people: ApiPersonWithEdges[], activePersonId?: string):
     const entry = {
       id: p.id,
       name: p.displayName || `${p.firstName}${p.lastName ? ' ' + p.lastName : ''}`,
-      role: p.id === subject?.id ? 'Self' : 'Family Member',
+      role: getRoleLabel(p.id, p.sex),
       avatar: p.avatarUrl || '',
       memories: p.counts?.stories || 0,
+      sex: p.sex,
     }
     entryById.set(p.id, entry)
 
@@ -479,6 +544,7 @@ export default function FamilyTree() {
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null)
   const [isPersonModalOpen, setIsPersonModalOpen] = useState(false)
   const [isAddPersonModalOpen, setIsAddPersonModalOpen] = useState(false)
+  const [isGedcomImportModalOpen, setIsGedcomImportModalOpen] = useState(false)
   const [personModalInitialTab, setPersonModalInitialTab] = useState<'overview' | 'relationships'>('overview')
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false)
 
@@ -540,9 +606,10 @@ export default function FamilyTree() {
         relationshipKind: relationshipKindValue,
         marriageDate,
         marriagePlace,
+        avatarFile,
         ...personCreateData
       } = personData
-      
+
       // Clean up empty strings for optional fields
       const cleanedData = {
         ...personCreateData,
@@ -556,7 +623,7 @@ export default function FamilyTree() {
         bio: personCreateData.bio || undefined,
         tags: personCreateData.tags || undefined,
       }
-      
+
       const res = await fetchWithCSRFAndJSON('/api/people', cleanedData)
 
       const created = await res.json()
@@ -595,6 +662,18 @@ export default function FamilyTree() {
         }
       }
 
+      if (avatarFile && createdPersonId) {
+        const form = new FormData()
+        form.append('file', avatarFile)
+        const avatarRes = await fetchWithCSRF(`/api/people/${createdPersonId}/avatar`, {
+          method: 'POST',
+          body: form,
+        })
+        if (!avatarRes.ok) {
+          console.warn('Avatar upload failed:', await avatarRes.text())
+        }
+      }
+
       // Close modal on success
       setIsAddPersonModalOpen(false)
       
@@ -611,6 +690,21 @@ export default function FamilyTree() {
   }
 
   const [isFullscreen, setIsFullscreen] = useState(false)
+
+  const handleExportGedcom = async () => {
+    try {
+      const response = await fetchWithCSRFAndJSON('/api/export/gedcom', {})
+      if (!response.ok) throw new Error('Export failed')
+      
+      const data = await response.json()
+      if (data.success && data.data.downloadUrl) {
+        // Trigger download
+        window.location.href = data.data.downloadUrl
+      }
+    } catch (error) {
+      console.error('Failed to export GEDCOM:', error)
+    }
+  }
 
   if (isLoading) {
     return (
@@ -631,6 +725,8 @@ export default function FamilyTree() {
       onPeopleChanged={fetchPeople}
       isFullscreen={isFullscreen}
       onToggleFullscreen={() => setIsFullscreen((prev) => !prev)}
+      onImportGedcom={() => setIsGedcomImportModalOpen(true)}
+      onExportGedcom={handleExportGedcom}
       initialSearchExpanded={initialSearchExpanded}
       initialSearchQuery={initialSearchQuery}
     />
@@ -673,6 +769,14 @@ export default function FamilyTree() {
         onClose={() => setIsSuccessModalOpen(false)}
         title="Person Created Successfully!"
         message="The new family member has been added to your family tree."
+      />
+
+      <GedcomImportModal
+        open={isGedcomImportModalOpen}
+        onClose={() => setIsGedcomImportModalOpen(false)}
+        onSuccess={() => {
+          fetchPeople()
+        }}
       />
     </>
   )

@@ -3,14 +3,14 @@ import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
 import { getAuthUser } from '@/lib/auth-helpers'
 import { validate, rules } from '@/lib/validation'
 export default apiHandler({
-  // GET /api/workspaces - List user's workspaces
+  // GET /api/familyspaces - List user's familyspaces
   GET: async (req, res) => {
     const user = await getAuthUser(req, res)
 
     const memberships = await prisma.membership.findMany({
       where: { userId: user.id, status: 'ACTIVE' },
       include: {
-        workspace: {
+        familyspace: {
           include: {
             _count: {
               select: {
@@ -26,22 +26,22 @@ export default apiHandler({
       orderBy: { joinedAt: 'asc' },
     })
 
-    const workspaces = memberships.map((m) => ({
-      id: m.workspace.id,
-      name: m.workspace.name,
-      slug: m.workspace.slug,
-      planType: m.workspace.planType,
-      deploymentMode: m.workspace.deploymentMode,
+    const familyspaces = memberships.map((m) => ({
+      id: m.familyspace.id,
+      name: m.familyspace.name,
+      slug: m.familyspace.slug,
+      planType: m.familyspace.planType,
+      deploymentMode: m.familyspace.deploymentMode,
       role: m.role,
-      isDefault: m.workspace.id === user.defaultWorkspaceId,
-      counts: m.workspace._count,
-      createdAt: m.workspace.createdAt,
+      isDefault: m.familyspace.id === user.defaultFamilyspaceId,
+      counts: m.familyspace._count,
+      createdAt: m.familyspace.createdAt,
     }))
 
-    return successResponse(res, workspaces)
+    return successResponse(res, familyspaces)
   },
 
-  // POST /api/workspaces - Create a new workspace
+  // POST /api/familyspaces - Create a new familyspace
   POST: async (req, res) => {
 
     const user = await getAuthUser(req, res)
@@ -63,7 +63,7 @@ export default apiHandler({
       .replace(/^-|-$/g, '')
       .substring(0, 40)
 
-    const existingSlug = await prisma.workspace.findUnique({ where: { slug: baseSlug } })
+    const existingSlug = await prisma.familyspace.findUnique({ where: { slug: baseSlug } })
     const slug = existingSlug ? `${baseSlug}-${Date.now().toString(36)}` : baseSlug
 
     // Get free plan
@@ -71,8 +71,8 @@ export default apiHandler({
       where: { planType: 'FREE', isActive: true },
     })
 
-    const workspace = await prisma.$transaction(async (tx) => {
-      const ws = await tx.workspace.create({
+    const familyspace = await prisma.$transaction(async (tx) => {
+      const ws = await tx.familyspace.create({
         data: {
           name,
           slug,
@@ -84,7 +84,7 @@ export default apiHandler({
 
       await tx.membership.create({
         data: {
-          workspaceId: ws.id,
+          familyspaceId: ws.id,
           userId: user.id,
           role: 'OWNER',
           status: 'ACTIVE',
@@ -94,7 +94,7 @@ export default apiHandler({
       if (freePlan) {
         await tx.subscription.create({
           data: {
-            workspaceId: ws.id,
+            familyspaceId: ws.id,
             planId: freePlan.id,
             billingStatus: 'ACTIVE',
           },
@@ -105,10 +105,10 @@ export default apiHandler({
     })
 
     return successResponse(res, {
-      id: workspace.id,
-      name: workspace.name,
-      slug: workspace.slug,
-      planType: workspace.planType,
+      id: familyspace.id,
+      name: familyspace.name,
+      slug: familyspace.slug,
+      planType: familyspace.planType,
     }, 201)
   },
 })

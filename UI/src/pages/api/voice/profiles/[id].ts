@@ -1,14 +1,14 @@
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
-import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 export default apiHandler({
   // GET /api/voice/profiles/[id] - Get profile details
   GET: async (req, res) => {
-    const user = await getAuthUserWithWorkspace(req, res)
+    const user = await getAuthUserWithFamilyspace(req, res)
     const profileId = req.query.id as string
 
     const profile = await prisma.voiceProfile.findFirst({
-      where: { id: profileId, workspaceId: user.workspaceId },
+      where: { id: profileId, familyspaceId: user.familyspaceId },
       include: {
         person: {
           select: { id: true, firstName: true, lastName: true, nickname: true },
@@ -51,12 +51,12 @@ export default apiHandler({
   // PUT /api/voice/profiles/[id] - Update profile metadata
   PUT: async (req, res) => {
 
-    const user = await getAuthUserWithWorkspace(req, res)
+    const user = await getAuthUserWithFamilyspace(req, res)
     const profileId = req.query.id as string
-    await requireWorkspaceRole(user.id, user.workspaceId, 'EDITOR')
+    await requireFamilyspaceRole(user.id, user.familyspaceId, 'EDITOR')
 
     const existing = await prisma.voiceProfile.findFirst({
-      where: { id: profileId, workspaceId: user.workspaceId },
+      where: { id: profileId, familyspaceId: user.familyspaceId },
     })
     if (!existing) throw Errors.notFound('Voice profile')
 
@@ -74,7 +74,7 @@ export default apiHandler({
         await prisma.voiceProfile.updateMany({
           where: {
             personId: existing.personId,
-            workspaceId: user.workspaceId,
+            familyspaceId: user.familyspaceId,
             id: { not: profileId },
           },
           data: { isDefault: false },
@@ -98,12 +98,12 @@ export default apiHandler({
   // DELETE /api/voice/profiles/[id] - Delete profile
   DELETE: async (req, res) => {
 
-    const user = await getAuthUserWithWorkspace(req, res)
+    const user = await getAuthUserWithFamilyspace(req, res)
     const profileId = req.query.id as string
-    await requireWorkspaceRole(user.id, user.workspaceId, 'EDITOR')
+    await requireFamilyspaceRole(user.id, user.familyspaceId, 'EDITOR')
 
     const existing = await prisma.voiceProfile.findFirst({
-      where: { id: profileId, workspaceId: user.workspaceId },
+      where: { id: profileId, familyspaceId: user.familyspaceId },
     })
     if (!existing) throw Errors.notFound('Voice profile')
 

@@ -7,7 +7,7 @@ export class PrismaChatRepository implements ChatRepository {
     const dbSession = await (prisma as any).chatSession.create({
       data: {
         id: session.id,
-        workspaceId: session.workspaceId,
+        familyspaceId: session.familyspaceId,
         personId: session.personId,
         userId: session.userId,
         title: session.title,
@@ -19,7 +19,7 @@ export class PrismaChatRepository implements ChatRepository {
     return this.mapDbSessionToChatSession(dbSession)
   }
 
-  async getSession(sessionId: string, userId?: string, workspaceId?: string): Promise<ChatSession | null> {
+  async getSession(sessionId: string, userId?: string, familyspaceId?: string): Promise<ChatSession | null> {
     const dbSession = await (prisma as any).chatSession.findUnique({
       where: { id: sessionId },
       include: {
@@ -33,7 +33,7 @@ export class PrismaChatRepository implements ChatRepository {
 
     // Ownership check — surface as null (404) to prevent enumeration
     if (userId && dbSession.userId !== userId) return null
-    if (workspaceId && dbSession.workspaceId !== workspaceId) return null
+    if (familyspaceId && dbSession.familyspaceId !== familyspaceId) return null
 
     return this.mapDbSessionToChatSession(dbSession)
   }
@@ -58,10 +58,10 @@ export class PrismaChatRepository implements ChatRepository {
     })
   }
 
-  async listSessions(workspaceId: string, userId: string): Promise<ChatSession[]> {
+  async listSessions(familyspaceId: string, userId: string): Promise<ChatSession[]> {
     const dbSessions = await (prisma as any).chatSession.findMany({
       where: {
-        workspaceId,
+        familyspaceId,
         userId,
         status: 'ACTIVE'
       },
@@ -100,10 +100,10 @@ export class PrismaChatRepository implements ChatRepository {
     return this.mapDbMessageToChatMessage(dbMessage)
   }
 
-  async getMessages(sessionId: string, limit = 50, offset = 0, userId?: string, workspaceId?: string): Promise<ChatMessage[]> {
+  async getMessages(sessionId: string, limit = 50, offset = 0, userId?: string, familyspaceId?: string): Promise<ChatMessage[]> {
     // Verify session ownership before returning messages
-    if (userId || workspaceId) {
-      const session = await this.getSession(sessionId, userId, workspaceId)
+    if (userId || familyspaceId) {
+      const session = await this.getSession(sessionId, userId, familyspaceId)
       if (!session) return []
     }
 
@@ -120,7 +120,7 @@ export class PrismaChatRepository implements ChatRepository {
   private mapDbSessionToChatSession(dbSession: any): ChatSession {
     return {
       id: dbSession.id,
-      workspaceId: dbSession.workspaceId,
+      familyspaceId: dbSession.familyspaceId,
       personId: dbSession.personId,
       userId: dbSession.userId,
       title: dbSession.title,

@@ -31,8 +31,8 @@ export class PersonaServiceImpl implements PersonaService {
     private llmGateway?: LLMGateway
   ) {}
 
-  async getPersonaProfile(personId: string, workspaceId: string): Promise<PersonaProfile | null> {
-    return await this.personaRepository.getPersonaProfile(personId, workspaceId)
+  async getPersonaProfile(personId: string, familyspaceId: string): Promise<PersonaProfile | null> {
+    return await this.personaRepository.getPersonaProfile(personId, familyspaceId)
   }
 
   async createPersonaProfile(profile: PersonaProfile): Promise<PersonaProfile> {
@@ -47,13 +47,13 @@ export class PersonaServiceImpl implements PersonaService {
     return await this.personaRepository.deletePersonaProfile(personId)
   }
 
-  async listPersonaProfiles(workspaceId: string): Promise<PersonaProfile[]> {
-    return await this.personaRepository.listPersonaProfiles(workspaceId)
+  async listPersonaProfiles(familyspaceId: string): Promise<PersonaProfile[]> {
+    return await this.personaRepository.listPersonaProfiles(familyspaceId)
   }
 
-  async generatePersonaProfile(personId: string, workspaceId: string, options: PersonaGenerationOptions): Promise<PersonaProfile> {
+  async generatePersonaProfile(personId: string, familyspaceId: string, options: PersonaGenerationOptions): Promise<PersonaProfile> {
     // Get documents for analysis
-    const documents = await this.documentRepository.listDocuments(workspaceId, {
+    const documents = await this.documentRepository.listDocuments(familyspaceId, {
       personId
     })
 
@@ -82,7 +82,7 @@ export class PersonaServiceImpl implements PersonaService {
     }
 
     if (options.extractFacts) {
-      knownFacts = await this.extractFacts(documents, workspaceId, personId)
+      knownFacts = await this.extractFacts(documents, familyspaceId, personId)
     }
 
     if (options.extractRelationships) {
@@ -99,16 +99,16 @@ export class PersonaServiceImpl implements PersonaService {
     }
     
     // Try to get person's display name
-    const displayName = await this.getPersonDisplayName(personId, workspaceId)
+    const displayName = await this.getPersonDisplayName(personId, familyspaceId)
     
-    const systemPrompt = await this.generateSystemPrompt(personId, workspaceId, writingStyle, knownFacts, customInstructions, displayName)
+    const systemPrompt = await this.generateSystemPrompt(personId, familyspaceId, writingStyle, knownFacts, customInstructions, displayName)
 
     // Create persona profile
     const now = new Date()
     const personaProfile: PersonaProfile = {
       id: `persona_${personId}_${Date.now()}`,
       personId,
-      workspaceId,
+      familyspaceId,
       version: 1,
       status: 'active',
       displayName,
@@ -128,12 +128,12 @@ export class PersonaServiceImpl implements PersonaService {
   }
 
   async generatePromptTemplate(persona: PersonaProfile): Promise<string> {
-    return await this.generateSystemPrompt(persona.personId, persona.workspaceId, persona.writingStyle, persona.knownFacts)
+    return await this.generateSystemPrompt(persona.personId, persona.familyspaceId, persona.writingStyle, persona.knownFacts)
   }
 
-  async extractStyleFromDocuments(personId: string, workspaceId: string): Promise<StyleProfile> {
+  async extractStyleFromDocuments(personId: string, familyspaceId: string): Promise<StyleProfile> {
     // Get all documents for this person
-    const documents = await this.documentRepository.listDocuments(workspaceId, { personId })
+    const documents = await this.documentRepository.listDocuments(familyspaceId, { personId })
     
     if (documents.length === 0) {
       throw new Error(`No documents found for person ${personId}`)
@@ -153,8 +153,8 @@ export class PersonaServiceImpl implements PersonaService {
     }
   }
 
-  private async getPersonDisplayName(personId: string, workspaceId: string): Promise<string> {
-    const person = await this.personService.getPerson(personId, workspaceId)
+  private async getPersonDisplayName(personId: string, familyspaceId: string): Promise<string> {
+    const person = await this.personService.getPerson(personId, familyspaceId)
     if (person?.fullName?.trim()) {
       return person.fullName.trim()
     }
@@ -164,7 +164,7 @@ export class PersonaServiceImpl implements PersonaService {
 
   private async generateSystemPrompt(
     personId: string,
-    workspaceId: string,
+    familyspaceId: string,
     writingStyle: PersonaProfile['writingStyle'],
     knownFacts: PersonaFact[],
     customInstructions?: PersonaProfile['customInstructions'],
@@ -182,7 +182,7 @@ export class PersonaServiceImpl implements PersonaService {
     const toneDescription = this.describeTone(writingStyle.tone)
 
     // Use displayName if provided, otherwise try to fetch it
-    const personName = displayName || await this.getPersonDisplayName(personId, workspaceId)
+    const personName = displayName || await this.getPersonDisplayName(personId, familyspaceId)
 
     const prompt = `You are ${personName}. You are having a conversation with family members who want to learn about your life and memories.
 
@@ -268,7 +268,7 @@ Your family values truth over completeness.`
 
   private async extractFacts(
     documents: Document[],
-    workspaceId: string,
+    familyspaceId: string,
     personId: string
   ): Promise<PersonaFact[]> {
     if (!this.llmGateway || documents.length === 0) return []
@@ -312,7 +312,7 @@ Your family values truth over completeness.`
             confidence: normalizedConfidence,
             sources: sample.map(d => d.id),
             provenance: sample.map(d => ({
-              workspaceId,
+              familyspaceId,
               personId,
               documentId: d.id,
               documentTitle: d.title,
@@ -421,5 +421,5 @@ export interface StyleExtractor {
 
 // Document repository interface
 export interface DocumentRepository {
-  listDocuments(workspaceId: string, filters?: { personId?: string }): Promise<Document[]>
+  listDocuments(familyspaceId: string, filters?: { personId?: string }): Promise<Document[]>
 }

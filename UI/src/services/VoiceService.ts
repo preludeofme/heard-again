@@ -13,7 +13,7 @@ import { prisma } from '@/lib/prisma'
 import { consentTokenService } from '@/server/services/voice/ConsentTokenService'
 
 export interface SynthesizeRequest {
-  workspaceId: string
+  familyspaceId: string
   userId: string
   modelId: string
   text: string
@@ -56,6 +56,8 @@ const LANGUAGE_MAP: Record<string, string> = {
 }
 
 export class VoiceService {
+  private prisma = prisma
+
   constructor(
     private voiceProfileRepo: VoiceProfileRepository = voiceProfileRepository,
     private voiceConsentRepo: VoiceConsentRepository = voiceConsentRepository,
@@ -66,10 +68,10 @@ export class VoiceService {
    * Get voice profile with validation
    */
   async getVoiceProfile(
-    workspaceId: string,
+    familyspaceId: string,
     profileId: string
   ): Promise<{ id: string; personId: string | null; name: string }> {
-    const profile = await this.voiceProfileRepo.findById(profileId, workspaceId)
+    const profile = await this.voiceProfileRepo.findById(profileId, familyspaceId)
 
     if (!profile || profile.status !== 'READY') {
       throw new AppError(
@@ -90,13 +92,13 @@ export class VoiceService {
    * Check voice consent for a person
    */
   async checkVoiceConsent(
-    workspaceId: string,
+    familyspaceId: string,
     voiceProfileId: string,
     personId: string
   ): Promise<boolean> {
     const activeConsent = await this.prisma.voiceConsent.findFirst({
       where: {
-        workspaceId,
+        familyspaceId,
         revokedAt: null,
         allowsGeneration: true,
         OR: [{ voiceProfileId }, { personId }],
@@ -174,7 +176,7 @@ export class VoiceService {
     audioBuffer: Buffer,
     duration: number | undefined,
     synthesisTime: number | undefined,
-    workspaceId: string,
+    familyspaceId: string,
     userId: string,
     language: string,
     resolvedLanguage: string
@@ -183,7 +185,7 @@ export class VoiceService {
 
     // Save audio file via StorageService
     const storedFile = await storageService.saveAudio(
-      workspaceId,
+      familyspaceId,
       audioId,
       audioBuffer,
       { mimeType: 'audio/wav', extension: 'wav' }
@@ -191,7 +193,7 @@ export class VoiceService {
 
     // Create asset record
     const asset = await this.assetRepo.create({
-      workspaceId,
+      familyspaceId,
       filename: fileName,
       originalName: fileName,
       mimeType: 'audio/wav',
@@ -239,7 +241,7 @@ export class VoiceService {
    * Main synthesis workflow
    */
   async synthesize(request: SynthesizeRequest): Promise<SynthesisResult> {
-    const { workspaceId, userId, modelId, text, language = 'en' } = request
+    const { familyspaceId, userId, modelId, text, language = 'en' } = request
 
     // Validate required fields
     if (!modelId || !text) {
@@ -257,7 +259,7 @@ export class VoiceService {
     }
 
     // Get and validate voice profile
-    const profile = await this.getVoiceProfile(workspaceId, modelId)
+    const profile = await this.getVoiceProfile(familyspaceId, modelId)
 
     let consentId: string | null = null
 
@@ -265,7 +267,7 @@ export class VoiceService {
     if (profile.personId) {
       const activeConsent = await this.prisma.voiceConsent.findFirst({
         where: {
-          workspaceId,
+          familyspaceId,
           revokedAt: null,
           allowsGeneration: true,
           OR: [{ voiceProfileId: profile.id }, { personId: profile.personId }],
@@ -286,7 +288,7 @@ export class VoiceService {
 
     // Issue a signed consent token for the TTS service (R1)
     const consentToken = consentTokenService.issueToken({
-      workspaceId,
+      familyspaceId,
       profileId: profile.id,
       consentId: consentId || 'unlinked',
     })
@@ -310,12 +312,12 @@ export class VoiceService {
       }>('/api/tts/synthesize', {
         method: 'POST',
         authToken: request.authToken,
-        workspaceId,
+        familyspaceId,
         body: {
           profileId: profile.name,
           text,
           language: resolvedLanguage,
-          workspaceId,
+          familyspaceId,
           consentToken, // Pass the signed token
         },
       })
@@ -331,7 +333,7 @@ export class VoiceService {
         {
           headers: {
             'Authorization': authHeader,
-            'X-Workspace-Id': workspaceId,
+            'X-Familyspace-Id': familyspaceId,
           },
         }
       )
@@ -352,7 +354,7 @@ export class VoiceService {
         audioBuffer,
         ttsData.duration,
         ttsData.synthesisTime,
-        workspaceId,
+        familyspaceId,
         userId,
         language,
         resolvedLanguage

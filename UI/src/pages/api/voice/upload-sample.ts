@@ -2,7 +2,7 @@ import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { TTS_SERVICE_URL } from '@/lib/tts-client'
 import { prisma } from '@/lib/prisma'
-import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 import { validateFileContent } from '@/lib/security/file-validator'
 import { scanAndQuarantineFile } from '@/lib/security/malware-scanner'
 import fs from 'fs/promises'
@@ -38,11 +38,11 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   let audioFile: formidable.File | undefined = undefined
 
   try {
-    const user = await getAuthUserWithWorkspace(req, res)
-    await requireWorkspaceRole(user.id, user.workspaceId, 'EDITOR')
+    const user = await getAuthUserWithFamilyspace(req, res)
+    await requireFamilyspaceRole(user.id, user.familyspaceId, 'EDITOR')
 
     // Create secure temporary upload directory
-    tempDir = path.join(process.cwd(), 'temp-uploads', 'voice-samples', user.workspaceId)
+    tempDir = path.join(process.cwd(), 'temp-uploads', 'voice-samples', user.familyspaceId)
     await fs.mkdir(tempDir, { recursive: true })
 
     const form = formidable({
@@ -104,7 +104,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       method: 'POST',
       headers: { 
         'Authorization': `Bearer ${TTS_SERVICE_TOKEN}`,
-        'X-Workspace-Id': user.workspaceId
+        'X-Familyspace-Id': user.familyspaceId
       },
       body: formData,
     })
@@ -120,7 +120,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     // Create Asset record in database with transcript
     const asset = await prisma.asset.create({
       data: {
-        workspaceId: user.workspaceId,
+        familyspaceId: user.familyspaceId,
         filename: `${ttsData.fileId}.wav`,
         originalName: ttsData.fileName || audioFile.originalFilename || 'audio.wav',
         mimeType: 'audio/wav',
@@ -128,10 +128,14 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         storageType: 'LOCAL',
         storagePath: ttsData.filePath,
         assetType: 'AUDIO',
+        isAISynthesized: true, // Hide from Document Archive
         durationSeconds: ttsData.duration,
         transcript: ttsData.transcript,
         processingStatus: 'COMPLETED',
         uploadedById: user.id,
+        metadata: {
+          ttsFileId: ttsData.fileId,
+        },
       },
     })
 

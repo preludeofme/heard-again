@@ -33,7 +33,7 @@ export class IngestionServiceImpl implements IngestionService {
 
   async submitDocument(
     file: File,
-    workspaceId: string,
+    familyspaceId: string,
     userId: string,
     config?: IngestionConfig
   ): Promise<IngestionJob> {
@@ -48,7 +48,7 @@ export class IngestionServiceImpl implements IngestionService {
     const job: IngestionJob = {
       id: jobId,
       documentId: uuidv4(),
-      workspaceId,
+      familyspaceId,
       userId,
       type: IngestionJobType.DOCUMENT_PROCESSING,
       status: IngestionJobStatus.QUEUED,
@@ -100,7 +100,7 @@ export class IngestionServiceImpl implements IngestionService {
   }
 
   async listJobs(
-    workspaceId: string,
+    familyspaceId: string,
     filters?: {
       status?: IngestionJobStatus
       type?: IngestionJobType

@@ -4,7 +4,7 @@ export { useStoriesController } from './useStoriesController'
 export { useVoiceLabController } from './useVoiceLabController'
 export { useDocumentsController } from './useDocumentsController'
 export { useTalkController } from './useTalkController'
-export { useWorkspaceController } from './useWorkspaceController'
+export { useFamilyspaceController } from './useFamilyspaceController'
 export { useMembershipController } from './useMembershipController'
 
 // Refactored focused hooks (Finding 5.4: Split useVoiceLabController)

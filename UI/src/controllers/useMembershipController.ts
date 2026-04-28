@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react'
 import { ApiError } from '@/lib/errors'
 
-export interface WorkspaceMember {
+export interface FamilyspaceMember {
   id: string
   userId: string
   email: string
@@ -12,7 +12,7 @@ export interface WorkspaceMember {
   lastLoginAt: string | null
 }
 
-export interface WorkspaceInvite {
+export interface FamilyspaceInvite {
   id: string
   email: string
   role: string
@@ -28,8 +28,8 @@ export interface WorkspaceInvite {
 }
 
 interface MembershipControllerState {
-  members: WorkspaceMember[]
-  invites: WorkspaceInvite[]
+  members: FamilyspaceMember[]
+  invites: FamilyspaceInvite[]
   isLoadingMembers: boolean
   isLoadingInvites: boolean
   hasError: boolean
@@ -40,12 +40,12 @@ interface MembershipControllerState {
 }
 
 interface MembershipControllerActions {
-  fetchMembers: (workspaceId: string) => Promise<void>
-  fetchInvites: (workspaceId: string) => Promise<void>
-  inviteMember: (workspaceId: string, email: string, role: string) => Promise<boolean>
-  updateMemberRole: (workspaceId: string, userId: string, role: string) => Promise<boolean>
-  removeMember: (workspaceId: string, userId: string) => Promise<boolean>
-  cancelInvite: (workspaceId: string, inviteId: string) => Promise<boolean>
+  fetchMembers: (familyspaceId: string) => Promise<void>
+  fetchInvites: (familyspaceId: string) => Promise<void>
+  inviteMember: (familyspaceId: string, email: string, role: string) => Promise<boolean>
+  updateMemberRole: (familyspaceId: string, userId: string, role: string) => Promise<boolean>
+  removeMember: (familyspaceId: string, userId: string) => Promise<boolean>
+  cancelInvite: (familyspaceId: string, inviteId: string) => Promise<boolean>
   acceptInvite: (token: string) => Promise<boolean>
   declineInvite: (token: string) => Promise<boolean>
 }
@@ -63,11 +63,11 @@ export function useMembershipController(): MembershipControllerState & Membershi
     isRemovingMember: false,
   })
 
-  const fetchMembers = useCallback(async (workspaceId: string) => {
+  const fetchMembers = useCallback(async (familyspaceId: string) => {
     setState(prev => ({ ...prev, isLoadingMembers: true, hasError: false, errorMessage: null }))
 
     try {
-      const response = await fetch(`/api/workspaces/${workspaceId}/members`, { credentials: 'include' })
+      const response = await fetch(`/api/familyspaces/${familyspaceId}/members`, { credentials: 'include' })
       const data = await response.json()
 
       if (!response.ok || !data.success) {
@@ -90,11 +90,11 @@ export function useMembershipController(): MembershipControllerState & Membershi
     }
   }, [])
 
-  const fetchInvites = useCallback(async (workspaceId: string) => {
+  const fetchInvites = useCallback(async (familyspaceId: string) => {
     setState(prev => ({ ...prev, isLoadingInvites: true, hasError: false, errorMessage: null }))
 
     try {
-      const response = await fetch(`/api/workspaces/${workspaceId}/invite`, { credentials: 'include' })
+      const response = await fetch(`/api/familyspaces/${familyspaceId}/invite`, { credentials: 'include' })
       const data = await response.json()
 
       if (!response.ok || !data.success) {
@@ -117,11 +117,11 @@ export function useMembershipController(): MembershipControllerState & Membershi
     }
   }, [])
 
-  const inviteMember = useCallback(async (workspaceId: string, email: string, role: string): Promise<boolean> => {
+  const inviteMember = useCallback(async (familyspaceId: string, email: string, role: string): Promise<boolean> => {
     setState(prev => ({ ...prev, isInviting: true, hasError: false, errorMessage: null }))
 
     try {
-      const response = await fetch(`/api/workspaces/${workspaceId}/invite`, {
+      const response = await fetch(`/api/familyspaces/${familyspaceId}/invite`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -152,11 +152,11 @@ export function useMembershipController(): MembershipControllerState & Membershi
     }
   }, [])
 
-  const updateMemberRole = useCallback(async (workspaceId: string, userId: string, role: string): Promise<boolean> => {
+  const updateMemberRole = useCallback(async (familyspaceId: string, userId: string, role: string): Promise<boolean> => {
     setState(prev => ({ ...prev, isUpdatingMember: true, hasError: false, errorMessage: null }))
 
     try {
-      const response = await fetch(`/api/workspaces/${workspaceId}/members/${userId}`, {
+      const response = await fetch(`/api/familyspaces/${familyspaceId}/members/${userId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -189,11 +189,11 @@ export function useMembershipController(): MembershipControllerState & Membershi
     }
   }, [])
 
-  const removeMember = useCallback(async (workspaceId: string, userId: string): Promise<boolean> => {
+  const removeMember = useCallback(async (familyspaceId: string, userId: string): Promise<boolean> => {
     setState(prev => ({ ...prev, isRemovingMember: true, hasError: false, errorMessage: null }))
 
     try {
-      const response = await fetch(`/api/workspaces/${workspaceId}/members/${userId}`, {
+      const response = await fetch(`/api/familyspaces/${familyspaceId}/members/${userId}`, {
         method: 'DELETE',
         credentials: 'include',
       })
@@ -222,9 +222,9 @@ export function useMembershipController(): MembershipControllerState & Membershi
     }
   }, [])
 
-  const cancelInvite = useCallback(async (workspaceId: string, inviteId: string): Promise<boolean> => {
+  const cancelInvite = useCallback(async (familyspaceId: string, inviteId: string): Promise<boolean> => {
     try {
-      const response = await fetch(`/api/workspaces/${workspaceId}/invite`, {
+      const response = await fetch(`/api/familyspaces/${familyspaceId}/invite`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

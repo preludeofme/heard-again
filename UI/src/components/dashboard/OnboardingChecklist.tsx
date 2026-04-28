@@ -2,12 +2,12 @@ import { Box, Typography, LinearProgress } from '@mui/material'
 import { CheckCircleRounded, RadioButtonUncheckedRounded, ArrowForwardRounded } from '@mui/icons-material'
 import { useRouter } from 'next/router'
 import { ProfileColors } from '@/components/profile/ProfileConstants'
-import type { OnboardingState, WorkspaceRole } from '@/controllers/useDashboardController'
+import type { OnboardingState, FamilyspaceRole } from '@/controllers/useDashboardController'
 
 interface OnboardingChecklistProps {
   state: OnboardingState
-  role: WorkspaceRole
-  workspaceId: string | null
+  role: FamilyspaceRole
+  familyspaceId: string | null
 }
 
 interface Step {
@@ -18,22 +18,22 @@ interface Step {
   done: boolean
 }
 
-export function OnboardingChecklist({ state, role, workspaceId }: OnboardingChecklistProps) {
+export function OnboardingChecklist({ state, role, familyspaceId }: OnboardingChecklistProps) {
   const router = useRouter()
 
   const steps: Step[] = [
     { key: 'hasFirstPerson', label: 'Add your first family member', hint: 'A name and a few details to start the tree', href: '/family-tree', done: state.hasFirstPerson },
-    { key: 'hasFirstStory', label: 'Capture your first story', hint: 'Write a memory or record one with the chat', href: '/stories#contribution-hub', done: state.hasFirstStory },
+    { key: 'hasFirstStory', label: 'Capture your first story', hint: 'Write a memory or record one', href: '/stories#contribution-hub', done: state.hasFirstStory },
     { key: 'hasFirstDocument', label: 'Upload a photo or document', hint: 'Add to the archive — letters, photos, certificates', href: '/documents', done: state.hasFirstDocument },
     { key: 'hasFirstVoice', label: 'Create a voice profile', hint: 'Clone a voice to read stories aloud', href: '/voice-lab', done: state.hasFirstVoice },
   ]
 
-  if ((role === 'OWNER' || role === 'ADMIN') && workspaceId) {
+  if ((role === 'OWNER' || role === 'ADMIN') && familyspaceId) {
     steps.push({
       key: 'hasInvitedMember',
       label: 'Invite a family member',
       hint: 'Share the vault with relatives',
-      href: `/workspaces/${workspaceId}/settings`,
+      href: `/familyspaces/${familyspaceId}/settings`,
       done: state.hasInvitedMember,
     })
   }

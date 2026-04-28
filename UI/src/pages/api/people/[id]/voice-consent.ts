@@ -1,15 +1,15 @@
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
-import { getAuthUserWithWorkspace } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace } from '@/lib/auth-helpers'
 
 export default apiHandler({
   // GET /api/people/[id]/voice-consent - Get consent status for a person
   GET: async (req, res) => {
-    const user = await getAuthUserWithWorkspace(req, res)
+    const user = await getAuthUserWithFamilyspace(req, res)
     const personId = req.query.id as string
 
     const person = await prisma.person.findFirst({
-      where: { id: personId, workspaceId: user.workspaceId },
+      where: { id: personId, familyspaceId: user.familyspaceId },
     })
     if (!person) throw Errors.notFound('Person')
 

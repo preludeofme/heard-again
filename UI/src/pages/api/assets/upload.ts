@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { successResponse, errorResponse } from '@/lib/api-helpers'
-import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 import { getStorageService } from '@/lib/storage/storage-service'
 import { FileOptimizer } from '@/lib/file-optimizer'
 import { validateFileContent, generateSecureFilename } from '@/lib/security/file-validator'
@@ -31,26 +31,35 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse) {
   let fields: formidable.Fields | undefined = undefined
   
   try {
-    const user = await getAuthUserWithWorkspace(req, res)
-    await requireWorkspaceRole(user.id, user.workspaceId, 'EDITOR')
+    let user = null
+    try {
+      user = await getAuthUserWithFamilyspace(req, res)
+    } catch (e) {
+      // Not authenticated
+    }
 
     const storageService = getStorageService()
     const storageMode = storageService.getMode()
     const fileOptimizer = new FileOptimizer()
 
-    // Create secure temporary upload directory
-    tempDir = path.join(process.cwd(), 'temp-uploads', user.workspaceId)
+    // We need to parse form first to get fields (like personId/subjectId)
+    // But formidable needs a path. We'll use a generic temp dir for unauthenticated uploads.
+    const baseTempDir = path.join(process.cwd(), 'temp-uploads')
+    const sessionTempDir = user ? user.familyspaceId : 'public-' + uuidv4()
+    tempDir = path.join(baseTempDir, sessionTempDir)
     await fs.promises.mkdir(tempDir, { recursive: true })
 
     const form = formidable({
-      keepExtensions: false, // Don't trust original extensions - will be validated and renamed
-      maxFileSize: 100 * 1024 * 1024, // 100MB
-      uploadDir: tempDir, // Restrict to secure workspace directory
-      filename: () => `${uuidv4()}.tmp`, // Use temporary extension
+      keepExtensions: false,
+      maxFileSize: 100 * 1024 * 1024,
+      uploadDir: tempDir,
+      filename: () => `${uuidv4()}.tmp`,
     })
 
+    let parsedFields: formidable.Fields
+    let files: formidable.Files
     try {
-      const [parsedFields, files] = await form.parse(req)
+      [parsedFields, files] = await form.parse(req)
       fields = parsedFields
       fileArray = files.file
 
@@ -62,6 +71,27 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse) {
     }
 
     const file = fileArray[0]
+    
+    // Resolve familyspaceId
+    let familyspaceId = user?.familyspaceId
+    const personIdField = (fields as any)?.personId?.[0] || (fields as any)?.subjectId?.[0]
+    
+    if (!user) {
+      if (!personIdField) {
+        return errorResponse(res, 'Authentication required or subjectId missing for public upload', 401)
+      }
+      const person = await prisma.person.findUnique({
+        where: { id: personIdField },
+        select: { familyspaceId: true }
+      })
+      if (!person) return errorResponse(res, 'Subject not found', 404)
+      familyspaceId = person.familyspaceId
+    } else {
+      // If user exists, check role
+      await requireFamilyspaceRole(user.id, user.familyspaceId, 'EDITOR')
+    }
+
+    if (!familyspaceId) return errorResponse(res, 'Familyspace context missing', 400)
 
     // Convert formidable file to buffer for optimization
     const fileBuffer = require('fs').readFileSync(file.filepath)
@@ -149,10 +179,10 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse) {
           validationResult.detectedType!,
           secureFilename,
           {
-            quality: 85, // Default quality
+            quality: 75, // Updated quality target
             maxWidth: 2048,
             maxHeight: 2048,
-            maxFileSize: 50 * 1024 * 1024, // 50MB target
+            maxFileSize: 100 * 1024, // Only skip optimization if already under 100KB
           }
         )
         optimizedBuffer = optimizationResult.optimizedFile
@@ -175,10 +205,10 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse) {
       secureFilename,
       validationResult.detectedType!,
       {
-        folder: `workspace-${user.workspaceId}`,
+        folder: `familyspace-${familyspaceId}`,
         metadata: {
-          uploadedById: user.id,
-          workspaceId: user.workspaceId,
+          uploadedById: user?.id || 'public',
+          familyspaceId: familyspaceId,
           originalName: file.originalFilename || 'unknown',
           validatedType: validationResult.detectedType!,
           originalSize: originalSize.toString(),
@@ -192,7 +222,7 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse) {
     // Create asset record in database
     const asset = await prisma.asset.create({
       data: {
-        workspaceId: user.workspaceId,
+        familyspaceId: familyspaceId,
         filename: uploadResult.filename,
         originalName: file.originalFilename || 'unknown',
         mimeType: validationResult.detectedType!,
@@ -201,20 +231,20 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse) {
         storagePath: uploadResult.storagePath,
         assetType: uploadResult.assetType as any,
         processingStatus: uploadResult.processingStatus,
-        uploadedById: user.id,
+        uploadedById: user?.id || null,
       },
     })
 
-    // Validate personId from form fields against caller's workspace (IDOR guard)
-    let personId: string | null = (fields as any)?.personId?.[0] || null
+    // Validate personId from form fields against caller's familyspace (IDOR guard)
+    let personId: string | null = (fields as any)?.personId?.[0] || (fields as any)?.subjectId?.[0] || null
     if (personId) {
-      const personBelongsToWorkspace = await prisma.person.findFirst({
-        where: { id: personId, workspaceId: user.workspaceId },
+      const personBelongsToFamilyspace = await prisma.person.findFirst({
+        where: { id: personId, familyspaceId: familyspaceId },
         select: { id: true },
       })
-      if (!personBelongsToWorkspace) {
+      if (!personBelongsToFamilyspace) {
         personId = null
-        logger.warn({ workspaceId: user.workspaceId }, 'personId does not belong to workspace — ignoring')
+        logger.warn({ familyspaceId: familyspaceId }, 'personId does not belong to familyspace — ignoring')
       }
     }
 
@@ -223,9 +253,9 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse) {
     const document = await prisma.document.create({
       data: {
         assetId: asset.id,
-        workspaceId: user.workspaceId,
+        familyspaceId: familyspaceId,
         title: file.originalFilename || asset.filename,
-        createdById: user.id,
+        createdById: user?.id || null,
       },
     })
     if (personId) {
@@ -280,7 +310,7 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse) {
           },
           body: JSON.stringify({
             assetId: asset.id,
-            workspaceId: user.workspaceId,
+            familyspaceId: familyspaceId,
             storageUrl: absoluteStorageUrl,
             mimeType: validationResult.detectedType!,
             title: file.originalFilename || asset.filename,

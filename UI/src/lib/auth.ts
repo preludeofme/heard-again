@@ -77,7 +77,7 @@ export const authOptions: NextAuthOptions = {
         // OAuth users have 'name', local users have 'displayName'
         token.displayName = (user as any).displayName || (user as any).name || null
         token.avatarUrl = (user as any).avatarUrl || (user as any).image || null
-        token.defaultWorkspaceId = (user as any).defaultWorkspaceId || null
+        token.defaultFamilyspaceId = (user as any).defaultFamilyspaceId || null
       }
       
       // Ensure role is always present in token (for new and existing sessions)
@@ -102,7 +102,7 @@ export const authOptions: NextAuthOptions = {
         session.user.email = token.email
         session.user.displayName = (token.displayName as string) || null
         session.user.avatarUrl = (token.avatarUrl as string) || null
-        session.user.defaultWorkspaceId = (token.defaultWorkspaceId as string) || null
+        session.user.defaultFamilyspaceId = (token.defaultFamilyspaceId as string) || null
         session.user.role = (token.role as string) || 'VIEWER'
       }
       return session
@@ -127,21 +127,21 @@ export const authOptions: NextAuthOptions = {
         logger.error('Failed to update lastLoginAt:', e)
       }
 
-      // Auto-create workspace for users who don't have one
+      // Auto-create familyspace for users who don't have one
       try {
-        // Check if user already has a workspace
+        // Check if user already has a familyspace
         const existingMembership = await prisma.membership.findFirst({
           where: { userId: user.id },
         })
 
         if (!existingMembership) {
-          logger.info(`No workspace found for user ${user.id}, creating one...`)
+          logger.info(`No familyspace found for user ${user.id}, creating one...`)
 
-          // Create default workspace
-          const workspace = await prisma.workspace.create({
+          // Create default familyspace
+          const familyspace = await prisma.familyspace.create({
             data: {
-              name: 'My Workspace',
-              slug: `workspace-${user.id.slice(0, 8)}`,
+              name: 'My Familyspace',
+              slug: `familyspace-${user.id.slice(0, 8)}`,
               ownerId: user.id,
               members: {
                 create: {
@@ -154,16 +154,16 @@ export const authOptions: NextAuthOptions = {
             },
           })
 
-          // Set as default workspace
+          // Set as default familyspace
           await prisma.user.update({
             where: { id: user.id },
-            data: { defaultWorkspaceId: workspace.id },
+            data: { defaultFamilyspaceId: familyspace.id },
           })
 
-          logger.info(`Auto-created workspace ${workspace.id} for user ${user.id}`)
+          logger.info(`Auto-created familyspace ${familyspace.id} for user ${user.id}`)
         }
       } catch (e) {
-        logger.error('Failed to auto-create workspace:', e)
+        logger.error('Failed to auto-create familyspace:', e)
       }
     },
   },

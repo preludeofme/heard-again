@@ -1,15 +1,15 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { ttsRequest } from '@/lib/tts-client'
-import { getAuthUserWithWorkspace } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace } from '@/lib/auth-helpers'
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
   try {
-    const user = await getAuthUserWithWorkspace(req, res)
+    const user = await getAuthUserWithFamilyspace(req, res)
     const data = await ttsRequest('/api/tts/health', {
-      workspaceId: user.workspaceId,
+      familyspaceId: user.familyspaceId,
     })
     return res.status(200).json({ success: true, ...data })
   } catch (error: any) {

@@ -84,7 +84,7 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
 
       const newSample: TrainingSample = {
         file,
-        fileId: uploadData.fileId,
+        fileId: uploadData.assetId,
       }
 
       setState(prev => ({

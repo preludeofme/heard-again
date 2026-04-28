@@ -13,13 +13,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!verifyServiceToken(req, res)) return
 
   const { method } = req
-  const workspaceId = req.headers['x-workspace-id'] as string
+  const familyspaceId = req.headers['x-familyspace-id'] as string
   const userId = req.headers['x-user-id'] as string
 
-  if (!workspaceId || !userId) {
+  if (!familyspaceId || !userId) {
     return res.status(400).json({
       success: false,
-      error: 'Missing required headers: x-workspace-id, x-user-id'
+      error: 'Missing required headers: x-familyspace-id, x-user-id'
     })
   }
 
@@ -75,10 +75,10 @@ async function handleGetInstructions(
     })
   }
 
-  const reqWorkspaceId = req.headers['x-workspace-id'] as string
+  const reqFamilyspaceId = req.headers['x-familyspace-id'] as string
   try {
-    const persona = await personaService.getPersonaProfile(personaId, reqWorkspaceId)
-    if (!persona || persona.workspaceId !== reqWorkspaceId) {
+    const persona = await personaService.getPersonaProfile(personaId, reqFamilyspaceId)
+    if (!persona || persona.familyspaceId !== reqFamilyspaceId) {
       return res.status(404).json({
         success: false,
         error: 'Persona profile not found'
@@ -121,10 +121,10 @@ async function handleUpdateInstructions(
     })
   }
 
-  const reqWorkspaceId = req.headers['x-workspace-id'] as string
+  const reqFamilyspaceId = req.headers['x-familyspace-id'] as string
   try {
-    const existing = await personaService.getPersonaProfile(personaId, reqWorkspaceId)
-    if (!existing || existing.workspaceId !== reqWorkspaceId) {
+    const existing = await personaService.getPersonaProfile(personaId, reqFamilyspaceId)
+    if (!existing || existing.familyspaceId !== reqFamilyspaceId) {
       return res.status(404).json({ success: false, error: 'Persona profile not found' })
     }
 
@@ -160,10 +160,10 @@ async function handleAddInstruction(
     })
   }
 
-  const reqWorkspaceId = req.headers['x-workspace-id'] as string
+  const reqFamilyspaceId = req.headers['x-familyspace-id'] as string
   try {
-    const persona = await personaService.getPersonaProfile(personaId, reqWorkspaceId)
-    if (!persona || persona.workspaceId !== reqWorkspaceId) {
+    const persona = await personaService.getPersonaProfile(personaId, reqFamilyspaceId)
+    if (!persona || persona.familyspaceId !== reqFamilyspaceId) {
       return res.status(404).json({
         success: false,
         error: 'Persona profile not found'
@@ -247,10 +247,10 @@ async function handleRemoveInstruction(
     })
   }
 
-  const reqWorkspaceId = req.headers['x-workspace-id'] as string
+  const reqFamilyspaceId = req.headers['x-familyspace-id'] as string
   try {
-    const persona = await personaService.getPersonaProfile(personaId, reqWorkspaceId)
-    if (!persona || persona.workspaceId !== reqWorkspaceId) {
+    const persona = await personaService.getPersonaProfile(personaId, reqFamilyspaceId)
+    if (!persona || persona.familyspaceId !== reqFamilyspaceId) {
       return res.status(404).json({
         success: false,
         error: 'Persona profile not found'

@@ -100,8 +100,8 @@ export interface PaginatedResponse<T> {
   }
 }
 
-export interface WorkspaceContext {
-  workspaceId: string
+export interface FamilyspaceContext {
+  familyspaceId: string
   userId: string
   permissions: string[]
   role: 'owner' | 'admin' | 'member' | 'viewer'

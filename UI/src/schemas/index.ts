@@ -52,6 +52,8 @@ export const createStorySchema = z.object({
   tags: z.array(z.string().max(50)).max(20).optional().nullable(),
   status: storyStatusSchema.optional().nullable(),
   assetIds: z.array(z.string().uuid()).optional().nullable(),
+  authorRelationship: z.string().max(100).optional().nullable(),
+  isPublic: z.boolean().optional().nullable(),
 })
 
 export type CreateStoryInput = z.infer<typeof createStorySchema>
@@ -205,7 +207,7 @@ export type SearchSuggestionsQuery = z.infer<typeof searchSuggestionsSchema>
 // Authentication Schemas
 // ============================================
 
-export const workspaceRoleSchema = z.enum(['OWNER', 'ADMIN', 'EDITOR', 'VIEWER'])
+export const familyspaceRoleSchema = z.enum(['OWNER', 'ADMIN', 'EDITOR', 'VIEWER'])
 
 // ============================================
 // Helper Functions for API Route Validation

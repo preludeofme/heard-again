@@ -5,7 +5,7 @@ export interface Person {
   firstName: string
   lastName: string
   fullName: string
-  workspaceId: string
+  familyspaceId: string
 }
 
 export class PersonService {
@@ -17,11 +17,11 @@ export class PersonService {
     this.serviceSecret = process.env.CHAT_SERVICE_SECRET || ''
   }
 
-  async getPerson(personId: string, workspaceId: string): Promise<Person | null> {
+  async getPerson(personId: string, familyspaceId: string): Promise<Person | null> {
     try {
       const response = await axios.get(`${this.uiBaseUrl}/api/people/${personId}`, {
         headers: {
-          'x-workspace-id': workspaceId,
+          'x-familyspace-id': familyspaceId,
           'x-user-id': 'system', // Using system user for persona generation
           'x-chat-service-secret': this.serviceSecret
         }
@@ -34,7 +34,7 @@ export class PersonService {
           firstName: person.firstName,
           lastName: person.lastName,
           fullName: `${person.firstName} ${person.lastName}`,
-          workspaceId: person.workspaceId
+          familyspaceId: person.familyspaceId
         }
       }
       return null

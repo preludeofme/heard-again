@@ -26,7 +26,7 @@ The primary user interface for the platform. Features include:
 - **Family Tree Management** - Visual family tree with relationship mapping
 - **Story Management** - Upload, edit, and organize family stories
 - **Voice Lab** - Voice cloning and text-to-speech synthesis
-- **Dashboard** - User workspace and content overview
+- **Dashboard** - User familyspace and content overview
 - **Collections** - Organize stories into themed collections
 - **Timeline** - Chronological view of family events
 - **Import/Export** - GEDCOM support for genealogy data

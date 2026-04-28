@@ -10,13 +10,13 @@ import { prisma } from '@/lib/prisma'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { method } = req
-  const workspaceId = req.headers['x-workspace-id'] as string
+  const familyspaceId = req.headers['x-familyspace-id'] as string
   const userId = req.headers['x-user-id'] as string
 
-  if (!workspaceId || !userId) {
+  if (!familyspaceId || !userId) {
     return res.status(400).json({
       success: false,
-      error: 'Missing required headers: x-workspace-id, x-user-id'
+      error: 'Missing required headers: x-familyspace-id, x-user-id'
     })
   }
 
@@ -32,7 +32,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     switch (method) {
       case 'POST':
-        await handleSynthesis(req, res, voiceIntegration, personaService, workspaceId)
+        await handleSynthesis(req, res, voiceIntegration, personaService, familyspaceId)
         break
       default:
         res.setHeader('Allow', ['POST'])
@@ -55,7 +55,7 @@ async function handleSynthesis(
   res: NextApiResponse,
   voiceIntegration: VoiceIntegrationService,
   personaService: PersonaServiceImpl,
-  workspaceId: string
+  familyspaceId: string
 ) {
   const { text, personaId, options } = req.body
 
@@ -75,7 +75,7 @@ async function handleSynthesis(
 
   try {
     // Get persona profile
-    const personaProfile = await personaService.getPersonaProfile(personaId, workspaceId)
+    const personaProfile = await personaService.getPersonaProfile(personaId, familyspaceId)
     if (!personaProfile) {
       return res.status(404).json({
         success: false,

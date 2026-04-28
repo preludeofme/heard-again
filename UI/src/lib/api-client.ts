@@ -21,10 +21,10 @@ async function fetchCSRFToken(): Promise<string> {
  * Get CSRF token (cached or fetch new)
  */
 export async function getCSRFToken(): Promise<string> {
-  // Always fetch a fresh token for now to avoid caching issues
-  // TODO: Implement proper caching with expiration
-  tokenPromise = null
-  csrfToken = null
+  // If we already have a token and no fetch is in progress, return it
+  if (csrfToken && !tokenPromise) {
+    return csrfToken
+  }
   
   // If fetch is in progress, wait for it
   if (tokenPromise) {
@@ -33,8 +33,11 @@ export async function getCSRFToken(): Promise<string> {
 
   // Fetch new token
   tokenPromise = fetchCSRFToken()
-  csrfToken = await tokenPromise
-  tokenPromise = null
+  try {
+    csrfToken = await tokenPromise
+  } finally {
+    tokenPromise = null
+  }
   
   return csrfToken
 }

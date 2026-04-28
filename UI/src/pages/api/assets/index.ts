@@ -1,18 +1,27 @@
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
-import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 
 export default apiHandler({
-  // GET /api/assets - List assets in workspace
+  // GET /api/assets - List assets in familyspace
   GET: async (req, res) => {
-    const user = await getAuthUserWithWorkspace(req, res)
+    const user = await getAuthUserWithFamilyspace(req, res)
     const { type, search, personId, page = '1', limit = '20' } = req.query
 
     const pageNum = Math.max(1, parseInt(page as string, 10) || 1)
     const pageSize = Math.min(50, Math.max(1, parseInt(limit as string, 10) || 20))
     const skip = (pageNum - 1) * pageSize
 
-    const where: any = { workspaceId: user.workspaceId }
+    const where: any = { 
+      familyspaceId: user.familyspaceId,
+      // Hide AI-generated narration audio and voice-training/voice-generation assets
+      // — these aren't user-curated documents.
+      isAISynthesized: false,
+      voiceGenerationOutputs: { none: {} },
+      voiceProfileSources: { none: {} },
+      modelArtifactFor: { none: {} },
+      generatedAudioForStories: { none: {} },
+    }
 
     if (type && typeof type === 'string') {
       where.assetType = type.toUpperCase()
@@ -34,7 +43,7 @@ export default apiHandler({
       const linkedDocs = await prisma.documentPerson.findMany({
         where: {
           personId,
-          document: { workspaceId: user.workspaceId, isDeleted: false },
+          document: { familyspaceId: user.familyspaceId, isDeleted: false },
         },
         select: { document: { select: { assetId: true } } },
       })

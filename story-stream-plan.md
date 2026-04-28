@@ -121,7 +121,7 @@ Migration name: `add_story_narration_fields`.
 
 | Method | Path | Purpose |
 |---|---|---|
-| POST | `/api/tts/synthesize-stream` | Chunked MP3 response. Body: `{ profileId, text, language, workspaceId }`. Splits text into sentences server-side, encodes each WAV→MP3, yields frames. |
+| POST | `/api/tts/synthesize-stream` | Chunked MP3 response. Body: `{ profileId, text, language, familyspaceId }`. Splits text into sentences server-side, encodes each WAV→MP3, yields frames. |
 
 ## 6. LLM Rewrite Prompt (Design)
 
@@ -172,14 +172,14 @@ async def synthesize_stream(...):
     return StreamingResponse(generate(), media_type="audio/mpeg")
 ```
 
-- Watermarking/metadata: MP3 ID3 tag added to first chunk with `aiGenerated=true` + workspaceId + jobId.
+- Watermarking/metadata: MP3 ID3 tag added to first chunk with `aiGenerated=true` + familyspaceId + jobId.
 - Logged via same `log_auth_event` path as `/synthesize`.
 
 ## 8. UI Streaming Proxy
 
 `UI/src/pages/api/stories/[id]/narrate.ts`:
 
-1. Auth user, resolve workspace, EDITOR role not required — VIEWER is fine for playback.
+1. Auth user, resolve familyspace, EDITOR role not required — VIEWER is fine for playback.
 2. Load story. Pick text: `narratedContent` if `narrationStatus = APPROVED`, else `content`.
 3. Resolve voice profile (query param → Story.voiceProfileId → default for subject).
 4. Check `VoiceConsent` (same logic as `voiceService.checkVoiceConsent`).
@@ -193,7 +193,7 @@ async def synthesize_stream(...):
 
 - Replace the existing `AudioPlayer` gated on `story.generatedAudio` with a new `<StoryNarrationPlayer>` component that:
   - Hits `/api/stories/[id]/narrate?voiceProfileId=…` as its `<audio src>`.
-  - Includes voice-profile selector (dropdown of the workspace's READY profiles).
+  - Includes voice-profile selector (dropdown of the familyspace's READY profiles).
   - Shows "AI-generated" disclosure per existing `AudioPlayer` contract.
   - Exposes a "Save as audio" button → `POST /api/stories/[id]/save-narration` → refreshes with `generatedAudioAssetId` and shows a "Download" link via `/api/assets/[id]/download`.
 - Add the **narration preparation banner** (sections 3.1, 3.4) above the story content when `narrationStatus ∈ {NONE, STALE}`.
@@ -213,8 +213,8 @@ async def synthesize_stream(...):
 
 ## 10. Security & Safety
 
-- Every new endpoint goes through existing `getAuthUserWithWorkspace` + `withCSRFProtection` where it mutates state.
-- LLM rewrite respects workspace boundaries: Chat service is passed only the content of that one story, nothing else.
+- Every new endpoint goes through existing `getAuthUserWithFamilyspace` + `withCSRFProtection` where it mutates state.
+- LLM rewrite respects familyspace boundaries: Chat service is passed only the content of that one story, nothing else.
 - Voice consent check runs on both `/narrate` and `/save-narration` — existing `checkVoiceConsent()` logic.
 - `VoiceGenerationJob` written for every stream (auditability) even though no asset is produced.
 - AI-generated disclosure remains on the player UI. ID3 metadata tags MP3 stream as AI-generated.

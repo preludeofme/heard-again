@@ -15,21 +15,21 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     }
   }
 
-  let workspaceId = session.user.defaultWorkspaceId || null
+  let familyspaceId = session.user.defaultFamilyspaceId || null
 
-  if (!workspaceId) {
+  if (!familyspaceId) {
     const membership = await prisma.membership.findFirst({
       where: {
         userId: session.user.id,
         status: 'ACTIVE',
       },
-      select: { workspaceId: true },
+      select: { familyspaceId: true },
       orderBy: { joinedAt: 'asc' },
     })
-    workspaceId = membership?.workspaceId || null
+    familyspaceId = membership?.familyspaceId || null
   }
 
-  if (!workspaceId) {
+  if (!familyspaceId) {
     return {
       redirect: {
         destination: '/family-tree',
@@ -39,7 +39,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
   }
 
   const firstPerson = await prisma.person.findFirst({
-    where: { workspaceId },
+    where: { familyspaceId },
     select: { id: true },
     orderBy: { createdAt: 'asc' },
   })

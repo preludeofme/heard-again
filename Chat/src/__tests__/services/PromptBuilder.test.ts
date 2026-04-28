@@ -72,7 +72,7 @@ describe('PromptBuilderImpl.buildSystemPrompt guardrails', () => {
     const fakePersona = {
       id: 'p1',
       personId: 'test-person',
-      workspaceId: 'ws1',
+      familyspaceId: 'ws1',
       version: 1,
       status: 'active' as const,
       systemPrompt: 'You are a test persona.',
@@ -110,7 +110,7 @@ describe('PromptBuilderImpl.buildSystemPrompt guardrails', () => {
 
   it('passes the sanitized message through to userMessage in CompiledPrompt', async () => {
     const fakePersona: any = {
-      id: 'p1', personId: 'test', workspaceId: 'ws1', version: 1, status: 'active',
+      id: 'p1', personId: 'test', familyspaceId: 'ws1', version: 1, status: 'active',
       systemPrompt: 'You are test.', writingStyle: { vocabulary: [], sentencePatterns: [],
         tone: { warmth: 0.5, formality: 0.5, emotionalIntensity: 0.5, optimism: 0.5, humor: 0.3, storytelling: 0.6 },
         formality: 'neutral', averageSentenceLength: 15, commonPhrases: [], emotionIndicators: [] },

@@ -6,7 +6,7 @@ export const NARRATION_RENDER_JOB = 'render'
 
 export interface NarrationRenderJobData {
   storyId: string
-  workspaceId: string
+  familyspaceId: string
   voiceProfileId: string
   userId: string
   voiceGenerationJobId: string

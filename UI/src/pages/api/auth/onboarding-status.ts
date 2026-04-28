@@ -11,42 +11,42 @@ export default apiHandler({
       throw Errors.unauthorized('Authentication required')
     }
 
-    // Get user's default workspace
-    const userWithWorkspace = await prisma.user.findUnique({
+    // Get user's default familyspace
+    const userWithFamilyspace = await prisma.user.findUnique({
       where: { id: user.id },
       include: {
-        defaultWorkspace: true,
+        defaultFamilyspace: true,
       },
     })
 
-    if (!userWithWorkspace?.defaultWorkspace) {
+    if (!userWithFamilyspace?.defaultFamilyspace) {
       return successResponse(res, {
         onboardingComplete: false,
-        reason: 'no_workspace',
+        reason: 'no_familyspace',
       })
     }
 
-    const workspace = userWithWorkspace.defaultWorkspace
+    const familyspace = userWithFamilyspace.defaultFamilyspace
 
-    // Check if workspace still has the default "My Workspace" name
-    // or if the user doesn't have a person record in the workspace
-    const isDefaultWorkspaceName = workspace.name === 'My Workspace'
+    // Check if familyspace still has the default "My Familyspace" name
+    // or if the user doesn't have a person record in the familyspace
+    const isDefaultFamilyspaceName = familyspace.name === 'My Familyspace'
 
-    // Count people in the workspace
+    // Count people in the familyspace
     const peopleCount = await prisma.person.count({
-      where: { workspaceId: workspace.id },
+      where: { familyspaceId: familyspace.id },
     })
 
-    const onboardingComplete = !isDefaultWorkspaceName && peopleCount > 0
+    const onboardingComplete = !isDefaultFamilyspaceName && peopleCount > 0
 
     return successResponse(res, {
       onboardingComplete,
-      workspace: {
-        id: workspace.id,
-        name: workspace.name,
+      familyspace: {
+        id: familyspace.id,
+        name: familyspace.name,
       },
       peopleCount,
-      needsFamilyName: isDefaultWorkspaceName,
+      needsFamilyName: isDefaultFamilyspaceName,
       needsPerson: peopleCount === 0,
     })
   },

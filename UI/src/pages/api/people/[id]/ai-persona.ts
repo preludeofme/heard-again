@@ -1,15 +1,15 @@
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
-import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 export default apiHandler({
   // GET /api/people/[id]/ai-persona - Get person's AI persona
   GET: async (req, res) => {
-    const user = await getAuthUserWithWorkspace(req, res)
+    const user = await getAuthUserWithFamilyspace(req, res)
     const personId = req.query.id as string
 
-    // Verify person exists in workspace
+    // Verify person exists in familyspace
     const person = await prisma.person.findFirst({
-      where: { id: personId, workspaceId: user.workspaceId },
+      where: { id: personId, familyspaceId: user.familyspaceId },
     })
     if (!person) {
       throw Errors.notFound('Person')
@@ -19,7 +19,7 @@ export default apiHandler({
     const persona = await prisma.personaProfile.findFirst({
       where: {
         personId,
-        workspaceId: user.workspaceId,
+        familyspaceId: user.familyspaceId,
         status: 'active',
       },
       orderBy: { version: 'desc' },
@@ -30,7 +30,7 @@ export default apiHandler({
       const draftPersona = await prisma.personaProfile.findFirst({
         where: {
           personId,
-          workspaceId: user.workspaceId,
+          familyspaceId: user.familyspaceId,
           status: 'draft',
         },
         orderBy: { version: 'desc' },
@@ -43,13 +43,13 @@ export default apiHandler({
 
   // PUT /api/people/[id]/ai-persona - Update or create AI persona
   PUT: async (req, res) => {
-    const user = await getAuthUserWithWorkspace(req, res)
+    const user = await getAuthUserWithFamilyspace(req, res)
     const personId = req.query.id as string
-    await requireWorkspaceRole(user.id, user.workspaceId, 'EDITOR')
+    await requireFamilyspaceRole(user.id, user.familyspaceId, 'EDITOR')
 
-    // Verify person exists in workspace
+    // Verify person exists in familyspace
     const person = await prisma.person.findFirst({
-      where: { id: personId, workspaceId: user.workspaceId },
+      where: { id: personId, familyspaceId: user.familyspaceId },
     })
     if (!person) {
       throw Errors.notFound('Person')
@@ -72,7 +72,7 @@ export default apiHandler({
     const existingPersona = await prisma.personaProfile.findFirst({
       where: {
         personId,
-        workspaceId: user.workspaceId,
+        familyspaceId: user.familyspaceId,
       },
       orderBy: { version: 'desc' },
     })
@@ -88,9 +88,9 @@ export default apiHandler({
 
     const persona = await prisma.personaProfile.upsert({
       where: {
-        personId_workspaceId_version: {
+        personId_familyspaceId_version: {
           personId,
-          workspaceId: user.workspaceId,
+          familyspaceId: user.familyspaceId,
           version: newVersion,
         },
       },
@@ -109,7 +109,7 @@ export default apiHandler({
       },
       create: {
         personId,
-        workspaceId: user.workspaceId,
+        familyspaceId: user.familyspaceId,
         version: newVersion,
         systemPrompt,
         responseGuidelines,
@@ -129,9 +129,9 @@ export default apiHandler({
 
   // POST /api/people/[id]/ai-persona/activate - Activate a persona version
   POST: async (req, res) => {
-    const user = await getAuthUserWithWorkspace(req, res)
+    const user = await getAuthUserWithFamilyspace(req, res)
     const personId = req.query.id as string
-    await requireWorkspaceRole(user.id, user.workspaceId, 'EDITOR')
+    await requireFamilyspaceRole(user.id, user.familyspaceId, 'EDITOR')
 
     const { version } = req.body
 
@@ -143,7 +143,7 @@ export default apiHandler({
     const persona = await prisma.personaProfile.findFirst({
       where: {
         personId,
-        workspaceId: user.workspaceId,
+        familyspaceId: user.familyspaceId,
         version,
       },
     })
@@ -155,7 +155,7 @@ export default apiHandler({
     await prisma.personaProfile.updateMany({
       where: {
         personId,
-        workspaceId: user.workspaceId,
+        familyspaceId: user.familyspaceId,
         status: 'active',
       },
       data: { status: 'archived' },

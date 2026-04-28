@@ -6,7 +6,7 @@ export { DocumentType } from './retrieval'
 
 export interface ChatSession {
   id: string
-  workspaceId: string
+  familyspaceId: string
   personId: string
   userId: string
   title?: string
@@ -42,7 +42,7 @@ export interface ChatResponse {
 }
 
 export interface CreateSessionRequest {
-  workspaceId: string
+  familyspaceId: string
   personId: string
   userId: string
   title?: string
@@ -129,7 +129,7 @@ export interface EvidencePacketItem {
 }
 
 export interface EvidencePacket {
-  workspaceId: string
+  familyspaceId: string
   personId: string
   query: string
   retrievedAt: Date

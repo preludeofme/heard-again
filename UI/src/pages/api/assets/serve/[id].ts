@@ -2,7 +2,7 @@ import { logger } from '@/lib/logger'
 import { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '@/lib/prisma'
 import { getStorageService } from '@/lib/storage/storage-service'
-import { getAuthUserWithWorkspace } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace } from '@/lib/auth-helpers'
 import { errorResponse } from '@/lib/api-helpers'
 import { withRateLimit } from '@/lib/security/rate-limiter'
 import { withSecurityHeaders, getSecurityConfig } from '@/lib/security/security-headers'
@@ -17,13 +17,13 @@ export default withSecurityHeaders(withRateLimit('general', async function handl
 
   try {
     // CRITICAL: Validate authentication and tenant access
-    const user = await getAuthUserWithWorkspace(req, res)
+    const user = await getAuthUserWithFamilyspace(req, res)
     
     // Get asset from database with tenant validation
     const asset = await prisma.asset.findFirst({
       where: { 
         id,
-        workspaceId: user.workspaceId // Enforce tenant isolation
+        familyspaceId: user.familyspaceId // Enforce tenant isolation
       },
       select: {
         id: true,
@@ -33,7 +33,7 @@ export default withSecurityHeaders(withRateLimit('general', async function handl
         storagePath: true,
         storageType: true,
         sizeBytes: true,
-        workspaceId: true,
+        familyspaceId: true,
       }
     })
 
@@ -43,11 +43,11 @@ export default withSecurityHeaders(withRateLimit('general', async function handl
     }
 
     // Additional tenant verification
-    if (asset.workspaceId !== user.workspaceId) {
+    if (asset.familyspaceId !== user.familyspaceId) {
       logger.error('Tenant isolation violation attempt:', {
         assetId: asset.id,
-        assetWorkspaceId: asset.workspaceId,
-        userWorkspaceId: user.workspaceId,
+        assetFamilyspaceId: asset.familyspaceId,
+        userFamilyspaceId: user.familyspaceId,
         userId: user.id
       })
       return res.status(404).json({ error: 'Asset not found' })
@@ -80,7 +80,7 @@ export default withSecurityHeaders(withRateLimit('general', async function handl
       // Log access for audit
       logger.info('Asset served:', {
         assetId: asset.id,
-        workspaceId: asset.workspaceId,
+        familyspaceId: asset.familyspaceId,
         userId: user.id,
         originalName: asset.originalName,
         mimeType: asset.mimeType,
@@ -103,7 +103,7 @@ export default withSecurityHeaders(withRateLimit('general', async function handl
     // Log access for audit
     logger.info('Asset redirect:', {
       assetId: asset.id,
-      workspaceId: asset.workspaceId,
+      familyspaceId: asset.familyspaceId,
       userId: user.id,
       originalName: asset.originalName,
       publicUrl: publicUrl.replace(/\/[^\/]+$/, '/***') // Redact sensitive parts

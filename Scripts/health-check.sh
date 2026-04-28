@@ -194,7 +194,7 @@ echo -e "${BLUE}6. Chat Session Creation${NC}"
 echo -e "  POST http://localhost:$CHAT_SYSTEM_PORT/api/chat/sessions"
 session_response=$(curl -s -X POST "http://localhost:$CHAT_SYSTEM_PORT/api/chat/sessions" \
     -H "Content-Type: application/json" \
-    -H "x-workspace-id: default" \
+    -H "x-familyspace-id: default" \
     -H "x-user-id: default" \
     -d '{"personId":"test-person-123","title":"Health Check Test"}' \
     --max-time 5 2>/dev/null || echo '{"error": "connection failed"}')

@@ -82,7 +82,7 @@ export class ServiceFactory {
         // Basic implementation
         throw new Error('Chat service not fully implemented in main project')
       },
-      listSessions: async (workspaceId: string, userId: string) => {
+      listSessions: async (familyspaceId: string, userId: string) => {
         // Basic implementation
         throw new Error('Chat service not fully implemented in main project')
       },

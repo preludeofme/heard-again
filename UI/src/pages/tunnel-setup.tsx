@@ -242,6 +242,9 @@ export default function TunnelSetup() {
           <Tabs
             value={tunnelMode}
             onChange={(_, value) => setTunnelMode(value)}
+            variant="scrollable"
+            scrollButtons="auto"
+            allowScrollButtonsMobile
             sx={{ mb: 3 }}
           >
             <Tab value="named" label="Named Tunnel (Production)" />

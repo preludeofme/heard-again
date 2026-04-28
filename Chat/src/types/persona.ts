@@ -3,7 +3,7 @@
 export interface PersonaProfile {
   id: string
   personId: string
-  workspaceId: string
+  familyspaceId: string
   version: number
   status: 'draft' | 'active' | 'archived'
   
@@ -90,7 +90,7 @@ export interface EmotionIndicator {
 }
 
 export interface PersonaFactProvenance {
-  workspaceId: string
+  familyspaceId: string
   personId: string
   documentId: string
   documentTitle?: string
@@ -161,12 +161,12 @@ export interface PersonaGenerationOptions {
 }
 
 export interface PersonaService {
-  getPersonaProfile(personId: string, workspaceId: string): Promise<PersonaProfile | null>
+  getPersonaProfile(personId: string, familyspaceId: string): Promise<PersonaProfile | null>
   createPersonaProfile(profile: PersonaProfile): Promise<PersonaProfile>
   updatePersonaProfile(personId: string, updates: PersonaUpdateRequest): Promise<PersonaProfile>
   deletePersonaProfile(personId: string): Promise<void>
-  listPersonaProfiles(workspaceId: string): Promise<PersonaProfile[]>
-  generatePersonaProfile(personId: string, workspaceId: string, options: PersonaGenerationOptions): Promise<PersonaProfile>
+  listPersonaProfiles(familyspaceId: string): Promise<PersonaProfile[]>
+  generatePersonaProfile(personId: string, familyspaceId: string, options: PersonaGenerationOptions): Promise<PersonaProfile>
 }
 
 export interface StyleExtractor {

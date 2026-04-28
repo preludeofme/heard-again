@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import { ApiError } from '@/lib/errors'
 
-export interface Workspace {
+export interface Familyspace {
   id: string
   name: string
   slug: string
@@ -18,7 +18,7 @@ export interface Workspace {
   createdAt: string
 }
 
-export interface WorkspaceDetail extends Workspace {
+export interface FamilyspaceDetail extends Familyspace {
   owner: {
     id: string
     email: string
@@ -34,9 +34,9 @@ export interface WorkspaceDetail extends Workspace {
   cloudGpuEnabled: boolean
 }
 
-interface WorkspaceControllerState {
-  workspaces: Workspace[]
-  currentWorkspace: WorkspaceDetail | null
+interface FamilyspaceControllerState {
+  familyspaces: Familyspace[]
+  currentFamilyspace: FamilyspaceDetail | null
   isLoading: boolean
   hasError: boolean
   errorMessage: string | null
@@ -45,20 +45,20 @@ interface WorkspaceControllerState {
   isDeleting: boolean
 }
 
-interface WorkspaceControllerActions {
-  fetchWorkspaces: () => Promise<void>
-  fetchWorkspaceDetails: (id: string) => Promise<void>
-  createWorkspace: (name: string) => Promise<Workspace | null>
-  updateWorkspace: (id: string, data: { name?: string }) => Promise<boolean>
-  deleteWorkspace: (id: string) => Promise<boolean>
-  switchWorkspace: (id: string) => Promise<boolean>
-  setDefaultWorkspace: (id: string) => void
+interface FamilyspaceControllerActions {
+  fetchFamilyspaces: () => Promise<void>
+  fetchFamilyspaceDetails: (id: string) => Promise<void>
+  createFamilyspace: (name: string) => Promise<Familyspace | null>
+  updateFamilyspace: (id: string, data: { name?: string }) => Promise<boolean>
+  deleteFamilyspace: (id: string) => Promise<boolean>
+  switchFamilyspace: (id: string) => Promise<boolean>
+  setDefaultFamilyspace: (id: string) => void
 }
 
-export function useWorkspaceController(): WorkspaceControllerState & WorkspaceControllerActions {
-  const [state, setState] = useState<WorkspaceControllerState>({
-    workspaces: [],
-    currentWorkspace: null,
+export function useFamilyspaceController(): FamilyspaceControllerState & FamilyspaceControllerActions {
+  const [state, setState] = useState<FamilyspaceControllerState>({
+    familyspaces: [],
+    currentFamilyspace: null,
     isLoading: false,
     hasError: false,
     errorMessage: null,
@@ -67,20 +67,20 @@ export function useWorkspaceController(): WorkspaceControllerState & WorkspaceCo
     isDeleting: false,
   })
 
-  const fetchWorkspaces = useCallback(async () => {
+  const fetchFamilyspaces = useCallback(async () => {
     setState(prev => ({ ...prev, isLoading: true, hasError: false, errorMessage: null }))
 
     try {
-      const response = await fetch('/api/workspaces', { credentials: 'include' })
+      const response = await fetch('/api/familyspaces', { credentials: 'include' })
       const data = await response.json()
 
       if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Failed to load workspaces')
+        throw new Error(data.error || 'Failed to load familyspaces')
       }
 
       setState(prev => ({
         ...prev,
-        workspaces: data.data || [],
+        familyspaces: data.data || [],
         isLoading: false,
       }))
     } catch (error) {
@@ -94,20 +94,20 @@ export function useWorkspaceController(): WorkspaceControllerState & WorkspaceCo
     }
   }, [])
 
-  const fetchWorkspaceDetails = useCallback(async (id: string) => {
+  const fetchFamilyspaceDetails = useCallback(async (id: string) => {
     setState(prev => ({ ...prev, isLoading: true, hasError: false, errorMessage: null }))
 
     try {
-      const response = await fetch(`/api/workspaces/${id}`, { credentials: 'include' })
+      const response = await fetch(`/api/familyspaces/${id}`, { credentials: 'include' })
       const data = await response.json()
 
       if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Failed to load workspace details')
+        throw new Error(data.error || 'Failed to load familyspace details')
       }
 
       setState(prev => ({
         ...prev,
-        currentWorkspace: data.data,
+        currentFamilyspace: data.data,
         isLoading: false,
       }))
     } catch (error) {
@@ -121,11 +121,11 @@ export function useWorkspaceController(): WorkspaceControllerState & WorkspaceCo
     }
   }, [])
 
-  const createWorkspace = useCallback(async (name: string): Promise<Workspace | null> => {
+  const createFamilyspace = useCallback(async (name: string): Promise<Familyspace | null> => {
     setState(prev => ({ ...prev, isCreating: true, hasError: false, errorMessage: null }))
 
     try {
-      const response = await fetch('/api/workspaces', {
+      const response = await fetch('/api/familyspaces', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -134,18 +134,18 @@ export function useWorkspaceController(): WorkspaceControllerState & WorkspaceCo
       const data = await response.json()
 
       if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Failed to create workspace')
+        throw new Error(data.error || 'Failed to create familyspace')
       }
 
-      const newWorkspace = data.data as Workspace
+      const newFamilyspace = data.data as Familyspace
 
       setState(prev => ({
         ...prev,
-        workspaces: [...prev.workspaces, newWorkspace],
+        familyspaces: [...prev.familyspaces, newFamilyspace],
         isCreating: false,
       }))
 
-      return newWorkspace
+      return newFamilyspace
     } catch (error) {
       const apiError = ApiError.fromError(error)
       setState(prev => ({
@@ -158,11 +158,11 @@ export function useWorkspaceController(): WorkspaceControllerState & WorkspaceCo
     }
   }, [])
 
-  const updateWorkspace = useCallback(async (id: string, data: { name?: string }): Promise<boolean> => {
+  const updateFamilyspace = useCallback(async (id: string, data: { name?: string }): Promise<boolean> => {
     setState(prev => ({ ...prev, isUpdating: true, hasError: false, errorMessage: null }))
 
     try {
-      const response = await fetch(`/api/workspaces/${id}`, {
+      const response = await fetch(`/api/familyspaces/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -171,17 +171,17 @@ export function useWorkspaceController(): WorkspaceControllerState & WorkspaceCo
       const result = await response.json()
 
       if (!response.ok || !result.success) {
-        throw new Error(result.error || 'Failed to update workspace')
+        throw new Error(result.error || 'Failed to update familyspace')
       }
 
       setState(prev => ({
         ...prev,
-        workspaces: prev.workspaces.map(w =>
+        familyspaces: prev.familyspaces.map(w =>
           w.id === id ? { ...w, ...result.data } : w
         ),
-        currentWorkspace: prev.currentWorkspace?.id === id
-          ? { ...prev.currentWorkspace, ...result.data }
-          : prev.currentWorkspace,
+        currentFamilyspace: prev.currentFamilyspace?.id === id
+          ? { ...prev.currentFamilyspace, ...result.data }
+          : prev.currentFamilyspace,
         isUpdating: false,
       }))
 
@@ -198,24 +198,24 @@ export function useWorkspaceController(): WorkspaceControllerState & WorkspaceCo
     }
   }, [])
 
-  const deleteWorkspace = useCallback(async (id: string): Promise<boolean> => {
+  const deleteFamilyspace = useCallback(async (id: string): Promise<boolean> => {
     setState(prev => ({ ...prev, isDeleting: true, hasError: false, errorMessage: null }))
 
     try {
-      const response = await fetch(`/api/workspaces/${id}`, {
+      const response = await fetch(`/api/familyspaces/${id}`, {
         method: 'DELETE',
         credentials: 'include',
       })
       const result = await response.json()
 
       if (!response.ok || !result.success) {
-        throw new Error(result.error || 'Failed to delete workspace')
+        throw new Error(result.error || 'Failed to delete familyspace')
       }
 
       setState(prev => ({
         ...prev,
-        workspaces: prev.workspaces.filter(w => w.id !== id),
-        currentWorkspace: prev.currentWorkspace?.id === id ? null : prev.currentWorkspace,
+        familyspaces: prev.familyspaces.filter(w => w.id !== id),
+        currentFamilyspace: prev.currentFamilyspace?.id === id ? null : prev.currentFamilyspace,
         isDeleting: false,
       }))
 
@@ -232,21 +232,21 @@ export function useWorkspaceController(): WorkspaceControllerState & WorkspaceCo
     }
   }, [])
 
-  const switchWorkspace = useCallback(async (id: string): Promise<boolean> => {
+  const switchFamilyspace = useCallback(async (id: string): Promise<boolean> => {
     try {
-      const response = await fetch(`/api/workspaces/${id}/switch`, {
+      const response = await fetch(`/api/familyspaces/${id}/switch`, {
         method: 'POST',
         credentials: 'include',
       })
       const result = await response.json()
 
       if (!response.ok || !result.success) {
-        throw new Error(result.error || 'Failed to switch workspace')
+        throw new Error(result.error || 'Failed to switch familyspace')
       }
 
       setState(prev => ({
         ...prev,
-        workspaces: prev.workspaces.map(w => ({
+        familyspaces: prev.familyspaces.map(w => ({
           ...w,
           isDefault: w.id === id,
         })),
@@ -264,10 +264,10 @@ export function useWorkspaceController(): WorkspaceControllerState & WorkspaceCo
     }
   }, [])
 
-  const setDefaultWorkspace = useCallback((id: string) => {
+  const setDefaultFamilyspace = useCallback((id: string) => {
     setState(prev => ({
       ...prev,
-      workspaces: prev.workspaces.map(w => ({
+      familyspaces: prev.familyspaces.map(w => ({
         ...w,
         isDefault: w.id === id,
       })),
@@ -276,12 +276,12 @@ export function useWorkspaceController(): WorkspaceControllerState & WorkspaceCo
 
   return {
     ...state,
-    fetchWorkspaces,
-    fetchWorkspaceDetails,
-    createWorkspace,
-    updateWorkspace,
-    deleteWorkspace,
-    switchWorkspace,
-    setDefaultWorkspace,
+    fetchFamilyspaces,
+    fetchFamilyspaceDetails,
+    createFamilyspace,
+    updateFamilyspace,
+    deleteFamilyspace,
+    switchFamilyspace,
+    setDefaultFamilyspace,
   }
 }

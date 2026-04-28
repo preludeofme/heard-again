@@ -13,6 +13,7 @@ interface PersonOption {
   firstName: string
   lastName?: string
   displayName?: string
+  avatarUrl?: string | null
 }
 
 const personName = (person: PersonOption) => {
@@ -72,6 +73,7 @@ export default function VoiceLab() {
         firstName: selectedPerson.firstName,
         lastName: selectedPerson.lastName,
         displayName: selectedPerson.displayName,
+        avatarUrl: selectedPerson.avatarUrl,
       })
     }
   }

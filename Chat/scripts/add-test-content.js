@@ -5,7 +5,7 @@ async function addContent() {
   // Get any document with the right title
   const doc = await prisma.document.findFirst({
     where: {
-      workspaceId: '931638b2-8341-41fc-a064-0883a9911d54',
+      familyspaceId: '931638b2-8341-41fc-a064-0883a9911d54',
       title: { contains: "Dad Story" }
     }
   });
@@ -29,7 +29,7 @@ When dad was about 6, he had a dog that was a shepherd mix, black and white call
     const { ChromaClient, DefaultEmbeddingFunction } = require('chromadb');
     const chroma = new ChromaClient({ path: 'http://localhost:8004' });
     const collection = await chroma.getCollection({
-      name: 'workspace_931638b2-8341-41fc-a064-0883a9911d54_documents',
+      name: 'familyspace_931638b2-8341-41fc-a064-0883a9911d54_documents',
       embeddingFunction: new DefaultEmbeddingFunction()
     });
     

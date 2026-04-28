@@ -5,7 +5,7 @@ import { personRepository } from '@/server/repositories/PersonRepository'
 
 export class GedcomImportService {
   async importGedcom(
-    workspaceId: string,
+    familyspaceId: string,
     userId: string,
     filePath: string,
     assetId: string,
@@ -45,8 +45,8 @@ export class GedcomImportService {
         for (const individual of individuals) {
           const person = await tx.person.upsert({
             where: {
-              workspaceId_gedcomXref: {
-                workspaceId,
+              familyspaceId_gedcomXref: {
+                familyspaceId,
                 gedcomXref: individual.xref,
               },
             },
@@ -62,7 +62,7 @@ export class GedcomImportService {
               bio: individual.note,
             },
             create: {
-              workspaceId,
+              familyspaceId,
               firstName: individual.firstName,
               lastName: individual.lastName,
               displayName: individual.fullName,
@@ -149,8 +149,8 @@ export class GedcomImportService {
         for (const family of families) {
           const familyUnit = await tx.familyUnit.upsert({
             where: {
-              workspaceId_gedcomXref: {
-                workspaceId,
+              familyspaceId_gedcomXref: {
+                familyspaceId,
                 gedcomXref: family.xref,
               },
             },
@@ -160,7 +160,7 @@ export class GedcomImportService {
               divorceDate: family.divorceDate,
             },
             create: {
-              workspaceId,
+              familyspaceId,
               gedcomXref: family.xref,
               marriageDate: family.marriageDate,
               marriagePlace: family.marriagePlace,

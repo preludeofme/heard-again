@@ -88,7 +88,7 @@ export function logSecurityEvent(
 // Audit logging helper (for compliance)
 export function logAuditEvent(
   action: string,
-  workspaceId: string,
+  familyspaceId: string,
   userId: string,
   resourceType: string,
   resourceId: string,
@@ -98,7 +98,7 @@ export function logAuditEvent(
   _pinoLogger.info({
     audit: true,
     action,
-    workspaceId,
+    familyspaceId,
     userId,
     resourceType,
     resourceId,

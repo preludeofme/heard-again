@@ -2,13 +2,13 @@ import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { ttsRequest } from '@/lib/tts-client'
 import { prisma } from '@/lib/prisma'
-import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 import { withMFAProtection, SENSITIVE_OPERATIONS } from '@/lib/security/mfa'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
 
 async function trainVoiceHandler(req: NextApiRequest, res: NextApiResponse) {
-  const user = await getAuthUserWithWorkspace(req, res)
-  await requireWorkspaceRole(user.id, user.workspaceId, 'EDITOR')
+  const user = await getAuthUserWithFamilyspace(req, res)
+  await requireFamilyspaceRole(user.id, user.familyspaceId, 'EDITOR')
 
   const { samples, language, modelName, styleInstruct, personId } = req.body
 
@@ -18,7 +18,7 @@ async function trainVoiceHandler(req: NextApiRequest, res: NextApiResponse) {
 
   if (personId) {
     const person = await prisma.person.findFirst({
-      where: { id: personId, workspaceId: user.workspaceId },
+      where: { id: personId, familyspaceId: user.familyspaceId },
       select: { id: true },
     })
     if (!person) {
@@ -27,14 +27,28 @@ async function trainVoiceHandler(req: NextApiRequest, res: NextApiResponse) {
   }
 
   // In Qwen3-TTS, "training" is really creating a voice profile from reference audio.
-  // We use the first sample's fileId to create the voice profile.
-  const primaryFileId = samples[0]
+  // We use the first sample's assetId to create the voice profile.
+  const primaryAssetId = samples[0]
+
+  // Retrieve the asset to get the internal TTS fileId
+  const asset = await prisma.asset.findUnique({
+    where: { id: primaryAssetId },
+    select: { id: true, filename: true, metadata: true }
+  })
+
+  if (!asset) {
+    throw Errors.notFound('Audio sample asset not found')
+  }
+
+  // Get the TTS fileId from metadata or fallback to filename parsing
+  const metadata = asset.metadata as any
+  const ttsFileId = metadata?.ttsFileId || asset.filename.split('.')[0]
 
   const data = await ttsRequest('/api/tts/create-voice-profile', {
     method: 'POST',
-    workspaceId: user.workspaceId,
+    familyspaceId: user.familyspaceId,
     body: {
-      fileId: primaryFileId,
+      fileId: ttsFileId,
       refText: null,
       profileName: modelName || `voice_${Date.now()}`,
       styleInstruct: styleInstruct || null,
@@ -46,7 +60,7 @@ async function trainVoiceHandler(req: NextApiRequest, res: NextApiResponse) {
 
   const profile = await prisma.voiceProfile.create({
     data: {
-      workspaceId: user.workspaceId,
+      familyspaceId: user.familyspaceId,
       createdById: user.id,
       personId: personId || null,
       name: modelName || `voice_${Date.now()}`,
@@ -57,7 +71,8 @@ async function trainVoiceHandler(req: NextApiRequest, res: NextApiResponse) {
       engineVersion: language || 'English',
       styleParams: data.styleParams || null,
       status: 'READY',
-      externalId: ttsProfileId, // Store TTS profile ID here (no FK constraint)
+      externalId: ttsProfileId,
+      sourceAssetId: asset.id, // Link the actual database asset ID
     },
   })
 

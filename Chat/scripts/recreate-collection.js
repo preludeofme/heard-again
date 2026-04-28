@@ -4,7 +4,7 @@ async function recreateCollection() {
   const client = new ChromaClient({ path: 'http://localhost:8004' });
   
   try {
-    const collectionName = 'workspace_931638b2-8341-41fc-a064-0883a9911d54_documents';
+    const collectionName = 'familyspace_931638b2-8341-41fc-a064-0883a9911d54_documents';
     
     // Delete existing collection
     try {

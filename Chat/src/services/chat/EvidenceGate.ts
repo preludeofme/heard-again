@@ -54,7 +54,7 @@ export class EvidenceGateImpl implements EvidenceGate {
       distinctSources >= appliedThresholds.minSources
 
     return {
-      workspaceId: context.workspaceId,
+      familyspaceId: context.familyspaceId,
       personId: context.personId ?? '',
       query,
       retrievedAt: new Date(),

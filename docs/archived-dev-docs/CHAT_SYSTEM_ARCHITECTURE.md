@@ -114,7 +114,7 @@ graph TD
 ```typescript
 // Handles standard POST requests for immediate responses
 POST /api/chat/messages
-Headers: x-workspace-id, x-user-id, authorization
+Headers: x-familyspace-id, x-user-id, authorization
 Body: { sessionId, message, options? }
 Response: { success, response, message }
 ```
@@ -123,7 +123,7 @@ Response: { success, response, message }
 ```typescript
 // Handles Server-Sent Events for real-time streaming
 POST /api/chat/stream
-Headers: x-workspace-id, x-user-id, authorization
+Headers: x-familyspace-id, x-user-id, authorization
 Body: { sessionId, message, options? }
 Response: SSE events: start, chunk, metadata, end, error
 ```
@@ -132,11 +132,11 @@ Response: SSE events: start, chunk, metadata, end, error
 
 ```typescript
 // Session validation
-const session = await chatService.getSession(sessionId, userId, workspaceId)
+const session = await chatService.getSession(sessionId, userId, familyspaceId)
 if (!session) throw new Error('Session not found')
 
 // Persona profile retrieval
-const personaProfile = await personaService.getPersonaProfile(session.personId, session.workspaceId)
+const personaProfile = await personaService.getPersonaProfile(session.personId, session.familyspaceId)
 if (!personaProfile) throw new Error('Persona profile not found')
 
 // User message storage
@@ -150,7 +150,7 @@ const userMessage = await chatService.storeUserMessage(sessionId, message)
 const retrievedDocuments = await retrievalService.searchDocuments(
   request.message,
   {
-    workspaceId: session.workspaceId,
+    familyspaceId: session.familyspaceId,
     personId: session.personId,
     maxResults: request.options?.maxRetrievedDocuments ?? 5
   }

@@ -1,7 +1,7 @@
 import crypto from 'crypto'
 
 export interface ConsentTokenPayload {
-  workspaceId: string
+  familyspaceId: string
   profileId: string
   consentId: string
   exp: number // Expiration timestamp

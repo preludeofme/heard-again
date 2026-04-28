@@ -5,7 +5,7 @@ const { PrismaClient } = require('@prisma/client');
 const { Queue } = require('bullmq');
 const { v4: uuidv4 } = require('uuid');
 
-const WORKSPACE_ID = '931638b2-8341-41fc-a064-0883a9911d54';
+const FAMILYSPACE_ID = '931638b2-8341-41fc-a064-0883a9911d54';
 const PERSON_ID = '6967b35d-a6fb-46d4-9cb5-4965c8f36c6c';
 
 async function reingest() {
@@ -16,7 +16,7 @@ async function reingest() {
     // Get the two documents linked to the person
     const docs = await prisma.document.findMany({
       where: { 
-        workspaceId: WORKSPACE_ID,
+        familyspaceId: FAMILYSPACE_ID,
         personId: PERSON_ID,
         title: { in: ["Dad's jobs.docx", "Dad Story - addendum.docx"] }
       },
@@ -39,9 +39,9 @@ async function reingest() {
       const traceId = uuidv4();
       const job = await queue.add('process-document', {
         documentId: doc.id,
-        filePath: `/home/trubuck-design/Projects/Personal/heard-again/Chat/temp-ingestion/${WORKSPACE_ID}/${doc.id}.docx`,
+        filePath: `/home/trubuck-design/Projects/Personal/heard-again/Chat/temp-ingestion/${FAMILYSPACE_ID}/${doc.id}.docx`,
         mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        workspaceId: WORKSPACE_ID,
+        familyspaceId: FAMILYSPACE_ID,
         title: doc.title,
         personId: PERSON_ID,
         traceId,

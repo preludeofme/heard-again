@@ -1,16 +1,16 @@
 import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { ttsRequest } from '@/lib/tts-client'
-import { getAuthUserWithWorkspace } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace } from '@/lib/auth-helpers'
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
   try {
-    const user = await getAuthUserWithWorkspace(req, res)
+    const user = await getAuthUserWithFamilyspace(req, res)
     const data = await ttsRequest('/api/tts/voice-profiles', {
-      workspaceId: user.workspaceId,
+      familyspaceId: user.familyspaceId,
     })
 
     // Map TTS service profiles to the VoiceModel shape expected by the frontend

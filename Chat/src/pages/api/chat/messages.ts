@@ -15,13 +15,13 @@ export default async function handler(
   }
 
   try {
-    // Extract workspace and user info from headers
-    const workspaceId = req.headers['x-workspace-id'] as string
+    // Extract familyspace and user info from headers
+    const familyspaceId = req.headers['x-familyspace-id'] as string
     const userId = req.headers['x-user-id'] as string
 
-    if (!workspaceId || !userId) {
+    if (!familyspaceId || !userId) {
       return res.status(400).json({ 
-        error: 'Missing required headers: x-workspace-id, x-user-id' 
+        error: 'Missing required headers: x-familyspace-id, x-user-id' 
       })
     }
 
@@ -29,9 +29,9 @@ export default async function handler(
 
     switch (req.method) {
       case 'GET':
-        return await handleGetMessages(chatService, sessionId, req.query, res, userId, workspaceId)
+        return await handleGetMessages(chatService, sessionId, req.query, res, userId, familyspaceId)
       case 'POST':
-        return await handleSendMessage(chatService, sessionId, workspaceId, userId, req.body, res)
+        return await handleSendMessage(chatService, sessionId, familyspaceId, userId, req.body, res)
       default:
         return res.status(405).json({ error: 'Method not allowed' })
     }
@@ -50,20 +50,20 @@ async function handleGetMessages(
   query: any,
   res: NextApiResponse,
   userId: string,
-  workspaceId: string
+  familyspaceId: string
 ) {
   try {
     const limit = parseInt(query.limit as string) || 50
     const offset = parseInt(query.offset as string) || 0
 
-    // Verify session exists and belongs to this workspace (SEC-3).
-    // userId ownership is enforced at the UI proxy layer; here we scope to workspace only.
-    const session = await chatService.getSession(sessionId, undefined, workspaceId)
+    // Verify session exists and belongs to this familyspace (SEC-3).
+    // userId ownership is enforced at the UI proxy layer; here we scope to familyspace only.
+    const session = await chatService.getSession(sessionId, undefined, familyspaceId)
     if (!session) {
       return res.status(404).json({ error: 'Chat session not found' })
     }
 
-    const messages = await chatService.getHistory(sessionId, limit, offset, workspaceId)
+    const messages = await chatService.getHistory(sessionId, limit, offset, familyspaceId)
     
     res.status(200).json({
       success: true,
@@ -87,7 +87,7 @@ async function handleGetMessages(
 async function handleSendMessage(
   chatService: any,
   sessionId: string,
-  workspaceId: string,
+  familyspaceId: string,
   userId: string,
   body: any,
   res: NextApiResponse
@@ -113,8 +113,8 @@ async function handleSendMessage(
       })
     }
 
-    // Verify session exists and belongs to this user/workspace (SEC-3)
-    const session = await chatService.getSession(sessionId, userId, workspaceId)
+    // Verify session exists and belongs to this user/familyspace (SEC-3)
+    const session = await chatService.getSession(sessionId, userId, familyspaceId)
     if (!session) {
       return res.status(404).json({ error: 'Chat session not found' })
     }

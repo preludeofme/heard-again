@@ -1,8 +1,9 @@
-import React from 'react'
-import { Box, Typography, IconButton } from '@mui/material'
-import { Replay10, Forward30, PlayArrow } from '@mui/icons-material'
+import React, { useState, useRef } from 'react'
+import { Box, Typography, IconButton, CircularProgress } from '@mui/material'
+import { Replay10, Forward30, PlayArrow, Stop } from '@mui/icons-material'
 import Link from 'next/link'
 import { ProfileColors, WAVEFORM_HEIGHTS } from './ProfileConstants'
+import { fetchWithCSRFAndJSON } from '@/lib/api-client'
 
 interface VoiceSignatureProps {
   personId?: string
@@ -27,6 +28,51 @@ export function VoiceSignature({
   const defaultVoice = voiceProfiles?.find(v => v.isDefault) ?? voiceProfiles?.[0] ?? null
   const hasClonedVoice = !!defaultVoice?.isCloned
   const hasAnyVoice = voiceProfiles && voiceProfiles.length > 0
+  
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [isSynthesizing, setIsSynthesizing] = useState(false)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+
+  const handlePlaySample = async () => {
+    if (isPlaying) {
+      if (audioRef.current) {
+        audioRef.current.pause()
+        audioRef.current = null
+      }
+      setIsPlaying(false)
+      return
+    }
+
+    if (!defaultVoice) return
+
+    setIsSynthesizing(true)
+    try {
+      const response = await fetchWithCSRFAndJSON('/api/voice/synthesize', {
+        modelId: defaultVoice.id,
+        text: `Hello, this is a sample of my digital voice clone for ${firstName || 'the family archive'}.`,
+      })
+
+      if (!response.ok) throw new Error('Failed to synthesize')
+      
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      const audio = new Audio(url)
+      audioRef.current = audio
+      
+      audio.onended = () => {
+        setIsPlaying(false)
+        audioRef.current = null
+        URL.revokeObjectURL(url)
+      }
+
+      setIsPlaying(true)
+      audio.play()
+    } catch (err) {
+      console.error('Playback failed:', err)
+    } finally {
+      setIsSynthesizing(false)
+    }
+  }
 
   return (
     <Box
@@ -61,22 +107,43 @@ export function VoiceSignature({
             <Box sx={{ bgcolor: ProfileColors.secondaryContainer, color: ProfileColors.onSecondaryContainer, px: 2, py: 0.5, borderRadius: '9999px', fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', fontFamily: 'var(--font-manrope), sans-serif' }}>
               Voice Profile
             </Box>
-          ) : null}
+          ) : (
+            <Box sx={{ bgcolor: '#fff3e0', color: '#e65100', px: 2, py: 0.5, borderRadius: '9999px', fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', fontFamily: 'var(--font-manrope), sans-serif' }}>
+              Model Needed
+            </Box>
+          )}
         </Box>
 
         {/* Waveform */}
         <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: '4px', height: 88, mb: 4 }}>
-          {WAVEFORM_HEIGHTS.map((h, i) => (
-            <Box
-              key={i}
-              sx={{
-                flex: 1,
-                height: h * 3.5,
-                borderRadius: '9999px',
-                bgcolor: i >= 2 && i <= 6 ? ProfileColors.primary : ProfileColors.tertiaryFixedDim,
-              }}
-            />
-          ))}
+          {hasAnyVoice ? (
+            WAVEFORM_HEIGHTS.map((h, i) => (
+              <Box
+                key={i}
+                sx={{
+                  flex: 1,
+                  height: h * 3.5,
+                  borderRadius: '9999px',
+                  bgcolor: i >= 2 && i <= 6 ? ProfileColors.primary : ProfileColors.tertiaryFixedDim,
+                  opacity: isPlaying ? 1 : 0.6,
+                  transition: 'height 0.2s',
+                  ...(isPlaying && {
+                    animation: `waveform-pulse ${0.5 + Math.random()}s ease-in-out infinite alternate`,
+                    '@keyframes waveform-pulse': {
+                      from: { height: h * 2 },
+                      to: { height: h * 5 },
+                    }
+                  })
+                }}
+              />
+            ))
+          ) : (
+            <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', border: '1px dashed #dcdad5', borderRadius: 4, bgcolor: 'rgba(0,0,0,0.02)' }}>
+              <Typography sx={{ fontFamily: 'var(--font-manrope), sans-serif', fontSize: '0.8rem', color: ProfileColors.onSurfaceVariant, opacity: 0.5 }}>
+                No voice pattern detected
+              </Typography>
+            </Box>
+          )}
         </Box>
 
         {/* Controls */}
@@ -85,26 +152,32 @@ export function VoiceSignature({
             <Replay10 sx={{ fontSize: 28 }} />
           </IconButton>
           <Box
-            component={Link}
-            href={isGlobal ? '/voice-lab' : `/voice-lab?personId=${personId}`}
+            onClick={hasAnyVoice ? handlePlaySample : undefined}
             sx={{
               width: 60,
               height: 60,
-              bgcolor: ProfileColors.primary,
+              bgcolor: hasAnyVoice ? ProfileColors.primary : '#dcdad5',
               color: '#fff',
               borderRadius: '50%',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               textDecoration: 'none',
-              boxShadow: '0 6px 24px rgba(22,51,74,0.3)',
+              boxShadow: hasAnyVoice ? '0 6px 24px rgba(22,51,74,0.3)' : 'none',
               transition: 'transform 0.15s, opacity 0.15s',
-              '&:hover': { opacity: 0.9 },
-              '&:active': { transform: 'scale(0.92)' },
+              cursor: hasAnyVoice ? 'pointer' : 'default',
+              '&:hover': hasAnyVoice ? { opacity: 0.9 } : {},
+              '&:active': hasAnyVoice ? { transform: 'scale(0.92)' } : {},
             }}
             aria-label="Play voice sample"
           >
-            <PlayArrow sx={{ fontSize: 34 }} />
+            {isSynthesizing ? (
+              <CircularProgress size={24} color="inherit" />
+            ) : isPlaying ? (
+              <Stop sx={{ fontSize: 34 }} />
+            ) : (
+              <PlayArrow sx={{ fontSize: 34 }} />
+            )}
           </Box>
           <IconButton sx={{ color: ProfileColors.primary, opacity: 0.35 }} aria-label="Forward 30 seconds">
             <Forward30 sx={{ fontSize: 28 }} />

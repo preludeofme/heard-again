@@ -122,7 +122,7 @@ If retrieval does not pass sufficiency thresholds, the pipeline must skip genera
 
 ```ts
 type EvidencePacket = {
-  workspaceId: string
+  familyspaceId: string
   personId: string
   query: string
   retrievedAt: string
@@ -156,7 +156,7 @@ These are starting values and must be tuned through evaluation.
 
 ### Retrieval Rules
 
-- Scope by `workspaceId` and `personId`.
+- Scope by `familyspaceId` and `personId`.
 - Deduplicate near-identical chunks.
 - Keep final context bounded and citation-ready.
 - Never allow answer generation with zero valid evidence.
@@ -171,7 +171,7 @@ These are starting values and must be tuned through evaluation.
 type PersonaProfile = {
   id: string
   personId: string
-  workspaceId: string
+  familyspaceId: string
   displayName?: string
   status: 'draft' | 'active' | 'archived'
   writingStyle: {
@@ -195,7 +195,7 @@ type PersonaProfile = {
 ```ts
 type StoryRecord = {
   id: string
-  workspaceId: string
+  familyspaceId: string
   personId: string
   title: string
   storyText: string
@@ -213,7 +213,7 @@ type StoryRecord = {
 ```ts
 type QuoteRecord = {
   id: string
-  workspaceId: string
+  familyspaceId: string
   personId: string
   quoteText: string
   speaker?: string
@@ -230,7 +230,7 @@ type QuoteRecord = {
 ```ts
 type FactRecord = {
   id: string
-  workspaceId: string
+  familyspaceId: string
   personId: string
   type: 'biographical' | 'relationship' | 'preference' | 'experience' | 'achievement'
   fact: string
@@ -305,7 +305,7 @@ Final pipeline:
 Step behavior:
 
 1. User message received.
-2. Retrieve evidence scoped to workspace/persona.
+2. Retrieve evidence scoped to familyspace/persona.
 3. If retrieval fails thresholds: return `INSUFFICIENT_EVIDENCE` immediately.
 4. Build strict prompt with persona + evidence + response contract.
 5. Generate response with deterministic decoding.

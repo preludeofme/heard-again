@@ -19,7 +19,7 @@ export interface RetrievalService {
 }
 
 export interface SearchContext {
-  workspaceId: string
+  familyspaceId: string
   personId?: string
   sessionId?: string
   maxResults?: number
@@ -55,7 +55,7 @@ export interface RetrievedDocument {
 
 export interface Document {
   id: string
-  workspaceId: string
+  familyspaceId: string
   assetId?: string
   personId?: string
   title: string
@@ -127,7 +127,7 @@ export interface DocumentRepository {
   createDocument(document: Document): Promise<Document>
   updateDocument(document: Document): Promise<Document>
   deleteDocument(documentId: string): Promise<void>
-  listDocuments(workspaceId: string, filters?: any): Promise<Document[]>
+  listDocuments(familyspaceId: string, filters?: any): Promise<Document[]>
 }
 
 export interface EmbeddingGenerationRequest {

@@ -37,6 +37,8 @@ interface FamilyTreePageProps {
   onToggleFullscreen?: () => void
   initialSearchExpanded?: boolean
   initialSearchQuery?: string
+  onImportGedcom?: () => void
+  onExportGedcom?: () => void
 }
 
 const defaultFamilyData: FamilyTreeData = {
@@ -54,6 +56,8 @@ export function FamilyTreePage({
   onPeopleChanged,
   isFullscreen = false,
   onToggleFullscreen,
+  onImportGedcom,
+  onExportGedcom,
 }: FamilyTreePageProps) {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
@@ -244,6 +248,8 @@ export function FamilyTreePage({
         }}
         onOpenRelationshipEditor={handleOpenRelationshipEditor}
         onToggleFullscreen={onToggleFullscreen}
+        onImportGedcom={onImportGedcom}
+        onExportGedcom={onExportGedcom}
       />
 
       <FamilyTreeCanvas

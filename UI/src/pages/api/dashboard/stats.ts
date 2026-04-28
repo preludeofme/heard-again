@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse } from '@/lib/api-helpers'
-import { getAuthUserWithWorkspace } from '@/lib/auth-helpers'
-import type { WorkspaceRole } from '@prisma/client'
+import { getAuthUserWithFamilyspace } from '@/lib/auth-helpers'
+import type { FamilyspaceRole } from '@prisma/client'
 
 const ACTIVITY_WINDOW_DAYS = 14
 
@@ -15,9 +15,9 @@ interface ActivityEntry {
   actor: string
 }
 
-function dailySeed(workspaceId: string): number {
+function dailySeed(familyspaceId: string): number {
   const today = new Date().toISOString().slice(0, 10)
-  const key = `${workspaceId}-${today}`
+  const key = `${familyspaceId}-${today}`
   let h = 0
   for (let i = 0; i < key.length; i++) {
     h = (h * 31 + key.charCodeAt(i)) | 0
@@ -26,23 +26,23 @@ function dailySeed(workspaceId: string): number {
 }
 
 export default apiHandler({
-  // GET /api/dashboard/stats - Workspace landing page payload
+  // GET /api/dashboard/stats - Familyspace landing page payload
   GET: async (req, res) => {
-    const user = await getAuthUserWithWorkspace(req, res)
-    const workspaceId = user.workspaceId
+    const user = await getAuthUserWithFamilyspace(req, res)
+    const familyspaceId = user.familyspaceId
 
     const membership = await prisma.membership.findUnique({
-      where: { workspaceId_userId: { workspaceId, userId: user.id } },
+      where: { familyspaceId_userId: { familyspaceId, userId: user.id } },
       select: { role: true },
     })
 
-    const role: WorkspaceRole = membership?.role ?? 'VIEWER'
+    const role: FamilyspaceRole = membership?.role ?? 'VIEWER'
     const isAdminOrOwner = role === 'OWNER' || role === 'ADMIN'
 
     const activitySince = new Date(Date.now() - ACTIVITY_WINDOW_DAYS * 24 * 60 * 60 * 1000)
 
     const [
-      workspace,
+      familyspace,
       peopleCount,
       storiesCount,
       voiceProfileCount,
@@ -63,18 +63,18 @@ export default apiHandler({
       untaggedStoriesCount,
       featuredPersonCandidates,
     ] = await Promise.all([
-      prisma.workspace.findUnique({
-        where: { id: workspaceId },
+      prisma.familyspace.findUnique({
+        where: { id: familyspaceId },
         select: { id: true, name: true, planType: true },
       }),
-      prisma.person.count({ where: { workspaceId } }),
-      prisma.story.count({ where: { workspaceId, deletedAt: null } }),
-      prisma.voiceProfile.count({ where: { workspaceId, deletedAt: null } }),
-      prisma.story.count({ where: { workspaceId, status: 'PUBLISHED', deletedAt: null } }),
-      prisma.story.count({ where: { workspaceId, status: 'DRAFT', deletedAt: null } }),
-      prisma.document.count({ where: { workspaceId, isDeleted: false } }),
+      prisma.person.count({ where: { familyspaceId } }),
+      prisma.story.count({ where: { familyspaceId, deletedAt: null } }),
+      prisma.voiceProfile.count({ where: { familyspaceId, deletedAt: null } }),
+      prisma.story.count({ where: { familyspaceId, status: 'PUBLISHED', deletedAt: null } }),
+      prisma.story.count({ where: { familyspaceId, status: 'DRAFT', deletedAt: null } }),
+      prisma.document.count({ where: { familyspaceId, isDeleted: false } }),
       prisma.story.findMany({
-        where: { workspaceId, deletedAt: null },
+        where: { familyspaceId, deletedAt: null },
         select: {
           id: true,
           title: true,
@@ -86,14 +86,21 @@ export default apiHandler({
           tags: true,
           createdAt: true,
           generatedAudioAssetId: true,
-          subject: { select: { id: true, firstName: true, lastName: true } },
+          subject: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              avatarAsset: { select: { id: true } },
+            },
+          },
           createdBy: { select: { id: true, displayName: true } },
         },
         orderBy: [{ isPinned: 'desc' }, { createdAt: 'desc' }],
         take: 8,
       }),
       prisma.person.findMany({
-        where: { workspaceId },
+        where: { familyspaceId },
         select: {
           id: true,
           firstName: true,
@@ -107,13 +114,13 @@ export default apiHandler({
         take: 8,
       }),
       prisma.story.findFirst({
-        where: { workspaceId, status: 'DRAFT', createdById: user.id, deletedAt: null },
+        where: { familyspaceId, status: 'DRAFT', createdById: user.id, deletedAt: null },
         select: { id: true, title: true, updatedAt: true, subjectId: true },
         orderBy: { updatedAt: 'desc' },
       }),
       prisma.voiceGenerationJob.findFirst({
         where: {
-          voiceProfile: { workspaceId },
+          voiceProfile: { familyspaceId },
           status: { in: ['QUEUED', 'PROCESSING'] },
         },
         select: {
@@ -125,12 +132,12 @@ export default apiHandler({
         orderBy: { queuedAt: 'desc' },
       }),
       isAdminOrOwner
-        ? prisma.workspaceInvite.count({ where: { workspaceId, status: 'PENDING' } })
+        ? prisma.familyspaceInvite.count({ where: { familyspaceId, status: 'PENDING' } })
         : Promise.resolve(0),
-      prisma.membership.count({ where: { workspaceId } }),
+      prisma.membership.count({ where: { familyspaceId } }),
       // Recent comments
       prisma.storyComment.findMany({
-        where: { workspaceId, createdAt: { gte: activitySince } },
+        where: { familyspaceId, createdAt: { gte: activitySince } },
         select: {
           id: true,
           content: true,
@@ -143,7 +150,7 @@ export default apiHandler({
       }),
       // Recent uploads (assets)
       prisma.asset.findMany({
-        where: { workspaceId, createdAt: { gte: activitySince }, isAISynthesized: false },
+        where: { familyspaceId, createdAt: { gte: activitySince }, isAISynthesized: false },
         select: {
           id: true,
           originalName: true,
@@ -157,7 +164,7 @@ export default apiHandler({
       // Recent completed voice generations
       prisma.voiceGenerationJob.findMany({
         where: {
-          voiceProfile: { workspaceId },
+          voiceProfile: { familyspaceId },
           status: 'COMPLETED',
           completedAt: { gte: activitySince },
         },
@@ -172,21 +179,21 @@ export default apiHandler({
       }),
       // Suggestion: a person with no stories
       prisma.person.findFirst({
-        where: { workspaceId, storiesAsSubject: { none: {} } },
+        where: { familyspaceId, storiesAsSubject: { none: {} } },
         select: { id: true, firstName: true, lastName: true, displayName: true },
         orderBy: { createdAt: 'asc' },
       }),
       // Suggestion: a living person without a voice profile
       prisma.person.findFirst({
-        where: { workspaceId, isDeceased: false, voiceProfiles: { none: {} } },
+        where: { familyspaceId, isDeceased: false, voiceProfiles: { none: {} } },
         select: { id: true, firstName: true, lastName: true, displayName: true },
         orderBy: { createdAt: 'asc' },
       }),
       // Suggestion: untagged stories count
-      prisma.story.count({ where: { workspaceId, tags: { isEmpty: true }, deletedAt: null } }),
+      prisma.story.count({ where: { familyspaceId, tags: { isEmpty: true }, deletedAt: null } }),
       // Featured person pool (people with at least one story; fall back happens below)
       prisma.person.findMany({
-        where: { workspaceId, storiesAsSubject: { some: { deletedAt: null } } },
+        where: { familyspaceId, storiesAsSubject: { some: { deletedAt: null } } },
         select: {
           id: true,
           firstName: true,
@@ -218,6 +225,7 @@ export default apiHandler({
         ? {
             id: s.subject.id,
             name: `${s.subject.firstName}${s.subject.lastName ? ' ' + s.subject.lastName : ''}`,
+            avatarAssetId: s.subject.avatarAsset?.id ?? null,
           }
         : null,
       createdBy: s.createdBy?.displayName || 'Unknown',
@@ -276,7 +284,7 @@ export default apiHandler({
     // Pick featured person deterministically per day
     let featuredPerson = null
     if (featuredPersonCandidates.length > 0) {
-      const seed = dailySeed(workspaceId)
+      const seed = dailySeed(familyspaceId)
       const pick = featuredPersonCandidates[seed % featuredPersonCandidates.length]
       featuredPerson = {
         id: pick.id,
@@ -322,10 +330,10 @@ export default apiHandler({
     }
 
     return successResponse(res, {
-      workspace: {
-        id: workspaceId,
-        name: workspace?.name ?? 'Family Vault',
-        planType: workspace?.planType ?? 'FREE',
+      familyspace: {
+        id: familyspaceId,
+        name: familyspace?.name ?? 'Family Vault',
+        planType: familyspace?.planType ?? 'FREE',
       },
       userContext: {
         userId: user.id,

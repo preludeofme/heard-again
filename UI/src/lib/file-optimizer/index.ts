@@ -41,8 +41,11 @@ export class FileOptimizer {
   ): Promise<OptimizationResult> {
     const originalSize = file.length
 
-    // Skip optimization if file is already small enough
-    if (options.maxFileSize && originalSize <= options.maxFileSize) {
+    // Skip optimization only if the file is already extremely small (e.g., thumbnails or icons)
+    // defined by options.maxFileSize (default to skipping if < 50KB if not specified)
+    const bypassThreshold = options.maxFileSize || 50 * 1024; 
+    
+    if (originalSize <= bypassThreshold && !options.quality && !options.maxWidth) {
       return {
         optimizedFile: file,
         originalSize,

@@ -1,11 +1,11 @@
 import { logger } from '@/lib/logger'
 import { NextApiRequest, NextApiResponse } from 'next'
-import { getAuthUserWithWorkspace } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace } from '@/lib/auth-helpers'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    // Authenticate user and get workspace context
-    const user = await getAuthUserWithWorkspace(req, res)
+    // Authenticate user and get familyspace context
+    const user = await getAuthUserWithFamilyspace(req, res)
     if (!user) return
 
     const { personId } = req.query
@@ -24,7 +24,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${process.env.CHAT_SERVICE_SECRET}`,
-        'x-workspace-id': user.workspaceId,
+        'x-familyspace-id': user.familyspaceId,
         'x-user-id': user.id,
       },
       credentials: 'include',

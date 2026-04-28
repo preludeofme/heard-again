@@ -25,13 +25,13 @@ export default async function handler(
   }
 
   try {
-    // Extract workspace and user info from headers
-    const workspaceId = req.headers['x-workspace-id'] as string
+    // Extract familyspace and user info from headers
+    const familyspaceId = req.headers['x-familyspace-id'] as string
     const userId = req.headers['x-user-id'] as string
 
-    if (!workspaceId || !userId) {
+    if (!familyspaceId || !userId) {
       return res.status(400).json({ 
-        error: 'Missing required headers: x-workspace-id, x-user-id' 
+        error: 'Missing required headers: x-familyspace-id, x-user-id' 
       })
     }
 
@@ -71,9 +71,9 @@ export default async function handler(
 
     const chatService = ServiceFactory.getChatService()
 
-    // Verify session exists and belongs to this workspace (SEC-3).
-    // userId ownership is enforced at the UI proxy layer; here we scope to workspace only.
-    const session = await chatService.getSession(sessionId, undefined, workspaceId)
+    // Verify session exists and belongs to this familyspace (SEC-3).
+    // userId ownership is enforced at the UI proxy layer; here we scope to familyspace only.
+    const session = await chatService.getSession(sessionId, undefined, familyspaceId)
     if (!session) {
       res.write(`event: error\ndata: ${JSON.stringify({ error: 'Chat session not found' })}\n\n`)
       res.end()

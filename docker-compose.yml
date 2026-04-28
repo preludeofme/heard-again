@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # Chat System — internal only, not reachable from the host
   chat:

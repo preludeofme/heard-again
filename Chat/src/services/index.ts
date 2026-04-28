@@ -107,9 +107,9 @@ class ChatRepositoryImpl implements ChatRepository {
     return await prismaRepo.createSession(session)
   }
 
-  async getSession(sessionId: string, userId?: string, workspaceId?: string): Promise<ChatSession | null> {
+  async getSession(sessionId: string, userId?: string, familyspaceId?: string): Promise<ChatSession | null> {
     const prismaRepo = new PrismaChatRepository()
-    return await prismaRepo.getSession(sessionId, userId, workspaceId)
+    return await prismaRepo.getSession(sessionId, userId, familyspaceId)
   }
 
   async updateSession(session: ChatSession): Promise<ChatSession> {
@@ -122,9 +122,9 @@ class ChatRepositoryImpl implements ChatRepository {
     return await prismaRepo.deleteSession(sessionId)
   }
 
-  async listSessions(workspaceId: string, userId: string): Promise<ChatSession[]> {
+  async listSessions(familyspaceId: string, userId: string): Promise<ChatSession[]> {
     const prismaRepo = new PrismaChatRepository()
-    return await prismaRepo.listSessions(workspaceId, userId)
+    return await prismaRepo.listSessions(familyspaceId, userId)
   }
 
   async addMessage(message: ChatMessage): Promise<ChatMessage> {
@@ -132,9 +132,9 @@ class ChatRepositoryImpl implements ChatRepository {
     return await prismaRepo.addMessage(message)
   }
 
-  async getMessages(sessionId: string, limit?: number, offset?: number, userId?: string, workspaceId?: string): Promise<ChatMessage[]> {
+  async getMessages(sessionId: string, limit?: number, offset?: number, userId?: string, familyspaceId?: string): Promise<ChatMessage[]> {
     const prismaRepo = new PrismaChatRepository()
-    return await prismaRepo.getMessages(sessionId, limit, offset, userId, workspaceId)
+    return await prismaRepo.getMessages(sessionId, limit, offset, userId, familyspaceId)
   }
 
   async updateMessage(messageId: string, content: string, metadata?: any): Promise<ChatMessage | null> {

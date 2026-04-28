@@ -6,11 +6,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!verifyServiceToken(req, res)) return
 
   const { sessionId } = req.query
-  const workspaceId = req.headers['x-workspace-id'] as string
+  const familyspaceId = req.headers['x-familyspace-id'] as string
   const userId = req.headers['x-user-id'] as string
 
-  if (!workspaceId || !userId) {
-    return res.status(400).json({ error: 'Missing required headers: x-workspace-id, x-user-id' })
+  if (!familyspaceId || !userId) {
+    return res.status(400).json({ error: 'Missing required headers: x-familyspace-id, x-user-id' })
   }
 
   if (!sessionId || typeof sessionId !== 'string') {
@@ -22,8 +22,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     switch (req.method) {
       case 'GET': {
-        // SEC-3: ownership enforced via userId + workspaceId
-        const session = await chatService.getSession(sessionId, userId, workspaceId)
+        // SEC-3: ownership enforced via userId + familyspaceId
+        const session = await chatService.getSession(sessionId, userId, familyspaceId)
         if (!session) {
           return res.status(404).json({ success: false, error: 'Session not found' })
         }
@@ -31,7 +31,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       case 'DELETE': {
-        const session = await chatService.getSession(sessionId, userId, workspaceId)
+        const session = await chatService.getSession(sessionId, userId, familyspaceId)
         if (!session) {
           return res.status(404).json({ success: false, error: 'Session not found' })
         }
@@ -40,7 +40,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       case 'PATCH': {
-        const session = await chatService.getSession(sessionId, userId, workspaceId)
+        const session = await chatService.getSession(sessionId, userId, familyspaceId)
         if (!session) {
           return res.status(404).json({ success: false, error: 'Session not found' })
         }

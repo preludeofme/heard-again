@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '@/lib/prisma'
-import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 import { logger } from '@/lib/logger'
 import { getNarrationQueue, narrationDedupeKey } from '@/lib/queues/narrationQueue'
 
@@ -47,12 +47,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   let user
   try {
-    user = await getAuthUserWithWorkspace(req, res)
+    user = await getAuthUserWithFamilyspace(req, res)
   } catch {
     return
   }
 
-  await requireWorkspaceRole(user.id, user.workspaceId, 'VIEWER')
+  await requireFamilyspaceRole(user.id, user.familyspaceId, 'VIEWER')
 
   const jobId = req.query.id as string
   if (!jobId) {
@@ -62,7 +62,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const dbJob = await prisma.voiceGenerationJob.findFirst({
     where: {
       id: jobId,
-      story: { workspaceId: user.workspaceId },
+      story: { familyspaceId: user.familyspaceId },
     },
     select: {
       id: true,

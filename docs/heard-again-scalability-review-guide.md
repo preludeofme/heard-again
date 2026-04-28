@@ -48,7 +48,7 @@ User hosts:
 
 Heard Again provides:
 - secure remote routing through `heardagain.com`
-- central auth and workspace identity
+- central auth and familyspace identity
 - optional billing enforcement
 - optional cloud compute
 
@@ -72,7 +72,7 @@ The system should be designed around three planes:
 ## 2.1 Control Plane
 Handles:
 - authentication
-- workspace/account identity
+- familyspace/account identity
 - subscriptions and billing
 - instance registration
 - tunnel registration
@@ -89,7 +89,7 @@ Stores:
 - uploaded recordings
 - generated audio
 - collections
-- workspace content
+- familyspace content
 
 This may live:
 - in Heard Again cloud
@@ -126,15 +126,15 @@ The system must behave like one product with different deployment options, not t
 
 ### Review Questions
 - Is the same domain model used in all deployment modes?
-- Can a workspace move from self-hosted to cloud-hosted without a full redesign?
-- Can a self-hosted workspace use cloud compute without duplicating data models?
+- Can a familyspace move from self-hosted to cloud-hosted without a full redesign?
+- Can a self-hosted familyspace use cloud compute without duplicating data models?
 - Are deployment-specific concerns abstracted behind interfaces?
 
 ## 3.2 Strict Separation of Stateful vs Stateless Services
 Stateful services:
 - database
 - file/object storage
-- workspace content
+- familyspace content
 - voice assets
 - relationship graph
 
@@ -196,7 +196,7 @@ The API layer must be horizontally scalable.
 The database will become a bottleneck before compute if relationships, memberships, stories, assets, and permissions are not indexed well.
 
 ### Requirements
-- clear tenant/workspace boundary
+- clear tenant/familyspace boundary
 - indexing on all hot lookup paths
 - support for pagination everywhere
 - avoid unbounded eager loading
@@ -204,7 +204,7 @@ The database will become a bottleneck before compute if relationships, membershi
 - store files in object storage, not DB rows
 
 ### Review Questions
-- Is every major content table scoped by workspace?
+- Is every major content table scoped by familyspace?
 - Are foreign keys and indexes present on common filters?
 - Are list endpoints paginated and sortable?
 - Are relationship-heavy queries bounded?
@@ -243,7 +243,7 @@ Caching should be applied carefully.
 - anything tenant-sensitive without strong key scoping
 
 ### Review Questions
-- Is caching scoped by tenant/workspace?
+- Is caching scoped by tenant/familyspace?
 - Are permission changes invalidating caches?
 - Is the source of truth always clear?
 
@@ -335,7 +335,7 @@ Self-hosted instances should register themselves with the platform.
 
 ### Required capabilities
 - instance ID
-- workspace binding
+- familyspace binding
 - token or certificate-based auth
 - heartbeat
 - version reporting
@@ -355,14 +355,14 @@ Tunnel access should require both:
 
 ### Requirements
 - short-lived session tokens
-- workspace-aware access checks
+- familyspace-aware access checks
 - role-aware access checks
 - no permanent shared tunnel secret in browser
 - revocation support
 
 ### Review Questions
 - If membership is revoked, does access end quickly?
-- Are access sessions scoped to workspace and instance?
+- Are access sessions scoped to familyspace and instance?
 - Are logs available for access activity?
 
 ## 6.4 Self-Hosted Data Ownership
@@ -384,10 +384,10 @@ Hybrid mode must not accidentally become cloud storage by default.
 # 7. Multi-Tenancy Requirements
 
 ## 7.1 Tenant Isolation
-Workspace isolation is non-negotiable.
+Familyspace isolation is non-negotiable.
 
 ### Requirements
-- every tenant-owned record must be workspace-scoped
+- every tenant-owned record must be familyspace-scoped
 - authorization must be enforced server-side
 - no cross-tenant query leakage
 - object storage paths should be tenant-aware
@@ -395,18 +395,18 @@ Workspace isolation is non-negotiable.
 
 ### Review Questions
 - Is every read/write path tenant scoped?
-- Can a user access another workspace by ID guessing?
-- Are storage keys namespaced by workspace?
+- Can a user access another familyspace by ID guessing?
+- Are storage keys namespaced by familyspace?
 
 ## 7.2 Permission Model
 Do not rely on frontend checks.
 
 ### Requirements
 - centralized authorization layer
-- workspace membership required
+- familyspace membership required
 - role checks enforced in backend
 - invitation flow separate from active membership
-- story/person/asset operations validated against workspace ownership
+- story/person/asset operations validated against familyspace ownership
 
 ### Review Questions
 - Is authorization duplicated inconsistently across handlers?
@@ -632,7 +632,7 @@ The system must produce structured logs.
 
 ### Required fields
 - request ID
-- workspace ID
+- familyspace ID
 - user ID when available
 - instance ID when relevant
 - job ID when relevant
@@ -686,7 +686,7 @@ The implementation agent should explicitly verify the following.
 - Appropriate indexes on hot queries
 
 ## Database
-- Workspace scoping on tenant tables
+- Familyspace scoping on tenant tables
 - No blob storage in relational DB
 - Query plans checked for major list/detail screens
 - No N+1 on primary views
@@ -720,7 +720,7 @@ The implementation agent should explicitly verify the following.
 
 ## Security
 - Multi-tenant access checks centralized
-- Storage namespaced by workspace
+- Storage namespaced by familyspace
 - Cloud compute retention policy defined
 - Consent and voice usage checks enforced
 
@@ -745,7 +745,7 @@ The system should support movement between deployment modes.
 - cloud hosted -> export for self-hosting
 
 ### Review Questions
-- Is there an import/export path for complete workspace backup?
+- Is there an import/export path for complete familyspace backup?
 - Are deployment-specific IDs avoided in business records?
 - Can storage references survive migration?
 
@@ -756,7 +756,7 @@ The system should support movement between deployment modes.
 The architecture must protect margins as users grow.
 
 ## Requirements
-- generation usage tracked per workspace
+- generation usage tracked per familyspace
 - compute jobs metered
 - storage growth measured
 - replay/listening separated from generation cost

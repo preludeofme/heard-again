@@ -1,11 +1,11 @@
 import { logger } from '@/lib/logger'
 import { NextApiRequest, NextApiResponse } from 'next'
-import { getAuthUserWithWorkspace } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace } from '@/lib/auth-helpers'
 import { apiHandler, Errors } from '@/lib/api-helpers'
 
 async function generatePersona(req: NextApiRequest, res: NextApiResponse) {
-  // Authenticate user and get workspace context
-  const user = await getAuthUserWithWorkspace(req, res)
+  // Authenticate user and get familyspace context
+  const user = await getAuthUserWithFamilyspace(req, res)
 
   const { personId } = req.query
   const chatSystemUrl = process.env.CHAT_SYSTEM_URL || 'http://localhost:4778'
@@ -20,7 +20,7 @@ async function generatePersona(req: NextApiRequest, res: NextApiResponse) {
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${process.env.CHAT_SERVICE_SECRET}`,
-      'x-workspace-id': user.workspaceId,
+      'x-familyspace-id': user.familyspaceId,
       'x-user-id': user.id,
     },
     credentials: 'include',

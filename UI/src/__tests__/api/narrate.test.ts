@@ -1,6 +1,6 @@
 import handler from '@/pages/api/stories/[id]/narrate'
 import { prisma } from '@/lib/prisma'
-import { getAuthUserWithWorkspace } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace } from '@/lib/auth-helpers'
 import { enqueueNarrationRender } from '@/lib/queues/narrationQueue'
 
 // Manual mock for node-mocks-http
@@ -68,7 +68,7 @@ jest.mock('@/lib/prisma', () => ({
 }))
 
 jest.mock('@/lib/auth-helpers', () => ({
-  getAuthUserWithWorkspace: jest.fn(),
+  getAuthUserWithFamilyspace: jest.fn(),
 }))
 
 jest.mock('@/lib/queues/narrationQueue', () => ({
@@ -86,13 +86,13 @@ jest.mock('@/lib/logger', () => ({
 describe('/api/stories/[id]/narrate API', () => {
   const mockUser = {
     id: 'user-1',
-    workspaceId: 'ws-1',
+    familyspaceId: 'ws-1',
   }
 
   beforeEach(() => {
     jest.clearAllMocks()
     process.env.AUDIO_GENERATION_ENABLED = 'true'
-    ;(getAuthUserWithWorkspace as jest.Mock).mockResolvedValue(mockUser)
+    ;(getAuthUserWithFamilyspace as jest.Mock).mockResolvedValue(mockUser)
   })
 
   it('should return 405 for non-GET methods', async () => {

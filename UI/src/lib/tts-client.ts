@@ -11,7 +11,7 @@ interface TTSRequestOptions {
   headers?: Record<string, string>
   isFormData?: boolean
   authToken?: string
-  workspaceId?: string
+  familyspaceId?: string
 }
 
 export async function ttsRequest<T = any>(
@@ -24,7 +24,7 @@ export async function ttsRequest<T = any>(
     headers = {}, 
     isFormData = false, 
     authToken,
-    workspaceId 
+    familyspaceId 
   } = options
 
   const requestHeaders: Record<string, string> = isFormData 
@@ -40,9 +40,9 @@ export async function ttsRequest<T = any>(
     requestHeaders['Authorization'] = `Bearer ${TTS_SERVICE_TOKEN}`
   }
 
-  // Internal service-to-service calls MUST provide the workspace context
-  if (workspaceId) {
-    requestHeaders['X-Workspace-Id'] = workspaceId
+  // Internal service-to-service calls MUST provide the familyspace context
+  if (familyspaceId) {
+    requestHeaders['X-Familyspace-Id'] = familyspaceId
   }
 
   const fetchOptions: RequestInit = {

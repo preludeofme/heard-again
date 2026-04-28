@@ -1,6 +1,6 @@
 import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { getAuthUserWithWorkspace } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace } from '@/lib/auth-helpers'
 import { prisma } from '@/lib/prisma'
 
 export interface TimelineEvent {
@@ -24,12 +24,12 @@ export interface TimelineEvent {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  let workspaceId: string
+  let familyspaceId: string
   let userId: string
   
   try {
-    const user = await getAuthUserWithWorkspace(req, res)
-    workspaceId = user.workspaceId
+    const user = await getAuthUserWithFamilyspace(req, res)
+    familyspaceId = user.familyspaceId
     userId = user.id
   } catch (error: any) {
     return res.status(error.statusCode || 401).json({ success: false, error: error.message || 'Unauthorized' })
@@ -40,9 +40,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     switch (method) {
       case 'GET':
-        return await getTimelineEvents(req, res, workspaceId)
+        return await getTimelineEvents(req, res, familyspaceId)
       case 'POST':
-        return await createTimelineEvent(req, res, workspaceId, userId)
+        return await createTimelineEvent(req, res, familyspaceId, userId)
       default:
         return res.status(405).json({ success: false, error: 'Method not allowed' })
     }
@@ -52,7 +52,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 }
 
-async function getTimelineEvents(req: NextApiRequest, res: NextApiResponse, workspaceId: string) {
+async function getTimelineEvents(req: NextApiRequest, res: NextApiResponse, familyspaceId: string) {
   const {
     personId,
     eventTypes,
@@ -73,7 +73,7 @@ async function getTimelineEvents(req: NextApiRequest, res: NextApiResponse, work
     // Birth events from Person.birthDate
     prisma.person.findMany({
       where: {
-        workspaceId,
+        familyspaceId,
         birthDate: { not: null },
         ...(personFilter && { id: personFilter.id }),
       },
@@ -90,7 +90,7 @@ async function getTimelineEvents(req: NextApiRequest, res: NextApiResponse, work
     // Death events from Person.deathDate
     prisma.person.findMany({
       where: {
-        workspaceId,
+        familyspaceId,
         deathDate: { not: null },
         isDeceased: true,
         ...(personFilter && { id: personFilter.id }),
@@ -108,7 +108,7 @@ async function getTimelineEvents(req: NextApiRequest, res: NextApiResponse, work
     // Marriage events from FamilyUnit.marriageDate
     prisma.familyUnit.findMany({
       where: {
-        workspaceId,
+        familyspaceId,
         marriageDate: { not: null },
         ...(personFilter && {
           parents: {
@@ -138,7 +138,7 @@ async function getTimelineEvents(req: NextApiRequest, res: NextApiResponse, work
     // Story events
     prisma.story.findMany({
       where: {
-        workspaceId,
+        familyspaceId,
         storyDate: { not: null },
         ...(personFilter && {
           OR: [
@@ -178,7 +178,7 @@ async function getTimelineEvents(req: NextApiRequest, res: NextApiResponse, work
     // Document events
     prisma.document.findMany({
       where: {
-        workspaceId,
+        familyspaceId,
         dateOccurred: { not: null },
         isDeleted: false,
         ...(personFilter && {
@@ -215,7 +215,7 @@ async function getTimelineEvents(req: NextApiRequest, res: NextApiResponse, work
     // PersonEvent records (custom events from Add Event form)
     prisma.personEvent.findMany({
       where: {
-        person: { workspaceId },
+        person: { familyspaceId },
         eventDate: { not: null },
         ...(personFilter && { personId: personFilter.id }),
       },
@@ -438,7 +438,7 @@ async function getTimelineEvents(req: NextApiRequest, res: NextApiResponse, work
 async function createTimelineEvent(
   req: NextApiRequest,
   res: NextApiResponse,
-  workspaceId: string,
+  familyspaceId: string,
   userId: string
 ) {
   // For now, custom timeline events can be created as PersonEvent records
@@ -452,9 +452,9 @@ async function createTimelineEvent(
     })
   }
 
-  // Verify person exists in workspace
+  // Verify person exists in familyspace
   const person = await prisma.person.findFirst({
-    where: { id: personId, workspaceId },
+    where: { id: personId, familyspaceId },
   })
 
   if (!person) {

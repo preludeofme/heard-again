@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import {
   Dialog,
   DialogTitle,
@@ -32,6 +32,7 @@ import {
   Check as CheckIcon,
   AutoAwesome as AutoAwesomeIcon,
   Send as SendIcon,
+  PhotoCamera as PhotoCameraIcon,
 } from '@mui/icons-material'
 import { PersonType } from '@/contracts'
 
@@ -54,6 +55,7 @@ export interface PersonFormData {
   relationshipKind?: 'BIOLOGICAL' | 'ADOPTED' | 'STEP'
   marriageDate?: string
   marriagePlace?: string
+  avatarFile?: File
 }
 
 export interface ExistingPerson {
@@ -65,7 +67,7 @@ export interface ExistingPerson {
 interface AddEditPersonModalProps {
   open: boolean
   onClose: () => void
-  person?: PersonFormData & { id?: string }
+  person?: PersonFormData & { id?: string; avatarUrl?: string | null }
   mode: 'create' | 'edit'
   onSubmit: (data: PersonFormData) => Promise<void>
   isSubmitting?: boolean
@@ -124,6 +126,10 @@ export function AddEditPersonModal({
   })
   const [errors, setErrors] = useState<Partial<Record<keyof PersonFormData, string>>>({})
   const [touched, setTouched] = useState<Partial<Record<keyof PersonFormData, boolean>>>({})
+  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null)
+  const [pendingAvatarFile, setPendingAvatarFile] = useState<File | null>(null)
+  const [avatarError, setAvatarError] = useState<string | null>(null)
+  const avatarInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (person && mode === 'edit') {
@@ -142,6 +148,7 @@ export function AddEditPersonModal({
         personType: person.personType || PersonType.FAMILY,
         tags: person.tags || [],
       })
+      setAvatarPreviewUrl(person.avatarUrl || null)
     } else {
       setFormData({
         firstName: '',
@@ -159,10 +166,39 @@ export function AddEditPersonModal({
         tags: [],
       })
       setInterviewMessages([{ role: 'system', content: "Hi! Let's add a new person to your family tree. Tell me their name and how they are related to you." }])
+      setAvatarPreviewUrl(null)
     }
+    setPendingAvatarFile(null)
+    setAvatarError(null)
     setErrors({})
     setTouched({})
   }, [person, mode, open])
+
+  useEffect(() => {
+    if (!pendingAvatarFile) return
+    const url = URL.createObjectURL(pendingAvatarFile)
+    setAvatarPreviewUrl(url)
+    return () => URL.revokeObjectURL(url)
+  }, [pendingAvatarFile])
+
+  const handleAvatarFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setAvatarError(null)
+    if (!file.type.startsWith('image/')) {
+      setAvatarError('Please choose an image file (JPG, PNG, etc.).')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setAvatarError('Photo must be under 5MB.')
+      return
+    }
+    setPendingAvatarFile(file)
+  }
+
+  const handleAvatarPickClick = () => {
+    avatarInputRef.current?.click()
+  }
 
   const handleChange = (field: keyof PersonFormData, value: string | boolean) => {
     if (field === 'deathDate') {
@@ -207,7 +243,7 @@ export function AddEditPersonModal({
   const handleSubmit = async () => {
     if (validate()) {
       try {
-        await onSubmit(formData)
+        await onSubmit({ ...formData, avatarFile: pendingAvatarFile || undefined })
       } catch (error) {
         console.error('Failed to save person:', error)
         alert(`Error: ${error instanceof Error ? error.message : 'Failed to save person'}`)
@@ -333,9 +369,47 @@ export function AddEditPersonModal({
         ) : (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
             <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-              <Avatar sx={{ width: 64, height: 64, backgroundColor: '#d0e3e6', color: '#16334a' }}>
-                {getInitials() || <PersonIcon fontSize="large" />}
-              </Avatar>
+              <Box sx={{ position: 'relative' }}>
+                <Avatar
+                  src={avatarPreviewUrl || undefined}
+                  onClick={handleAvatarPickClick}
+                  sx={{
+                    width: 64,
+                    height: 64,
+                    backgroundColor: '#d0e3e6',
+                    color: '#16334a',
+                    cursor: 'pointer',
+                    '&:hover': { opacity: 0.85 },
+                  }}
+                >
+                  {!avatarPreviewUrl && (getInitials() || <PersonIcon fontSize="large" />)}
+                </Avatar>
+                <IconButton
+                  size="small"
+                  onClick={handleAvatarPickClick}
+                  aria-label="Upload profile photo"
+                  sx={{
+                    position: 'absolute',
+                    bottom: -4,
+                    right: -4,
+                    width: 26,
+                    height: 26,
+                    backgroundColor: '#16334a',
+                    color: '#ffffff',
+                    border: '2px solid #faf9f7',
+                    '&:hover': { backgroundColor: '#2e4a62' },
+                  }}
+                >
+                  <PhotoCameraIcon sx={{ fontSize: 14 }} />
+                </IconButton>
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  onChange={handleAvatarFileSelect}
+                />
+              </Box>
               <Grid container spacing={2}>
                 <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
@@ -357,6 +431,11 @@ export function AddEditPersonModal({
                 </Grid>
               </Grid>
             </Box>
+            {avatarError && (
+              <Typography variant="caption" sx={{ color: 'error.main', mt: -2 }}>
+                {avatarError}
+              </Typography>
+            )}
 
             <FormControl fullWidth>
               <InputLabel>Role / Person Type</InputLabel>

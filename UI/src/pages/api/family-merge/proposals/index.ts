@@ -1,26 +1,26 @@
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
-import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 import { findPersonMatches } from '../analyze'
 
 export default apiHandler({
-  // GET /api/family-merge/proposals - List all merge proposals for the workspace
+  // GET /api/family-merge/proposals - List all merge proposals for the familyspace
   GET: async (req, res) => {
-    const user = await getAuthUserWithWorkspace(req, res)
-    await requireWorkspaceRole(user.id, user.workspaceId, 'ADMIN')
+    const user = await getAuthUserWithFamilyspace(req, res)
+    await requireFamilyspaceRole(user.id, user.familyspaceId, 'ADMIN')
     
     const proposals = await prisma.familyMergeProposal.findMany({
       where: {
         OR: [
-          { targetWorkspaceId: user.workspaceId },
-          { sourceWorkspaceId: user.workspaceId }
+          { targetFamilyspaceId: user.familyspaceId },
+          { sourceFamilyspaceId: user.familyspaceId }
         ]
       },
       include: {
-        targetWorkspace: {
+        targetFamilyspace: {
           select: { id: true, name: true, slug: true }
         },
-        sourceWorkspace: {
+        sourceFamilyspace: {
           select: { id: true, name: true, slug: true }
         },
         proposedBy: {
@@ -38,56 +38,56 @@ export default apiHandler({
 
   // POST /api/family-merge/proposals - Create a new merge proposal
   POST: async (req, res) => {
-    const user = await getAuthUserWithWorkspace(req, res)
-    await requireWorkspaceRole(user.id, user.workspaceId, 'ADMIN')
+    const user = await getAuthUserWithFamilyspace(req, res)
+    await requireFamilyspaceRole(user.id, user.familyspaceId, 'ADMIN')
     
-    const { sourceWorkspaceId, minScore = 0.6, autoApprove = false } = req.body
+    const { sourceFamilyspaceId, minScore = 0.6, autoApprove = false } = req.body
     
-    if (!sourceWorkspaceId) {
-      throw Errors.badRequest('sourceWorkspaceId is required')
+    if (!sourceFamilyspaceId) {
+      throw Errors.badRequest('sourceFamilyspaceId is required')
     }
     
-    if (sourceWorkspaceId === user.workspaceId) {
-      throw Errors.badRequest('Cannot merge a workspace with itself')
+    if (sourceFamilyspaceId === user.familyspaceId) {
+      throw Errors.badRequest('Cannot merge a familyspace with itself')
     }
     
-    // Verify user has access to source workspace
+    // Verify user has access to source familyspace
     const sourceMembership = await prisma.membership.findFirst({
       where: {
         userId: user.id,
-        workspaceId: sourceWorkspaceId,
+        familyspaceId: sourceFamilyspaceId,
         status: 'ACTIVE',
         role: { in: ['ADMIN', 'OWNER'] }
       }
     })
     
     if (!sourceMembership) {
-      throw Errors.forbidden('You must be an ADMIN or OWNER of the source workspace to propose a merge')
+      throw Errors.forbidden('You must be an ADMIN or OWNER of the source familyspace to propose a merge')
     }
     
     // Check for existing pending proposal
     const existingProposal = await prisma.familyMergeProposal.findFirst({
       where: {
-        targetWorkspaceId: user.workspaceId,
-        sourceWorkspaceId,
+        targetFamilyspaceId: user.familyspaceId,
+        sourceFamilyspaceId,
         status: { in: ['PENDING', 'APPROVED'] }
       }
     })
     
     if (existingProposal) {
-      throw Errors.conflict(`An existing proposal (${existingProposal.status}) already exists for this workspace pair`)
+      throw Errors.conflict(`An existing proposal (${existingProposal.status}) already exists for this familyspace pair`)
     }
     
     // Find matches
     const matches = await findPersonMatches(
-      user.workspaceId,
-      sourceWorkspaceId,
+      user.familyspaceId,
+      sourceFamilyspaceId,
       minScore
     )
     
     // Get source person count
     const totalSourcePeople = await prisma.person.count({
-      where: { workspaceId: sourceWorkspaceId }
+      where: { familyspaceId: sourceFamilyspaceId }
     })
     
     // Calculate overall match score
@@ -100,8 +100,8 @@ export default apiHandler({
       // Create the proposal
       const newProposal = await tx.familyMergeProposal.create({
         data: {
-          targetWorkspaceId: user.workspaceId,
-          sourceWorkspaceId,
+          targetFamilyspaceId: user.familyspaceId,
+          sourceFamilyspaceId,
           proposedById: user.id,
           status: autoApprove ? 'APPROVED' : 'PENDING',
           overallMatchScore,
@@ -135,10 +135,10 @@ export default apiHandler({
     const completeProposal = await prisma.familyMergeProposal.findUnique({
       where: { id: proposal.id },
       include: {
-        targetWorkspace: {
+        targetFamilyspace: {
           select: { id: true, name: true, slug: true }
         },
-        sourceWorkspace: {
+        sourceFamilyspace: {
           select: { id: true, name: true, slug: true }
         },
         personMatches: {

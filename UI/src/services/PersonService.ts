@@ -21,16 +21,16 @@ export class PersonService {
   constructor(private repo: PersonRepository = personRepository) {}
 
   /**
-   * List people in a workspace
+   * List people in a familyspace
    */
   async listPeople(
-    workspaceId: string,
+    familyspaceId: string,
     query: ListPeopleQuery
   ): Promise<PersonListItem[]> {
     const { search, type } = query
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const where: any = { workspaceId }
+    const where: any = { familyspaceId }
 
     if (search) {
       where.OR = [
@@ -44,7 +44,7 @@ export class PersonService {
       where.personType = type.toUpperCase()
     }
 
-    const people = await this.repo.findMany(workspaceId, {
+    const people = await this.repo.findMany(familyspaceId, {
       where,
       include: PERSON_INCLUDE,
     })
@@ -57,9 +57,9 @@ export class PersonService {
    */
   async getPerson(
     personId: string,
-    workspaceId: string
+    familyspaceId: string
   ): Promise<PersonListItem | null> {
-    const person = await this.repo.findById(personId, workspaceId, PERSON_INCLUDE)
+    const person = await this.repo.findById(personId, familyspaceId, PERSON_INCLUDE)
 
     return person ? this.mapToListItem(person as any) : null
   }
@@ -68,12 +68,12 @@ export class PersonService {
    * Create a new person
    */
   async createPerson(
-    workspaceId: string,
+    familyspaceId: string,
     userId: string,
     data: CreatePersonInput
   ): Promise<CreatePersonResponse> {
     const person = await this.repo.create({
-      workspaceId,
+      familyspaceId,
       createdById: userId,
       firstName: data.firstName,
       lastName: data.lastName ?? null,
@@ -105,7 +105,7 @@ export class PersonService {
    */
   async updatePerson(
     personId: string,
-    workspaceId: string,
+    familyspaceId: string,
     data: Partial<CreatePersonInput>,
     userId: string
   ): Promise<CreatePersonResponse> {
@@ -125,7 +125,7 @@ export class PersonService {
     if (data.personType !== undefined) updateData.personType = data.personType
     if (data.tags !== undefined) updateData.tags = data.tags
 
-    const person = await this.repo.update(personId, workspaceId, updateData, userId)
+    const person = await this.repo.update(personId, familyspaceId, updateData, userId)
 
     return {
       id: person.id,
@@ -142,9 +142,9 @@ export class PersonService {
    */
   async getPersonDetail(
     personId: string,
-    workspaceId: string
+    familyspaceId?: string
   ): Promise<any> {
-    const person = await this.repo.findById(personId, workspaceId, {
+    const person = await this.repo.findById(personId, familyspaceId, {
       avatarAsset: {
         select: { id: true, storagePath: true, mimeType: true },
       },
@@ -173,7 +173,7 @@ export class PersonService {
 
     const familyUnits = await (this.repo as any).prisma.familyUnit.findMany({
       where: {
-        workspaceId,
+        familyspaceId,
         OR: [
           { parents: { some: { parentId: personId } } },
           { children: { some: { childId: personId } } },
@@ -253,8 +253,8 @@ export class PersonService {
   /**
    * Delete a person
    */
-  async deletePerson(personId: string, workspaceId: string, userId: string): Promise<void> {
-    await this.repo.delete(personId, workspaceId, userId)
+  async deletePerson(personId: string, familyspaceId: string, userId: string): Promise<void> {
+    await this.repo.delete(personId, familyspaceId, userId)
   }
 
   /**

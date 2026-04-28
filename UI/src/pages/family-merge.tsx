@@ -43,7 +43,7 @@ import { Layout } from '@/components/layout/Layout'
 
 type MergeStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CONFLICT' | 'MERGED' | 'FAILED'
 
-interface Workspace {
+interface Familyspace {
   id: string
   name: string
   slug: string
@@ -74,13 +74,13 @@ interface Match {
 interface Proposal {
   id: string
   status: MergeStatus
-  targetWorkspaceId: string
-  sourceWorkspaceId: string
-  targetWorkspace: {
+  targetFamilyspaceId: string
+  sourceFamilyspaceId: string
+  targetFamilyspace: {
     name: string
     slug: string
   }
-  sourceWorkspace: {
+  sourceFamilyspace: {
     name: string
     slug: string
   }
@@ -116,15 +116,15 @@ function statusColor(status: MergeStatus): 'default' | 'warning' | 'success' | '
 }
 
 export default function FamilyMergePage() {
-  const [workspaces, setWorkspaces] = useState<Workspace[]>([])
-  const [isLoadingWorkspaces, setIsLoadingWorkspaces] = useState(true)
+  const [familyspaces, setFamilyspaces] = useState<Familyspace[]>([])
+  const [isLoadingFamilyspaces, setIsLoadingFamilyspaces] = useState(true)
   const [proposals, setProposals] = useState<Proposal[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   
   const [isCreateOpen, setIsCreateOpen] = useState(false)
-  const [selectedSourceWorkspace, setSelectedSourceWorkspace] = useState('')
+  const [selectedSourceFamilyspace, setSelectedSourceFamilyspace] = useState('')
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [analysisResult, setAnalysisResult] = useState<{
     matches: Array<{
@@ -163,29 +163,29 @@ export default function FamilyMergePage() {
     }
   }, [])
 
-  // Load workspaces
+  // Load familyspaces
   useEffect(() => {
-    const loadWorkspaces = async () => {
-      setIsLoadingWorkspaces(true)
+    const loadFamilyspaces = async () => {
+      setIsLoadingFamilyspaces(true)
       try {
-        const response = await fetch('/api/workspaces', { credentials: 'include' })
+        const response = await fetch('/api/familyspaces', { credentials: 'include' })
         const data = await response.json()
         
         if (response.ok && data.success) {
-          setWorkspaces(data.data || [])
+          setFamilyspaces(data.data || [])
         }
       } catch (err) {
-        console.error('Failed to load workspaces', err)
+        console.error('Failed to load familyspaces', err)
       } finally {
-        setIsLoadingWorkspaces(false)
+        setIsLoadingFamilyspaces(false)
       }
     }
     
-    loadWorkspaces()
+    loadFamilyspaces()
   }, [])
 
-  const analyzeWorkspace = async () => {
-    if (!selectedSourceWorkspace) return
+  const analyzeFamilyspace = async () => {
+    if (!selectedSourceFamilyspace) return
     
     setIsAnalyzing(true)
     setError(null)
@@ -196,25 +196,25 @@ export default function FamilyMergePage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ sourceWorkspaceId: selectedSourceWorkspace, minScore: 0.6 })
+        body: JSON.stringify({ sourceFamilyspaceId: selectedSourceFamilyspace, minScore: 0.6 })
       })
       
       const data = await response.json()
       
       if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Failed to analyze workspace')
+        throw new Error(data.error || 'Failed to analyze familyspace')
       }
       
       setAnalysisResult(data.data)
     } catch (err: any) {
-      setError(err.message || 'Failed to analyze workspace')
+      setError(err.message || 'Failed to analyze familyspace')
     } finally {
       setIsAnalyzing(false)
     }
   }
 
   const createProposal = async () => {
-    if (!selectedSourceWorkspace || !analysisResult) return
+    if (!selectedSourceFamilyspace || !analysisResult) return
     
     setIsAnalyzing(true)
     setError(null)
@@ -224,7 +224,7 @@ export default function FamilyMergePage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ sourceWorkspaceId: selectedSourceWorkspace, minScore: 0.6 })
+        body: JSON.stringify({ sourceFamilyspaceId: selectedSourceFamilyspace, minScore: 0.6 })
       })
       
       const data = await response.json()
@@ -235,7 +235,7 @@ export default function FamilyMergePage() {
       
       setSuccess('Merge proposal created successfully')
       setIsCreateOpen(false)
-      setSelectedSourceWorkspace('')
+      setSelectedSourceFamilyspace('')
       setAnalysisResult(null)
       await loadProposals()
     } catch (err: any) {
@@ -373,8 +373,8 @@ export default function FamilyMergePage() {
     }
   }
 
-  // Filter out current workspace from available workspaces
-  const availableWorkspaces = workspaces.filter(
+  // Filter out current familyspace from available familyspaces
+  const availableFamilyspaces = familyspaces.filter(
     (w) => !w.isDefault
   ) || []
 
@@ -394,13 +394,13 @@ export default function FamilyMergePage() {
                 variant="contained"
                 startIcon={<CompareArrows />}
                 onClick={() => setIsCreateOpen(true)}
-                disabled={availableWorkspaces.length === 0}
+                disabled={availableFamilyspaces.length === 0}
               >
                 New Merge Proposal
               </Button>
             </Box>
             <Typography variant="body2" sx={{ color: '#546669', mb: 4 }}>
-              Merge family trees from different workspaces. Matches people by name, dates, and parents.
+              Merge family trees from different familyspaces. Matches people by name, dates, and parents.
             </Typography>
 
             {error && (
@@ -431,7 +431,7 @@ export default function FamilyMergePage() {
                       No merge proposals yet
                     </Typography>
                     <Typography variant="body2" sx={{ color: '#6f7c7f' }}>
-                      Create a new proposal to merge family trees from another workspace.
+                      Create a new proposal to merge family trees from another familyspace.
                     </Typography>
                   </Paper>
                 ) : (
@@ -439,7 +439,7 @@ export default function FamilyMergePage() {
                     <Table>
                       <TableHead>
                         <TableRow>
-                          <TableCell>Source Workspace</TableCell>
+                          <TableCell>Source Familyspace</TableCell>
                           <TableCell>Status</TableCell>
                           <TableCell>Matches</TableCell>
                           <TableCell>Created</TableCell>
@@ -451,7 +451,7 @@ export default function FamilyMergePage() {
                           <TableRow key={proposal.id}>
                             <TableCell>
                               <Typography variant="subtitle2" sx={{ color: '#16334a' }}>
-                                {proposal.sourceWorkspace?.name || 'Unknown'}
+                                {proposal.sourceFamilyspace?.name || 'Unknown'}
                               </Typography>
                             </TableCell>
                             <TableCell>
@@ -548,31 +548,31 @@ export default function FamilyMergePage() {
           <DialogTitle>Create Merge Proposal</DialogTitle>
           <DialogContent>
             <Typography variant="body2" sx={{ color: '#6f7c7f', mb: 3 }}>
-              Select a workspace to merge into your current family tree. We'll analyze and suggest matching people.
+              Select a familyspace to merge into your current family tree. We'll analyze and suggest matching people.
             </Typography>
 
             <FormControl fullWidth sx={{ mb: 3 }}>
-              <InputLabel>Source Workspace</InputLabel>
+              <InputLabel>Source Familyspace</InputLabel>
               <Select
-                value={selectedSourceWorkspace}
+                value={selectedSourceFamilyspace}
                 onChange={(e) => {
-                  setSelectedSourceWorkspace(e.target.value)
+                  setSelectedSourceFamilyspace(e.target.value)
                   setAnalysisResult(null)
                 }}
-                disabled={isLoadingWorkspaces || isAnalyzing}
+                disabled={isLoadingFamilyspaces || isAnalyzing}
               >
-                {availableWorkspaces.map((workspace: { id: string; name: string }) => (
-                  <MenuItem key={workspace.id} value={workspace.id}>
-                    {workspace.name}
+                {availableFamilyspaces.map((familyspace: { id: string; name: string }) => (
+                  <MenuItem key={familyspace.id} value={familyspace.id}>
+                    {familyspace.name}
                   </MenuItem>
                 ))}
               </Select>
             </FormControl>
 
-            {selectedSourceWorkspace && !analysisResult && (
+            {selectedSourceFamilyspace && !analysisResult && (
               <Button
                 variant="outlined"
-                onClick={analyzeWorkspace}
+                onClick={analyzeFamilyspace}
                 disabled={isAnalyzing}
                 startIcon={isAnalyzing ? <CircularProgress size={20} /> : <CompareArrows />}
               >
@@ -626,7 +626,7 @@ export default function FamilyMergePage() {
           <DialogActions>
             <Button onClick={() => {
               setIsCreateOpen(false)
-              setSelectedSourceWorkspace('')
+              setSelectedSourceFamilyspace('')
               setAnalysisResult(null)
             }}>
               Cancel
@@ -644,7 +644,7 @@ export default function FamilyMergePage() {
         {/* Proposal Detail Dialog */}
         <Dialog open={isDetailOpen} onClose={() => setIsDetailOpen(false)} maxWidth="lg" fullWidth>
           <DialogTitle>
-            Merge Proposal: {selectedProposal?.sourceWorkspace?.name}
+            Merge Proposal: {selectedProposal?.sourceFamilyspace?.name}
           </DialogTitle>
           <DialogContent>
             {isLoadingDetail ? (
@@ -680,7 +680,7 @@ export default function FamilyMergePage() {
                                 {match.targetPerson.firstName} {match.targetPerson.lastName}
                               </Typography>
                               <Typography variant="caption" sx={{ color: '#6f7c7f' }}>
-                                Current workspace
+                                Current familyspace
                               </Typography>
                             </Box>
                             <CompareArrows sx={{ color: '#546669' }} />
@@ -689,7 +689,7 @@ export default function FamilyMergePage() {
                                 {match.sourcePerson.firstName} {match.sourcePerson.lastName}
                               </Typography>
                               <Typography variant="caption" sx={{ color: '#6f7c7f' }}>
-                                Source workspace
+                                Source familyspace
                               </Typography>
                             </Box>
                             <Chip

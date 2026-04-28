@@ -14,13 +14,13 @@ export default async function handler(
   }
 
   try {
-    // Extract workspace and user info from headers or auth context
-    const workspaceId = req.headers['x-workspace-id'] as string
+    // Extract familyspace and user info from headers or auth context
+    const familyspaceId = req.headers['x-familyspace-id'] as string
     const userId = req.headers['x-user-id'] as string
 
-    if (!workspaceId || !userId) {
+    if (!familyspaceId || !userId) {
       return res.status(400).json({ 
-        error: 'Missing required headers: x-workspace-id, x-user-id' 
+        error: 'Missing required headers: x-familyspace-id, x-user-id' 
       })
     }
 
@@ -58,7 +58,7 @@ export default async function handler(
     // Create document record
     const document: Document = {
       id: uuidv4(),
-      workspaceId,
+      familyspaceId,
       personId: req.body.personId || null,
       title: fileData.name,
       content: '', // Will be populated during processing

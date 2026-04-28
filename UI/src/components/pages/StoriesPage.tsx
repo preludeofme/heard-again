@@ -9,7 +9,8 @@ import {
   ScheduleOutlined as ScheduleIcon, 
   ArrowForwardOutlined as ArrowForwardIcon, 
   CloseOutlined as CloseIcon, 
-  KeyboardArrowDownOutlined as ArrowDownIcon 
+  KeyboardArrowDownOutlined as ArrowDownIcon,
+  ShareOutlined as Share
 } from '@mui/icons-material'
 import { StoryContribution } from '@/types'
 import { formatDistanceToNow } from 'date-fns'
@@ -17,6 +18,13 @@ import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import { EmptyState } from '@/components/feedback/UIStates'
 import { AudioRecorder } from '@/components/audio/AudioRecorder'
+import { RichTextEditor } from '@/components/editor/RichTextEditor'
+
+function stripHtml(html: string) {
+  if (typeof window === 'undefined') return html
+  const doc = new DOMParser().parseFromString(html, 'text/html')
+  return doc.body.textContent || ''
+}
 
 interface StoriesPageProps {
   stories: StoryContribution[]
@@ -25,9 +33,10 @@ interface StoriesPageProps {
     firstName: string
     lastName?: string | null
     displayName?: string | null
+    avatarUrl?: string | null
   } | null
-  onSubmitStory?: (title: string, content: string, storyDate?: string, location?: string) => Promise<void>
-  onSubmitAudio?: (audioBlob: Blob, duration: number) => Promise<void>
+  onSubmitStory?: (title: string, content: string, storyDate?: string, location?: string, authorRelationship?: string) => Promise<void>
+  onSubmitAudio?: (audioBlob: Blob, duration: number, title?: string, authorRelationship?: string) => Promise<void>
 }
 
 const getDisplayName = (member: StoriesPageProps['selectedFamilyMember']) => {
@@ -40,6 +49,7 @@ export function StoriesPage({ stories, selectedFamilyMember, onSubmitStory, onSu
   const [storyContent, setStoryContent] = useState('')
   const [storyDate, setStoryDate] = useState('')
   const [storyLocation, setStoryLocation] = useState('')
+  const [authorRelationship, setAuthorRelationship] = useState('')
   const [showOptional, setShowOptional] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showAudioDialog, setShowAudioDialog] = useState(false)
@@ -98,11 +108,13 @@ export function StoriesPage({ stories, selectedFamilyMember, onSubmitStory, onSu
         storyContent,
         storyDate || undefined,
         storyLocation || undefined,
+        authorRelationship || undefined,
       )
       setStoryTitle('')
       setStoryContent('')
       setStoryDate('')
       setStoryLocation('')
+      setAuthorRelationship('')
       setShowOptional(false)
     } finally {
       setIsSubmitting(false)
@@ -113,12 +125,14 @@ export function StoriesPage({ stories, selectedFamilyMember, onSubmitStory, onSu
     if (!onSubmitAudio) return
     setIsSubmittingAudio(true)
     try {
-      await onSubmitAudio(audioBlob, duration)
+      await onSubmitAudio(audioBlob, duration, undefined, authorRelationship || undefined)
       setShowAudioDialog(false)
     } finally {
       setIsSubmittingAudio(false)
     }
   }
+
+  const initials = selectedFamilyMember?.firstName?.[0] || '?'
 
   return (
     <Box sx={{ minHeight: '100vh', backgroundColor: '#fcf9f4' }}>
@@ -140,16 +154,36 @@ export function StoriesPage({ stories, selectedFamilyMember, onSubmitStory, onSu
             >
               Help us tell {getDisplayName(selectedFamilyMember)}'s story.
             </Typography>
-            <Typography 
-              variant="h6" 
-              sx={{ 
-                color: '#546669',
-                maxWidth: 500,
-                lineHeight: 1.6
-              }}
-            >
-              We are building a living archive of {getDisplayName(selectedFamilyMember)}'s life. Your memories, voice, and stories are the threads that keep {selectedFamilyMember ? 'their' : 'his'} legacy vibrant for the generations to come.
-            </Typography>
+            <Box sx={{ display: 'flex', gap: 2, mb: 4 }}>
+              <Typography 
+                variant="h6" 
+                sx={{ 
+                  color: '#546669',
+                  maxWidth: 500,
+                  lineHeight: 1.6
+                }}
+              >
+                We are building a living archive of {getDisplayName(selectedFamilyMember)}'s life. Your memories, voice, and stories are the threads that keep {selectedFamilyMember ? 'their' : 'his'} legacy vibrant for the generations to come.
+              </Typography>
+            </Box>
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <Button
+                variant="outlined"
+                startIcon={<Share />}
+                onClick={() => {
+                  const shareUrl = `${window.location.origin}/stories/contribute?subjectId=${selectedFamilyMember?.id}`
+                  navigator.clipboard.writeText(shareUrl)
+                  alert('Contribution link copied to clipboard! Share this with family and friends.')
+                }}
+                sx={{ 
+                  borderColor: '#16334a', 
+                  color: '#16334a',
+                  '&:hover': { borderColor: '#2e4a62', backgroundColor: 'rgba(22, 51, 74, 0.05)' }
+                }}
+              >
+                Invite others to tell a story
+              </Button>
+            </Box>
           </Grid>
           <Grid size={{ xs: 12, lg: 5 }} sx={{ position: 'relative' }}>
             <Box
@@ -161,22 +195,32 @@ export function StoriesPage({ stories, selectedFamilyMember, onSubmitStory, onSu
                 transform: 'rotate(2deg)',
                 transition: 'transform 0.7s',
                 maxHeight: { xs: '400px', md: '500px' },
+                bgcolor: '#d0e3e6',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
                 '&:hover': {
                   transform: 'rotate(0deg)',
                 },
               }}
             >
-              <Avatar
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuCE6G2ba8wPd1OUCIlR2SNCWMhXSpZqRXMGA-auLhpR7gdEzS8PmWdIhULhGftOvD6SNbz7D796CNvDySAbq32Db_HzZEk1OlUDYb1QCsjF7h53Z3mCcuEU1hdwLOhAZWeK8JEC_eJHW2To1WqsI0XSwxyF_USNIljlTT-kRjjEsQF6XPqnMdE52F_tMU4HqEk6NlfAuy9df8rUQt5p4d_t0jESsosqGtCeDDbv6cnkwVrTo_KE6mf-5pTdF497qGFsmopSDSWGHPQ"
-                variant="square"
-                sx={{ 
-                  width: '100%', 
-                  height: '100%',
-                  '& img': {
-                    objectFit: 'cover'
-                  }
-                }}
-              />
+              {selectedFamilyMember?.avatarUrl ? (
+                <Avatar
+                  src={selectedFamilyMember.avatarUrl}
+                  variant="square"
+                  sx={{ 
+                    width: '100%', 
+                    height: '100%',
+                    '& img': {
+                      objectFit: 'cover'
+                    }
+                  }}
+                />
+              ) : (
+                <Typography sx={{ fontFamily: 'var(--font-newsreader), serif', fontSize: '10rem', color: '#16334a', fontWeight: 700 }}>
+                  {initials}
+                </Typography>
+              )}
             </Box>
             {/* Floating Quote Card */}
             <Box
@@ -351,23 +395,10 @@ export function StoriesPage({ stories, selectedFamilyMember, onSubmitStory, onSu
                       }
                     }}
                   />
-                  <TextField
-                    fullWidth
-                    multiline
-                    rows={4}
+                  <RichTextEditor
+                    content={storyContent}
+                    onChange={setStoryContent}
                     placeholder={`Share your favorite memory of ${getDisplayName(selectedFamilyMember)}...`}
-                    value={storyContent}
-                    onChange={(e) => setStoryContent(e.target.value)}
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        backgroundColor: '#ebe8e3',
-                        borderRadius: 3,
-                        '& fieldset': { border: 'none' },
-                        '&:hover fieldset': { border: 'none' },
-                        '&.Mui-focused fieldset': { border: 'none' },
-                        '&.Mui-focused': { backgroundColor: '#ffffff' }
-                      }
-                    }}
                   />
 
                   {/* Starter Templates */}
@@ -402,35 +433,53 @@ export function StoriesPage({ stories, selectedFamilyMember, onSubmitStory, onSu
                       onClick={() => setShowOptional(p => !p)}
                       sx={{ color: '#546669', fontSize: '0.78rem', textTransform: 'none', px: 0.5, mb: 0.5 }}
                     >
-                      {showOptional ? '− Hide details' : '+ Add date & location'}
+                      {showOptional ? '− Hide details' : '+ Add date, location & relationship'}
                     </Button>
                     <Collapse in={showOptional}>
-                      <Box sx={{ display: 'flex', gap: 1.5, flexDirection: { xs: 'column', sm: 'row' } }}>
+                      <Box sx={{ display: 'flex', gap: 1.5, flexDirection: { xs: 'column' }, mb: 2 }}>
+                        <Box sx={{ display: 'flex', gap: 1.5, flexDirection: { xs: 'column', sm: 'row' } }}>
+                          <TextField
+                            type="date"
+                            size="small"
+                            label="Date"
+                            InputLabelProps={{ shrink: true }}
+                            value={storyDate}
+                            onChange={(e) => setStoryDate(e.target.value)}
+                            sx={{
+                              flex: 1,
+                              '& .MuiOutlinedInput-root': {
+                                backgroundColor: '#ebe8e3',
+                                borderRadius: 2,
+                                '& fieldset': { border: 'none' },
+                                '&.Mui-focused': { backgroundColor: '#ffffff' },
+                              },
+                            }}
+                          />
+                          <TextField
+                            size="small"
+                            label="Location"
+                            placeholder="e.g. Chicago, IL"
+                            value={storyLocation}
+                            onChange={(e) => setStoryLocation(e.target.value)}
+                            sx={{
+                              flex: 1,
+                              '& .MuiOutlinedInput-root': {
+                                backgroundColor: '#ebe8e3',
+                                borderRadius: 2,
+                                '& fieldset': { border: 'none' },
+                                '&.Mui-focused': { backgroundColor: '#ffffff' },
+                              },
+                            }}
+                          />
+                        </Box>
                         <TextField
-                          type="date"
                           size="small"
-                          label="Date"
-                          InputLabelProps={{ shrink: true }}
-                          value={storyDate}
-                          onChange={(e) => setStoryDate(e.target.value)}
+                          label="Your Relationship"
+                          placeholder="e.g. Son, Daughter, Grandchild, Friend"
+                          value={authorRelationship}
+                          onChange={(e) => setAuthorRelationship(e.target.value)}
                           sx={{
-                            flex: 1,
-                            '& .MuiOutlinedInput-root': {
-                              backgroundColor: '#ebe8e3',
-                              borderRadius: 2,
-                              '& fieldset': { border: 'none' },
-                              '&.Mui-focused': { backgroundColor: '#ffffff' },
-                            },
-                          }}
-                        />
-                        <TextField
-                          size="small"
-                          label="Location"
-                          placeholder="e.g. Chicago, IL"
-                          value={storyLocation}
-                          onChange={(e) => setStoryLocation(e.target.value)}
-                          sx={{
-                            flex: 1,
+                            width: '100%',
                             '& .MuiOutlinedInput-root': {
                               backgroundColor: '#ebe8e3',
                               borderRadius: 2,
@@ -558,10 +607,14 @@ export function StoriesPage({ stories, selectedFamilyMember, onSubmitStory, onSu
                     flexGrow: 1,
                     lineHeight: 1.6,
                     fontStyle: story.type === 'audio' ? 'italic' : 'normal',
-                    fontSize: story.type === 'audio' ? '1.1rem' : '1rem'
+                    fontSize: story.type === 'audio' ? '1.1rem' : '1rem',
+                    display: '-webkit-box',
+                    WebkitLineClamp: 4,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
                   }}
                 >
-                  {story.content}
+                  {story.type === 'audio' ? story.content : stripHtml(story.content)}
                 </Typography>
 
                 {story.type === 'audio' && (
@@ -610,10 +663,21 @@ export function StoriesPage({ stories, selectedFamilyMember, onSubmitStory, onSu
                   </Box>
                 )}
 
+                <Box sx={{ display: 'flex', gap: 1, mt: 2, flexWrap: 'wrap' }}>
+                  {story.type === 'audio' && (
+                    <Chip size="small" icon={<MicIcon sx={{ fontSize: '14px !important' }} />} label="Raw" sx={{ height: 20, fontSize: '0.65rem', backgroundColor: 'rgba(255, 255, 255, 0.2)', color: 'inherit' }} />
+                  )}
+                  <Chip size="small" icon={<AutoStoriesIcon sx={{ fontSize: '14px !important' }} />} label="Transcript" sx={{ height: 20, fontSize: '0.65rem', backgroundColor: story.type === 'audio' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.05)', color: 'inherit' }} />
+                  {story.hasNarration && (
+                    <Chip size="small" icon={<PlayIcon sx={{ fontSize: '14px !important' }} />} label="AI" sx={{ height: 20, fontSize: '0.65rem', backgroundColor: 'rgba(255, 255, 255, 0.2)', color: 'inherit' }} />
+                  )}
+                </Box>
+
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 2, opacity: 0.6 }}>
                   <ScheduleIcon sx={{ fontSize: 16 }} />
                   <Typography variant="caption">
                     {formatDistanceToNow(story.createdAt, { addSuffix: true })}
+                    {story.authorRelationship && ` • ${story.authorRelationship}`}
                   </Typography>
                 </Box>
               </Card>
@@ -712,6 +776,26 @@ export function StoriesPage({ stories, selectedFamilyMember, onSubmitStory, onSu
           >
             <CloseIcon />
           </IconButton>
+          <Box sx={{ p: 4, pb: 0 }}>
+            <Typography variant="h5" className="serif-font" sx={{ mb: 2, color: '#16334a' }}>
+              Record your story
+            </Typography>
+            <TextField
+              fullWidth
+              size="small"
+              label="Your Relationship"
+              placeholder="e.g. Son, Daughter, Grandchild, Friend"
+              value={authorRelationship}
+              onChange={(e) => setAuthorRelationship(e.target.value)}
+              sx={{
+                mb: 3,
+                '& .MuiOutlinedInput-root': {
+                  backgroundColor: '#f6f3ee',
+                  borderRadius: 2,
+                },
+              }}
+            />
+          </Box>
           <AudioRecorder
             onRecordingComplete={handleAudioComplete}
             onCancel={() => setShowAudioDialog(false)}

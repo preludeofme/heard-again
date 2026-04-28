@@ -1,11 +1,11 @@
 import { logger } from '@/lib/logger'
 import { NextApiRequest, NextApiResponse } from 'next'
-import { getAuthUserWithWorkspace } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace } from '@/lib/auth-helpers'
 import { apiHandler } from '@/lib/api-helpers'
 
 async function proxyToChatSystem(req: NextApiRequest, res: NextApiResponse) {
   const chatSystemUrl = process.env.CHAT_SYSTEM_URL || 'http://localhost:4778'
-  const user = await getAuthUserWithWorkspace(req, res)
+  const user = await getAuthUserWithFamilyspace(req, res)
 
   const { sessionId } = req.query
   const url = `${chatSystemUrl}/api/chat/messages${sessionId ? `?sessionId=${sessionId}` : ''}`
@@ -15,7 +15,7 @@ async function proxyToChatSystem(req: NextApiRequest, res: NextApiResponse) {
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${process.env.CHAT_SERVICE_SECRET}`,
-      'x-workspace-id': user.workspaceId,
+      'x-familyspace-id': user.familyspaceId,
       'x-user-id': user.id,
     },
     body: req.method !== 'GET' ? JSON.stringify(req.body) : undefined,

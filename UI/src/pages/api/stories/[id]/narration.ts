@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
-import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 import { enqueueNarrationRender } from '@/lib/queues/narrationQueue'
 import { logger } from '@/lib/logger'
 import type { NarrationStatus } from '@prisma/client'
@@ -11,13 +11,13 @@ const ALLOWED_ACTIONS = new Set(['update', 'approve', 'discard'])
 
 async function enqueueRenderOnApprove(params: {
   storyId: string
-  workspaceId: string
+  familyspaceId: string
   userId: string
 }) {
-  const { storyId, workspaceId, userId } = params
+  const { storyId, familyspaceId, userId } = params
 
   const story = await prisma.story.findFirst({
-    where: { id: storyId, workspaceId },
+    where: { id: storyId, familyspaceId },
     select: { id: true, voiceProfileId: true, subjectId: true },
   })
   if (!story) return null
@@ -26,7 +26,7 @@ async function enqueueRenderOnApprove(params: {
   if (!voiceProfileId && story.subjectId) {
     const defaultProfile = await prisma.voiceProfile.findFirst({
       where: {
-        workspaceId,
+        familyspaceId,
         personId: story.subjectId,
         isDefault: true,
         status: 'READY',
@@ -41,7 +41,7 @@ async function enqueueRenderOnApprove(params: {
   }
 
   const profile = await prisma.voiceProfile.findFirst({
-    where: { id: voiceProfileId, workspaceId, status: 'READY' },
+    where: { id: voiceProfileId, familyspaceId, status: 'READY' },
     select: { id: true, personId: true },
   })
   if (!profile) {
@@ -52,7 +52,7 @@ async function enqueueRenderOnApprove(params: {
   if (profile.personId) {
     const consent = await prisma.voiceConsent.findFirst({
       where: {
-        workspaceId,
+        familyspaceId,
         revokedAt: null,
         allowsGeneration: true,
         OR: [{ voiceProfileId: profile.id }, { personId: profile.personId }],
@@ -78,7 +78,7 @@ async function enqueueRenderOnApprove(params: {
 
   const queueJobId = await enqueueNarrationRender({
     storyId,
-    workspaceId,
+    familyspaceId,
     voiceProfileId: profile.id,
     userId,
     voiceGenerationJobId: voiceGenerationJob.id,
@@ -96,9 +96,9 @@ export default apiHandler({
   // PATCH /api/stories/[id]/narration
   // body: { action: 'update' | 'approve' | 'discard', narratedContent?: string }
   PATCH: async (req, res) => {
-    const user = await getAuthUserWithWorkspace(req, res)
+    const user = await getAuthUserWithFamilyspace(req, res)
     const storyId = req.query.id as string
-    await requireWorkspaceRole(user.id, user.workspaceId, 'EDITOR')
+    await requireFamilyspaceRole(user.id, user.familyspaceId, 'EDITOR')
 
     const { action, narratedContent } = req.body ?? {}
 
@@ -107,7 +107,7 @@ export default apiHandler({
     }
 
     const story = await prisma.story.findFirst({
-      where: { id: storyId, workspaceId: user.workspaceId },
+      where: { id: storyId, familyspaceId: user.familyspaceId },
       select: { id: true, narratedContent: true, narrationStatus: true },
     })
     if (!story) throw Errors.notFound('Story')
@@ -172,7 +172,7 @@ export default apiHandler({
       try {
         renderEnqueue = await enqueueRenderOnApprove({
           storyId,
-          workspaceId: user.workspaceId,
+          familyspaceId: user.familyspaceId,
           userId: user.id,
         })
       } catch (err) {

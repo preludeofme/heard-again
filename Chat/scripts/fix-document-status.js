@@ -5,7 +5,7 @@ async function fixStatus() {
   // Update documents that have content but wrong status
   const result = await prisma.document.updateMany({
     where: {
-      workspaceId: '931638b2-8341-41fc-a064-0883a9911d54',
+      familyspaceId: '931638b2-8341-41fc-a064-0883a9911d54',
       personId: '6967b35d-a6fb-46d4-9cb5-4965c8f36c6c',
       content: {
         not: ''
@@ -23,7 +23,7 @@ async function fixStatus() {
   // Show updated documents
   const docs = await prisma.document.findMany({
     where: {
-      workspaceId: '931638b2-8341-41fc-a064-0883a9911d54',
+      familyspaceId: '931638b2-8341-41fc-a064-0883a9911d54',
       personId: '6967b35d-a6fb-46d4-9cb5-4965c8f36c6c',
       status: 'PROCESSED'
     },

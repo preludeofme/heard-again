@@ -30,8 +30,8 @@ interface RetentionPolicy {
 }
 
 const defaultPolicy: RetentionPolicy = {
-  audioRetentionDays: 3650,
-  transcriptRetentionDays: 3650,
+  audioRetentionDays: 0,
+  transcriptRetentionDays: 0,
   inactiveStoryDraftRetentionDays: 365,
   purgeRevokedVoiceConsentsAfterDays: 365,
   autoDeleteFailedProcessingAfterDays: 30,
@@ -227,6 +227,12 @@ export default function PrivacyPage() {
                     Data Retention Policy
                   </Typography>
 
+                  <Typography variant="body2" sx={{ color: '#546669', mb: 3 }}>
+                    The primary purpose of Heard Again is the <strong>historical preservation</strong> of family memories. 
+                    Unlike social media, we prioritize long-term storage of your audio and stories. 
+                    Setting a value to <strong>0</strong> ensures data is kept indefinitely (never automatically deleted).
+                  </Typography>
+
                   {isLoadingPolicy ? (
                     <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
                       <CircularProgress />
@@ -239,6 +245,7 @@ export default function PrivacyPage() {
                             fullWidth
                             type="number"
                             label="Audio Retention (days)"
+                            helperText="Set to 0 for indefinite preservation"
                             value={policy.audioRetentionDays}
                             onChange={updateNumberField('audioRetentionDays')}
                           />
@@ -248,6 +255,7 @@ export default function PrivacyPage() {
                             fullWidth
                             type="number"
                             label="Transcript Retention (days)"
+                            helperText="Set to 0 for indefinite preservation"
                             value={policy.transcriptRetentionDays}
                             onChange={updateNumberField('transcriptRetentionDays')}
                           />
@@ -310,6 +318,22 @@ export default function PrivacyPage() {
                       </Box>
                     </>
                   )}
+                </CardContent>
+              </Card>
+
+              <Card sx={{ borderRadius: 3 }}>
+                <CardContent sx={{ p: 3 }}>
+                  <Typography variant="h6" sx={{ color: '#16334a', fontWeight: 700, mb: 2 }}>
+                    Legal Basis for Archiving
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: '#546669', mb: 2 }}>
+                    Under GDPR (Article 5(1)(e)), personal data may be stored for longer periods if it is processed solely for 
+                    <strong> archiving purposes in the public interest, scientific or historical research purposes</strong>.
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: '#546669' }}>
+                    Heard Again operates on the basis of <strong>Historical Preservation</strong>. We do not remove data unless 
+                    explicitly requested by the account owner or according to the retention settings you configure above.
+                  </Typography>
                 </CardContent>
               </Card>
 

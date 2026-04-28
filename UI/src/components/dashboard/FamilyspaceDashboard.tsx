@@ -1,7 +1,7 @@
 import { Box, Grid, CircularProgress, Alert, Typography } from '@mui/material'
 import { ProfileColors } from '@/components/profile/ProfileConstants'
 import { useDashboardController } from '@/controllers/useDashboardController'
-import { WorkspaceHero } from './WorkspaceHero'
+import { FamilyspaceHero } from './FamilyspaceHero'
 import { OnboardingChecklist } from './OnboardingChecklist'
 import { ContinueCard } from './ContinueCard'
 import { QuickActionsRail } from './QuickActionsRail'
@@ -12,9 +12,9 @@ import { FeaturedPersonCard } from './FeaturedPersonCard'
 import { Suggestions } from './Suggestions'
 import { SubscriptionStatusCard } from './SubscriptionStatusCard'
 
-export function WorkspaceDashboard() {
+export function FamilyspaceDashboard() {
   const {
-    workspace,
+    familyspace,
     userContext,
     stats,
     onboardingState,
@@ -87,8 +87,8 @@ export function WorkspaceDashboard() {
     >
       <Grid container spacing={3}>
         <Grid size={{ xs: 12 }}>
-          <WorkspaceHero
-            workspace={workspace}
+          <FamilyspaceHero
+            familyspace={familyspace}
             userContext={userContext}
             stats={stats}
             pendingInvites={pendingInvites}
@@ -97,7 +97,7 @@ export function WorkspaceDashboard() {
 
         {!allOnboardingDone && (
           <Grid size={{ xs: 12 }}>
-            <OnboardingChecklist state={onboardingState} role={role} workspaceId={workspace?.id ?? null} />
+            <OnboardingChecklist state={onboardingState} role={role} familyspaceId={familyspace?.id ?? null} />
           </Grid>
         )}
 
@@ -147,7 +147,7 @@ export function WorkspaceDashboard() {
 
             {showSubscription && billingUsage && (
               <Grid size={{ xs: 12 }}>
-                <SubscriptionStatusCard usage={billingUsage} planType={workspace?.planType ?? 'FREE'} />
+                <SubscriptionStatusCard usage={billingUsage} planType={familyspace?.planType ?? 'FREE'} />
               </Grid>
             )}
           </>

@@ -2,14 +2,18 @@ import { BaseRepository } from './BaseRepository'
 import type { Prisma, Story } from '@prisma/client'
 
 export class StoryRepository extends BaseRepository {
-  async findById(id: string, workspaceId: string, include?: Prisma.StoryInclude): Promise<Story | null> {
+  async findById(id: string, familyspaceId?: string, include?: Prisma.StoryInclude): Promise<Story | null> {
+    const where: Prisma.StoryWhereInput = { id }
+    if (familyspaceId) {
+      where.familyspaceId = familyspaceId
+    }
     return this.prisma.story.findFirst({
-      where: { id, workspaceId },
+      where,
       include,
     })
   }
 
-  async findMany(workspaceId: string, options: { 
+  async findMany(familyspaceId: string, options: { 
     skip?: number, 
     take?: number,
     where?: Prisma.StoryWhereInput,
@@ -18,7 +22,7 @@ export class StoryRepository extends BaseRepository {
     return this.prisma.story.findMany({
       where: { 
         ...options.where,
-        workspaceId,
+        familyspaceId,
       },
       skip: options.skip,
       take: options.take,
@@ -27,25 +31,27 @@ export class StoryRepository extends BaseRepository {
     })
   }
 
-  async create(data: Prisma.StoryUncheckedCreateInput, userId: string): Promise<Story> {
+  async create(data: Prisma.StoryUncheckedCreateInput, userId: string | null): Promise<Story> {
     const story = await this.prisma.story.create({ data: data as any })
     
-    await this.audit({
-      workspaceId: story.workspaceId,
-      actorId: userId,
-      actorType: 'USER',
-      action: 'CREATE',
-      resourceType: 'STORY',
-      resourceId: story.id,
-      afterState: story,
-    })
+    if (userId) {
+      await this.audit({
+        familyspaceId: story.familyspaceId,
+        actorId: userId,
+        actorType: 'USER',
+        action: 'CREATE',
+        resourceType: 'STORY',
+        resourceId: story.id,
+        afterState: story,
+      })
+    }
 
     return story
   }
 
-  async update(id: string, workspaceId: string, data: Prisma.StoryUncheckedUpdateInput, userId: string): Promise<Story> {
+  async update(id: string, familyspaceId: string, data: Prisma.StoryUncheckedUpdateInput, userId: string | null): Promise<Story> {
     const before = await this.prisma.story.findFirstOrThrow({
-      where: { id, workspaceId },
+      where: { id, familyspaceId },
     })
 
     const story = await this.prisma.story.update({
@@ -53,23 +59,25 @@ export class StoryRepository extends BaseRepository {
       data: data as any,
     })
 
-    await this.audit({
-      workspaceId,
-      actorId: userId,
-      actorType: 'USER',
-      action: 'UPDATE',
-      resourceType: 'STORY',
-      resourceId: story.id,
-      beforeState: before,
-      afterState: story,
-    })
+    if (userId) {
+      await this.audit({
+        familyspaceId,
+        actorId: userId,
+        actorType: 'USER',
+        action: 'UPDATE',
+        resourceType: 'STORY',
+        resourceId: story.id,
+        beforeState: before,
+        afterState: story,
+      })
+    }
 
     return story
   }
 
-  async delete(id: string, workspaceId: string, userId: string): Promise<Story> {
+  async delete(id: string, familyspaceId: string, userId: string): Promise<Story> {
     const before = await this.prisma.story.findFirstOrThrow({
-      where: { id, workspaceId },
+      where: { id, familyspaceId },
     })
 
     const story = await this.prisma.story.delete({
@@ -77,7 +85,7 @@ export class StoryRepository extends BaseRepository {
     })
 
     await this.audit({
-      workspaceId,
+      familyspaceId,
       actorId: userId,
       actorType: 'USER',
       action: 'DELETE',
@@ -89,11 +97,11 @@ export class StoryRepository extends BaseRepository {
     return story
   }
 
-  async count(workspaceId: string, where?: Prisma.StoryWhereInput): Promise<number> {
+  async count(familyspaceId: string, where?: Prisma.StoryWhereInput): Promise<number> {
     return this.prisma.story.count({
       where: {
         ...where,
-        workspaceId,
+        familyspaceId,
       },
     })
   }

@@ -6,7 +6,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { v4 as uuidv4 } from 'uuid'
 import { prisma } from '@/lib/prisma'
 import { errorResponse, successResponse } from '@/lib/api-helpers'
-import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 import { validateFileContent, generateSecureFilename, ALLOWED_MIME_TYPES } from '@/lib/security/file-validator'
 
 export const config = {
@@ -39,16 +39,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const user = await getAuthUserWithWorkspace(req, res)
-    await requireWorkspaceRole(user.id, user.workspaceId, 'EDITOR')
+    const user = await getAuthUserWithFamilyspace(req, res)
+    await requireFamilyspaceRole(user.id, user.familyspaceId, 'EDITOR')
 
-    const workspaceDir = path.join(IMPORT_DIR, user.workspaceId, 'bulk-audio')
-    await fs.mkdir(workspaceDir, { recursive: true })
+    const familyspaceDir = path.join(IMPORT_DIR, user.familyspaceId, 'bulk-audio')
+    await fs.mkdir(familyspaceDir, { recursive: true })
 
     const form = formidable({
       keepExtensions: false, // Don't trust original extensions
       maxFileSize: 250 * 1024 * 1024,
-      uploadDir: workspaceDir, // Restrict to secure workspace directory
+      uploadDir: familyspaceDir, // Restrict to secure familyspace directory
       filename: () => `${uuidv4()}.tmp`, // Use temporary extension
       multiples: true,
     })
@@ -107,7 +107,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       )
 
       // Move to final location with secure name
-      const finalPath = path.join(workspaceDir, secureFilename)
+      const finalPath = path.join(familyspaceDir, secureFilename)
       await fs.rename(file.filepath, finalPath)
 
       validatedAudioFiles.push({
@@ -129,7 +129,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const relativePath = path.relative(process.cwd(), file.filepath)
         const asset = await tx.asset.create({
           data: {
-            workspaceId: user.workspaceId,
+            familyspaceId: user.familyspaceId,
             filename: path.basename(file.filepath),
             originalName: file.originalFilename,
             mimeType: file.mimetype,
@@ -153,7 +153,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const importJob = await prisma.importJob.create({
       data: {
-        workspaceId: user.workspaceId,
+        familyspaceId: user.familyspaceId,
         sourceType: 'CSV',
         status: 'COMPLETED',
         importedById: user.id,

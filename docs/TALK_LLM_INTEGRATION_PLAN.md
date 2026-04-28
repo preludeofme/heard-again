@@ -15,7 +15,7 @@
 User (browser)
   ↓ types / speaks
 UI (Next.js — /UI)
-  ↓  getServerSession() → derives userId + workspaceId from JWT (never from client headers)
+  ↓  getServerSession() → derives userId + familyspaceId from JWT (never from client headers)
   ↓  POST /api/chat/stream  (proxy)
   ↓  Authorization: Bearer CHAT_SERVICE_SECRET  (never exposed to browser)
 Chat Service (Next.js — /Chat, port 4778)
@@ -37,7 +37,7 @@ Chat Service (Next.js — /Chat, port 4778)
 > See `TALK_LLM_SECURITY_REVIEW.md` for full exploit scenarios.
 
 - [x] **[SEC-1] Add service token authentication to Chat service**
-  - Every Chat service route currently accepts any `x-workspace-id` / `x-user-id` header
+  - Every Chat service route currently accepts any `x-familyspace-id` / `x-user-id` header
     value with zero verification — any caller can impersonate any user
   - Fix: Add an `Authorization: Bearer <CHAT_SERVICE_SECRET>` check at the top of every
     Chat service handler before any logic runs:
@@ -54,21 +54,21 @@ Chat Service (Next.js — /Chat, port 4778)
 
 - [x] **[SEC-2] Fix UI proxy routes — derive identity from NextAuth session, never from client headers**
   - All three proxy routes (`sessions.ts`, `stream.ts`, `messages.ts`) forward
-    `x-workspace-id` and `x-user-id` directly from the browser's request headers
+    `x-familyspace-id` and `x-user-id` directly from the browser's request headers
   - An authenticated user can send any value for these headers and access any other
     user's sessions, messages, and persona data
-  - Fix: Use the already-existing `getAuthUserWithWorkspace()` helper (same pattern as
+  - Fix: Use the already-existing `getAuthUserWithFamilyspace()` helper (same pattern as
     `UI/src/pages/api/voice/audio/[id].ts`):
     ```typescript
-    import { getAuthUserWithWorkspace } from '@/lib/auth-helpers'
+    import { getAuthUserWithFamilyspace } from '@/lib/auth-helpers'
 
     export default async function handler(req, res) {
-      const user = await getAuthUserWithWorkspace(req, res) // throws 401 if not authed
+      const user = await getAuthUserWithFamilyspace(req, res) // throws 401 if not authed
       const response = await fetch(`${chatSystemUrl}/api/chat/sessions`, {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${process.env.CHAT_SERVICE_SECRET}`,
-          'x-workspace-id': user.workspaceId,  // ← from validated session
+          'x-familyspace-id': user.familyspaceId,  // ← from validated session
           'x-user-id': user.id,                // ← from validated session
         },
       })
@@ -76,28 +76,28 @@ Chat Service (Next.js — /Chat, port 4778)
     ```
   - Affected files: `UI/src/pages/api/chat/sessions.ts`, `stream.ts`, `messages.ts`
 
-- [x] **[SEC-3] Add session ownership check — verify userId + workspaceId before returning any session/messages**
+- [x] **[SEC-3] Add session ownership check — verify userId + familyspaceId before returning any session/messages**
   - `ChatRepository.getSession()` and `getMessages()` query only by `sessionId` with no
     ownership filter — any sessionId leaks the full conversation to any caller
-  - Fix: Pass `userId` and `workspaceId` into all read operations and verify at query level:
+  - Fix: Pass `userId` and `familyspaceId` into all read operations and verify at query level:
     ```typescript
     // ChatRepository.getSession — add ownership filter
     const session = await prisma.chatSession.findUnique({ where: { id: sessionId } })
-    if (!session || session.userId !== userId || session.workspaceId !== workspaceId) {
+    if (!session || session.userId !== userId || session.familyspaceId !== familyspaceId) {
       return null  // surface as 404 — never 403 (avoids enumeration)
     }
     ```
-  - Apply the same `userId + workspaceId` WHERE clause to `listSessions()` and `getMessages()`
+  - Apply the same `userId + familyspaceId` WHERE clause to `listSessions()` and `getMessages()`
   - Affected files: `Chat/src/repositories/ChatRepository.ts`,
     `Chat/src/pages/api/chat/messages.ts`
 
-- [x] **[SEC-4] Add persona profile ownership check — verify workspaceId before read or write**
-  - `GET /api/persona/profiles` returns any persona by `personId` with no workspace check
+- [x] **[SEC-4] Add persona profile ownership check — verify familyspaceId before read or write**
+  - `GET /api/persona/profiles` returns any persona by `personId` with no familyspace check
   - `POST/PUT/DELETE /api/persona/instructions` modifies any persona by `personaId` with
     no ownership check — **allows prompt poisoning of other users' family personas**
   - Fix: After fetching a `PersonaProfile`, always verify:
     ```typescript
-    if (!profile || profile.workspaceId !== workspaceId) {
+    if (!profile || profile.familyspaceId !== familyspaceId) {
       return res.status(404).json({ success: false, error: 'Persona profile not found' })
     }
     ```
@@ -106,7 +106,7 @@ Chat Service (Next.js — /Chat, port 4778)
 
 - [x] **[SEC-5] Remove `allowDangerousEmailAccountLinking: true` from Google OAuth**
   - `UI/src/lib/auth.ts:65` — this flag allows automatic account takeover: an attacker
-    who creates a Google account with a victim's email gets full access to their workspace
+    who creates a Google account with a victim's email gets full access to their familyspace
   - Fix: Remove the flag (defaults to `false`) and implement explicit link confirmation
     with email re-verification if OAuth account linking is needed
 
@@ -198,43 +198,43 @@ Chat Service (Next.js — /Chat, port 4778)
 ## Phase 2 — Auth Context Wiring
 
 > **Note:** SEC-1 and SEC-2 in Phase 0-S are the prerequisite for this entire phase.
-> Once those are complete, `workspaceId` and `userId` flow correctly from the validated
+> Once those are complete, `familyspaceId` and `userId` flow correctly from the validated
 > NextAuth session — never from client-supplied values.
 
 - [x] **Remove hardcoded identity from `useChatConversation.ts`**
-  - `useChatConversation.ts` currently hardcodes `'x-workspace-id': 'default'` and
+  - `useChatConversation.ts` currently hardcodes `'x-familyspace-id': 'default'` and
     `'x-user-id': 'default'` in three `fetch()` calls
   - With Phase 0-S complete, the UI proxy routes derive identity server-side —
     the client no longer sends these headers at all
-  - Fix: Remove `'x-workspace-id'` and `'x-user-id'` from all `fetch()` calls in
+  - Fix: Remove `'x-familyspace-id'` and `'x-user-id'` from all `fetch()` calls in
     `useChatConversation.ts`; the proxy handles identity injection automatically
 
-- [x] **Fix hardcoded `workspaceId: 'default'` in `PersonaServiceImpl.generatePersonaProfile`**
+- [x] **Fix hardcoded `familyspaceId: 'default'` in `PersonaServiceImpl.generatePersonaProfile`**
   - `Chat/src/services/persona/PersonaService.ts:44,95` — hardcoded `'default'` causes
-    all generated personas to be assigned to a phantom workspace, breaking all lookups
-  - Fix: Thread the real `workspaceId` from the API route through to the service:
+    all generated personas to be assigned to a phantom familyspace, breaking all lookups
+  - Fix: Thread the real `familyspaceId` from the API route through to the service:
     ```typescript
     async generatePersonaProfile(
       personId: string,
-      workspaceId: string,          // ← add this
+      familyspaceId: string,          // ← add this
       options: PersonaGenerationOptions
     ): Promise<PersonaProfile>
     ```
-  - Update all call sites in `Chat/src/pages/api/persona/profiles.ts` to pass `workspaceId`
+  - Update all call sites in `Chat/src/pages/api/persona/profiles.ts` to pass `familyspaceId`
     from the (now verified) request header
 
-- [ ] **Add `workspaceId` filter to all persona service queries**
-  - `PersonaServiceImpl.listPersonaProfiles()` already takes `workspaceId` — verify it is
+- [ ] **Add `familyspaceId` filter to all persona service queries**
+  - `PersonaServiceImpl.listPersonaProfiles()` already takes `familyspaceId` — verify it is
     passed correctly from all API routes after Phase 0-S SEC-4 ownership checks are in place
   - `PersonaServiceImpl.getPersonaProfile()` currently only queries by `personId` — the
     ownership check added in SEC-4 enforces isolation at the route layer, but add a
-    `workspaceId` filter at the repository query level as defense-in-depth
+    `familyspaceId` filter at the repository query level as defense-in-depth
 
-- [ ] **Propagate authenticated `workspaceId` into `RetrievalService.searchDocuments`**
-  - `ChatServiceImpl.sendMessage()` passes `session.workspaceId` into the retrieval
+- [ ] **Propagate authenticated `familyspaceId` into `RetrievalService.searchDocuments`**
+  - `ChatServiceImpl.sendMessage()` passes `session.familyspaceId` into the retrieval
     context — confirm this value originates from the DB-validated session (after Phase 0-S)
     and not from a client-supplied header
-  - The ChromaDB collection name is `workspace_${workspaceId}_documents` — if `workspaceId`
+  - The ChromaDB collection name is `familyspace_${familyspaceId}_documents` — if `familyspaceId`
     is ever client-controlled it becomes a cross-tenant RAG leak; SEC-2 closes this
 
 ---
@@ -274,7 +274,7 @@ Chat Service (Next.js — /Chat, port 4778)
 - [x] **Wire session resumption instead of always creating new sessions**
   - Current: every page load creates a brand-new session
   - Fix: On `initializeChatSession`, call `GET /api/chat/sessions` first and look for an
-    existing `ACTIVE` session for the same `personId + userId + workspaceId`
+    existing `ACTIVE` session for the same `personId + userId + familyspaceId`
   - Resume that session (load its history) rather than creating a duplicate
 
 - [x] **Replace placeholder `useConversation` (mock) with LLM-backed path as default**
@@ -432,13 +432,13 @@ Chat Service (Next.js — /Chat, port 4778)
 - [ ] **Tenant isolation: cross-session IDOR** — Authenticate as User A, obtain a
   `sessionId` belonging to User B, call `GET /api/chat/messages?sessionId={B_session}` —
   assert `404` (not the messages)
-- [ ] **Tenant isolation: cross-workspace persona** — Authenticate as Workspace A user,
-  call `GET /api/persona/profiles?personId={workspace_B_person_id}` — assert `404`
-- [ ] **Persona write isolation** — Authenticate as Workspace A user, call
-  `PUT /api/persona/instructions` with a `personaId` from Workspace B — assert `404`
+- [ ] **Tenant isolation: cross-familyspace persona** — Authenticate as Familyspace A user,
+  call `GET /api/persona/profiles?personId={familyspace_B_person_id}` — assert `404`
+- [ ] **Persona write isolation** — Authenticate as Familyspace A user, call
+  `PUT /api/persona/instructions` with a `personaId` from Familyspace B — assert `404`
 - [ ] **Identity header bypass attempt** — Authenticate legitimately, call
-  `POST /api/chat/sessions` with `x-workspace-id: other-workspace` header — assert that
-  sessions returned belong to the *authenticated user's* workspace, not the spoofed one
+  `POST /api/chat/sessions` with `x-familyspace-id: other-familyspace` header — assert that
+  sessions returned belong to the *authenticated user's* familyspace, not the spoofed one
 - [ ] **Service token enforcement** — Call Chat service directly (bypassing UI proxy) with
   no `Authorization` header — assert `401`
 - [ ] **Prompt injection rejection** — Send a message containing

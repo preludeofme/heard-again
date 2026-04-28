@@ -256,15 +256,15 @@ Tasks are ordered by dependency sequence within each phase. Complete tasks in or
 - [x] **9.3 — Eliminate the double session-fetch in TTS role checking**
   - **Affected**: `TTS/app/auth.py:110-163`
   - **Steps**:
-    1. Modify `require_workspace_role` to accept the already-fetched `session_data` dict as a parameter rather than re-fetching from NextAuth:
+    1. Modify `require_familyspace_role` to accept the already-fetched `session_data` dict as a parameter rather than re-fetching from NextAuth:
        ```python
-       async def require_workspace_role(
+       async def require_familyspace_role(
            auth_data: Dict[str, Any] = Depends(validate_token),
            required_role: str = 'EDITOR'
        ) -> Dict[str, Any]:
        ```
     2. Pass `session_data` through from `validate_token` by adding it to the returned dict (e.g. `auth_data['session_data'] = session_data`)
-    3. In `require_workspace_role`, read `user_role` from `auth_data['session_data']` instead of making a second HTTP call
+    3. In `require_familyspace_role`, read `user_role` from `auth_data['session_data']` instead of making a second HTTP call
   - **Validation**: Add logging to count NextAuth `/api/auth/session` calls per request; confirm count drops from 2 to 1 for role-protected endpoints
   - **Depends on**: 9.2
 
@@ -516,7 +516,7 @@ Tasks are ordered by dependency sequence within each phase. Complete tasks in or
   - **Steps**:
     1. Add a test for `GET /api/people` — confirm unauthenticated request returns 401
     2. Add a test for `POST /api/people` — confirm EDITOR role can create, VIEWER role gets 403
-    3. Add a test for workspace isolation — user A cannot read workspace B's data
+    3. Add a test for familyspace isolation — user A cannot read familyspace B's data
     4. Use `next-test-api-route-handler` or mock `getServerSession` for isolation
   - **Validation**: `npm test` passes; the three new test cases are green
 

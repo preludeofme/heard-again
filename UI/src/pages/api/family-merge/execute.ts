@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
-import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 
 interface MergeResult {
   mergedPeople: number
@@ -14,8 +14,8 @@ interface MergeResult {
 export default apiHandler({
   // POST /api/family-merge/execute - Execute an approved merge proposal
   POST: async (req, res) => {
-    const user = await getAuthUserWithWorkspace(req, res)
-    await requireWorkspaceRole(user.id, user.workspaceId, 'OWNER')
+    const user = await getAuthUserWithFamilyspace(req, res)
+    await requireFamilyspaceRole(user.id, user.familyspaceId, 'OWNER')
     
     const { proposalId } = req.body
     
@@ -27,7 +27,7 @@ export default apiHandler({
     const proposal = await prisma.familyMergeProposal.findFirst({
       where: {
         id: proposalId,
-        targetWorkspaceId: user.workspaceId,
+        targetFamilyspaceId: user.familyspaceId,
         status: 'APPROVED'
       },
       include: {

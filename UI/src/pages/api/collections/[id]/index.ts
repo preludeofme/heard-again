@@ -1,15 +1,15 @@
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
-import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 
 export default apiHandler({
   // GET /api/collections/[id] - Get collection with stories
   GET: async (req, res) => {
-    const user = await getAuthUserWithWorkspace(req, res)
+    const user = await getAuthUserWithFamilyspace(req, res)
     const collectionId = req.query.id as string
 
     const collection = await prisma.collection.findFirst({
-      where: { id: collectionId, workspaceId: user.workspaceId },
+      where: { id: collectionId, familyspaceId: user.familyspaceId },
       include: {
         createdBy: {
           select: { id: true, displayName: true },
@@ -51,12 +51,12 @@ export default apiHandler({
 
   // PUT /api/collections/[id] - Update collection
   PUT: async (req, res) => {
-    const user = await getAuthUserWithWorkspace(req, res)
+    const user = await getAuthUserWithFamilyspace(req, res)
     const collectionId = req.query.id as string
-    await requireWorkspaceRole(user.id, user.workspaceId, 'EDITOR')
+    await requireFamilyspaceRole(user.id, user.familyspaceId, 'EDITOR')
 
     const existing = await prisma.collection.findFirst({
-      where: { id: collectionId, workspaceId: user.workspaceId },
+      where: { id: collectionId, familyspaceId: user.familyspaceId },
     })
     if (!existing) throw Errors.notFound('Collection')
 
@@ -80,12 +80,12 @@ export default apiHandler({
 
   // DELETE /api/collections/[id] - Delete collection
   DELETE: async (req, res) => {
-    const user = await getAuthUserWithWorkspace(req, res)
+    const user = await getAuthUserWithFamilyspace(req, res)
     const collectionId = req.query.id as string
-    await requireWorkspaceRole(user.id, user.workspaceId, 'EDITOR')
+    await requireFamilyspaceRole(user.id, user.familyspaceId, 'EDITOR')
 
     const existing = await prisma.collection.findFirst({
-      where: { id: collectionId, workspaceId: user.workspaceId },
+      where: { id: collectionId, familyspaceId: user.familyspaceId },
     })
     if (!existing) throw Errors.notFound('Collection')
 

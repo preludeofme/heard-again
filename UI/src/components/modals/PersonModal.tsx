@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   Box, Typography, Dialog, DialogTitle, DialogContent, DialogActions,
   Button, TextField, Avatar, Tabs, Tab, Chip, IconButton, Grid,
@@ -6,7 +6,7 @@ import {
 } from '@mui/material'
 import {
   Close, Edit, Save, Delete, Person, CalendarToday, Tag,
-  Mic, AutoStories, FamilyRestroom, Cancel, OpenInNew,
+  Mic, AutoStories, FamilyRestroom, Cancel, OpenInNew, PhotoCamera as PhotoCameraIcon,
 } from '@mui/icons-material'
 import { format } from 'date-fns'
 import { fetchWithCSRFAndJSON, fetchWithCSRF } from '@/lib/api-client'
@@ -103,6 +103,12 @@ export function PersonModal({ open, personId, initialTab = 'overview', onClose, 
   const [marriagePlace, setMarriagePlace] = useState('')
   const [isMutatingRelationship, setIsMutatingRelationship] = useState(false)
 
+  // Avatar state
+  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null)
+  const [pendingAvatarFile, setPendingAvatarFile] = useState<File | null>(null)
+  const [avatarError, setAvatarError] = useState<string | null>(null)
+  const avatarInputRef = useRef<HTMLInputElement>(null)
+
   // Edit form state
   const [editForm, setEditForm] = useState<Partial<PersonData>>({})
 
@@ -116,6 +122,7 @@ export function PersonModal({ open, personId, initialTab = 'overview', onClose, 
       if (!res.ok) throw new Error(data.error || 'Failed to load person')
       setPerson(data.data)
       setEditForm(data.data)
+      setAvatarPreviewUrl(data.data.avatarUrl || null)
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -143,8 +150,38 @@ export function PersonModal({ open, personId, initialTab = 'overview', onClose, 
       loadAvailablePeople()
       setIsEditing(false)
       setActiveTab(initialTab === 'relationships' ? 1 : 0)
+      setPendingAvatarFile(null)
+      setAvatarError(null)
     }
   }, [open, personId, initialTab, fetchPerson, loadAvailablePeople])
+
+  useEffect(() => {
+    if (!pendingAvatarFile) return
+    const url = URL.createObjectURL(pendingAvatarFile)
+    setAvatarPreviewUrl(url)
+    return () => URL.revokeObjectURL(url)
+  }, [pendingAvatarFile])
+
+  const handleAvatarFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setAvatarError(null)
+    if (!file.type.startsWith('image/')) {
+      setAvatarError('Please choose an image file (JPG, PNG, etc.).')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setAvatarError('Photo must be under 5MB.')
+      return
+    }
+    setPendingAvatarFile(file)
+  }
+
+  const handleAvatarPickClick = () => {
+    if (isEditing) {
+      avatarInputRef.current?.click()
+    }
+  }
 
   // Reset relationshipTargetId if it becomes invalid when availablePeople changes
   useEffect(() => {
@@ -204,11 +241,35 @@ export function PersonModal({ open, personId, initialTab = 'overview', onClose, 
   const handleSave = async () => {
     if (!personId || !person) return
     setIsSaving(true)
+    setError(null)
     try {
+      // 1. Update person text data
       const res = await fetchWithCSRFAndJSON(`/api/people/${personId}`, editForm)
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to save')
+      
+      // 2. Upload avatar if pending
+      if (pendingAvatarFile) {
+        const form = new FormData()
+        form.append('file', pendingAvatarFile)
+        const avatarRes = await fetchWithCSRF(`/api/people/${personId}/avatar`, {
+          method: 'POST',
+          body: form,
+        })
+        if (!avatarRes.ok) {
+          console.warn('Avatar upload failed:', await avatarRes.text())
+          // We don't throw here to allow partial success (text saved)
+        } else {
+          const avatarData = await avatarRes.json()
+          if (avatarData.success) {
+            // Update local person state with new avatar if needed
+            data.data.avatarUrl = `/api/assets/serve/${avatarData.data.avatarAssetId}`
+          }
+        }
+      }
+
       setPerson(data.data)
+      setPendingAvatarFile(null)
       setIsEditing(false)
       onSave?.(data.data)
     } catch (err: any) {
@@ -268,12 +329,49 @@ export function PersonModal({ open, personId, initialTab = 'overview', onClose, 
       <DialogTitle sx={{ px: 4, pt: 4, pb: 2 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <Box sx={{ display: 'flex', gap: 3, alignItems: 'center' }}>
-            <Avatar
-              src={person.avatarUrl || undefined}
-              sx={{ width: 80, height: 80, border: '4px solid #d0e3e6' }}
-            >
-              <Person sx={{ fontSize: 40 }} />
-            </Avatar>
+            <Box sx={{ position: 'relative' }}>
+              <Avatar
+                src={avatarPreviewUrl || undefined}
+                onClick={handleAvatarPickClick}
+                sx={{ 
+                  width: 80, 
+                  height: 80, 
+                  border: '4px solid #d0e3e6',
+                  cursor: isEditing ? 'pointer' : 'default',
+                  '&:hover': isEditing ? { opacity: 0.85 } : {},
+                }}
+              >
+                <Person sx={{ fontSize: 40 }} />
+              </Avatar>
+              {isEditing && (
+                <>
+                  <IconButton
+                    size="small"
+                    onClick={handleAvatarPickClick}
+                    sx={{
+                      position: 'absolute',
+                      bottom: -4,
+                      right: -4,
+                      width: 28,
+                      height: 28,
+                      backgroundColor: '#16334a',
+                      color: '#ffffff',
+                      border: '2px solid #fff',
+                      '&:hover': { backgroundColor: '#2e4a62' },
+                    }}
+                  >
+                    <PhotoCameraIcon sx={{ fontSize: 16 }} />
+                  </IconButton>
+                  <input
+                    ref={avatarInputRef}
+                    type="file"
+                    accept="image/*"
+                    hidden
+                    onChange={handleAvatarFileSelect}
+                  />
+                </>
+              )}
+            </Box>
             <Box>
               {isEditing ? (
                 <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
@@ -337,7 +435,13 @@ export function PersonModal({ open, personId, initialTab = 'overview', onClose, 
 
       {/* Tabs */}
       <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 2 }}>
-        <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)}>
+        <Tabs 
+          value={activeTab} 
+          onChange={(_, v) => setActiveTab(v)}
+          variant="scrollable"
+          scrollButtons="auto"
+          allowScrollButtonsMobile
+        >
           <Tab label="Overview" />
           <Tab label={`Relationships (${person.relationships.length})`} />
           <Tab label={`Voice Profiles (${person.voiceProfiles.length})`} />

@@ -9,7 +9,7 @@ This design outlines a production-grade, multi-tenant conversational AI system t
 ### Core Design Principles
 - **Service-Oriented Architecture**: Clear separation of concerns with typed contracts
 - **Defense in Depth**: Multiple layers of security and validation
-- **Tenant Isolation by Default**: All data access scoped by workspace
+- **Tenant Isolation by Default**: All data access scoped by familyspace
 - **Production-Ready**: Observable, testable, maintainable, and scalable
 
 ### High-Level Architecture
@@ -46,7 +46,7 @@ This design outlines a production-grade, multi-tenant conversational AI system t
 **Responsibility**: Chat orchestration, session management, prompt construction
 ```typescript
 interface ChatService {
-  createSession(workspaceId: string, personId: string): Promise<ChatSession>
+  createSession(familyspaceId: string, personId: string): Promise<ChatSession>
   sendMessage(sessionId: string, message: string): Promise<ChatResponse>
   getHistory(sessionId: string): Promise<ChatMessage[]>
 }
@@ -149,7 +149,7 @@ interface LLMGateway {
 ```typescript
 interface PersonaProfile {
   personId: string
-  workspaceId: string
+  familyspaceId: string
   // Extracted from documents
   writingStyle: {
     vocabulary: string[]
@@ -191,8 +191,8 @@ Guidelines:
 ## Security Architecture
 
 ### Tenant Isolation Layers
-1. **Database Level**: All queries include `workspaceId` filter
-2. **Vector DB Level**: Collections scoped by workspace, metadata filtering
+1. **Database Level**: All queries include `familyspaceId` filter
+2. **Vector DB Level**: Collections scoped by familyspace, metadata filtering
 3. **API Level**: Session validation on every request
 4. **Service Level**: Context passing with tenant validation
 

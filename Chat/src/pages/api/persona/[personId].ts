@@ -21,13 +21,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const { method } = req
   const { personId } = req.query
-  const workspaceId = req.headers['x-workspace-id'] as string
+  const familyspaceId = req.headers['x-familyspace-id'] as string
   const userId = req.headers['x-user-id'] as string
 
-  if (!workspaceId || !userId) {
+  if (!familyspaceId || !userId) {
     return res.status(400).json({
       success: false,
-      error: 'Missing required headers: x-workspace-id, x-user-id'
+      error: 'Missing required headers: x-familyspace-id, x-user-id'
     })
   }
 
@@ -41,7 +41,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     switch (method) {
       case 'GET':
-        await handleGetPersona(req, res, personId, workspaceId)
+        await handleGetPersona(req, res, personId, familyspaceId)
         break
       default:
         res.setHeader('Allow', ['GET'])
@@ -63,10 +63,10 @@ async function handleGetPersona(
   req: NextApiRequest, 
   res: NextApiResponse, 
   personId: string, 
-  workspaceId: string
+  familyspaceId: string
 ) {
   try {
-    const persona = await personaService.getPersonaProfile(personId, workspaceId)
+    const persona = await personaService.getPersonaProfile(personId, familyspaceId)
     
     // Ownership check — surface as 404 to prevent enumeration
     if (!persona) {
@@ -81,7 +81,7 @@ async function handleGetPersona(
       persona: {
         id: persona.id,
         personId: persona.personId,
-        workspaceId: persona.workspaceId,
+        familyspaceId: persona.familyspaceId,
         status: persona.status,
         documentSampleCount: persona.documentSampleCount,
         confidenceScore: persona.confidenceScore,

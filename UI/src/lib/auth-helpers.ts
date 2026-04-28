@@ -13,7 +13,7 @@ export interface AuthenticatedUser {
   id: string
   email: string
   displayName: string | null
-  defaultWorkspaceId: string | null
+  defaultFamilyspaceId: string | null
 }
 
 /**
@@ -34,30 +34,30 @@ export async function getAuthUser(
     id: session.user.id,
     email: session.user.email || '',
     displayName: session.user.displayName || null,
-    defaultWorkspaceId: session.user.defaultWorkspaceId || null,
+    defaultFamilyspaceId: session.user.defaultFamilyspaceId || null,
   }
 }
 
 /**
- * Get the authenticated user's current workspace ID.
- * Falls back to their first workspace if no default is set.
+ * Get the authenticated user's current familyspace ID.
+ * Falls back to their first familyspace if no default is set.
  * Throws AppError(401) if not authenticated.
- * Throws AppError(404) if no workspace found.
+ * Throws AppError(404) if no familyspace found.
  */
-export async function getAuthUserWithWorkspace(
+export async function getAuthUserWithFamilyspace(
   req: NextApiRequest,
   res: NextApiResponse
-): Promise<AuthenticatedUser & { workspaceId: string }> {
+): Promise<AuthenticatedUser & { familyspaceId: string }> {
   const user = await getAuthUser(req, res)
 
-  if (user.defaultWorkspaceId) {
-    return { ...user, workspaceId: user.defaultWorkspaceId }
+  if (user.defaultFamilyspaceId) {
+    return { ...user, familyspaceId: user.defaultFamilyspaceId }
   }
 
-  // Fall back to first owned/member workspace
+  // Fall back to first owned/member familyspace
   const membership = await prisma.membership.findFirst({
     where: { userId: user.id, status: 'ACTIVE' },
-    select: { workspaceId: true },
+    select: { familyspaceId: true },
     orderBy: { joinedAt: 'asc' },
   })
 
@@ -65,22 +65,22 @@ export async function getAuthUserWithWorkspace(
     throw Errors.forbidden('Access denied')
   }
 
-  return { ...user, workspaceId: membership.workspaceId }
+  return { ...user, familyspaceId: membership.familyspaceId }
 }
 
 /**
- * Verify the user has a specific role (or higher) in a workspace.
+ * Verify the user has a specific role (or higher) in a familyspace.
  */
 const roleHierarchy = ['VIEWER', 'LEGACY', 'EDITOR', 'ADMIN', 'OWNER'] as const
 
-export async function requireWorkspaceRole(
+export async function requireFamilyspaceRole(
   userId: string,
-  workspaceId: string,
+  familyspaceId: string,
   minimumRole: typeof roleHierarchy[number]
 ): Promise<void> {
   const membership = await prisma.membership.findUnique({
     where: {
-      workspaceId_userId: { workspaceId, userId },
+      familyspaceId_userId: { familyspaceId, userId },
     },
     select: { 
       role: true, 
@@ -92,14 +92,14 @@ export async function requireWorkspaceRole(
   })
 
   if (!membership || membership.status !== 'ACTIVE') {
-    throw Errors.forbidden('You are not a member of this workspace')
+    throw Errors.forbidden('You are not a member of this familyspace')
   }
 
   // ✅ SECURITY REQUIREMENT: Require MFA for OWNER role (S11)
   if (membership.role === 'OWNER' && !membership.user.mfaEnabled) {
     // For now, only log a warning instead of blocking access so the owner can actually reach the settings page to enable it.
-    logger.warn(`Owner ${userId} does not have MFA enabled in workspace ${workspaceId}`)
-    // throw Errors.forbidden('MFA is required for workspace owners. Please enable MFA in your profile settings.')
+    logger.warn(`Owner ${userId} does not have MFA enabled in familyspace ${familyspaceId}`)
+    // throw Errors.forbidden('MFA is required for familyspace owners. Please enable MFA in your profile settings.')
   }
 
   const userRoleIndex = roleHierarchy.indexOf(membership.role as any)

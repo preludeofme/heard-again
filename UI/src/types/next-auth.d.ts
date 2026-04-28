@@ -10,7 +10,7 @@ declare module 'next-auth' {
       image?: string | null
       displayName?: string | null
       avatarUrl?: string | null
-      defaultWorkspaceId?: string | null
+      defaultFamilyspaceId?: string | null
       role?: string | null
     }
   }
@@ -18,7 +18,7 @@ declare module 'next-auth' {
   interface User {
     displayName?: string | null
     avatarUrl?: string | null
-    defaultWorkspaceId?: string | null
+    defaultFamilyspaceId?: string | null
   }
 }
 
@@ -27,7 +27,7 @@ declare module 'next-auth/jwt' {
     id?: string
     displayName?: string | null
     avatarUrl?: string | null
-    defaultWorkspaceId?: string | null
+    defaultFamilyspaceId?: string | null
     role?: string | null
   }
 }

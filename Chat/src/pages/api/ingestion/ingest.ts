@@ -33,16 +33,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(401).json({ error: 'Unauthorized' })
   }
 
-  const { assetId, workspaceId, storageUrl, mimeType, title, personId } = req.body
+  const { assetId, familyspaceId, storageUrl, mimeType, title, personId } = req.body
 
-  if (!assetId || !workspaceId || !storageUrl || !mimeType || !title) {
-    logger.warn({ assetId, workspaceId, mimeType }, 'Ingest request rejected — missing required fields')
+  if (!assetId || !familyspaceId || !storageUrl || !mimeType || !title) {
+    logger.warn({ assetId, familyspaceId, mimeType }, 'Ingest request rejected — missing required fields')
     return res.status(400).json({
-      error: 'Missing required fields: assetId, workspaceId, storageUrl, mimeType, title',
+      error: 'Missing required fields: assetId, familyspaceId, storageUrl, mimeType, title',
     })
   }
 
-  logger.info({ assetId, workspaceId, mimeType, title, personId: personId ?? null }, 'RAG ingest request received')
+  logger.info({ assetId, familyspaceId, mimeType, title, personId: personId ?? null }, 'RAG ingest request received')
 
   if (!EXTRACTABLE_MIME_TYPES.has(mimeType)) {
     logger.info({ assetId, mimeType }, 'MIME type not RAG-extractable — skipping')
@@ -66,8 +66,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   let filePath: string | null = null
   try {
-    // Workspace-scoped temp directory prevents cross-tenant file commingling.
-    const tempDir = path.join(process.cwd(), 'temp-ingestion', workspaceId)
+    // Familyspace-scoped temp directory prevents cross-tenant file commingling.
+    const tempDir = path.join(process.cwd(), 'temp-ingestion', familyspaceId)
     await fs.promises.mkdir(tempDir, { recursive: true })
 
     const documentId = uuidv4()
@@ -93,7 +93,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const documentRepository = new PrismaDocumentRepository()
     const document: Document = {
       id: documentId,
-      workspaceId,
+      familyspaceId,
       assetId: assetId || undefined,
       personId: personId || undefined,
       title,
@@ -112,7 +112,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const savedDocument = await documentRepository.upsertByAssetId(document)
-    logger.info({ assetId, documentId: savedDocument.id, workspaceId, personId: personId ?? null }, 'Document record upserted in Chat DB')
+    logger.info({ assetId, documentId: savedDocument.id, familyspaceId, personId: personId ?? null }, 'Document record upserted in Chat DB')
 
     // Queue ingestion job for the worker to process
     const traceId = uuidv4()
@@ -123,7 +123,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         documentId: savedDocument.id,
         filePath,
         mimeType,
-        workspaceId,
+        familyspaceId,
         title,
         personId: personId || null,
         traceId,
@@ -145,7 +145,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (filePath) {
       fs.unlink(filePath, () => {}) // best-effort, non-blocking
     }
-    logger.error({ assetId, workspaceId, mimeType, err: error instanceof Error ? error.message : String(error) }, 'RAG ingest failed — document not queued')
+    logger.error({ assetId, familyspaceId, mimeType, err: error instanceof Error ? error.message : String(error) }, 'RAG ingest failed — document not queued')
     return res.status(500).json({
       error: 'Failed to queue document for ingestion',
     })

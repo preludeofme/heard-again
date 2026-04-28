@@ -126,7 +126,7 @@ Heard Again is a Next.js 14 + MUI application with a Python TTS service, Node.js
 
 ## Notes
 
-**Auth architecture is sound overall.** The `getAuthUserWithWorkspace` helper, `withCSRFProtection` wrapper, workspace RBAC via `requireWorkspaceRole`, and file upload security pipeline (magic-byte validation + ClamAV) are all properly implemented. The issue is coverage gaps and the dev-mode escape hatches not being gated out of production builds.
+**Auth architecture is sound overall.** The `getAuthUserWithFamilyspace` helper, `withCSRFProtection` wrapper, familyspace RBAC via `requireFamilyspaceRole`, and file upload security pipeline (magic-byte validation + ClamAV) are all properly implemented. The issue is coverage gaps and the dev-mode escape hatches not being gated out of production builds.
 
 **The Chat/AI layer is operationally immature.** The persona generation pipeline and document ingestion worker are wired up, but audio generation jobs are never dispatched. The Chat service `.env` commits, Ollama dependency for the ingestion worker profile, and the synchronous TTS auth pattern all need hardening before the AI features are marketed as production-grade.
 

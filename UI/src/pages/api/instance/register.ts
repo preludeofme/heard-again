@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
-import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 import { validate, rules } from '@/lib/validation'
 
 // Generate a secure random token
@@ -13,7 +13,7 @@ function generateToken(length = 32): string {
   return result
 }
 
-// Generate a subdomain from workspace slug
+// Generate a subdomain from familyspace slug
 function generateSubdomain(slug: string): string {
   const base = slug.toLowerCase().replace(/[^a-z0-9-]/g, '-').substring(0, 20)
   const random = Math.random().toString(36).substring(2, 6)
@@ -23,8 +23,8 @@ function generateSubdomain(slug: string): string {
 export default apiHandler({
   // POST /api/instance/register - Register a new local instance
   POST: async (req, res) => {
-    const user = await getAuthUserWithWorkspace(req, res)
-    await requireWorkspaceRole(user.id, user.workspaceId, 'OWNER')
+    const user = await getAuthUserWithFamilyspace(req, res)
+    await requireFamilyspaceRole(user.id, user.familyspaceId, 'OWNER')
 
     const { valid, errors } = validate(req.body, {
       type: [rules.required, rules.oneOf(['LOCAL', 'HYBRID'])],
@@ -39,24 +39,24 @@ export default apiHandler({
 
     const { type, version, computeMode, dataMode, metadata } = req.body
 
-    // Check if workspace has an instance already
+    // Check if familyspace has an instance already
     const existingInstance = await prisma.instance.findFirst({
-      where: { workspaceId: user.workspaceId },
+      where: { familyspaceId: user.familyspaceId },
     })
 
     if (existingInstance) {
-      throw Errors.conflict('An instance is already registered for this workspace')
+      throw Errors.conflict('An instance is already registered for this familyspace')
     }
 
     // Check if plan supports tunnel for non-local types
     const subscription = await prisma.subscription.findUnique({
-      where: { workspaceId: user.workspaceId },
+      where: { familyspaceId: user.familyspaceId },
       include: { plan: true },
     })
 
-    // Get workspace for slug
-    const workspace = await prisma.workspace.findUnique({
-      where: { id: user.workspaceId },
+    // Get familyspace for slug
+    const familyspace = await prisma.familyspace.findUnique({
+      where: { id: user.familyspaceId },
       select: { slug: true },
     })
 
@@ -68,7 +68,7 @@ export default apiHandler({
 
     // Generate tunnel config if needed
     const tunnelEnabled = wantsTunnel && subscription?.plan?.tunnelEnabled
-    const tunnelSubdomain = tunnelEnabled ? generateSubdomain(workspace?.slug || 'instance') : null
+    const tunnelSubdomain = tunnelEnabled ? generateSubdomain(familyspace?.slug || 'instance') : null
     const tunnelToken = tunnelEnabled ? generateToken(48) : null
     const tunnelTokenExpiresAt = tunnelEnabled 
       ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days
@@ -76,7 +76,7 @@ export default apiHandler({
 
     const instance = await prisma.instance.create({
       data: {
-        workspaceId: user.workspaceId,
+        familyspaceId: user.familyspaceId,
         type: type as any,
         status: 'ACTIVE',
         version,
@@ -91,10 +91,10 @@ export default apiHandler({
       },
     })
 
-    // Update workspace deployment mode
+    // Update familyspace deployment mode
     const deploymentMode = tunnelEnabled ? 'TUNNELED' : 'LOCAL'
-    await prisma.workspace.update({
-      where: { id: user.workspaceId },
+    await prisma.familyspace.update({
+      where: { id: user.familyspaceId },
       data: { deploymentMode: deploymentMode as any },
     })
 

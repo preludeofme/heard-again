@@ -47,7 +47,7 @@ interface Member {
 }
 
 interface MemberManagementModalProps {
-  workspaceId: string
+  familyspaceId: string
   open: boolean
   onClose: () => void
   canManageMembers: boolean
@@ -64,7 +64,7 @@ const roleLabels: Record<string, string> = {
 const roleHierarchy = ['OWNER', 'ADMIN', 'EDITOR', 'VIEWER', 'LEGACY']
 
 export function MemberManagementModal({
-  workspaceId,
+  familyspaceId,
   open,
   onClose,
   canManageMembers,
@@ -79,7 +79,7 @@ export function MemberManagementModal({
   const [isUpdating, setIsUpdating] = useState(false)
 
   const { data: members, isLoading, error, refresh } = useApi<Member[]>({
-    url: open ? `/api/workspaces/${workspaceId}/members` : '',
+    url: open ? `/api/familyspaces/${familyspaceId}/members` : '',
   })
 
   const handleOpenMenu = (event: React.MouseEvent<HTMLElement>, member: Member) => {
@@ -100,7 +100,7 @@ export function MemberManagementModal({
     setInviteSuccess(null)
 
     try {
-      const response = await fetch(`/api/workspaces/${workspaceId}/invite`, {
+      const response = await fetch(`/api/familyspaces/${familyspaceId}/invite`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -134,7 +134,7 @@ export function MemberManagementModal({
 
     try {
       const response = await fetch(
-        `/api/workspaces/${workspaceId}/members/${selectedMember.userId}`,
+        `/api/familyspaces/${familyspaceId}/members/${selectedMember.userId}`,
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -165,7 +165,7 @@ export function MemberManagementModal({
 
     try {
       const response = await fetch(
-        `/api/workspaces/${workspaceId}/members/${selectedMember.userId}`,
+        `/api/familyspaces/${familyspaceId}/members/${selectedMember.userId}`,
         {
           method: 'DELETE',
           credentials: 'include',
@@ -195,7 +195,7 @@ export function MemberManagementModal({
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth aria-labelledby="member-management-dialog-title">
       <DialogTitle id="member-management-dialog-title" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Typography variant="h6" sx={{ fontWeight: 600 }}>
-          Workspace Members
+          Familyspace Members
         </Typography>
         <IconButton onClick={onClose} size="small" aria-label="Close dialog">
           <CloseIcon />
@@ -362,7 +362,7 @@ export function MemberManagementModal({
                 <ListItemIcon>
                   <DeleteIcon fontSize="small" color="error" />
                 </ListItemIcon>
-                <ListItemText primary="Remove from workspace" />
+                <ListItemText primary="Remove from familyspace" />
               </MenuItem>
             </>
           )}

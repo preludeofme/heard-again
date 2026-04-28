@@ -77,21 +77,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           client_reference_id?: string
           customer?: string
           subscription?: string
-          metadata?: { workspaceId?: string; planId?: string }
+          metadata?: { familyspaceId?: string; planId?: string }
         }
         
-        const workspaceId = session.metadata?.workspaceId || session.client_reference_id
+        const familyspaceId = session.metadata?.familyspaceId || session.client_reference_id
         const stripeCustomerId = session.customer as string
         const stripeSubscriptionId = session.subscription as string
         
-        if (!workspaceId) {
-          logger.error('[Billing] No workspaceId in checkout session')
+        if (!familyspaceId) {
+          logger.error('[Billing] No familyspaceId in checkout session')
           break
         }
 
         // Update subscription with Stripe IDs
         await prisma.subscription.updateMany({
-          where: { workspaceId },
+          where: { familyspaceId },
           data: {
             stripeCustomerId,
             stripeSubscriptionId,
@@ -99,7 +99,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           },
         })
         
-        logger.info(`[Billing] Checkout completed for workspace ${workspaceId}`)
+        logger.info(`[Billing] Checkout completed for familyspace ${familyspaceId}`)
         break
       }
 
@@ -180,9 +180,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 },
               })
               
-              // Downgrade workspace
-              await prisma.workspace.update({
-                where: { id: existingSub.workspaceId },
+              // Downgrade familyspace
+              await prisma.familyspace.update({
+                where: { id: existingSub.familyspaceId },
                 data: {
                   planType: 'FREE',
                   tunnelEnabled: false,
@@ -227,9 +227,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 data: { planId },
               })
               
-              // Update workspace entitlements
-              await prisma.workspace.update({
-                where: { id: existingSub.workspaceId },
+              // Update familyspace entitlements
+              await prisma.familyspace.update({
+                where: { id: existingSub.familyspaceId },
                 data: {
                   planType: plan.planType,
                   tunnelEnabled: plan.tunnelEnabled,

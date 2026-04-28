@@ -2,13 +2,13 @@ import { BaseRepository } from './BaseRepository'
 import type { Prisma, Asset } from '@prisma/client'
 
 export class AssetRepository extends BaseRepository {
-  async findById(id: string, workspaceId: string): Promise<Asset | null> {
+  async findById(id: string, familyspaceId: string): Promise<Asset | null> {
     return this.prisma.asset.findFirst({
-      where: { id, workspaceId },
+      where: { id, familyspaceId },
     })
   }
 
-  async findMany(workspaceId: string, options: { 
+  async findMany(familyspaceId: string, options: { 
     skip?: number, 
     take?: number,
     where?: Prisma.AssetWhereInput 
@@ -16,7 +16,7 @@ export class AssetRepository extends BaseRepository {
     return this.prisma.asset.findMany({
       where: { 
         ...options.where,
-        workspaceId,
+        familyspaceId,
       },
       skip: options.skip,
       take: options.take,
@@ -28,7 +28,7 @@ export class AssetRepository extends BaseRepository {
     const asset = await this.prisma.asset.create({ data: data as any })
     
     await this.audit({
-      workspaceId: asset.workspaceId,
+      familyspaceId: asset.familyspaceId,
       actorId: userId,
       actorType: 'USER',
       action: 'CREATE',
@@ -40,9 +40,9 @@ export class AssetRepository extends BaseRepository {
     return asset
   }
 
-  async delete(id: string, workspaceId: string, userId: string): Promise<Asset> {
+  async delete(id: string, familyspaceId: string, userId: string): Promise<Asset> {
     const before = await this.prisma.asset.findFirstOrThrow({
-      where: { id, workspaceId },
+      where: { id, familyspaceId },
     })
 
     const asset = await this.prisma.asset.delete({
@@ -50,7 +50,7 @@ export class AssetRepository extends BaseRepository {
     })
 
     await this.audit({
-      workspaceId,
+      familyspaceId,
       actorId: userId,
       actorType: 'USER',
       action: 'DELETE',

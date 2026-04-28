@@ -296,7 +296,7 @@ export function VoiceConsentModal({
               <Box>
                 <Typography variant="body2">Allow sharing with family members</Typography>
                 <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                  Other workspace members can use this voice for their stories
+                  Other familyspace members can use this voice for their stories
                 </Typography>
               </Box>
             }
@@ -338,7 +338,7 @@ export function VoiceConsentModal({
         <Alert severity="info" sx={{ mt: 3 }} icon={<InfoIcon />}>
           <Typography variant="caption">
             All AI-generated audio will be labeled as such. Voice profiles are stored securely
-            and isolated to your workspace. You can revoke consent at any time from the voice
+            and isolated to your familyspace. You can revoke consent at any time from the voice
             profile settings.
           </Typography>
         </Alert>

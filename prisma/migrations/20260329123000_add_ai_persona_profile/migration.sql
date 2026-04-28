@@ -2,7 +2,7 @@
 CREATE TABLE "AiPersonaProfile" (
     "id" TEXT NOT NULL,
     "personId" TEXT NOT NULL,
-    "workspaceId" TEXT NOT NULL,
+    "familyspaceId" TEXT NOT NULL,
     "status" TEXT NOT NULL DEFAULT 'DRAFT',
     "systemPrompt" TEXT,
     "responseGuidelines" TEXT[],
@@ -28,7 +28,7 @@ CREATE UNIQUE INDEX "AiPersonaProfile_personId_key" ON "AiPersonaProfile"("perso
 
 -- Create indexes
 CREATE INDEX "AiPersonaProfile_personId_idx" ON "AiPersonaProfile"("personId");
-CREATE INDEX "AiPersonaProfile_workspaceId_idx" ON "AiPersonaProfile"("workspaceId");
+CREATE INDEX "AiPersonaProfile_familyspaceId_idx" ON "AiPersonaProfile"("familyspaceId");
 CREATE INDEX "AiPersonaProfile_status_idx" ON "AiPersonaProfile"("status");
 
 -- Add foreign key constraint

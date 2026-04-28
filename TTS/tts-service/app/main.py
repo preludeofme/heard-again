@@ -12,6 +12,7 @@ from anyio import to_thread
 
 import numpy as np
 import soundfile as sf
+import librosa
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
@@ -28,7 +29,7 @@ from app.config import (
 from app.model_manager import model_manager
 from app.transcriber import transcribe_audio
 from app.style_presets import resolve_style_params, list_presets
-from app.auth import validate_token, require_workspace_role, validate_tenant_access, log_auth_event
+from app.auth import validate_token, require_familyspace_role, validate_tenant_access, log_auth_event
 from app.rate_limiter import RateLimitMiddleware
 from app.text_chunker import chunk_text
 from app.validators import (
@@ -192,7 +193,7 @@ async def startup():
 
 
 def _find_warmup_profile() -> Optional[Path]:
-    """Pick any existing .pt voice profile across all workspaces for warmup.
+    """Pick any existing .pt voice profile across all familyspaces for warmup.
 
     The warmup synthesis is throwaway — we only need the prompt to be valid
     and from this VOICE_PROFILES_DIR. Returns None if none are found.
@@ -263,7 +264,7 @@ async def load_design_model():
 
 @app.post("/api/tts/upload-reference")
 async def upload_reference(
-    auth_data: Annotated[dict, Depends(require_workspace_role)],
+    auth_data: Annotated[dict, Depends(require_familyspace_role)],
     audio: UploadFile = File(...),
 ):
     """Upload a reference audio file for voice cloning."""
@@ -291,10 +292,10 @@ async def upload_reference(
             )
 
         file_id = str(uuid.uuid4())
-        # Organize files by workspace for tenant isolation
-        workspace_dir = REFERENCE_AUDIO_DIR / auth_data['workspace_id']
-        workspace_dir.mkdir(exist_ok=True)
-        save_path = workspace_dir / f"{file_id}{ext}"
+        # Organize files by familyspace for tenant isolation
+        familyspace_dir = REFERENCE_AUDIO_DIR / auth_data['familyspace_id']
+        familyspace_dir.mkdir(exist_ok=True)
+        save_path = familyspace_dir / f"{file_id}{ext}"
 
         save_path.write_bytes(content)
 
@@ -316,13 +317,13 @@ async def upload_reference(
             logger.error(f"Auto-transcription failed (non-fatal): {e}", extra={'user_context': user_context})
 
         # Save metadata (transcript + duration) as a JSON sidecar
-        meta_path = workspace_dir / f"{file_id}{JSON_EXTENSION}"
+        meta_path = familyspace_dir / f"{file_id}{JSON_EXTENSION}"
         metadata = {
             "fileId": file_id,
             "fileName": audio.filename,
             "duration": duration,
             "transcript": transcript,
-            "workspaceId": auth_data['workspace_id'],
+            "familyspaceId": auth_data['familyspace_id'],
             "uploadedBy": auth_data['user_id']
         }
         meta_path.write_text(json.dumps(metadata))
@@ -353,7 +354,7 @@ def get_user_context(auth_data: dict) -> dict:
     """Extract user context for logging"""
     return {
         'user_id': auth_data['user_id'],
-        'workspace_id': auth_data['workspace_id'],
+        'familyspace_id': auth_data['familyspace_id'],
         'email': auth_data.get('email', 'unknown')
     }
 
@@ -371,7 +372,7 @@ class CreateProfileRequest(BaseModel):
 
 @app.post("/api/tts/create-voice-profile")
 async def create_voice_profile(
-    auth_data: Annotated[dict, Depends(require_workspace_role)],
+    auth_data: Annotated[dict, Depends(require_familyspace_role)],
     req: ValidatedCreateProfileRequest,
 ):
     """Create a reusable .pt voice profile from uploaded reference audio."""
@@ -380,9 +381,9 @@ async def create_voice_profile(
     if not model_manager.is_loaded:
         raise HTTPException(status_code=503, detail=MODEL_NOT_LOADED_ERROR)
 
-    # Find the reference audio file in user's workspace directory
-    workspace_dir = REFERENCE_AUDIO_DIR / auth_data['workspace_id']
-    ref_files = [f for f in workspace_dir.glob(f"{req.fileId}.*") if f.suffix != JSON_EXTENSION]
+    # Find the reference audio file in user's familyspace directory
+    familyspace_dir = REFERENCE_AUDIO_DIR / auth_data['familyspace_id']
+    ref_files = [f for f in familyspace_dir.glob(f"{req.fileId}.*") if f.suffix != JSON_EXTENSION]
     if not ref_files:
         await log_auth_event('REFERENCE_NOT_FOUND', auth_data, {'fileId': req.fileId})
         raise HTTPException(status_code=404, detail=REFERENCE_AUDIO_NOT_FOUND_ERROR)
@@ -391,17 +392,17 @@ async def create_voice_profile(
 
     # Validate tenant access to the reference file
     try:
-        meta_path = workspace_dir / f"{req.fileId}{JSON_EXTENSION}"
+        meta_path = familyspace_dir / f"{req.fileId}{JSON_EXTENSION}"
         if meta_path.exists():
             meta = json.loads(meta_path.read_text())
-            validate_tenant_access(auth_data, meta.get('workspaceId', ''))
+            validate_tenant_access(auth_data, meta.get('familyspaceId', ''))
     except Exception as e:
         await log_auth_event('TENANT_VIOLATION_ATTEMPT', auth_data, {'fileId': req.fileId})
         raise HTTPException(status_code=403, detail="Access denied")
 
     # Load stored transcript if refText not provided
     if not req.refText:
-        meta_path = workspace_dir / f"{req.fileId}{JSON_EXTENSION}"
+        meta_path = familyspace_dir / f"{req.fileId}{JSON_EXTENSION}"
         if meta_path.exists():
             meta = json.loads(meta_path.read_text())
             req.refText = meta.get("transcript", None)
@@ -429,24 +430,24 @@ async def create_voice_profile(
         )
         elapsed = time.time() - start
 
-        # Organize voice profiles by workspace for tenant isolation
-        workspace_profiles_dir = VOICE_PROFILES_DIR / auth_data['workspace_id']
-        workspace_profiles_dir.mkdir(exist_ok=True)
+        # Organize voice profiles by familyspace for tenant isolation
+        familyspace_profiles_dir = VOICE_PROFILES_DIR / auth_data['familyspace_id']
+        familyspace_profiles_dir.mkdir(exist_ok=True)
         
-        # Move profile to workspace directory
-        workspace_profile_path = workspace_profiles_dir / f"{safe_name}.pt"
-        if profile_path != workspace_profile_path:
-            profile_path.rename(workspace_profile_path)
-            profile_path = workspace_profile_path
+        # Move profile to familyspace directory
+        familyspace_profile_path = familyspace_profiles_dir / f"{safe_name}.pt"
+        if profile_path != familyspace_profile_path:
+            profile_path.rename(familyspace_profile_path)
+            profile_path = familyspace_profile_path
 
         # Save style metadata alongside the profile
         if req.styleInstruct or style_params:
-            meta_path = workspace_profiles_dir / f"{safe_name}{JSON_EXTENSION}"
+            meta_path = familyspace_profiles_dir / f"{safe_name}{JSON_EXTENSION}"
             metadata = {
                 "profileId": safe_name,
                 "styleInstruct": req.styleInstruct or "",
                 "styleParams": style_params,
-                "workspaceId": auth_data['workspace_id'],
+                "familyspaceId": auth_data['familyspace_id'],
                 "createdBy": auth_data['user_id'],
                 "fileId": req.fileId
             }
@@ -474,19 +475,19 @@ async def create_voice_profile(
 
 
 @app.get("/api/tts/voice-profiles")
-async def list_voice_profiles(auth_data: Annotated[dict, Depends(require_workspace_role)]):
-    """List all saved voice profiles for the authenticated user's workspace."""
+async def list_voice_profiles(auth_data: Annotated[dict, Depends(require_familyspace_role)]):
+    """List all saved voice profiles for the authenticated user's familyspace."""
     user_context = get_user_context(auth_data)
     
     profiles = []
-    workspace_profiles_dir = VOICE_PROFILES_DIR / auth_data['workspace_id']
+    familyspace_profiles_dir = VOICE_PROFILES_DIR / auth_data['familyspace_id']
     
-    # Only list profiles from the user's workspace
-    for pt_file in sorted(workspace_profiles_dir.glob("*.pt")):
+    # Only list profiles from the user's familyspace
+    for pt_file in sorted(familyspace_profiles_dir.glob("*.pt")):
         stat = pt_file.stat()
         
         # Load metadata for additional info
-        meta_path = workspace_profiles_dir / f"{pt_file.stem}{JSON_EXTENSION}"
+        meta_path = familyspace_profiles_dir / f"{pt_file.stem}{JSON_EXTENSION}"
         metadata = {}
         if meta_path.exists():
             try:
@@ -502,7 +503,7 @@ async def list_voice_profiles(auth_data: Annotated[dict, Depends(require_workspa
             "sizeBytes": stat.st_size,
             "createdAt": stat.st_mtime,
             "createdBy": metadata.get("createdBy"),
-            "workspaceId": auth_data['workspace_id'],
+            "familyspaceId": auth_data['familyspace_id'],
             "styleInstruct": metadata.get("styleInstruct"),
         })
 
@@ -513,26 +514,26 @@ async def list_voice_profiles(auth_data: Annotated[dict, Depends(require_workspa
 
 @app.delete("/api/tts/voice-profiles/{profile_id}")
 async def delete_voice_profile(
-    auth_data: Annotated[dict, Depends(require_workspace_role)],
+    auth_data: Annotated[dict, Depends(require_familyspace_role)],
     profile_id: str,
 ):
     """Delete a voice profile."""
     user_context = get_user_context(auth_data)
     
-    # Check profile in user's workspace directory
-    workspace_profiles_dir = VOICE_PROFILES_DIR / auth_data['workspace_id']
-    profile_path = workspace_profiles_dir / f"{profile_id}.pt"
+    # Check profile in user's familyspace directory
+    familyspace_profiles_dir = VOICE_PROFILES_DIR / auth_data['familyspace_id']
+    profile_path = familyspace_profiles_dir / f"{profile_id}.pt"
     
     if not profile_path.exists():
         await log_auth_event('PROFILE_DELETE_NOT_FOUND', auth_data, {'profileId': profile_id})
         raise HTTPException(status_code=404, detail="Voice profile not found")
 
     # Verify tenant access
-    meta_path = workspace_profiles_dir / f"{profile_id}{JSON_EXTENSION}"
+    meta_path = familyspace_profiles_dir / f"{profile_id}{JSON_EXTENSION}"
     if meta_path.exists():
         try:
             metadata = json.loads(meta_path.read_text())
-            validate_tenant_access(auth_data, metadata.get('workspaceId', ''))
+            validate_tenant_access(auth_data, metadata.get('familyspaceId', ''))
         except Exception as e:
             await log_auth_event('TENANT_VIOLATION_ATTEMPT', auth_data, {'profileId': profile_id})
             raise HTTPException(status_code=403, detail="Access denied")
@@ -563,7 +564,7 @@ class DesignVoiceRequest(BaseModel):
 
 @app.post("/api/tts/design-voice")
 async def design_voice(
-    auth_data: Annotated[dict, Depends(require_workspace_role)],
+    auth_data: Annotated[dict, Depends(require_familyspace_role)],
     req: DesignVoiceRequest,
 ):
     """Generate speech with a designed voice from a natural-language description."""
@@ -572,9 +573,9 @@ async def design_voice(
     if not model_manager.design_loaded:
         raise HTTPException(status_code=503, detail=VOICE_DESIGN_MODEL_NOT_LOADED_ERROR)
 
-    # Ensure workspace-specific output directory exists
-    workspace_output_dir = GENERATED_AUDIO_DIR / auth_data['workspace_id']
-    workspace_output_dir.mkdir(parents=True, exist_ok=True)
+    # Ensure familyspace-specific output directory exists
+    familyspace_output_dir = GENERATED_AUDIO_DIR / auth_data['familyspace_id']
+    familyspace_output_dir.mkdir(parents=True, exist_ok=True)
 
     try:
         start = time.time()
@@ -590,12 +591,12 @@ async def design_voice(
             text=req.text,
             instruct=req.instruct,
             language=req.language,
-            workspace_id=auth_data['workspace_id']  # Pass workspace for scoping
+            familyspace_id=auth_data['familyspace_id']  # Pass familyspace for scoping
         )
         elapsed = time.time() - start
 
         output_id = str(uuid.uuid4())
-        output_path = workspace_output_dir / f"{output_id}.wav"
+        output_path = familyspace_output_dir / f"{output_id}.wav"
         sf.write(str(output_path), audio_data, sr)
 
         duration = len(audio_data) / sr
@@ -635,7 +636,7 @@ class DesignAndCloneRequest(BaseModel):
 
 @app.post("/api/tts/design-and-clone")
 async def design_and_clone(
-    auth_data: Annotated[dict, Depends(require_workspace_role)],
+    auth_data: Annotated[dict, Depends(require_familyspace_role)],
     req: DesignAndCloneRequest,
 ):
     """
@@ -651,9 +652,9 @@ async def design_and_clone(
     if not model_manager.base_loaded:
         raise HTTPException(status_code=503, detail=BASE_MODEL_NOT_LOADED_ERROR)
 
-    # Ensure workspace-specific output directory exists
-    workspace_output_dir = GENERATED_AUDIO_DIR / auth_data['workspace_id']
-    workspace_output_dir.mkdir(parents=True, exist_ok=True)
+    # Ensure familyspace-specific output directory exists
+    familyspace_output_dir = GENERATED_AUDIO_DIR / auth_data['familyspace_id']
+    familyspace_output_dir.mkdir(parents=True, exist_ok=True)
 
     safe_name = "".join(c if c.isalnum() or c in "-_ " else "" for c in req.profileName)
     safe_name = safe_name.strip().replace(" ", "_") or f"designed_{uuid.uuid4().hex[:8]}"
@@ -674,7 +675,7 @@ async def design_and_clone(
             instruct=req.instruct,
             profile_name=safe_name,
             language=req.language,
-            workspace_id=auth_data['workspace_id']  # Pass workspace for scoping
+            familyspace_id=auth_data['familyspace_id']  # Pass familyspace for scoping
         )
         elapsed = time.time() - start
 
@@ -722,7 +723,7 @@ class BlendVoiceRequest(BaseModel):
 
 @app.post("/api/tts/blend-voice")
 async def blend_voice(
-    auth_data: Annotated[dict, Depends(require_workspace_role)],
+    auth_data: Annotated[dict, Depends(require_familyspace_role)],
     req: BlendVoiceRequest,
 ):
     """
@@ -740,16 +741,16 @@ async def blend_voice(
     if not model_manager.base_loaded:
         raise HTTPException(status_code=503, detail=BASE_MODEL_NOT_LOADED_ERROR)
 
-    # Find the reference audio file in user's workspace (exclude .json sidecar)
-    workspace_ref_dir = REFERENCE_AUDIO_DIR / auth_data['workspace_id']
-    ref_files = [f for f in workspace_ref_dir.glob(f"{req.fileId}.*") if f.suffix != JSON_EXTENSION]
+    # Find the reference audio file in user's familyspace (exclude .json sidecar)
+    familyspace_ref_dir = REFERENCE_AUDIO_DIR / auth_data['familyspace_id']
+    ref_files = [f for f in familyspace_ref_dir.glob(f"{req.fileId}.*") if f.suffix != JSON_EXTENSION]
     if not ref_files:
         raise HTTPException(status_code=404, detail=REFERENCE_AUDIO_NOT_FOUND_ERROR)
     ref_path = str(ref_files[0])
 
     # Load stored transcript if not provided
     if not req.refText:
-        meta_path = workspace_ref_dir / f"{req.fileId}{JSON_EXTENSION}"
+        meta_path = familyspace_ref_dir / f"{req.fileId}{JSON_EXTENSION}"
         if meta_path.exists():
             meta = json.loads(meta_path.read_text())
             req.refText = meta.get("transcript", None)
@@ -767,9 +768,9 @@ async def blend_voice(
     safe_name = "".join(c if c.isalnum() or c in "-_ " else "" for c in req.profileName)
     safe_name = safe_name.strip().replace(" ", "_") or f"blended_{uuid.uuid4().hex[:8]}"
 
-    # Ensure workspace-specific output directory exists
-    workspace_output_dir = GENERATED_AUDIO_DIR / auth_data['workspace_id']
-    workspace_output_dir.mkdir(parents=True, exist_ok=True)
+    # Ensure familyspace-specific output directory exists
+    familyspace_output_dir = GENERATED_AUDIO_DIR / auth_data['familyspace_id']
+    familyspace_output_dir.mkdir(parents=True, exist_ok=True)
 
     try:
         start = time.time()
@@ -788,7 +789,7 @@ async def blend_voice(
             style_ref_text=style_ref_text,
             profile_name=safe_name,
             language=req.language,
-            workspace_id=auth_data['workspace_id']  # Pass workspace for scoping
+            familyspace_id=auth_data['familyspace_id']  # Pass familyspace for scoping
         )
         elapsed = time.time() - start
 
@@ -829,52 +830,52 @@ class SynthesizeRequest(BaseModel):
     text: str
     language: str = "English"
     style: Optional[str] = None
-    workspaceId: Optional[str] = None  # Explicit workspace override
+    familyspaceId: Optional[str] = None  # Explicit familyspace override
 
 
 @app.post("/api/tts/synthesize")
 async def synthesize_speech(
-    auth_data: Annotated[dict, Depends(require_workspace_role)],
+    auth_data: Annotated[dict, Depends(require_familyspace_role)],
     req: SynthesizeRequest,
 ):
     """Generate speech from text using a saved voice profile."""
     # DEBUG: Confirm we entered the function
-    logger.info(f"DEBUG: ENTER synthesize_speech - auth_workspace={auth_data.get('workspace_id')}, req_workspace={req.workspaceId}, profile={req.profileId}")
+    logger.info(f"DEBUG: ENTER synthesize_speech - auth_familyspace={auth_data.get('familyspace_id')}, req_familyspace={req.familyspaceId}, profile={req.profileId}")
     user_context = get_user_context(auth_data)
     
     if not model_manager.is_loaded:
         raise HTTPException(status_code=503, detail=MODEL_NOT_LOADED_ERROR)
 
-    # Verify voice profile belongs to user's workspace
-    # Use explicit workspaceId from request if provided, otherwise fall back to auth
-    workspace_id = req.workspaceId or auth_data['workspace_id']
-    workspace_profiles_dir = VOICE_PROFILES_DIR / workspace_id
+    # Verify voice profile belongs to user's familyspace
+    # Use explicit familyspaceId from request if provided, otherwise fall back to auth
+    familyspace_id = req.familyspaceId or auth_data['familyspace_id']
+    familyspace_profiles_dir = VOICE_PROFILES_DIR / familyspace_id
     
     # Sanitize profileId to match how profiles are saved (spaces -> underscores)
     safe_profile_id = "".join(c if c.isalnum() or c in "-_ " else "" for c in req.profileId)
     safe_profile_id = safe_profile_id.strip().replace(" ", "_")
     
-    profile_path = workspace_profiles_dir / f"{safe_profile_id}.pt"
+    profile_path = familyspace_profiles_dir / f"{safe_profile_id}.pt"
     
     # DEBUG: Log what we're looking for
-    logger.info(f"DEBUG: Looking for profile '{req.profileId}' in workspace '{workspace_id}'")
+    logger.info(f"DEBUG: Looking for profile '{req.profileId}' in familyspace '{familyspace_id}'")
     logger.info(f"DEBUG: VOICE_PROFILES_DIR = {VOICE_PROFILES_DIR}")
     logger.info(f"DEBUG: Profile path = {profile_path}")
     logger.info(f"DEBUG: Profile path (absolute) = {profile_path.absolute()}")
     logger.info(f"DEBUG: Profile exists = {profile_path.exists()}")
     logger.info(f"DEBUG: Profile parent exists = {profile_path.parent.exists()}")
-    logger.info(f"DEBUG: Workspace dir exists = {workspace_profiles_dir.exists()}")
-    if workspace_profiles_dir.exists():
-        files = list(workspace_profiles_dir.glob("*.pt"))
-        logger.info(f"DEBUG: Files in workspace dir: {[f.name for f in files]}")
+    logger.info(f"DEBUG: Familyspace dir exists = {familyspace_profiles_dir.exists()}")
+    if familyspace_profiles_dir.exists():
+        files = list(familyspace_profiles_dir.glob("*.pt"))
+        logger.info(f"DEBUG: Files in familyspace dir: {[f.name for f in files]}")
         for f in files:
             logger.info(f"DEBUG: File '{f.name}' at path: {f}")
     
     if not profile_path.exists():
         await log_auth_event('PROFILE_ACCESS_DENIED', auth_data, {
             'profileId': req.profileId,
-            'requestedWorkspace': workspace_id,
-            'authWorkspace': auth_data['workspace_id']
+            'requestedFamilyspace': familyspace_id,
+            'authFamilyspace': auth_data['familyspace_id']
         })
         raise HTTPException(status_code=404, detail="Voice profile not found")
 
@@ -883,7 +884,7 @@ async def synthesize_speech(
     if req.style:
         gen_kwargs = resolve_style_params(style=req.style)
     else:
-        meta_path = workspace_profiles_dir / f"{safe_profile_id}{JSON_EXTENSION}"
+        meta_path = familyspace_profiles_dir / f"{safe_profile_id}{JSON_EXTENSION}"
         if meta_path.exists():
             try:
                 meta = json.loads(meta_path.read_text())
@@ -904,20 +905,20 @@ async def synthesize_speech(
         )
         elapsed = time.time() - start
 
-        # Save generated audio in workspace-scoped directory
+        # Save generated audio in familyspace-scoped directory
         output_id = str(uuid.uuid4())
-        workspace_audio_dir = GENERATED_AUDIO_DIR / auth_data['workspace_id']
-        workspace_audio_dir.mkdir(exist_ok=True)
-        output_path = workspace_audio_dir / f"{output_id}.wav"
+        familyspace_audio_dir = GENERATED_AUDIO_DIR / auth_data['familyspace_id']
+        familyspace_audio_dir.mkdir(exist_ok=True)
+        output_path = familyspace_audio_dir / f"{output_id}.wav"
         sf.write(str(output_path), audio_data, sr)
 
         duration = len(audio_data) / sr
 
-        # Save metadata with workspace ownership
-        meta_path = workspace_audio_dir / f"{output_id}{JSON_EXTENSION}"
+        # Save metadata with familyspace ownership
+        meta_path = familyspace_audio_dir / f"{output_id}{JSON_EXTENSION}"
         metadata = {
             "audioId": output_id,
-            "workspaceId": workspace_id,
+            "familyspaceId": familyspace_id,
             "createdBy": auth_data['user_id'],
             "profileId": req.profileId,
             "duration": duration,
@@ -927,7 +928,7 @@ async def synthesize_speech(
 
         logger.info(
             f"Synthesized {duration:.1f}s audio in {elapsed:.1f}s "
-            f"(profile={req.profileId}, workspace={workspace_id})"
+            f"(profile={req.profileId}, familyspace={familyspace_id})"
         )
 
         return {
@@ -952,7 +953,7 @@ class SynthesizeDirectRequest(BaseModel):
 
 @app.post("/api/tts/synthesize-direct")
 async def synthesize_direct(
-    auth_data: Annotated[dict, Depends(require_workspace_role)],
+    auth_data: Annotated[dict, Depends(require_familyspace_role)],
     req: SynthesizeDirectRequest,
 ):
     """Generate speech directly from reference audio (no saved profile)."""
@@ -961,9 +962,9 @@ async def synthesize_direct(
     if not model_manager.is_loaded:
         raise HTTPException(status_code=503, detail=MODEL_NOT_LOADED_ERROR)
 
-    # Look for reference audio in user's workspace directory
-    workspace_ref_dir = REFERENCE_AUDIO_DIR / auth_data['workspace_id']
-    ref_files = [f for f in workspace_ref_dir.glob(f"{req.fileId}.*") if f.suffix != JSON_EXTENSION]
+    # Look for reference audio in user's familyspace directory
+    familyspace_ref_dir = REFERENCE_AUDIO_DIR / auth_data['familyspace_id']
+    ref_files = [f for f in familyspace_ref_dir.glob(f"{req.fileId}.*") if f.suffix != JSON_EXTENSION]
     
     if not ref_files:
         await log_auth_event('REFERENCE_NOT_FOUND', auth_data, {'fileId': req.fileId})
@@ -971,7 +972,7 @@ async def synthesize_direct(
 
     # Load stored transcript if refText not provided
     if not req.refText:
-        meta_path = workspace_ref_dir / f"{req.fileId}{JSON_EXTENSION}"
+        meta_path = familyspace_ref_dir / f"{req.fileId}{JSON_EXTENSION}"
         if meta_path.exists():
             meta = json.loads(meta_path.read_text())
             req.refText = meta.get("transcript", None)
@@ -986,20 +987,20 @@ async def synthesize_direct(
         )
         elapsed = time.time() - start
 
-        # Save generated audio in workspace-scoped directory
+        # Save generated audio in familyspace-scoped directory
         output_id = str(uuid.uuid4())
-        workspace_audio_dir = GENERATED_AUDIO_DIR / auth_data['workspace_id']
-        workspace_audio_dir.mkdir(exist_ok=True)
-        output_path = workspace_audio_dir / f"{output_id}.wav"
+        familyspace_audio_dir = GENERATED_AUDIO_DIR / auth_data['familyspace_id']
+        familyspace_audio_dir.mkdir(exist_ok=True)
+        output_path = familyspace_audio_dir / f"{output_id}.wav"
         sf.write(str(output_path), audio_data, sr)
 
         duration = len(audio_data) / sr
 
-        # Save metadata with workspace ownership
-        meta_path = workspace_audio_dir / f"{output_id}{JSON_EXTENSION}"
+        # Save metadata with familyspace ownership
+        meta_path = familyspace_audio_dir / f"{output_id}{JSON_EXTENSION}"
         metadata = {
             "audioId": output_id,
-            "workspaceId": auth_data['workspace_id'],
+            "familyspaceId": auth_data['familyspace_id'],
             "createdBy": auth_data['user_id'],
             "fileId": req.fileId,
             "duration": duration,
@@ -1009,7 +1010,7 @@ async def synthesize_direct(
 
         logger.info(
             f"Direct synthesis: {duration:.1f}s audio in {elapsed:.1f}s "
-            f"(workspace={auth_data['workspace_id']})"
+            f"(familyspace={auth_data['familyspace_id']})"
         )
 
         return {
@@ -1033,13 +1034,13 @@ class SynthesizeBatchRequest(BaseModel):
     text: Optional[str] = None
     language: str = "English"
     style: Optional[str] = None
-    workspaceId: Optional[str] = None
+    familyspaceId: Optional[str] = None
     silencePaddingMs: int = 150
 
 
 @app.post("/api/tts/synthesize-batch")
 async def synthesize_batch(
-    auth_data: Annotated[dict, Depends(require_workspace_role)],
+    auth_data: Annotated[dict, Depends(require_familyspace_role)],
     req: SynthesizeBatchRequest,
 ):
     """Render a full list of sentences into a single audio asset.
@@ -1052,18 +1053,18 @@ async def synthesize_batch(
     if not model_manager.is_loaded:
         raise HTTPException(status_code=503, detail=MODEL_NOT_LOADED_ERROR)
 
-    workspace_id = req.workspaceId or auth_data['workspace_id']
-    workspace_profiles_dir = VOICE_PROFILES_DIR / workspace_id
+    familyspace_id = req.familyspaceId or auth_data['familyspace_id']
+    familyspace_profiles_dir = VOICE_PROFILES_DIR / familyspace_id
 
     safe_profile_id = "".join(c if c.isalnum() or c in "-_ " else "" for c in req.profileId)
     safe_profile_id = safe_profile_id.strip().replace(" ", "_")
-    profile_path = workspace_profiles_dir / f"{safe_profile_id}.pt"
+    profile_path = familyspace_profiles_dir / f"{safe_profile_id}.pt"
 
     if not profile_path.exists():
         await log_auth_event('PROFILE_ACCESS_DENIED', auth_data, {
             'profileId': req.profileId,
-            'requestedWorkspace': workspace_id,
-            'authWorkspace': auth_data['workspace_id'],
+            'requestedFamilyspace': familyspace_id,
+            'authFamilyspace': auth_data['familyspace_id'],
             'endpoint': 'synthesize-batch',
         })
         raise HTTPException(status_code=404, detail="Voice profile not found")
@@ -1085,7 +1086,7 @@ async def synthesize_batch(
     if req.style:
         gen_kwargs = resolve_style_params(style=req.style)
     else:
-        meta_path = workspace_profiles_dir / f"{safe_profile_id}{JSON_EXTENSION}"
+        meta_path = familyspace_profiles_dir / f"{safe_profile_id}{JSON_EXTENSION}"
         if meta_path.exists():
             try:
                 meta = json.loads(meta_path.read_text())
@@ -1098,13 +1099,13 @@ async def synthesize_batch(
     batch_id = str(uuid.uuid4())
     padding_ms = max(0, min(req.silencePaddingMs, 1000))
     logger.info(
-        f"[batch {batch_id}] start: profile={req.profileId} workspace={workspace_id} "
+        f"[batch {batch_id}] start: profile={req.profileId} familyspace={familyspace_id} "
         f"sentences={len(sentences)} chars={sum(len(s) for s in sentences)} "
         f"paddingMs={padding_ms}"
     )
 
-    workspace_audio_dir = GENERATED_AUDIO_DIR / auth_data['workspace_id']
-    workspace_audio_dir.mkdir(parents=True, exist_ok=True)
+    familyspace_audio_dir = GENERATED_AUDIO_DIR / auth_data['familyspace_id']
+    familyspace_audio_dir.mkdir(parents=True, exist_ok=True)
 
     progress_queue: asyncio.Queue = asyncio.Queue()
     loop = asyncio.get_event_loop()
@@ -1141,14 +1142,23 @@ async def synthesize_batch(
 
             parts: list[np.ndarray] = []
             for i, arr in enumerate(audio_arrays):
-                parts.append(arr.astype(np.float32, copy=False))
+                # Trim silence from each segment to ensure smooth stitching
+                # We use a relatively high threshold (-30dB) to catch ambient noise from model
+                # and avoid double-padding between sentences.
+                try:
+                    trimmed_arr, _ = librosa.effects.trim(arr, top_db=30)
+                    parts.append(trimmed_arr.astype(np.float32, copy=False))
+                except Exception as trim_err:
+                    logger.warning(f"Failed to trim segment {i}: {trim_err}")
+                    parts.append(arr.astype(np.float32, copy=False))
+
                 if silence is not None and i < len(audio_arrays) - 1:
                     parts.append(silence)
             full_audio = np.concatenate(parts) if parts else np.zeros(0, dtype=np.float32)
 
             output_id = str(uuid.uuid4())
-            wav_path = workspace_audio_dir / f"{output_id}.wav"
-            mp3_path = workspace_audio_dir / f"{output_id}.mp3"
+            wav_path = familyspace_audio_dir / f"{output_id}.wav"
+            mp3_path = familyspace_audio_dir / f"{output_id}.mp3"
             sf.write(str(wav_path), full_audio, sr)
 
             duration = len(full_audio) / sr if sr else 0.0
@@ -1168,10 +1178,10 @@ async def synthesize_batch(
                 output_mime = "audio/wav"
                 output_path = wav_path
 
-            meta_path = workspace_audio_dir / f"{output_id}{JSON_EXTENSION}"
+            meta_path = familyspace_audio_dir / f"{output_id}{JSON_EXTENSION}"
             metadata = {
                 "audioId": output_id,
-                "workspaceId": workspace_id,
+                "familyspaceId": familyspace_id,
                 "createdBy": auth_data['user_id'],
                 "profileId": req.profileId,
                 "duration": duration,
@@ -1230,16 +1240,50 @@ async def synthesize_batch(
     )
 
 
-# ---------------------------------------------------------------------------
-# Audio serving
-# ---------------------------------------------------------------------------
+@app.post("/api/tts/transcribe")
+async def transcribe_general_audio(
+    auth_data: Annotated[dict, Depends(require_familyspace_role)],
+    audio: UploadFile = File(...),
+):
+    """Transcribe any audio file (e.g. for stories)."""
+    user_context = get_user_context(auth_data)
+    
+    try:
+        ext = Path(audio.filename or "").suffix.lower()
+        if ext not in ALLOWED_AUDIO_EXTENSIONS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unsupported format '{ext}'. Allowed: {ALLOWED_AUDIO_EXTENSIONS}",
+            )
+
+        content = await audio.read()
+        
+        # Save temporarily for Whisper
+        temp_id = str(uuid.uuid4())
+        temp_path = REFERENCE_AUDIO_DIR / f"temp_{temp_id}{ext}"
+        REFERENCE_AUDIO_DIR.mkdir(exist_ok=True)
+        temp_path.write_bytes(content)
+
+        try:
+            transcript = transcribe_audio(str(temp_path))
+            return {
+                "success": True,
+                "transcript": transcript,
+            }
+        finally:
+            if temp_path.exists():
+                temp_path.unlink()
+                
+    except Exception as e:
+        logger.error(f"Transcription failed: {e}", extra={'user_context': user_context})
+        raise HTTPException(status_code=500, detail="Transcription failed")
 
 @app.get("/api/tts/audio/{audio_id}")
 async def serve_audio(
-    auth_data: Annotated[dict, Depends(require_workspace_role)],
+    auth_data: Annotated[dict, Depends(require_familyspace_role)],
     audio_id: str,
 ):
-    """Serve a generated audio file with authentication and workspace verification."""
+    """Serve a generated audio file with authentication and familyspace verification."""
     user_context = get_user_context(auth_data)
 
     # Reject any traversal attempts in the path parameter.
@@ -1247,16 +1291,16 @@ async def serve_audio(
         await log_auth_event('AUDIO_ACCESS_DENIED', auth_data, {'audioId': audio_id, 'reason': 'invalid_id'})
         raise HTTPException(status_code=404, detail="Audio file not found")
 
-    workspace_audio_dir = (GENERATED_AUDIO_DIR / auth_data['workspace_id']).resolve()
+    familyspace_audio_dir = (GENERATED_AUDIO_DIR / auth_data['familyspace_id']).resolve()
 
     audio_path: Optional[Path] = None
     media_type = "audio/mpeg"
     extension = "mp3"
     for ext, mime in (("mp3", "audio/mpeg"), ("wav", "audio/wav")):
-        candidate = (workspace_audio_dir / f"{audio_id}.{ext}").resolve()
-        # Defense-in-depth: candidate must remain inside the workspace dir.
+        candidate = (familyspace_audio_dir / f"{audio_id}.{ext}").resolve()
+        # Defense-in-depth: candidate must remain inside the familyspace dir.
         try:
-            candidate.relative_to(workspace_audio_dir)
+            candidate.relative_to(familyspace_audio_dir)
         except ValueError:
             continue
         if candidate.exists():
@@ -1270,14 +1314,14 @@ async def serve_audio(
         raise HTTPException(status_code=404, detail="Audio file not found")
 
     # Verify ownership via metadata
-    meta_path = workspace_audio_dir / f"{audio_id}{JSON_EXTENSION}"
+    meta_path = familyspace_audio_dir / f"{audio_id}{JSON_EXTENSION}"
     if meta_path.exists():
         try:
             metadata = json.loads(meta_path.read_text())
-            if metadata.get('workspaceId') != auth_data['workspace_id']:
+            if metadata.get('familyspaceId') != auth_data['familyspace_id']:
                 await log_auth_event('TENANT_VIOLATION', auth_data, {
                     'audioId': audio_id,
-                    'resourceWorkspace': metadata.get('workspaceId')
+                    'resourceFamilyspace': metadata.get('familyspaceId')
                 })
                 raise HTTPException(status_code=404, detail="Audio file not found")
         except json.JSONDecodeError:

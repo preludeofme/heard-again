@@ -65,8 +65,8 @@ export class MigrationManager {
       await db.$executeRaw`DROP TABLE IF EXISTS persona_profiles CASCADE`
       await db.$executeRaw`DROP TABLE IF EXISTS chat_messages CASCADE`
       await db.$executeRaw`DROP TABLE IF EXISTS chat_sessions CASCADE`
-      await db.$executeRaw`DROP TABLE IF EXISTS user_workspaces CASCADE`
-      await db.$executeRaw`DROP TABLE IF EXISTS workspaces CASCADE`
+      await db.$executeRaw`DROP TABLE IF EXISTS user_familyspaces CASCADE`
+      await db.$executeRaw`DROP TABLE IF EXISTS familyspaces CASCADE`
       
       // Drop enums
       await db.$executeRaw`DROP TYPE IF EXISTS "SessionStatus" CASCADE`
@@ -78,7 +78,7 @@ export class MigrationManager {
       await db.$executeRaw`DROP TYPE IF EXISTS "IngestionJobType" CASCADE`
       await db.$executeRaw`DROP TYPE IF EXISTS "IngestionJobStatus" CASCADE`
       await db.$executeRaw`DROP TYPE IF EXISTS "JobPriority" CASCADE`
-      await db.$executeRaw`DROP TYPE IF EXISTS "WorkspaceRole" CASCADE`
+      await db.$executeRaw`DROP TYPE IF EXISTS "FamilyspaceRole" CASCADE`
       
       console.log('Database reset completed')
     } catch (error) {
@@ -92,16 +92,16 @@ export class MigrationManager {
       console.log('Seeding database...')
       const db = Database.getInstance()
       
-      // Create a default workspace for testing
-      const workspace = await db.workspace.create({
+      // Create a default familyspace for testing
+      const familyspace = await db.familyspace.create({
         data: {
-          name: 'Default Workspace',
-          description: 'Default workspace for testing',
+          name: 'Default Familyspace',
+          description: 'Default familyspace for testing',
           settings: {}
         }
       })
       
-      console.log(`Created default workspace: ${workspace.id}`)
+      console.log(`Created default familyspace: ${familyspace.id}`)
       console.log('Database seeding completed')
     } catch (error) {
       console.error('Database seeding failed:', error)
@@ -150,10 +150,10 @@ export class ChatRepositoryImpl {
     })
   }
 
-  async listSessions(workspaceId: string, userId: string): Promise<any[]> {
+  async listSessions(familyspaceId: string, userId: string): Promise<any[]> {
     return await this.db.chatSession.findMany({
       where: {
-        workspaceId,
+        familyspaceId,
         userId,
         status: 'ACTIVE'
       },
@@ -220,10 +220,10 @@ export class DocumentRepositoryImpl {
     })
   }
 
-  async listDocuments(workspaceId: string, filters?: any): Promise<any[]> {
+  async listDocuments(familyspaceId: string, filters?: any): Promise<any[]> {
     return await this.db.document.findMany({
       where: {
-        workspaceId,
+        familyspaceId,
         ...filters
       },
       orderBy: { createdAt: 'desc' }
@@ -259,9 +259,9 @@ export class PersonaRepositoryImpl {
     })
   }
 
-  async listPersonaProfiles(workspaceId: string): Promise<any[]> {
+  async listPersonaProfiles(familyspaceId: string): Promise<any[]> {
     return await this.db.personaProfile.findMany({
-      where: { workspaceId },
+      where: { familyspaceId },
       orderBy: { createdAt: 'desc' }
     })
   }

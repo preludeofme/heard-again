@@ -1,6 +1,6 @@
 import { logger } from '@/lib/logger'
 import { NextApiRequest, NextApiResponse } from 'next'
-import { getAuthUserWithWorkspace } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace } from '@/lib/auth-helpers'
 import { AppError } from '@/lib/api-helpers'
 import http from 'http'
 
@@ -22,9 +22,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const chatSystemUrl = process.env.CHAT_SYSTEM_URL || 'http://localhost:4778'
 
-  let user: Awaited<ReturnType<typeof getAuthUserWithWorkspace>>
+  let user: Awaited<ReturnType<typeof getAuthUserWithFamilyspace>>
   try {
-    user = await getAuthUserWithWorkspace(req, res)
+    user = await getAuthUserWithFamilyspace(req, res)
   } catch (err) {
     if (err instanceof AppError) {
       return res.status(err.statusCode).json({ success: false, error: err.message })
@@ -83,7 +83,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           'Content-Type': 'application/json',
           'Content-Length': Buffer.byteLength(bodyPayload),
           'Authorization': `Bearer ${process.env.CHAT_SERVICE_SECRET}`,
-          'x-workspace-id': user.workspaceId,
+          'x-familyspace-id': user.familyspaceId,
           'x-user-id': user.id,
         },
       },

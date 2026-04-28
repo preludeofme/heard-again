@@ -2,7 +2,7 @@
 CREATE TABLE "PersonaProfile" (
     "id" TEXT NOT NULL,
     "personId" TEXT NOT NULL,
-    "workspaceId" TEXT NOT NULL,
+    "familyspaceId" TEXT NOT NULL,
     "version" INTEGER NOT NULL DEFAULT 1,
     "status" TEXT NOT NULL DEFAULT 'draft',
     "vocabulary" TEXT[] DEFAULT ARRAY[]::TEXT[],
@@ -33,16 +33,16 @@ CREATE TABLE "PersonaProfile" (
 CREATE INDEX "PersonaProfile_personId_idx" ON "PersonaProfile"("personId");
 
 -- CreateIndex
-CREATE INDEX "PersonaProfile_workspaceId_idx" ON "PersonaProfile"("workspaceId");
+CREATE INDEX "PersonaProfile_familyspaceId_idx" ON "PersonaProfile"("familyspaceId");
 
 -- CreateIndex
 CREATE INDEX "PersonaProfile_status_idx" ON "PersonaProfile"("status");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "PersonaProfile_personId_workspaceId_version_key" ON "PersonaProfile"("personId", "workspaceId", "version");
+CREATE UNIQUE INDEX "PersonaProfile_personId_familyspaceId_version_key" ON "PersonaProfile"("personId", "familyspaceId", "version");
 
 -- AddForeignKey
 ALTER TABLE "PersonaProfile" ADD CONSTRAINT "PersonaProfile_personId_fkey" FOREIGN KEY ("personId") REFERENCES "Person"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "PersonaProfile" ADD CONSTRAINT "PersonaProfile_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "PersonaProfile" ADD CONSTRAINT "PersonaProfile_familyspaceId_fkey" FOREIGN KEY ("familyspaceId") REFERENCES "Familyspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;

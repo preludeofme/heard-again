@@ -41,7 +41,7 @@ Updated as work lands on `feat/mvp-release`. Mark `[x]` when merged to the branc
 ### Phase 1 — Stabilize
 - [x] CSRF default-on in `apiHandler` (R4 / S2) — embedded in `apiHandler`, 34 routes unwrapped, 4 pre-auth routes opt out via `{ csrf: false }`, csrf.test.ts rewritten for stateless HMAC, new `api-helpers.csrf.test.ts` locks the default-on behavior
 - [x] Delete mock data from production components (F2) — `PersonDetailModal.tsx` mocks removed; defaults now `[]` for arrays / undefined for `person`; loading + error guards already cover the null case. Sole consumer (`FamilyTreePage.tsx:1530`) was already passing all props explicitly.
-- [x] Replace `window.location.reload()` with explicit refetch — `FamilyTreePage.tsx:488,505` now invoke an `onPeopleChanged` prop wired to `fetchPeople` from the parent page. Three remaining call sites are intentional recovery/context-switch reloads (kept by design): `SessionErrorBoundary.tsx:63` (auth recovery), `AudioRecorder.tsx:334` (mic-permission re-init), `WorkspaceSwitcher.tsx:85` (JWT-scoped workspace context switch).
+- [x] Replace `window.location.reload()` with explicit refetch — `FamilyTreePage.tsx:488,505` now invoke an `onPeopleChanged` prop wired to `fetchPeople` from the parent page. Three remaining call sites are intentional recovery/context-switch reloads (kept by design): `SessionErrorBoundary.tsx:63` (auth recovery), `AudioRecorder.tsx:334` (mic-permission re-init), `FamilyspaceSwitcher.tsx:85` (JWT-scoped familyspace context switch).
 - [x] API contract tests for top 20 routes (R10) — `UI/src/__tests__/api/contract/routes.test.ts` covers 20 core routes with automated validation of Auth, CSRF, and Method rules.
 - [x] Golden-snapshot tests for `PromptBuilder` (R10) — `Chat/src/__tests__/services/PromptBuilder.snapshot.test.ts` locks 4 full system-prompt + context snapshots and 4 inline shape assertions across no-doc, with-doc, with-guidelines, two-doc citation, and history-truncation paths. Side-effect: fixed `Chat/tsconfig.json` `ignoreDeprecations` from invalid `"6.0"` to `"5.0"` so all Chat tests now run under TS 5.9.3.
 - [x] Upload → malware-scan → asset integration test (R10) — `UI/src/__tests__/api/upload-integration.test.ts` verifies the full security pipeline for file uploads.
@@ -57,19 +57,19 @@ Updated as work lands on `feat/mvp-release`. Mark `[x]` when merged to the branc
 ### Phase 3 — Improve safety
 - [x] Signed consent tokens UI → TTS (R1 / S1) — `ConsentTokenService` in UI issues short-lived HMAC tokens; `consent_validator.py` in TTS enforces them.
 - [x] `Asset.isAISynthesized` + WAV/ID3 watermark + UI disclosure (R6) — Flag added to schema and `VoiceService`; metadata stamps added to synthesized assets.
-- [x] Per-profile + per-workspace voice generation quotas (R6) — Implemented per-profile rate limiting in `TTS/app/rate_limiter.py`.
+- [x] Per-profile + per-familyspace voice generation quotas (R6) — Implemented per-profile rate limiting in `TTS/app/rate_limiter.py`.
 - [x] Content filter on TTS input (R6) — Slur and violence filter added to `VoiceService.synthesize`.
-- [x] `workspaceId` on `StoryComment` + `Notification` (R8 / S8) — Added to schema with backfill indexes.
+- [x] `familyspaceId` on `StoryComment` + `Notification` (R8 / S8) — Added to schema with backfill indexes.
 - [x] `AuditLog` writes from repository methods (R7 / S5) — `BaseRepository.audit()` helper used by all repository write methods.
-- [x] Encrypt reference voice samples at rest (R12 / S4) — `EncryptionService` in TTS implements AES-256-GCM with workspace-scoped keys.
+- [x] Encrypt reference voice samples at rest (R12 / S4) — `EncryptionService` in TTS implements AES-256-GCM with familyspace-scoped keys.
 - [x] Auto-delete reference `.wav` after profile training — Implemented in `TTS/app/main.py` after successful profile creation.
 
 ### Phase 4 — Production readiness
 - [x] Decompose FamilyTreePage / account / self-hosting / family-merge (R3) — `FamilyTreePage.tsx` decomposed into specialized hook and components in `family-tree/` directory; reduced from 1583 to 319 lines.
 - [x] Queue GEDCOM + family-merge jobs in BullMQ (R9) — GEDCOM import moved to `importQueue` with background worker.
 - [x] Second-pass LLM judge in `ResponseValidationService` (R11) — Implemented `validateWithLLMJudge` using Ollama to verify factual claims against evidence.
-- [x] Data-retention enforcement worker — `RetentionWorker` in `UI/src/workers/retentionWorker.ts` enforces workspace-specific retention policies for audio and drafts.
-- [x] GDPR data flow documented + cascade on owner delete (S10) — Documented in `docs/GDPR_DATA_FLOW.md`; implemented cascade workspace deletion in `permanent-deletion.ts`.
+- [x] Data-retention enforcement worker — `RetentionWorker` in `UI/src/workers/retentionWorker.ts` enforces familyspace-specific retention policies for audio and drafts.
+- [x] GDPR data flow documented + cascade on owner delete (S10) — Documented in `docs/GDPR_DATA_FLOW.md`; implemented cascade familyspace deletion in `permanent-deletion.ts`.
 
 ### Cross-cutting security findings
 - [x] S3 — Field decryption errors throw, not warn — Fixed in `field-encryption.ts`.

@@ -1,15 +1,15 @@
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
-import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 
 export default apiHandler({
   // GET /api/billing/usage - Get usage stats for current billing period
   GET: async (req, res) => {
-    const user = await getAuthUserWithWorkspace(req, res)
-    await requireWorkspaceRole(user.id, user.workspaceId, 'VIEWER')
+    const user = await getAuthUserWithFamilyspace(req, res)
+    await requireFamilyspaceRole(user.id, user.familyspaceId, 'VIEWER')
 
     const subscription = await prisma.subscription.findUnique({
-      where: { workspaceId: user.workspaceId },
+      where: { familyspaceId: user.familyspaceId },
       include: { plan: true },
     })
 
@@ -19,7 +19,7 @@ export default apiHandler({
 
     // Get asset storage usage
     const storageResult = await prisma.asset.aggregate({
-      where: { workspaceId: user.workspaceId },
+      where: { familyspaceId: user.familyspaceId },
       _sum: { sizeBytes: true },
       _count: { id: true },
     })
@@ -27,7 +27,7 @@ export default apiHandler({
     // Get voice generation usage
     const generationStats = await prisma.voiceGenerationJob.aggregate({
       where: {
-        voiceProfile: { workspaceId: user.workspaceId },
+        voiceProfile: { familyspaceId: user.familyspaceId },
         completedAt: {
           gte: subscription.lastBillingResetAt,
         },
@@ -37,9 +37,9 @@ export default apiHandler({
       _count: { id: true },
     })
 
-    // Get workspace stats
-    const workspaceStats = await prisma.workspace.findUnique({
-      where: { id: user.workspaceId },
+    // Get familyspace stats
+    const familyspaceStats = await prisma.familyspace.findUnique({
+      where: { id: user.familyspaceId },
       include: {
         _count: {
           select: {
@@ -80,11 +80,11 @@ export default apiHandler({
           jobsCount: generationStats._count.id,
         },
         members: {
-          count: workspaceStats?._count.members || 0,
+          count: familyspaceStats?._count.members || 0,
           quota: plan?.memberQuota || 1,
         },
         voiceProfiles: {
-          count: workspaceStats?._count.voiceProfiles || 0,
+          count: familyspaceStats?._count.voiceProfiles || 0,
           quota: plan?.voiceProfileQuota || 0,
         },
       },

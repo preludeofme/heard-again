@@ -155,6 +155,9 @@ export default function ImportPage() {
                 <Tabs
                   value={tab}
                   onChange={(_, value) => setTab(value as ImportTab)}
+                  variant="scrollable"
+                  scrollButtons="auto"
+                  allowScrollButtonsMobile
                   sx={{ mb: 2 }}
                 >
                   <Tab value="gedcom" label="GEDCOM" icon={<UploadFile />} iconPosition="start" />
@@ -165,7 +168,7 @@ export default function ImportPage() {
                 <Typography variant="body2" sx={{ color: '#546669', mb: 2 }}>
                   {tab === 'gedcom' && 'Upload a GEDCOM file to import genealogy records.'}
                   {tab === 'json' && 'Upload a Heard Again JSON backup file.'}
-                  {tab === 'bulk-audio' && 'Upload one or more audio files to your workspace assets.'}
+                  {tab === 'bulk-audio' && 'Upload one or more audio files to your familyspace assets.'}
                 </Typography>
 
                 <Button

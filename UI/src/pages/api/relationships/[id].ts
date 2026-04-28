@@ -1,20 +1,20 @@
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
-import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 
 export default apiHandler({
   // DELETE /api/relationships/[id] - Remove a relationship
   DELETE: async (req, res) => {
-    const user = await getAuthUserWithWorkspace(req, res)
+    const user = await getAuthUserWithFamilyspace(req, res)
     const relationshipId = decodeURIComponent(req.query.id as string)
-    await requireWorkspaceRole(user.id, user.workspaceId, 'EDITOR')
+    await requireFamilyspaceRole(user.id, user.familyspaceId, 'EDITOR')
 
     if (relationshipId.startsWith('fam:')) {
       const parts = relationshipId.split(':')
       const familyId = parts[1]
 
       const family = await prisma.familyUnit.findFirst({
-        where: { id: familyId, workspaceId: user.workspaceId },
+        where: { id: familyId, familyspaceId: user.familyspaceId },
       })
       if (!family) throw Errors.notFound('Relationship')
 
@@ -28,7 +28,7 @@ export default apiHandler({
       const childId = parts[2]
 
       const family = await prisma.familyUnit.findFirst({
-        where: { id: familyId, workspaceId: user.workspaceId },
+        where: { id: familyId, familyspaceId: user.familyspaceId },
       })
       if (!family) throw Errors.notFound('Relationship')
 

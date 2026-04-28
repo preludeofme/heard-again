@@ -1,21 +1,21 @@
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
-import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 
 export default apiHandler({
   // GET /api/instance/status - Get instance connection status
   GET: async (req, res) => {
-    const user = await getAuthUserWithWorkspace(req, res)
-    await requireWorkspaceRole(user.id, user.workspaceId, 'VIEWER')
+    const user = await getAuthUserWithFamilyspace(req, res)
+    await requireFamilyspaceRole(user.id, user.familyspaceId, 'VIEWER')
 
     const instance = await prisma.instance.findFirst({
-      where: { workspaceId: user.workspaceId },
+      where: { familyspaceId: user.familyspaceId },
     })
 
     if (!instance) {
       return successResponse(res, {
         registered: false,
-        message: 'No instance registered for this workspace',
+        message: 'No instance registered for this familyspace',
       })
     }
 

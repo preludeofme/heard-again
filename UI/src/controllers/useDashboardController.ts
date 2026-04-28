@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import { ApiError } from '@/lib/errors'
 
-export type WorkspaceRole = 'OWNER' | 'ADMIN' | 'EDITOR' | 'VIEWER' | 'LEGACY'
+export type FamilyspaceRole = 'OWNER' | 'ADMIN' | 'EDITOR' | 'VIEWER' | 'LEGACY'
 
 export interface DashboardStats {
   people: number
@@ -13,7 +13,7 @@ export interface DashboardStats {
   members: number
 }
 
-export interface DashboardWorkspace {
+export interface DashboardFamilyspace {
   id: string
   name: string
   planType: string
@@ -22,7 +22,7 @@ export interface DashboardWorkspace {
 export interface DashboardUserContext {
   userId: string
   displayName: string | null
-  role: WorkspaceRole
+  role: FamilyspaceRole
 }
 
 export interface OnboardingState {
@@ -59,7 +59,7 @@ export interface DashboardStory {
   tags: string[]
   createdAt: string
   hasNarration: boolean
-  subject: { id: string; name: string } | null
+  subject: { id: string; name: string; avatarAssetId: string | null } | null
   createdBy: string
 }
 
@@ -110,7 +110,7 @@ export interface Suggestion {
 }
 
 interface DashboardControllerState {
-  workspace: DashboardWorkspace | null
+  familyspace: DashboardFamilyspace | null
   userContext: DashboardUserContext | null
   stats: DashboardStats
   onboardingState: OnboardingState
@@ -156,7 +156,7 @@ const EMPTY_CONTINUE: ContinueWork = {
 
 export function useDashboardController(): DashboardControllerState & DashboardControllerActions {
   const [state, setState] = useState<DashboardControllerState>({
-    workspace: null,
+    familyspace: null,
     userContext: null,
     stats: EMPTY_STATS,
     onboardingState: EMPTY_ONBOARDING,
@@ -185,7 +185,7 @@ export function useDashboardController(): DashboardControllerState & DashboardCo
       }
 
       const payload = statsData.data
-      const role: WorkspaceRole = payload.userContext?.role ?? 'VIEWER'
+      const role: FamilyspaceRole = payload.userContext?.role ?? 'VIEWER'
       const isAdminOrOwner = role === 'OWNER' || role === 'ADMIN'
 
       let billingUsage: BillingUsage | null = null
@@ -199,12 +199,12 @@ export function useDashboardController(): DashboardControllerState & DashboardCo
             }
           }
         } catch {
-          // Billing is optional — workspaces without subscriptions return 404
+          // Billing is optional — familyspaces without subscriptions return 404
         }
       }
 
       setState({
-        workspace: payload.workspace,
+        familyspace: payload.familyspace,
         userContext: payload.userContext,
         stats: payload.stats,
         onboardingState: payload.onboardingState,

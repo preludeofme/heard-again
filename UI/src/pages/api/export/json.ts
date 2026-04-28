@@ -2,16 +2,16 @@ import fs from 'fs/promises'
 import path from 'path'
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse } from '@/lib/api-helpers'
-import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 export default apiHandler({
-  // POST /api/export/json - Export workspace data as JSON
+  // POST /api/export/json - Export familyspace data as JSON
   POST: async (req, res) => {
 
-    const user = await getAuthUserWithWorkspace(req, res)
-    await requireWorkspaceRole(user.id, user.workspaceId, 'VIEWER')
+    const user = await getAuthUserWithFamilyspace(req, res)
+    await requireFamilyspaceRole(user.id, user.familyspaceId, 'VIEWER')
 
-    const workspace = await prisma.workspace.findUnique({
-      where: { id: user.workspaceId },
+    const familyspace = await prisma.familyspace.findUnique({
+      where: { id: user.familyspaceId },
       select: {
         id: true,
         name: true,
@@ -24,7 +24,7 @@ export default apiHandler({
 
     const [people, stories, assets, voiceProfiles, collections] = await Promise.all([
       prisma.person.findMany({
-        where: { workspaceId: user.workspaceId },
+        where: { familyspaceId: user.familyspaceId },
         select: {
           id: true,
           firstName: true,
@@ -41,7 +41,7 @@ export default apiHandler({
         },
       }),
       prisma.story.findMany({
-        where: { workspaceId: user.workspaceId },
+        where: { familyspaceId: user.familyspaceId },
         select: {
           id: true,
           title: true,
@@ -58,7 +58,7 @@ export default apiHandler({
         },
       }),
       prisma.asset.findMany({
-        where: { workspaceId: user.workspaceId },
+        where: { familyspaceId: user.familyspaceId },
         select: {
           id: true,
           originalName: true,
@@ -70,7 +70,7 @@ export default apiHandler({
         },
       }),
       prisma.voiceProfile.findMany({
-        where: { workspaceId: user.workspaceId },
+        where: { familyspaceId: user.familyspaceId },
         select: {
           id: true,
           name: true,
@@ -81,7 +81,7 @@ export default apiHandler({
         },
       }),
       prisma.collection.findMany({
-        where: { workspaceId: user.workspaceId },
+        where: { familyspaceId: user.familyspaceId },
         include: {
           stories: {
             select: {
@@ -97,7 +97,7 @@ export default apiHandler({
     const exportPayload = {
       version: 1,
       exportedAt: new Date().toISOString(),
-      workspace,
+      familyspace,
       summary: {
         people: people.length,
         stories: stories.length,
@@ -117,10 +117,10 @@ export default apiHandler({
       },
     }
 
-    const exportDir = path.join(process.cwd(), 'exports', user.workspaceId)
+    const exportDir = path.join(process.cwd(), 'exports', user.familyspaceId)
     await fs.mkdir(exportDir, { recursive: true })
 
-    const fileName = `workspace-export-${Date.now()}.json`
+    const fileName = `familyspace-export-${Date.now()}.json`
     const absoluteFilePath = path.join(exportDir, fileName)
     const fileContent = JSON.stringify(exportPayload, null, 2)
     await fs.writeFile(absoluteFilePath, fileContent, 'utf-8')
@@ -131,7 +131,7 @@ export default apiHandler({
     const [asset, exportJob] = await prisma.$transaction(async (tx) => {
       const createdAsset = await tx.asset.create({
         data: {
-          workspaceId: user.workspaceId,
+          familyspaceId: user.familyspaceId,
           filename: fileName,
           originalName: fileName,
           mimeType: 'application/json',
@@ -144,14 +144,14 @@ export default apiHandler({
           metadata: {
             exportType: 'JSON',
             generatedBy: 'api.export.json',
-            workspaceId: user.workspaceId,
+            familyspaceId: user.familyspaceId,
           },
         },
       })
 
       const createdJob = await tx.exportJob.create({
         data: {
-          workspaceId: user.workspaceId,
+          familyspaceId: user.familyspaceId,
           exportType: 'JSON',
           status: 'COMPLETED',
           requestedById: user.id,

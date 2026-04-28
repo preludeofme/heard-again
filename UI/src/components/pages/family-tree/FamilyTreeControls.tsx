@@ -15,6 +15,8 @@ import {
   PersonAddOutlined as PersonAdd,
   Fullscreen,
   FullscreenExit,
+  UploadFile,
+  FileDownload,
 } from '@mui/icons-material'
 
 interface FamilyTreeControlsProps {
@@ -28,6 +30,8 @@ interface FamilyTreeControlsProps {
   onOpenSearch: () => void
   onOpenRelationshipEditor: () => void
   onToggleFullscreen?: () => void
+  onImportGedcom?: () => void
+  onExportGedcom?: () => void
 }
 
 export function FamilyTreeControls({
@@ -41,6 +45,8 @@ export function FamilyTreeControls({
   onOpenSearch,
   onOpenRelationshipEditor,
   onToggleFullscreen,
+  onImportGedcom,
+  onExportGedcom,
 }: FamilyTreeControlsProps) {
   return (
     <Box
@@ -146,6 +152,34 @@ export function FamilyTreeControls({
           >
             <RestartAlt sx={{ fontSize: 18 }} />
           </IconButton>
+
+          {onImportGedcom && (
+            <>
+              <Divider orientation="vertical" flexItem sx={{ mx: 0.5, borderColor: 'rgba(208, 227, 230, 0.6)' }} />
+              <IconButton
+                size="small"
+                onClick={onImportGedcom}
+                sx={{ color: 'primary.main' }}
+                title="Import GEDCOM"
+              >
+                <UploadFile sx={{ fontSize: 18 }} />
+              </IconButton>
+            </>
+          )}
+
+          {onExportGedcom && (
+            <>
+              {!onImportGedcom && <Divider orientation="vertical" flexItem sx={{ mx: 0.5, borderColor: 'rgba(208, 227, 230, 0.6)' }} />}
+              <IconButton
+                size="small"
+                onClick={onExportGedcom}
+                sx={{ color: 'primary.main' }}
+                title="Export GEDCOM"
+              >
+                <FileDownload sx={{ fontSize: 18 }} />
+              </IconButton>
+            </>
+          )}
 
           {onToggleFullscreen && (
             <>

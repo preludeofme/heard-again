@@ -168,7 +168,7 @@ export const queueManager = new QueueManager()
 
 // Job types and interfaces
 export interface BaseJobData {
-  workspaceId: string
+  familyspaceId: string
   userId: string
   traceId?: string
 }

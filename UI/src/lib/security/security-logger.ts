@@ -25,7 +25,7 @@ export interface SecurityEvent {
         'SECURITY_CONFIG_CHANGE' | 'DATA_EXPORT' | 'VOICE_PROFILE_ACCESS' | 'SYSTEM_ERROR'
   severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
   userId?: string
-  workspaceId?: string
+  familyspaceId?: string
   ipAddress?: string
   userAgent?: string
   resource?: string
@@ -40,7 +40,7 @@ export interface AuditTrail {
   id: string
   eventType: string
   userId: string
-  workspaceId: string
+  familyspaceId: string
   action: string
   resourceType: string
   resourceId: string
@@ -127,7 +127,7 @@ class SecurityLogger {
         logger.error('CRITICAL SECURITY EVENTS:', criticalEvents.map(e => ({
           type: e.type,
           userId: e.userId,
-          workspaceId: e.workspaceId,
+          familyspaceId: e.familyspaceId,
           details: e.details,
           timestamp: e.timestamp
         })))
@@ -150,7 +150,7 @@ class SecurityLogger {
       type: event.type,
       severity: event.severity,
       userId: event.userId,
-      workspaceId: event.workspaceId,
+      familyspaceId: event.familyspaceId,
       ipAddress: this.anonymizeIP(event.ipAddress),
       resource: event.resource,
       action: event.action,
@@ -167,7 +167,7 @@ class SecurityLogger {
       type: event.type,
       severity: event.severity,
       userId: event.userId,
-      workspaceId: event.workspaceId,
+      familyspaceId: event.familyspaceId,
       ipAddress: this.anonymizeIP(event.ipAddress),
       userAgent: event.userAgent,
       resource: event.resource,
@@ -184,7 +184,7 @@ class SecurityLogger {
     let message = event.type
     
     if (event.userId) message += ` user:${event.userId}`
-    if (event.workspaceId) message += ` workspace:${event.workspaceId}`
+    if (event.familyspaceId) message += ` familyspace:${event.familyspaceId}`
     if (event.resource) message += ` resource:${event.resource}`
     if (event.action) message += ` action:${event.action}`
     
@@ -263,13 +263,13 @@ export function addSecurityContext(req: NextApiRequest, res: NextApiResponse, ne
 
 // Helper functions for common security events
 export const securityEvents = {
-  async logAuthSuccess(userId: string, workspaceId: string, ipAddress?: string, userAgent?: string) {
+  async logAuthSuccess(userId: string, familyspaceId: string, ipAddress?: string, userAgent?: string) {
     const logger = SecurityLogger.getInstance()
     await logger.logSecurityEvent({
       type: 'AUTH_SUCCESS',
       severity: 'LOW',
       userId,
-      workspaceId,
+      familyspaceId,
       ipAddress,
       userAgent,
       action: 'LOGIN',
@@ -294,29 +294,29 @@ export const securityEvents = {
     })
   },
 
-  async logTenantViolation(userId: string, workspaceId: string, targetWorkspaceId: string, ipAddress?: string, userAgent?: string) {
+  async logTenantViolation(userId: string, familyspaceId: string, targetFamilyspaceId: string, ipAddress?: string, userAgent?: string) {
     const logger = SecurityLogger.getInstance()
     await logger.logSecurityEvent({
       type: 'TENANT_VIOLATION',
       severity: 'HIGH',
       userId,
-      workspaceId,
+      familyspaceId,
       ipAddress,
       userAgent,
       action: 'UNAUTHORIZED_ACCESS_ATTEMPT',
       details: {
-        targetWorkspaceId,
+        targetFamilyspaceId,
       },
     })
   },
 
-  async logMalwareDetected(userId: string, workspaceId: string, filename: string, threats: string[], ipAddress?: string, userAgent?: string) {
+  async logMalwareDetected(userId: string, familyspaceId: string, filename: string, threats: string[], ipAddress?: string, userAgent?: string) {
     const loggerInstance = SecurityLogger.getInstance()
     await loggerInstance.logSecurityEvent({
       type: 'MALWARE_DETECTED',
       severity: 'CRITICAL',
       userId,
-      workspaceId,
+      familyspaceId,
       ipAddress,
       userAgent,
       resource: 'FILE',
@@ -328,13 +328,13 @@ export const securityEvents = {
     })
   },
 
-  async logFileUpload(userId: string, workspaceId: string, filename: string, fileSize: number, ipAddress?: string, userAgent?: string) {
+  async logFileUpload(userId: string, familyspaceId: string, filename: string, fileSize: number, ipAddress?: string, userAgent?: string) {
     const loggerInstance = SecurityLogger.getInstance()
     await loggerInstance.logSecurityEvent({
       type: 'FILE_UPLOAD',
       severity: 'LOW',
       userId,
-      workspaceId,
+      familyspaceId,
       ipAddress,
       userAgent,
       resource: 'FILE',
@@ -346,13 +346,13 @@ export const securityEvents = {
     })
   },
 
-  async logFileAccess(userId: string, workspaceId: string, resourceId: string, ipAddress?: string, userAgent?: string) {
+  async logFileAccess(userId: string, familyspaceId: string, resourceId: string, ipAddress?: string, userAgent?: string) {
     const logger = SecurityLogger.getInstance()
     await logger.logSecurityEvent({
       type: 'FILE_ACCESS',
       severity: 'LOW',
       userId,
-      workspaceId,
+      familyspaceId,
       ipAddress,
       userAgent,
       resource: 'FILE',
@@ -378,13 +378,13 @@ export const securityEvents = {
     })
   },
 
-  async logSuspiciousActivity(userId: string, workspaceId: string, activity: string, details: Record<string, any>, ipAddress?: string, userAgent?: string) {
+  async logSuspiciousActivity(userId: string, familyspaceId: string, activity: string, details: Record<string, any>, ipAddress?: string, userAgent?: string) {
     const logger = SecurityLogger.getInstance()
     await logger.logSecurityEvent({
       type: 'SUSPICIOUS_ACTIVITY',
       severity: 'HIGH',
       userId,
-      workspaceId,
+      familyspaceId,
       ipAddress,
       userAgent,
       action: activity,

@@ -1,15 +1,15 @@
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
-import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 export default apiHandler({
   // PUT /api/voice/consent/[id] - Revoke voice consent
   PUT: async (req, res) => {
-    const user = await getAuthUserWithWorkspace(req, res)
+    const user = await getAuthUserWithFamilyspace(req, res)
     const consentId = req.query.id as string
-    await requireWorkspaceRole(user.id, user.workspaceId, 'EDITOR')
+    await requireFamilyspaceRole(user.id, user.familyspaceId, 'EDITOR')
 
     const consent = await prisma.voiceConsent.findFirst({
-      where: { id: consentId, workspaceId: user.workspaceId },
+      where: { id: consentId, familyspaceId: user.familyspaceId },
     })
 
     if (!consent) throw Errors.notFound('VoiceConsent')

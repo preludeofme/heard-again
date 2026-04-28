@@ -13,8 +13,8 @@ import storyDetailHandler from '@/pages/api/stories/[id]'
 import assetsHandler from '@/pages/api/assets/index'
 import assetDetailHandler from '@/pages/api/assets/[id]'
 import uploadAssetHandler from '@/pages/api/assets/upload'
-import workspacesHandler from '@/pages/api/workspaces/index'
-import workspaceInviteHandler from '@/pages/api/workspaces/[id]/invite'
+import familyspacesHandler from '@/pages/api/familyspaces/index'
+import familyspaceInviteHandler from '@/pages/api/familyspaces/[id]/invite'
 import signupHandler from '@/pages/api/auth/signup'
 import forgotPasswordHandler from '@/pages/api/auth/forgot-password'
 import resetPasswordHandler from '@/pages/api/auth/reset-password'
@@ -45,7 +45,7 @@ describe('API Contract Tests', () => {
           id: TEST_SESSION.sub,
           email: 'test@example.com',
           displayName: 'Test User',
-          defaultWorkspaceId: 'ws-1'
+          defaultFamilyspaceId: 'ws-1'
         }
       }
       mockGetToken.mockResolvedValue(TEST_SESSION as any)
@@ -132,21 +132,21 @@ describe('API Contract Tests', () => {
     }, hooks)
   })
 
-  // 8. Workspaces
-  it('contract: /api/workspaces', async () => {
+  // 8. Familyspaces
+  it('contract: /api/familyspaces', async () => {
     await assertContract({
-      label: 'GET/POST /api/workspaces',
-      handler: workspacesHandler,
+      label: 'GET/POST /api/familyspaces',
+      handler: familyspacesHandler,
       supportedMethods: ['GET', 'POST'],
       unsupportedMethod: 'DELETE',
     }, hooks)
   })
 
-  // 9. Workspace Invite
-  it('contract: /api/workspaces/[id]/invite', async () => {
+  // 9. Familyspace Invite
+  it('contract: /api/familyspaces/[id]/invite', async () => {
     await assertContract({
-      label: 'POST /api/workspaces/[id]/invite',
-      handler: workspaceInviteHandler,
+      label: 'POST /api/familyspaces/[id]/invite',
+      handler: familyspaceInviteHandler,
       supportedMethods: ['GET', 'POST'],
       unsupportedMethod: 'DELETE',
       query: { id: 'ws1' }

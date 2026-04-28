@@ -14,6 +14,7 @@ interface PersonOption {
   firstName: string
   lastName?: string
   displayName?: string
+  avatarUrl?: string | null
 }
 
 const personName = (person: PersonOption) => {
@@ -73,6 +74,7 @@ export default function Stories() {
         firstName: selectedPerson.firstName,
         lastName: selectedPerson.lastName,
         displayName: selectedPerson.displayName,
+        avatarUrl: selectedPerson.avatarUrl,
       })
     }
   }
@@ -131,18 +133,19 @@ export default function Stories() {
           <StoriesPage
             stories={visibleStories}
             selectedFamilyMember={selectedFamilyMember}
-            onSubmitStory={async (title, content, storyDate, location) => {
+            onSubmitStory={async (title, content, storyDate, location, authorRelationship) => {
               await controller.submitStory({
                 title,
                 content,
                 storyType: 'MEMORY',
-                subjectId: selectedSubjectId,
+                subjectId: controller.subjectId,
                 storyDate,
                 location,
+                authorRelationship,
               })
             }}
-            onSubmitAudio={async (audioBlob, duration) => {
-              await controller.submitAudioStory(audioBlob, duration)
+            onSubmitAudio={async (audioBlob, duration, title, authorRelationship) => {
+              await controller.submitAudioStory(audioBlob, duration, title, authorRelationship)
             }}
           />
         )}

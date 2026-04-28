@@ -60,7 +60,7 @@ export class StorageService {
    * Save audio file to storage
    */
   async saveAudio(
-    workspaceId: string,
+    familyspaceId: string,
     audioId: string,
     buffer: Buffer,
     options?: {
@@ -71,7 +71,7 @@ export class StorageService {
     const extension = options?.extension || 'wav'
     const mimeType = options?.mimeType || 'audio/wav'
     
-    const relativePath = this.buildAudioPath(workspaceId, `${audioId}.${extension}`)
+    const relativePath = this.buildAudioPath(familyspaceId, `${audioId}.${extension}`)
     
     if (this.config.type === 'LOCAL') {
       return this.saveToLocal(relativePath, buffer, mimeType)
@@ -84,7 +84,7 @@ export class StorageService {
    * Save generic file to storage
    */
   async saveFile(
-    workspaceId: string,
+    familyspaceId: string,
     fileId: string,
     buffer: Buffer,
     options: {
@@ -93,7 +93,7 @@ export class StorageService {
       assetType: string
     }
   ): Promise<StoredFile> {
-    const relativePath = this.buildFilePath(workspaceId, fileId, options.filename)
+    const relativePath = this.buildFilePath(familyspaceId, fileId, options.filename)
     
     if (this.config.type === 'LOCAL') {
       return this.saveToLocal(relativePath, buffer, options.mimeType)
@@ -212,21 +212,21 @@ export class StorageService {
   /**
    * Build path for audio files
    */
-  private buildAudioPath(workspaceId: string, filename: string): string {
-    return path.join('generated', workspaceId, 'voice', filename)
+  private buildAudioPath(familyspaceId: string, filename: string): string {
+    return path.join('generated', familyspaceId, 'voice', filename)
   }
 
   /**
    * Build path for generic files
    */
-  private buildFilePath(workspaceId: string, fileId: string, filename: string): string {
+  private buildFilePath(familyspaceId: string, fileId: string, filename: string): string {
     const now = new Date()
     const datePath = path.join(
       String(now.getFullYear()),
       String(now.getMonth() + 1).padStart(2, '0'),
       String(now.getDate()).padStart(2, '0')
     )
-    return path.join('uploads', workspaceId, datePath, `${fileId}_${filename}`)
+    return path.join('uploads', familyspaceId, datePath, `${fileId}_${filename}`)
   }
 }
 

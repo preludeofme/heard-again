@@ -1,7 +1,7 @@
 import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '@/lib/prisma'
-import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 import fs from 'fs'
 import path from 'path'
 
@@ -22,8 +22,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 
   try {
-    const user = await getAuthUserWithWorkspace(req, res)
-    await requireWorkspaceRole(user.id, user.workspaceId, 'EDITOR')
+    const user = await getAuthUserWithFamilyspace(req, res)
+    await requireFamilyspaceRole(user.id, user.familyspaceId, 'EDITOR')
 
     const { personId, voiceProfileId, sampleAssetIds } = req.body
 
@@ -42,7 +42,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       assets = await prisma.asset.findMany({
         where: {
           id: { in: sampleAssetIds },
-          workspaceId: user.workspaceId,
+          familyspaceId: user.familyspaceId,
           assetType: 'AUDIO',
         },
         orderBy: { createdAt: 'asc' },
@@ -52,7 +52,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       const profile = await prisma.voiceProfile.findFirst({
         where: {
           id: voiceProfileId,
-          workspaceId: user.workspaceId,
+          familyspaceId: user.familyspaceId,
         },
         include: {
           sourceAsset: true,
@@ -66,7 +66,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       // Look for assets that might be voice samples for this person
       assets = await prisma.asset.findMany({
         where: {
-          workspaceId: user.workspaceId,
+          familyspaceId: user.familyspaceId,
           assetType: 'AUDIO',
           transcript: { not: null }, // Must have transcript
         },
@@ -151,7 +151,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     // Also write a metadata JSON file with additional info
     const metadata = {
       profileName,
-      workspaceId: user.workspaceId,
+      familyspaceId: user.familyspaceId,
       personId: personId || null,
       voiceProfileId: voiceProfileId || null,
       createdAt: new Date().toISOString(),

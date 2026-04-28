@@ -88,7 +88,7 @@ const steps = [
     label: 'Cloud Tunnel Setup (Optional)',
     icon: <Cloud />,
     content: [
-      { text: 'Enable tunnel in workspace settings', checked: false },
+      { text: 'Enable tunnel in familyspace settings', checked: false },
       { text: 'Install cloudflared on your server', checked: false },
       { text: 'Run cloudflared with your tunnel token', checked: false },
       { text: 'Access your instance from anywhere', checked: false },

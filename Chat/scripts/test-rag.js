@@ -3,7 +3,7 @@ const { ChromaClient, DefaultEmbeddingFunction } = require('chromadb');
 async function testRAG() {
   const chroma = new ChromaClient({ path: 'http://localhost:8004' });
   const collection = await chroma.getCollection({
-    name: 'workspace_931638b2-8341-41fc-a064-0883a9911d54_documents',
+    name: 'familyspace_931638b2-8341-41fc-a064-0883a9911d54_documents',
     embeddingFunction: new DefaultEmbeddingFunction()
   });
 

@@ -59,6 +59,7 @@ export function VoiceLabPage({ voiceModels, controller }: VoiceLabPageProps) {
 
   const { selectedFamilyMember } = useSelectedFamilyMember()
   const memberName = selectedFamilyMember?.firstName || 'this person'
+  const hasSelectedPerson = Boolean(selectedFamilyMember?.id)
 
   // ── Local state ──
   const [selectedVoiceId, setSelectedVoiceId] = useState<string | null>(null)
@@ -171,7 +172,10 @@ export function VoiceLabPage({ voiceModels, controller }: VoiceLabPageProps) {
 
   // ── Create voice with auto-refresh ──
   const handleCreateVoice = async (modelName: string, language: string, styleInstruct?: string) => {
-    await startVoiceTraining(modelName, language, styleInstruct)
+    if (!selectedFamilyMember?.id) {
+      throw new Error('Select a family member before creating a voice — voices must be assigned to a person.')
+    }
+    await startVoiceTraining(modelName, language, styleInstruct, selectedFamilyMember.id)
     await refreshData() // Refresh the voice list after creation
   }
 
@@ -205,16 +209,26 @@ export function VoiceLabPage({ voiceModels, controller }: VoiceLabPageProps) {
               size="large"
               startIcon={<AddIcon />}
               onClick={toggleRecordingModal}
+              disabled={!hasSelectedPerson}
               sx={{
-                background: 'linear-gradient(135deg, #16334a 0%, #2e4a62 100%)',
+                background: hasSelectedPerson
+                  ? 'linear-gradient(135deg, #16334a 0%, #2e4a62 100%)'
+                  : undefined,
                 py: 2,
                 fontSize: '1.1rem',
                 fontWeight: 600,
-                mb: 4,
+                mb: hasSelectedPerson ? 4 : 1,
               }}
             >
-              {`Add a sample of ${memberName}'s voice`}
+              {hasSelectedPerson
+                ? `Add a sample of ${memberName}'s voice`
+                : 'Select a family member to add a voice'}
             </Button>
+            {!hasSelectedPerson && (
+              <Typography variant="caption" sx={{ display: 'block', color: '#8a6f00', mb: 4 }}>
+                Voices must be tied to a family member so they don't end up orphaned. Use the search above to pick a person first.
+              </Typography>
+            )}
 
             {/* ── Test Selected Voice ── */}
             <Box sx={{ mb: 4 }}>
@@ -353,12 +367,17 @@ export function VoiceLabPage({ voiceModels, controller }: VoiceLabPageProps) {
                   variant="contained"
                   startIcon={<AddIcon />}
                   onClick={toggleRecordingModal}
+                  disabled={!hasSelectedPerson}
                   sx={{
-                    background: 'linear-gradient(135deg, #16334a 0%, #2e4a62 100%)',
+                    background: hasSelectedPerson
+                      ? 'linear-gradient(135deg, #16334a 0%, #2e4a62 100%)'
+                      : undefined,
                     fontWeight: 600,
                   }}
                 >
-                  {`Add a sample of ${memberName}'s voice`}
+                  {hasSelectedPerson
+                    ? `Add a sample of ${memberName}'s voice`
+                    : 'Select a family member to add a voice'}
                 </Button>
               </Box>
             ) : (
@@ -415,6 +434,19 @@ export function VoiceLabPage({ voiceModels, controller }: VoiceLabPageProps) {
                             }}
                           >
                             {model.displayName || model.name}
+                          </Typography>
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              color: model.person ? '#16334a' : '#b45309',
+                              display: 'block',
+                              fontWeight: 500,
+                              fontStyle: model.person ? 'normal' : 'italic',
+                            }}
+                          >
+                            {model.person
+                              ? `For ${model.person.firstName}${model.person.lastName ? ` ${model.person.lastName}` : ''}`
+                              : 'Unassigned voice'}
                           </Typography>
                           <Typography variant="caption" sx={{ color: '#546669', display: 'block' }}>
                             {new Date(model.createdAt).toLocaleDateString()}

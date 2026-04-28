@@ -19,7 +19,7 @@ Your schema is a strong starting point, but there are a few categories of change
 These are the most important changes because they affect correctness and future development.
 
 ## 1.1 Add missing `Collection` model
-You reference `collections Collection[]` on `Workspace`, but `Collection` does not exist.
+You reference `collections Collection[]` on `Familyspace`, but `Collection` does not exist.
 
 ### Change
 Add:
@@ -37,8 +37,8 @@ Needed for:
 ```prisma
 model Collection {
   id          String   @id @default(uuid())
-  workspaceId String
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  familyspaceId String
+  familyspace   Familyspace @relation(fields: [familyspaceId], references: [id], onDelete: Cascade)
 
   name        String
   description String?
@@ -52,7 +52,7 @@ model Collection {
 
   stories     CollectionStory[]
 
-  @@index([workspaceId])
+  @@index([familyspaceId])
   @@index([createdById])
 }
 
@@ -80,21 +80,21 @@ You have several fields that look relational but are just `String` fields.
 
 ### Change these into real relations where appropriate
 
-#### `User.defaultWorkspaceId`
+#### `User.defaultFamilyspaceId`
 ### Current
 ```prisma
-defaultWorkspaceId String?
+defaultFamilyspaceId String?
 ```
 
 ### Change
 ```prisma
-defaultWorkspaceId String?
-defaultWorkspace   Workspace? @relation("UserDefaultWorkspace", fields: [defaultWorkspaceId], references: [id])
+defaultFamilyspaceId String?
+defaultFamilyspace   Familyspace? @relation("UserDefaultFamilyspace", fields: [defaultFamilyspaceId], references: [id])
 ```
 
-Then on `Workspace`:
+Then on `Familyspace`:
 ```prisma
-defaultForUsers User[] @relation("UserDefaultWorkspace")
+defaultForUsers User[] @relation("UserDefaultFamilyspace")
 ```
 
 ---
@@ -270,13 +270,13 @@ voiceGenerationOutputs VoiceGenerationJob[] @relation("VoiceGenerationOutputAsse
 
 ---
 
-## 1.3 Remove or simplify `Workspace.currentSubscriptionId`
+## 1.3 Remove or simplify `Familyspace.currentSubscriptionId`
 You already have:
 ```prisma
 subscription Subscription?
 ```
 
-And `Subscription.workspaceId` is unique.
+And `Subscription.familyspaceId` is unique.
 
 ### Recommendation
 Remove:
@@ -293,7 +293,7 @@ This duplicates the relationship and risks data drift.
 Because you now have multiple relations between some tables, name them explicitly.
 
 ### Recommended areas
-- `User` ↔ `Workspace`
+- `User` ↔ `Familyspace`
 - `User` ↔ `Person`
 - `User` ↔ `Asset`
 - `Story` ↔ `Asset`
@@ -308,7 +308,7 @@ Prevents Prisma ambiguity errors later.
 
 ---
 
-## 2.1 Add `WorkspaceInvite`
+## 2.1 Add `FamilyspaceInvite`
 Right now `Membership` is trying to do both:
 - membership
 - invitation
@@ -317,14 +317,14 @@ That will get messy.
 
 ### Add separate invitation model
 ```prisma
-model WorkspaceInvite {
+model FamilyspaceInvite {
   id          String   @id @default(uuid())
 
-  workspaceId String
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  familyspaceId String
+  familyspace   Familyspace @relation(fields: [familyspaceId], references: [id], onDelete: Cascade)
 
   email       String
-  role        WorkspaceRole @default(VIEWER)
+  role        FamilyspaceRole @default(VIEWER)
 
   invitedById String
   invitedBy   User     @relation(fields: [invitedById], references: [id])
@@ -339,7 +339,7 @@ model WorkspaceInvite {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  @@index([workspaceId])
+  @@index([familyspaceId])
   @@index([email])
   @@index([token])
 }
@@ -368,8 +368,8 @@ Needed for importing GEDCOM, JSON, CSV, etc.
 model ImportJob {
   id            String   @id @default(uuid())
 
-  workspaceId   String
-  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  familyspaceId   String
+  familyspace     Familyspace @relation(fields: [familyspaceId], references: [id], onDelete: Cascade)
 
   sourceType    ImportSourceType
   sourceAssetId String?
@@ -388,7 +388,7 @@ model ImportJob {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  @@index([workspaceId])
+  @@index([familyspaceId])
   @@index([status])
 }
 
@@ -409,8 +409,8 @@ Needed for PDF export, ZIP backup, JSON export.
 model ExportJob {
   id            String   @id @default(uuid())
 
-  workspaceId   String
-  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  familyspaceId   String
+  familyspace     Familyspace @relation(fields: [familyspaceId], references: [id], onDelete: Cascade)
 
   exportType    ExportType
   status        JobStatus @default(PENDING)
@@ -427,7 +427,7 @@ model ExportJob {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  @@index([workspaceId])
+  @@index([familyspaceId])
   @@index([status])
 }
 
@@ -456,8 +456,8 @@ This is important for trust and legal safety.
 model VoiceConsent {
   id                   String   @id @default(uuid())
 
-  workspaceId          String
-  workspace            Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  familyspaceId          String
+  familyspace            Familyspace @relation(fields: [familyspaceId], references: [id], onDelete: Cascade)
 
   personId             String?
   person               Person?   @relation(fields: [personId], references: [id], onDelete: SetNull)
@@ -479,7 +479,7 @@ model VoiceConsent {
 
   metadata             Json?
 
-  @@index([workspaceId])
+  @@index([familyspaceId])
   @@index([personId])
   @@index([voiceProfileId])
 }
@@ -634,17 +634,17 @@ Useful for:
 ---
 
 ## 4.2 Add `visibility` to stories
-You have workspace-level membership, but story-level visibility may matter later.
+You have familyspace-level membership, but story-level visibility may matter later.
 
 ### Add
 ```prisma
-visibility StoryVisibility @default(WORKSPACE)
+visibility StoryVisibility @default(FAMILYSPACE)
 ```
 
 ```prisma
 enum StoryVisibility {
   PRIVATE
-  WORKSPACE
+  FAMILYSPACE
   SHARED_LINK
 }
 ```
@@ -763,7 +763,7 @@ Only if billing is tied to rounded usage.
 
 ---
 
-# 6. Improve Workspace / Instance Design
+# 6. Improve Familyspace / Instance Design
 
 ---
 
@@ -820,14 +820,14 @@ Search and genealogy workflows become much better.
 
 # 8. Tighten Membership vs Invite Responsibilities
 
-## Keep `Membership` for active workspace participation
+## Keep `Membership` for active familyspace participation
 Use it only for:
 - accepted members
 - role/permissions
 - joinedAt
-- user/workspace link
+- user/familyspace link
 
-## Move invitation flow to `WorkspaceInvite`
+## Move invitation flow to `FamilyspaceInvite`
 That means:
 - `MembershipStatus.PENDING` becomes unnecessary
 
@@ -852,7 +852,7 @@ Cleaner separation:
 
 ## Must do now
 1. Add `Collection`
-2. Add `WorkspaceInvite`
+2. Add `FamilyspaceInvite`
 3. Add `ImportJob`
 4. Add `ExportJob`
 5. Add `VoiceConsent`

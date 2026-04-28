@@ -3,7 +3,7 @@
  */
 import { NextApiRequest, NextApiResponse } from 'next'
 import uploadHandler, { config } from '@/pages/api/assets/upload'
-import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 import { scanAndQuarantineFile } from '@/lib/security/malware-scanner'
 import { getStorageService } from '@/lib/storage/storage-service'
 import { prisma } from '@/lib/prisma'
@@ -35,8 +35,8 @@ jest.mock('fs', () => ({
   rmSync: jest.fn(),
 }))
 
-const mockGetAuth = getAuthUserWithWorkspace as jest.MockedFunction<typeof getAuthUserWithWorkspace>
-const mockRequireRole = requireWorkspaceRole as jest.MockedFunction<typeof requireWorkspaceRole>
+const mockGetAuth = getAuthUserWithFamilyspace as jest.MockedFunction<typeof getAuthUserWithFamilyspace>
+const mockRequireRole = requireFamilyspaceRole as jest.MockedFunction<typeof requireFamilyspaceRole>
 const mockScan = scanAndQuarantineFile as jest.MockedFunction<typeof scanAndQuarantineFile>
 const mockGetStorage = getStorageService as jest.MockedFunction<typeof getStorageService>
 const mockValidateFile = validateFileContent as jest.MockedFunction<typeof validateFileContent>
@@ -90,7 +90,7 @@ describe('Upload Integration — Upload → Malware Scan → Asset', () => {
 
     mockGetAuth.mockResolvedValue({
       id: 'user-1',
-      workspaceId: 'ws-1',
+      familyspaceId: 'ws-1',
       email: 'test@example.com',
       displayName: 'Test User',
     } as any)
@@ -155,7 +155,7 @@ describe('Upload Integration — Upload → Malware Scan → Asset', () => {
     // Verify database records were created
     expect(prisma.asset.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({
-        workspaceId: 'ws-1',
+        familyspaceId: 'ws-1',
         filename: 'secure-file.jpg',
       })
     }))

@@ -4,7 +4,7 @@ CREATE TYPE "DocumentType" AS ENUM ('PDF', 'LETTER', 'PHOTO', 'HANDWRITTEN', 'CE
 -- CreateTable
 CREATE TABLE "Document" (
     "id" TEXT NOT NULL,
-    "workspaceId" TEXT NOT NULL,
+    "familyspaceId" TEXT NOT NULL,
     "assetId" TEXT NOT NULL,
     "title" TEXT NOT NULL,
     "description" TEXT,
@@ -40,7 +40,7 @@ CREATE TABLE "DocumentPerson" (
 CREATE UNIQUE INDEX "Document_assetId_key" ON "Document"("assetId");
 
 -- CreateIndex
-CREATE INDEX "Document_workspaceId_idx" ON "Document"("workspaceId");
+CREATE INDEX "Document_familyspaceId_idx" ON "Document"("familyspaceId");
 
 -- CreateIndex
 CREATE INDEX "Document_documentType_idx" ON "Document"("documentType");
@@ -61,7 +61,7 @@ CREATE INDEX "DocumentPerson_personId_idx" ON "DocumentPerson"("personId");
 CREATE UNIQUE INDEX "DocumentPerson_documentId_personId_key" ON "DocumentPerson"("documentId", "personId");
 
 -- AddForeignKey
-ALTER TABLE "Document" ADD CONSTRAINT "Document_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "Document" ADD CONSTRAINT "Document_familyspaceId_fkey" FOREIGN KEY ("familyspaceId") REFERENCES "Familyspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Document" ADD CONSTRAINT "Document_assetId_fkey" FOREIGN KEY ("assetId") REFERENCES "Asset"("id") ON DELETE CASCADE ON UPDATE CASCADE;

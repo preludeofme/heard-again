@@ -123,7 +123,7 @@ export default function AccountPage() {
 
   // User data
   const [user, setUser] = useState<User | null>(null)
-  const [workspaceRole, setWorkspaceRole] = useState<string>('MEMBER')
+  const [familyspaceRole, setFamilyspaceRole] = useState<string>('MEMBER')
 
   // Subscription data
   const [subscription, setSubscription] = useState<Subscription | null>(null)
@@ -175,7 +175,7 @@ export default function AccountPage() {
       if (instanceData.success) {
         setInstance(instanceData.data.instance || null)
         setTunnelStatus(instanceData.data.tunnel || null)
-        setWorkspaceRole(instanceData.data.workspaceRole || 'MEMBER')
+        setFamilyspaceRole(instanceData.data.familyspaceRole || 'MEMBER')
       }
     } catch (err: any) {
       setError(err.message || 'Failed to load account data')
@@ -274,7 +274,13 @@ export default function AccountPage() {
           )}
 
           <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-            <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)}>
+            <Tabs 
+              value={activeTab} 
+              onChange={(_, v) => setActiveTab(v)}
+              variant="scrollable"
+              scrollButtons="auto"
+              allowScrollButtonsMobile
+            >
               <Tab icon={<Person />} label="Profile" />
               <Tab icon={<SecurityIcon />} label="Security" />
               <Tab icon={<CreditCard />} label="Subscription" />
@@ -311,10 +317,10 @@ export default function AccountPage() {
                   <Grid size={{ xs: 12, md: 6 }}>
                     <TextField
                       fullWidth
-                      label="Workspace Role"
-                      value={workspaceRole}
+                      label="Familyspace Role"
+                      value={familyspaceRole}
                       disabled
-                      helperText="Your role in the current workspace"
+                      helperText="Your role in the current familyspace"
                     />
                   </Grid>
                   <Grid size={{ xs: 12, md: 6 }}>

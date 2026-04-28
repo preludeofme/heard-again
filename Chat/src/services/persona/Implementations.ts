@@ -26,9 +26,9 @@ export class PersonaRepositoryImpl implements PersonaRepository {
     throw new Error('Not implemented - database integration needed')
   }
 
-  async listPersonaProfiles(workspaceId: string): Promise<PersonaProfile[]> {
+  async listPersonaProfiles(familyspaceId: string): Promise<PersonaProfile[]> {
     // TODO: Implement database query
-    // return await prisma.personaProfile.findMany({ where: { workspaceId } })
+    // return await prisma.personaProfile.findMany({ where: { familyspaceId } })
     throw new Error('Not implemented - database integration needed')
   }
 }
@@ -67,7 +67,7 @@ export class ChatRepositoryImpl implements ChatRepository {
     throw new Error('Not implemented - database integration needed')
   }
 
-  async listSessions(workspaceId: string, userId: string): Promise<any[]> {
+  async listSessions(familyspaceId: string, userId: string): Promise<any[]> {
     // TODO: Implement database query
     throw new Error('Not implemented - database integration needed')
   }

@@ -25,13 +25,13 @@ export default async function handler(
   if (!verifyServiceToken(req, res)) return
 
   try {
-    // Extract workspace and user info from headers
-    const workspaceId = req.headers['x-workspace-id'] as string
+    // Extract familyspace and user info from headers
+    const familyspaceId = req.headers['x-familyspace-id'] as string
     const userId = req.headers['x-user-id'] as string
 
-    if (!workspaceId || !userId) {
+    if (!familyspaceId || !userId) {
       return res.status(400).json({ 
-        error: 'Missing required headers: x-workspace-id, x-user-id' 
+        error: 'Missing required headers: x-familyspace-id, x-user-id' 
       })
     }
 
@@ -39,9 +39,9 @@ export default async function handler(
 
     switch (req.method) {
       case 'GET':
-        return await handleGetSessions(chatService, workspaceId, userId, res)
+        return await handleGetSessions(chatService, familyspaceId, userId, res)
       case 'POST':
-        return await handleCreateSession(chatService, workspaceId, userId, req.body, res)
+        return await handleCreateSession(chatService, familyspaceId, userId, req.body, res)
       default:
         return res.status(405).json({ error: 'Method not allowed' })
     }
@@ -56,12 +56,12 @@ export default async function handler(
 
 async function handleGetSessions(
   chatService: any,
-  workspaceId: string,
+  familyspaceId: string,
   userId: string,
   res: NextApiResponse
 ) {
   try {
-    const sessions = await chatService.listSessions(workspaceId, userId)
+    const sessions = await chatService.listSessions(familyspaceId, userId)
     
     res.status(200).json({
       success: true,
@@ -79,7 +79,7 @@ async function handleGetSessions(
 
 async function handleCreateSession(
   chatService: any,
-  workspaceId: string,
+  familyspaceId: string,
   userId: string,
   body: any,
   res: NextApiResponse
@@ -94,7 +94,7 @@ async function handleCreateSession(
     }
 
     const session = await chatService.createSession({
-      workspaceId,
+      familyspaceId,
       personId,
       userId,
       title: title || generateConversationTitle(personId)

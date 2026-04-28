@@ -2,57 +2,68 @@ generator client {
   provider = "prisma-client-js"
 }
 
+generator client_ui {
+  provider = "prisma-client-js"
+  output   = "../UI/node_modules/.prisma/client"
+}
+
+generator client_chat {
+  provider = "prisma-client-js"
+  output   = "../Chat/node_modules/.prisma/client"
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
 model User {
-  id                      String                @id @default(uuid())
-  email                   String                @unique
-  password                String?
-  oauthProvider           String?
-  oauthId                 String?
+  id                        String                @id @default(uuid())
+  email                     String                @unique
+  password                  String?
+  oauthProvider             String?
+  oauthId                   String?
   displayName             String?
-  avatarUrl               String?
-  status                  UserStatus            @default(ACTIVE)
-  createdAt               DateTime              @default(now())
-  updatedAt               DateTime              @updatedAt
-  lastLoginAt             DateTime?
-  defaultWorkspaceId      String?
-  image                   String?
-  name                    String?
-  emailVerified           DateTime?
-  mfaBackupCodes          String?
-  mfaEnabled              Boolean               @default(false)
-  mfaSecret               String?
-  uploadedAssets          Asset[]
-  collections             Collection[]
+  avatarUrl                 String?
+  status                    UserStatus            @default(ACTIVE)
+  createdAt                 DateTime              @default(now())
+  updatedAt                 DateTime              @updatedAt
+  lastLoginAt               DateTime?
+  defaultFamilyspaceId      String?
+  image                     String?
+  name                      String?
+  emailVerified             DateTime?
+  mfaBackupCodes            String?
+  mfaEnabled                Boolean               @default(false)
+  mfaSecret                 String?
+  uploadedAssets            Asset[]
+  collections               Collection[]
   collectionStories       CollectionStory[]
   createdDocuments        Document[]
-  exportJobs              ExportJob[]
-  mergeProposals          FamilyMergeProposal[]
-  importJobs              ImportJob[]
-  memberships             Membership[]
-  notifications           Notification[]
-  createdPeople           Person[]
+  exportJobs                ExportJob[]
+  mergeProposals            FamilyMergeProposal[]
+  importJobs                ImportJob[]
+  memberships               Membership[]
+  notifications             Notification[]
+  createdPeople             Person[]
   createdStories          Story[]               @relation("StoryCreator")
   narrationApprovals      Story[]               @relation("StoryNarrationApprover")
   comments                StoryComment[]
-  defaultWorkspace        Workspace?            @relation("UserDefaultWorkspace", fields: [defaultWorkspaceId], references: [id])
-  favorites               UserStoryFavorite[]
-  voiceConsents           VoiceConsent[]
-  voiceProfiles           VoiceProfile[]
-  ownedWorkspaces         Workspace[]           @relation("WorkspaceOwner")
-  invitedWorkspaceInvites WorkspaceInvite[]
-  accounts                Account[]
-  sessions                Session[]
+  defaultFamilyspace        Familyspace?          @relation("UserDefaultFamilyspace", fields: [defaultFamilyspaceId], references: [id])
+  favorites                 UserStoryFavorite[]
+  voiceConsents             VoiceConsent[]
+  voiceProfiles             VoiceProfile[]
+  ownedFamilyspaces         Familyspace[]         @relation("FamilyspaceOwner")
+  invitedFamilyspaceInvites FamilyspaceInvite[]
+  accounts                  Account[]
+  sessions                  Session[]
+  chatSessions              ChatSession[]
 
   @@index([email])
   @@index([oauthProvider, oauthId])
 }
 
-model Workspace {
+model Familyspace {
   id                     String                @id @default(uuid())
   name                   String
   slug                   String                @unique
@@ -65,7 +76,10 @@ model Workspace {
   storageQuotaBytes      BigInt                @default(0)
   memberQuota            Int                   @default(1)
   generationMinuteQuota  Int                   @default(0)
-  status                 WorkspaceStatus       @default(ACTIVE)
+  status                 FamilyspaceStatus     @default(ACTIVE)
+  isPublic               Boolean               @default(false)
+  allowMemberStories     Boolean               @default(true)
+  deletionVotes          Json?                 @default("{}")
   createdAt              DateTime              @default(now())
   updatedAt              DateTime              @updatedAt
   assets                 Asset[]
@@ -73,8 +87,8 @@ model Workspace {
   collections            Collection[]
   documents              Document[]
   exportJobs             ExportJob[]
-  mergeProposalsAsSource FamilyMergeProposal[] @relation("MergeSourceWorkspace")
-  mergeProposalsAsTarget FamilyMergeProposal[] @relation("MergeTargetWorkspace")
+  mergeProposalsAsSource FamilyMergeProposal[] @relation("MergeSourceFamilyspace")
+  mergeProposalsAsTarget FamilyMergeProposal[] @relation("MergeTargetFamilyspace")
   familyUnits            FamilyUnit[]
   importJobs             ImportJob[]
   instances              Instance[]
@@ -85,11 +99,12 @@ model Workspace {
   stories                Story[]
   storyComments          StoryComment[]
   subscription           Subscription?
-  defaultForUsers        User[]                @relation("UserDefaultWorkspace")
+  defaultForUsers        User[]                @relation("UserDefaultFamilyspace")
   voiceConsents          VoiceConsent[]
   voiceProfiles          VoiceProfile[]
-  owner                  User                  @relation("WorkspaceOwner", fields: [ownerId], references: [id])
-  invites                WorkspaceInvite[]
+  owner                  User                  @relation("FamilyspaceOwner", fields: [ownerId], references: [id])
+  invites                FamilyspaceInvite[]
+  chatSessions           ChatSession[]
 
   @@index([ownerId])
   @@index([slug])
@@ -97,9 +112,9 @@ model Workspace {
 
 model Membership {
   id               String           @id @default(uuid())
-  workspaceId      String
+  familyspaceId    String
   userId           String
-  role             WorkspaceRole    @default(VIEWER)
+  role             FamilyspaceRole  @default(VIEWER)
   invitedById      String?
   invitedAt        DateTime?
   joinedAt         DateTime         @default(now())
@@ -114,10 +129,10 @@ model Membership {
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
   user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  workspace        Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  familyspace      Familyspace      @relation(fields: [familyspaceId], references: [id], onDelete: Cascade)
 
-  @@unique([workspaceId, userId])
-  @@index([workspaceId])
+  @@unique([familyspaceId, userId])
+  @@index([familyspaceId])
   @@index([userId])
 }
 
@@ -162,7 +177,7 @@ model PersonEvent {
 
 model FamilyUnit {
   id            String         @id @default(uuid())
-  workspaceId   String
+  familyspaceId String
   gedcomXref    String?
   marriageDate  DateTime?
   marriagePlace String?
@@ -172,10 +187,10 @@ model FamilyUnit {
   updatedAt     DateTime       @updatedAt
   children      FamilyChild[]
   parents       FamilyParent[]
-  workspace     Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  familyspace   Familyspace    @relation(fields: [familyspaceId], references: [id], onDelete: Cascade)
 
-  @@unique([workspaceId, gedcomXref])
-  @@index([workspaceId])
+  @@unique([familyspaceId, gedcomXref])
+  @@index([familyspaceId])
 }
 
 model FamilyParent {
@@ -222,7 +237,7 @@ model PersonExternalRef {
 
 model Instance {
   id                   String         @id @default(uuid())
-  workspaceId          String
+  familyspaceId        String
   type                 InstanceType
   status               InstanceStatus @default(REGISTERING)
   version              String
@@ -246,15 +261,15 @@ model Instance {
   tunnelDnsRecordId    String?
   tunnelId             String?
   tunnelName           String?
-  workspace            Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  familyspace          Familyspace    @relation(fields: [familyspaceId], references: [id], onDelete: Cascade)
 
-  @@index([workspaceId])
+  @@index([familyspaceId])
   @@index([tunnelSubdomain])
 }
 
 model Subscription {
   id                    String        @id @default(uuid())
-  workspaceId           String        @unique
+  familyspaceId         String        @unique
   planId                String
   billingStatus         BillingStatus @default(TRIAL)
   stripeSubscriptionId  String?
@@ -267,9 +282,9 @@ model Subscription {
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
   plan                  Plan          @relation(fields: [planId], references: [id])
-  workspace             Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  familyspace           Familyspace   @relation(fields: [familyspaceId], references: [id], onDelete: Cascade)
 
-  @@index([workspaceId])
+  @@index([familyspaceId])
   @@index([stripeSubscriptionId])
 }
 
@@ -296,7 +311,7 @@ model Plan {
 
 model Person {
   id               String                   @id @default(uuid())
-  workspaceId      String
+  familyspaceId    String
   firstName        String
   lastName         String?
   displayName      String?
@@ -323,7 +338,7 @@ model Person {
   parentInFamilies FamilyParent[]
   avatarAsset      Asset?                   @relation("PersonAvatar", fields: [avatarAssetId], references: [id])
   createdBy        User                     @relation(fields: [createdById], references: [id])
-  workspace        Workspace                @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  familyspace      Familyspace              @relation(fields: [familyspaceId], references: [id], onDelete: Cascade)
   events           PersonEvent[]
   externalRefs     PersonExternalRef[]
   names            PersonName[]
@@ -332,9 +347,10 @@ model Person {
   storiesAsSubject Story[]                  @relation("StorySubject")
   voiceConsents    VoiceConsent[]
   voiceProfiles    VoiceProfile[]
+  chatSessions     ChatSession[]
 
-  @@unique([workspaceId, gedcomXref])
-  @@index([workspaceId])
+  @@unique([familyspaceId, gedcomXref])
+  @@index([familyspaceId])
   @@index([firstName, lastName])
   @@index([maidenName])
 }
@@ -342,7 +358,7 @@ model Person {
 model PersonaProfile {
   id                       String    @id @default(uuid())
   personId                 String
-  workspaceId              String
+  familyspaceId            String
   version                  Int       @default(1)
   status                   String    @default("draft")
   vocabulary               String[]  @default([])
@@ -361,23 +377,25 @@ model PersonaProfile {
   topicInstructions        Json      @default("{}")
   contextInstructions      Json      @default("{}")
   styleOverrides           Json      @default("{}")
+  writingStyle             Json?
+  customInstructions       Json?
   documentSampleCount      Int       @default(0)
   confidenceScore          Float     @default(0.0)
   lastUpdated              DateTime  @default(now())
   deletedAt                DateTime?
   createdAt                DateTime  @default(now())
   person                   Person    @relation(fields: [personId], references: [id], onDelete: Cascade)
-  workspace                Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  familyspace              Familyspace @relation(fields: [familyspaceId], references: [id], onDelete: Cascade)
 
-  @@unique([personId, workspaceId, version])
+  @@unique([personId, familyspaceId, version])
   @@index([personId])
-  @@index([workspaceId])
+  @@index([familyspaceId])
   @@index([status])
 }
 
 model Story {
   id                    String               @id @default(uuid())
-  workspaceId           String
+  familyspaceId         String
   title                 String
   content               String
   storyType             StoryType            @default(MEMORY)
@@ -393,6 +411,9 @@ model Story {
   status                StoryStatus          @default(DRAFT)
   isPinned              Boolean              @default(false)
   deletedAt             DateTime?
+  authorRelationship    String?
+  isPublic              Boolean              @default(false)
+  shareToken            String?              @unique
   narratedContent       String?
   narrationStatus       NarrationStatus      @default(NONE)
   narrationModel        String?
@@ -402,21 +423,21 @@ model Story {
   narrationRenderJobId  String?
   createdAt             DateTime             @default(now())
   updatedAt             DateTime             @updatedAt
-  createdById           String
+  createdById           String?
   collections           CollectionStory[]
-  createdBy             User                 @relation("StoryCreator", fields: [createdById], references: [id])
+  createdBy             User?                @relation("StoryCreator", fields: [createdById], references: [id])
   narrationApprovedBy   User?                @relation("StoryNarrationApprover", fields: [narrationApprovedById], references: [id])
   generatedAudioAsset   Asset?               @relation("StoryGeneratedAudio", fields: [generatedAudioAssetId], references: [id])
   speaker               Person?              @relation("StorySpeaker", fields: [speakerId], references: [id])
   subject               Person?              @relation("StorySubject", fields: [subjectId], references: [id])
   voiceProfile          VoiceProfile?        @relation(fields: [voiceProfileId], references: [id])
-  workspace             Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  familyspace           Familyspace          @relation(fields: [familyspaceId], references: [id], onDelete: Cascade)
   assets                StoryAsset[]
   comments              StoryComment[]
   favorites             UserStoryFavorite[]
   generationJobs        VoiceGenerationJob[]
 
-  @@index([workspaceId])
+  @@index([familyspaceId])
   @@index([subjectId])
   @@index([speakerId])
   @@index([storyDate])
@@ -425,21 +446,21 @@ model Story {
 }
 
 model StoryComment {
-  id          String         @id @default(uuid())
-  workspaceId String
-  storyId     String
-  userId      String
-  content     String
-  parentId    String?
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-  parent      StoryComment?  @relation("CommentThread", fields: [parentId], references: [id])
-  replies     StoryComment[] @relation("CommentThread")
-  story       Story          @relation(fields: [storyId], references: [id], onDelete: Cascade)
-  user        User           @relation(fields: [userId], references: [id])
-  workspace   Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  id            String         @id @default(uuid())
+  familyspaceId String
+  storyId       String
+  userId        String
+  content       String
+  parentId      String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  parent        StoryComment?  @relation("CommentThread", fields: [parentId], references: [id])
+  replies       StoryComment[] @relation("CommentThread")
+  story         Story          @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  user          User           @relation(fields: [userId], references: [id])
+  familyspace   Familyspace    @relation(fields: [familyspaceId], references: [id], onDelete: Cascade)
 
-  @@index([workspaceId])
+  @@index([familyspaceId])
   @@index([storyId])
   @@index([userId])
   @@index([parentId])
@@ -447,7 +468,7 @@ model StoryComment {
 
 model Asset {
   id                       String               @id @default(uuid())
-  workspaceId              String
+  familyspaceId            String
   filename                 String
   originalName             String
   mimeType                 String
@@ -465,10 +486,10 @@ model Asset {
   processingStatus         ProcessingStatus     @default(PENDING)
   processingError          String?
   createdAt                DateTime             @default(now())
-  updatedAt                DateTime             @updatedAt
-  uploadedById             String
-  uploadedBy               User                 @relation(fields: [uploadedById], references: [id])
-  workspace                Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  updatedAt             DateTime             @updatedAt
+  uploadedById          String?
+  uploadedBy            User?                 @relation(fields: [uploadedById], references: [id])
+  familyspace              Familyspace          @relation(fields: [familyspaceId], references: [id], onDelete: Cascade)
   document                 Document?
   exportOutputs            ExportJob[]          @relation("ExportOutputAsset")
   importSources            ImportJob[]          @relation("ImportSourceAsset")
@@ -479,14 +500,14 @@ model Asset {
   modelArtifactFor         VoiceProfile[]
   voiceProfileSources      VoiceProfile[]       @relation("VoiceProfileSourceAsset")
 
-  @@index([workspaceId])
+  @@index([familyspaceId])
   @@index([assetType])
   @@index([processingStatus])
 }
 
 model Document {
   id                    String           @id @default(uuid())
-  workspaceId           String
+  familyspaceId         String
   assetId               String           @unique
   title                 String
   description           String?
@@ -498,15 +519,19 @@ model Document {
   deletedById           String?
   aiSummary             String?
   aiSuggestedPeople     Json?
-  createdAt             DateTime         @default(now())
-  updatedAt             DateTime         @updatedAt
+  content               String?
+  source                String?           @default("upload")
+  embeddingStatus       EmbeddingStatus   @default(PENDING)
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
   createdById           String
   asset                 Asset            @relation(fields: [assetId], references: [id], onDelete: Cascade)
   createdBy             User             @relation(fields: [createdById], references: [id])
-  workspace             Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  familyspace           Familyspace      @relation(fields: [familyspaceId], references: [id], onDelete: Cascade)
   people                DocumentPerson[]
+  chunks                DocumentChunk[]
 
-  @@index([workspaceId])
+  @@index([familyspaceId])
   @@index([documentType])
   @@index([isDeleted])
   @@index([dateOccurred])
@@ -559,7 +584,7 @@ model StoryAsset {
 
 model VoiceProfile {
   id                   String               @id @default(uuid())
-  workspaceId          String
+  familyspaceId        String
   personId             String?
   createdById          String
   name                 String
@@ -585,9 +610,9 @@ model VoiceProfile {
   modelArtifactAsset   Asset?               @relation(fields: [modelArtifactAssetId], references: [id])
   person               Person?              @relation(fields: [personId], references: [id])
   sourceAsset          Asset?               @relation("VoiceProfileSourceAsset", fields: [sourceAssetId], references: [id])
-  workspace            Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  familyspace          Familyspace          @relation(fields: [familyspaceId], references: [id], onDelete: Cascade)
 
-  @@index([workspaceId])
+  @@index([familyspaceId])
   @@index([personId])
   @@index([createdById])
   @@index([externalId])
@@ -623,8 +648,8 @@ model VoiceGenerationJob {
 }
 
 model AuditLog {
-  id           String    @id @default(uuid())
-  workspaceId  String
+  id           String      @id @default(uuid())
+  familyspaceId String
   actorId      String?
   actorType    ActorType
   action       String
@@ -635,39 +660,39 @@ model AuditLog {
   beforeState  Json?
   afterState   Json?
   metadata     Json?
-  createdAt    DateTime  @default(now())
-  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdAt    DateTime    @default(now())
+  familyspace  Familyspace @relation(fields: [familyspaceId], references: [id], onDelete: Cascade)
 
-  @@index([workspaceId])
+  @@index([familyspaceId])
   @@index([action])
   @@index([resourceType, resourceId])
   @@index([createdAt])
 }
 
-model WorkspaceInvite {
-  id          String        @id @default(uuid())
-  workspaceId String
-  email       String
-  role        WorkspaceRole @default(VIEWER)
-  invitedById String
-  token       String        @unique
-  status      InviteStatus  @default(PENDING)
-  expiresAt   DateTime
-  acceptedAt  DateTime?
-  declinedAt  DateTime?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  invitedBy   User          @relation(fields: [invitedById], references: [id])
-  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+model FamilyspaceInvite {
+  id            String          @id @default(uuid())
+  familyspaceId String
+  email         String
+  role          FamilyspaceRole @default(VIEWER)
+  invitedById   String
+  token         String          @unique
+  status        InviteStatus    @default(PENDING)
+  expiresAt     DateTime
+  acceptedAt    DateTime?
+  declinedAt    DateTime?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  invitedBy     User            @relation(fields: [invitedById], references: [id])
+  familyspace   Familyspace     @relation(fields: [familyspaceId], references: [id], onDelete: Cascade)
 
-  @@index([workspaceId])
+  @@index([familyspaceId])
   @@index([email])
   @@index([token])
 }
 
 model ImportJob {
   id            String           @id @default(uuid())
-  workspaceId   String
+  familyspaceId String
   sourceType    ImportSourceType
   sourceAssetId String?
   status        JobStatus        @default(PENDING)
@@ -680,56 +705,56 @@ model ImportJob {
   updatedAt     DateTime         @updatedAt
   importedBy    User             @relation(fields: [importedById], references: [id])
   sourceAsset   Asset?           @relation("ImportSourceAsset", fields: [sourceAssetId], references: [id])
-  workspace     Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  familyspace   Familyspace      @relation(fields: [familyspaceId], references: [id], onDelete: Cascade)
 
-  @@index([workspaceId])
+  @@index([familyspaceId])
   @@index([status])
 }
 
 model ExportJob {
-  id            String     @id @default(uuid())
-  workspaceId   String
+  id            String      @id @default(uuid())
+  familyspaceId String
   exportType    ExportType
-  status        JobStatus  @default(PENDING)
+  status        JobStatus   @default(PENDING)
   errorMessage  String?
   requestedById String
   outputAssetId String?
   startedAt     DateTime?
   completedAt   DateTime?
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-  outputAsset   Asset?     @relation("ExportOutputAsset", fields: [outputAssetId], references: [id])
-  requestedBy   User       @relation(fields: [requestedById], references: [id])
-  workspace     Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  outputAsset   Asset?      @relation("ExportOutputAsset", fields: [outputAssetId], references: [id])
+  requestedBy   User        @relation(fields: [requestedById], references: [id])
+  familyspace   Familyspace @relation(fields: [familyspaceId], references: [id], onDelete: Cascade)
 
-  @@index([workspaceId])
+  @@index([familyspaceId])
   @@index([status])
 }
 
 model FamilyMergeProposal {
-  id                 String                   @id @default(uuid())
-  targetWorkspaceId  String
-  sourceWorkspaceId  String
-  proposedById       String
-  status             MergeStatus              @default(PENDING)
-  overallMatchScore  Float?
-  matchedPeopleCount Int                      @default(0)
-  totalSourcePeople  Int                      @default(0)
-  conflictDetails    Json?
-  reviewedAt         DateTime?
-  reviewedById       String?
-  executedAt         DateTime?
-  executedById       String?
-  errorMessage       String?
-  createdAt          DateTime                 @default(now())
-  updatedAt          DateTime                 @updatedAt
-  personMatches      FamilyMergePersonMatch[]
-  proposedBy         User                     @relation(fields: [proposedById], references: [id])
-  sourceWorkspace    Workspace                @relation("MergeSourceWorkspace", fields: [sourceWorkspaceId], references: [id], onDelete: Cascade)
-  targetWorkspace    Workspace                @relation("MergeTargetWorkspace", fields: [targetWorkspaceId], references: [id], onDelete: Cascade)
+  id                     String                   @id @default(uuid())
+  targetFamilyspaceId    String
+  sourceFamilyspaceId    String
+  proposedById           String
+  status                 MergeStatus              @default(PENDING)
+  overallMatchScore      Float?
+  matchedPeopleCount     Int                      @default(0)
+  totalSourcePeople      Int                      @default(0)
+  conflictDetails        Json?
+  reviewedAt             DateTime?
+  reviewedById           String?
+  executedAt             DateTime?
+  executedById           String?
+  errorMessage           String?
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+  personMatches          FamilyMergePersonMatch[]
+  proposedBy             User                     @relation(fields: [proposedById], references: [id])
+  sourceFamilyspace      Familyspace              @relation("MergeSourceFamilyspace", fields: [sourceFamilyspaceId], references: [id], onDelete: Cascade)
+  targetFamilyspace      Familyspace              @relation("MergeTargetFamilyspace", fields: [targetFamilyspaceId], references: [id], onDelete: Cascade)
 
-  @@index([targetWorkspaceId])
-  @@index([sourceWorkspaceId])
+  @@index([targetFamilyspaceId])
+  @@index([sourceFamilyspaceId])
   @@index([status])
   @@index([proposedById])
 }
@@ -761,7 +786,7 @@ model FamilyMergePersonMatch {
 
 model VoiceConsent {
   id                    String        @id @default(uuid())
-  workspaceId           String
+  familyspaceId         String
   personId              String?
   voiceProfileId        String?
   consentType           ConsentType
@@ -777,28 +802,28 @@ model VoiceConsent {
   grantedByUser         User          @relation(fields: [grantedByUserId], references: [id])
   person                Person?       @relation(fields: [personId], references: [id])
   voiceProfile          VoiceProfile? @relation(fields: [voiceProfileId], references: [id])
-  workspace             Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  familyspace           Familyspace   @relation(fields: [familyspaceId], references: [id], onDelete: Cascade)
 
-  @@unique([workspaceId, personId, voiceProfileId, consentType])
-  @@index([workspaceId])
+  @@unique([familyspaceId, personId, voiceProfileId, consentType])
+  @@index([familyspaceId])
   @@index([personId])
   @@index([voiceProfileId])
 }
 
 model Collection {
-  id          String            @id @default(uuid())
-  workspaceId String
-  name        String
-  description String?
-  createdById String
-  isPinned    Boolean           @default(false)
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-  createdBy   User              @relation(fields: [createdById], references: [id])
-  workspace   Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  stories     CollectionStory[]
+  id            String            @id @default(uuid())
+  familyspaceId String
+  name          String
+  description   String?
+  createdById   String
+  isPinned      Boolean           @default(false)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  createdBy     User              @relation(fields: [createdById], references: [id])
+  familyspace   Familyspace       @relation(fields: [familyspaceId], references: [id], onDelete: Cascade)
+  stories       CollectionStory[]
 
-  @@index([workspaceId])
+  @@index([familyspaceId])
   @@index([createdById])
 }
 
@@ -819,20 +844,20 @@ model CollectionStory {
 }
 
 model Notification {
-  id           String           @id @default(uuid())
-  workspaceId  String
-  userId       String
-  type         NotificationType
-  title        String
-  message      String?
-  isRead       Boolean          @default(false)
-  resourceType String?
-  resourceId   String?
-  createdAt    DateTime         @default(now())
-  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  workspace    Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  id            String           @id @default(uuid())
+  familyspaceId String
+  userId        String
+  type          NotificationType
+  title         String
+  message       String?
+  isRead        Boolean          @default(false)
+  resourceType  String?
+  resourceId    String?
+  createdAt     DateTime         @default(now())
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  familyspace   Familyspace      @relation(fields: [familyspaceId], references: [id], onDelete: Cascade)
 
-  @@index([workspaceId])
+  @@index([familyspaceId])
   @@index([userId, isRead])
 }
 
@@ -893,13 +918,13 @@ enum DeploymentMode {
   CLOUD
 }
 
-enum WorkspaceStatus {
+enum FamilyspaceStatus {
   ACTIVE
   SUSPENDED
   CANCELLED
 }
 
-enum WorkspaceRole {
+enum FamilyspaceRole {
   OWNER
   ADMIN
   EDITOR
@@ -1173,5 +1198,117 @@ enum MergeStatus {
   REJECTED
   CONFLICT
   MERGED
+  FAILED
+}
+
+// --- Chat Service Models ---
+
+model ChatSession {
+  id            String         @id @default(uuid())
+  familyspaceId String
+  personId      String
+  userId        String
+  title         String?
+  status        ChatSessionStatus @default(ACTIVE)
+  metadata      Json           @default("{}")
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  messages      ChatMessage[]
+  familyspace   Familyspace    @relation(fields: [familyspaceId], references: [id], onDelete: Cascade)
+  person        Person         @relation(fields: [personId], references: [id], onDelete: Cascade)
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([familyspaceId])
+  @@index([personId])
+  @@index([userId])
+}
+
+model ChatMessage {
+  id        String      @id @default(uuid())
+  sessionId String
+  role      MessageRole
+  content   String
+  metadata  Json        @default("{}")
+  createdAt DateTime    @default(now())
+  session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+}
+
+model DocumentChunk {
+  id             String   @id @default(uuid())
+  documentId     String
+  chunkIndex     Int
+  content        String
+  metadata       Json     @default("{}")
+  embedding      Float[]
+  embeddingModel String?
+  createdAt      DateTime @default(now())
+  document       Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, chunkIndex])
+}
+
+model IngestionJob {
+  id            String             @id @default(uuid())
+  documentId    String
+  familyspaceId String
+  userId        String
+  type          IngestionJobType
+  status        IngestionJobStatus @default(QUEUED)
+  priority      JobPriority        @default(NORMAL)
+  progress      Json               @default("{}")
+  config        Json               @default("{}")
+  error         Json?
+  metadata      Json               @default("{}")
+  createdAt     DateTime           @default(now())
+  startedAt     DateTime?
+  completedAt   DateTime?
+  updatedAt     DateTime           @updatedAt
+
+  @@index([familyspaceId])
+  @@index([documentId])
+}
+
+enum ChatSessionStatus {
+  ACTIVE
+  ARCHIVED
+  DELETED
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
+enum IngestionJobType {
+  DOCUMENT_PROCESSING
+  TEXT_EXTRACTION
+  CHUNKING
+  EMBEDDING_GENERATION
+  INDEXING
+}
+
+enum IngestionJobStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+  RETRYING
+}
+
+enum JobPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum EmbeddingStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
   FAILED
 }

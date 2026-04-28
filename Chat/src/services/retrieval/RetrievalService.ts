@@ -25,7 +25,7 @@ export class RetrievalServiceImpl implements RetrievalService {
   }
 
   async searchDocuments(query: string, context: SearchContext): Promise<RetrievedDocument[]> {
-    const collectionName = this.getCollectionName(context.workspaceId)
+    const collectionName = this.getCollectionName(context.familyspaceId)
     console.log(`[RAG] Searching documents for query: "${query}" in collection: ${collectionName}`)
     
     try {
@@ -145,8 +145,8 @@ export class RetrievalServiceImpl implements RetrievalService {
     query: string, 
     context?: SearchContext
   ): Promise<RetrievedDocument[]> {
-    if (!context?.workspaceId) {
-      throw new Error('workspaceId is required in SearchContext')
+    if (!context?.familyspaceId) {
+      throw new Error('familyspaceId is required in SearchContext')
     }
     const searchContext: SearchContext = {
       ...context,
@@ -170,8 +170,8 @@ export class RetrievalServiceImpl implements RetrievalService {
     return await this.documentRepository.getChunk(chunkId)
   }
 
-  private getCollectionName(workspaceId: string): string {
-    return `workspace_${workspaceId}_documents`
+  private getCollectionName(familyspaceId: string): string {
+    return `familyspace_${familyspaceId}_documents`
   }
 }
 

@@ -44,6 +44,9 @@ export interface StoryContribution {
   audioUrl?: string
   audioDurationSeconds?: number
   category?: string
+  authorRelationship?: string | null
+  isPublic?: boolean
+  hasNarration?: boolean
 }
 
 export interface ConversationMessage {

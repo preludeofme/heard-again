@@ -14,20 +14,20 @@ interface RetentionPolicy {
 }
 
 const DEFAULT_POLICY: RetentionPolicy = {
-  audioRetentionDays: 3650,
-  transcriptRetentionDays: 3650,
+  audioRetentionDays: 0,
+  transcriptRetentionDays: 0,
   inactiveStoryDraftRetentionDays: 365,
   purgeRevokedVoiceConsentsAfterDays: 365,
   autoDeleteFailedProcessingAfterDays: 30,
 }
 
-async function getWorkspacePolicy(workspaceId: string): Promise<RetentionPolicy> {
+async function getFamilyspacePolicy(familyspaceId: string): Promise<RetentionPolicy> {
   const latest = await prisma.auditLog.findFirst({
     where: {
-      workspaceId,
+      familyspaceId,
       action: 'privacy.retention.update',
-      resourceType: 'workspace',
-      resourceId: workspaceId,
+      resourceType: 'familyspace',
+      resourceId: familyspaceId,
     },
     orderBy: { createdAt: 'desc' },
     select: { metadata: true },
@@ -47,79 +47,85 @@ async function getWorkspacePolicy(workspaceId: string): Promise<RetentionPolicy>
 }
 
 async function processRetention(job: Job<RetentionJobData>) {
-  const { workspaceId, forceAll } = job.data
+  const { familyspaceId, forceAll } = job.data
   
-  if (workspaceId) {
-    await enforcePolicyForWorkspace(workspaceId)
+  if (familyspaceId) {
+    await enforcePolicyForFamilyspace(familyspaceId)
   } else if (forceAll) {
-    const workspaces = await prisma.workspace.findMany({
+    const familyspaces = await prisma.familyspace.findMany({
       select: { id: true }
     })
-    for (const ws of workspaces) {
-      await enforcePolicyForWorkspace(ws.id)
+    for (const ws of familyspaces) {
+      await enforcePolicyForFamilyspace(ws.id)
     }
   }
 }
 
-async function enforcePolicyForWorkspace(workspaceId: string) {
-  const policy = await getWorkspacePolicy(workspaceId)
+async function enforcePolicyForFamilyspace(familyspaceId: string) {
+  const policy = await getFamilyspacePolicy(familyspaceId)
   const now = new Date()
 
-  logger.info({ workspaceId, policy }, 'Enforcing retention policy')
+  logger.info({ familyspaceId, policy }, 'Enforcing retention policy')
 
   // 1. Purge Old Audio Assets
-  const audioCutoff = new Date(now.getTime() - policy.audioRetentionDays * 24 * 60 * 60 * 1000)
-  const oldAssets = await prisma.asset.findMany({
-    where: {
-      workspaceId,
-      assetType: { in: ['AUDIO', 'GENERATED_AUDIO'] },
-      createdAt: { lt: audioCutoff }
-    }
-  })
+  if (policy.audioRetentionDays > 0) {
+    const audioCutoff = new Date(now.getTime() - policy.audioRetentionDays * 24 * 60 * 60 * 1000)
+    const oldAssets = await prisma.asset.findMany({
+      where: {
+        familyspaceId,
+        assetType: { in: ['AUDIO', 'GENERATED_AUDIO'] },
+        createdAt: { lt: audioCutoff }
+      }
+    })
 
-  for (const asset of oldAssets) {
-    logger.info({ assetId: asset.id, workspaceId }, 'Retention: Deleting old audio asset')
-    try {
-      await storageService.deleteFile(asset.storagePath)
-      await prisma.asset.delete({ where: { id: asset.id } })
-    } catch (err) {
-      logger.error({ err, assetId: asset.id }, 'Failed to delete old asset')
+    for (const asset of oldAssets) {
+      logger.info({ assetId: asset.id, familyspaceId }, 'Retention: Deleting old audio asset')
+      try {
+        await storageService.deleteFile(asset.storagePath)
+        await prisma.asset.delete({ where: { id: asset.id } })
+      } catch (err) {
+        logger.error({ err, assetId: asset.id }, 'Failed to delete old asset')
+      }
     }
   }
 
   // 2. Purge Inactive Story Drafts
-  const draftCutoff = new Date(now.getTime() - policy.inactiveStoryDraftRetentionDays * 24 * 60 * 60 * 1000)
-  const inactiveDrafts = await prisma.story.findMany({
-    where: {
-      workspaceId,
-      status: 'DRAFT',
-      updatedAt: { lt: draftCutoff }
-    },
-    select: { id: true }
-  })
+  if (policy.inactiveStoryDraftRetentionDays > 0) {
+    const draftCutoff = new Date(now.getTime() - policy.inactiveStoryDraftRetentionDays * 24 * 60 * 60 * 1000)
+    const inactiveDrafts = await prisma.story.findMany({
+      where: {
+        familyspaceId,
+        status: 'DRAFT',
+        updatedAt: { lt: draftCutoff }
+      },
+      select: { id: true }
+    })
 
-  for (const story of inactiveDrafts) {
-    logger.info({ storyId: story.id, workspaceId }, 'Retention: Deleting inactive story draft')
-    await prisma.story.delete({ where: { id: story.id } })
+    for (const story of inactiveDrafts) {
+      logger.info({ storyId: story.id, familyspaceId }, 'Retention: Deleting inactive story draft')
+      await prisma.story.delete({ where: { id: story.id } })
+    }
   }
 
   // 3. Purge Failed Processing Assets
-  const failedCutoff = new Date(now.getTime() - policy.autoDeleteFailedProcessingAfterDays * 24 * 60 * 60 * 1000)
-  const failedAssets = await prisma.asset.findMany({
-    where: {
-      workspaceId,
-      processingStatus: 'FAILED',
-      createdAt: { lt: failedCutoff }
-    }
-  })
+  if (policy.autoDeleteFailedProcessingAfterDays > 0) {
+    const failedCutoff = new Date(now.getTime() - policy.autoDeleteFailedProcessingAfterDays * 24 * 60 * 60 * 1000)
+    const failedAssets = await prisma.asset.findMany({
+      where: {
+        familyspaceId,
+        processingStatus: 'FAILED',
+        createdAt: { lt: failedCutoff }
+      }
+    })
 
-  for (const asset of failedAssets) {
-    logger.info({ assetId: asset.id, workspaceId }, 'Retention: Deleting failed asset')
-    try {
-      if (asset.storagePath) await storageService.deleteFile(asset.storagePath)
-      await prisma.asset.delete({ where: { id: asset.id } })
-    } catch (err) {
-      logger.error({ err, assetId: asset.id }, 'Failed to delete failed asset')
+    for (const asset of failedAssets) {
+      logger.info({ assetId: asset.id, familyspaceId }, 'Retention: Deleting failed asset')
+      try {
+        if (asset.storagePath) await storageService.deleteFile(asset.storagePath)
+        await prisma.asset.delete({ where: { id: asset.id } })
+      } catch (err) {
+        logger.error({ err, assetId: asset.id }, 'Failed to delete failed asset')
+      }
     }
   }
 }

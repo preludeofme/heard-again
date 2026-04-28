@@ -157,6 +157,28 @@ export class ResponseValidationService {
       }
     }
 
+    // Check for "I don't know" variations that might be bypassing uncertainty phrases
+    const bypassPatterns = [
+      /I don't know (much|a lot|very much) about/gi,
+      /I'm not (an expert|sure about all the details|entirely certain)/gi,
+      /I (can't|couldn't) tell you (much|anything|specifics)/gi,
+    ]
+
+    for (const pattern of bypassPatterns) {
+      const matches = response.match(pattern)
+      if (matches) {
+        violations.push({
+          type: 'uncertainty_bypass',
+          severity: 'medium',
+          description: 'Response may be bypassing required canonical refusal format',
+          position: {
+            start: response.indexOf(matches[0]),
+            end: response.indexOf(matches[0]) + matches[0].length
+          }
+        })
+      }
+    }
+
     const isValid = violations.length === 0 || violations.every(v => v.severity === 'low')
 
     return {
@@ -216,38 +238,6 @@ Respond ONLY with the JSON array.`
     } catch (err) {
       console.warn('Failed to parse LLM Judge output:', llmOutput)
       return []
-    }
-  }
-
-    // Check for "I don't know" variations that might be bypassing uncertainty phrases
-    const bypassPatterns = [
-      /I don't know (much|a lot|very much) about/gi,
-      /I'm not (an expert|sure about all the details|entirely certain)/gi,
-      /I (can't|couldn't) tell you (much|anything|specifics)/gi,
-    ]
-
-    for (const pattern of bypassPatterns) {
-      const matches = response.match(pattern)
-      if (matches) {
-        violations.push({
-          type: 'uncertainty_bypass',
-          severity: 'medium',
-          description: 'Response may be bypassing required canonical refusal format',
-          position: {
-            start: response.indexOf(matches[0]),
-            end: response.indexOf(matches[0]) + matches[0].length
-          }
-        })
-      }
-    }
-
-    const isValid = violations.length === 0 || violations.every(v => v.severity === 'low')
-
-    return {
-      isValid,
-      content: response,
-      violations,
-      filteredContent: isValid ? response : this.filterContent(response, violations)
     }
   }
 

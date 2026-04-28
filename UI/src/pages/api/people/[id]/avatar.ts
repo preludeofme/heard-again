@@ -1,7 +1,7 @@
 import { logger } from '@/lib/logger'
 import { prisma } from '@/lib/prisma'
 import { successResponse, errorResponse } from '@/lib/api-helpers'
-import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 import formidable from 'formidable'
 import path from 'path'
 import fs from 'fs'
@@ -33,19 +33,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const user = await getAuthUserWithWorkspace(req, res)
+    const user = await getAuthUserWithFamilyspace(req, res)
     const personId = req.query.id as string
-    await requireWorkspaceRole(user.id, user.workspaceId, 'EDITOR')
+    await requireFamilyspaceRole(user.id, user.familyspaceId, 'EDITOR')
 
     const person = await prisma.person.findFirst({
-      where: { id: personId, workspaceId: user.workspaceId },
+      where: { id: personId, familyspaceId: user.familyspaceId },
     })
     if (!person) {
       return errorResponse(res, 'Person not found', 404)
     }
 
     // Create avatars directory
-    const avatarDir = path.join(UPLOAD_DIR, user.workspaceId, 'avatars')
+    const avatarDir = path.join(UPLOAD_DIR, user.familyspaceId, 'avatars')
     if (!fs.existsSync(avatarDir)) {
       fs.mkdirSync(avatarDir, { recursive: true })
     }
@@ -118,7 +118,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const result = await prisma.$transaction(async (tx) => {
       const asset = await tx.asset.create({
         data: {
-          workspaceId: user.workspaceId,
+          familyspaceId: user.familyspaceId,
           filename: path.basename(finalPath),
           originalName: file.originalFilename || 'avatar',
           mimeType: validationResult.detectedType!,

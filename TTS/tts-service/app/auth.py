@@ -46,17 +46,17 @@ async def validate_token(
         
         # 1. Check for Service-to-Service Token
         if TTS_SERVICE_TOKEN and bearer_token == TTS_SERVICE_TOKEN:
-            workspace_id = request.headers.get('X-Workspace-Id')
-            if not workspace_id:
-                logger.error("Service-to-service request missing X-Workspace-Id header")
+            familyspace_id = request.headers.get('X-Familyspace-Id')
+            if not familyspace_id:
+                logger.error("Service-to-service request missing X-Familyspace-Id header")
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="X-Workspace-Id header is required for service-to-service authentication"
+                    detail="X-Familyspace-Id header is required for service-to-service authentication"
                 )
             
             return {
                 'user_id': 'system-service',
-                'workspace_id': workspace_id,
+                'familyspace_id': familyspace_id,
                 'email': 'service@heardagain.internal',
                 'role': 'ADMIN', # Service token has admin privileges
                 'token': bearer_token,
@@ -110,9 +110,9 @@ async def validate_token(
         email = user.get('email')
         role = user.get('role', 'VIEWER')
         
-        # For workspace, we'll use a default or extract from user data
-        # The main app handles workspace authorization
-        workspace_id = user.get('defaultWorkspaceId') or 'default'
+        # For familyspace, we'll use a default or extract from user data
+        # The main app handles familyspace authorization
+        familyspace_id = user.get('defaultFamilyspaceId') or 'default'
         
         if not user_id:
             logger.error(f"Invalid session: missing user id - {session_data}")
@@ -124,7 +124,7 @@ async def validate_token(
         
         return {
             'user_id': user_id,
-            'workspace_id': workspace_id,
+            'familyspace_id': familyspace_id,
             'email': email,
             'role': role,
             'token': bearer_token,
@@ -141,12 +141,12 @@ async def validate_token(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-async def require_workspace_role(
+async def require_familyspace_role(
     auth_data: Dict[str, Any] = Depends(validate_token),
     required_role: str = 'EDITOR'
 ) -> Dict[str, Any]:
     """
-    Ensure user has required role in workspace.
+    Ensure user has required role in familyspace.
     Uses cached role from validate_token to avoid double-fetching.
     """
     try:
@@ -181,22 +181,22 @@ async def require_workspace_role(
         logger.error(f"Role check error: {e}")
         raise HTTPException(status_code=503, detail="Authorization service unavailable")
 
-def validate_tenant_access(auth_data: Dict[str, Any], resource_workspace_id: str) -> None:
+def validate_tenant_access(auth_data: Dict[str, Any], resource_familyspace_id: str) -> None:
     """
-    Validate that the authenticated user can access the specified workspace resource.
+    Validate that the authenticated user can access the specified familyspace resource.
     This prevents cross-tenant data access.
     """
-    if auth_data['workspace_id'] != resource_workspace_id:
+    if auth_data['familyspace_id'] != resource_familyspace_id:
         logger.error(f"Tenant isolation violation: user {auth_data['user_id']} "
-                    f"from workspace {auth_data['workspace_id']} "
-                    f"attempting to access workspace {resource_workspace_id}")
-        raise TenantIsolationError("Access denied: workspace mismatch")
+                    f"from familyspace {auth_data['familyspace_id']} "
+                    f"attempting to access familyspace {resource_familyspace_id}")
+        raise TenantIsolationError("Access denied: familyspace mismatch")
 
 def get_user_context(auth_data: Dict[str, Any]) -> Dict[str, str]:
     """Get user context for logging and auditing"""
     return {
         'user_id': auth_data['user_id'],
-        'workspace_id': auth_data['workspace_id'],
+        'familyspace_id': auth_data['familyspace_id'],
         'email': auth_data.get('email', 'unknown')
     }
 
@@ -207,7 +207,7 @@ async def log_auth_event(event_type: str, auth_data: Dict[str, Any], details: Di
         'event_type': event_type,
         'timestamp': time.time(),
         'user_id': auth_data['user_id'],
-        'workspace_id': auth_data['workspace_id'],
+        'familyspace_id': auth_data['familyspace_id'],
         'details': details or {}
     }
     

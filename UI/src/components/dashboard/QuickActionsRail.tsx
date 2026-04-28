@@ -9,10 +9,10 @@ import {
   AccountTreeRounded,
 } from '@mui/icons-material'
 import { ProfileColors } from '@/components/profile/ProfileConstants'
-import type { WorkspaceRole } from '@/controllers/useDashboardController'
+import type { FamilyspaceRole } from '@/controllers/useDashboardController'
 
 interface QuickActionsRailProps {
-  role: WorkspaceRole
+  role: FamilyspaceRole
 }
 
 interface Action {
@@ -26,14 +26,12 @@ const ALL_ACTIONS: Action[] = [
   { key: 'story', label: 'New Story', icon: <AutoStoriesRounded />, href: '/stories#contribution-hub' },
   { key: 'person', label: 'Add Person', icon: <PersonAddAlt1Rounded />, href: '/family-tree' },
   { key: 'upload', label: 'Upload', icon: <CloudUploadRounded />, href: '/documents' },
-  { key: 'chat', label: 'Open Chat', icon: <ChatBubbleOutlineRounded />, href: '/chat' },
   { key: 'voice', label: 'Voice Lab', icon: <GraphicEqRounded />, href: '/voice-lab' },
   { key: 'tree', label: 'Family Tree', icon: <AccountTreeRounded />, href: '/family-tree' },
 ]
 
 const VIEWER_ACTIONS: Action[] = [
   { key: 'story', label: 'Browse Stories', icon: <AutoStoriesRounded />, href: '/stories' },
-  { key: 'chat', label: 'Open Chat', icon: <ChatBubbleOutlineRounded />, href: '/chat' },
   { key: 'tree', label: 'Family Tree', icon: <AccountTreeRounded />, href: '/family-tree' },
 ]
 

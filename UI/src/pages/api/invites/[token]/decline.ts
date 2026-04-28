@@ -3,12 +3,12 @@ import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
 import { getAuthUser } from '@/lib/auth-helpers'
 
 export default apiHandler({
-  // POST /api/invites/[token]/decline - Decline a workspace invite
+  // POST /api/invites/[token]/decline - Decline a familyspace invite
   POST: async (req, res) => {
     const user = await getAuthUser(req, res)
     const token = req.query.token as string
 
-    const invite = await prisma.workspaceInvite.findUnique({ where: { token } })
+    const invite = await prisma.familyspaceInvite.findUnique({ where: { token } })
 
     if (!invite) throw Errors.notFound('Invite')
 
@@ -20,7 +20,7 @@ export default apiHandler({
       throw Errors.forbidden('This invite was sent to a different email address')
     }
 
-    await prisma.workspaceInvite.update({
+    await prisma.familyspaceInvite.update({
       where: { id: invite.id },
       data: { status: 'DECLINED' },
     })

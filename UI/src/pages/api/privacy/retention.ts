@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
-import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 
 interface RetentionPolicy {
   audioRetentionDays: number
@@ -14,8 +14,8 @@ interface RetentionPolicy {
 }
 
 const defaultPolicy: RetentionPolicy = {
-  audioRetentionDays: 3650,
-  transcriptRetentionDays: 3650,
+  audioRetentionDays: 0,
+  transcriptRetentionDays: 0,
   inactiveStoryDraftRetentionDays: 365,
   purgeRevokedVoiceConsentsAfterDays: 365,
   autoDeleteFailedProcessingAfterDays: 30,
@@ -47,11 +47,11 @@ function normalizePolicy(input: any, current: RetentionPolicy): RetentionPolicy 
 
   const next: RetentionPolicy = {
     ...current,
-    audioRetentionDays: toInt(input.audioRetentionDays, 1, 36500, 'audioRetentionDays', current.audioRetentionDays),
-    transcriptRetentionDays: toInt(input.transcriptRetentionDays, 1, 36500, 'transcriptRetentionDays', current.transcriptRetentionDays),
-    inactiveStoryDraftRetentionDays: toInt(input.inactiveStoryDraftRetentionDays, 1, 36500, 'inactiveStoryDraftRetentionDays', current.inactiveStoryDraftRetentionDays),
-    purgeRevokedVoiceConsentsAfterDays: toInt(input.purgeRevokedVoiceConsentsAfterDays, 1, 36500, 'purgeRevokedVoiceConsentsAfterDays', current.purgeRevokedVoiceConsentsAfterDays),
-    autoDeleteFailedProcessingAfterDays: toInt(input.autoDeleteFailedProcessingAfterDays, 1, 36500, 'autoDeleteFailedProcessingAfterDays', current.autoDeleteFailedProcessingAfterDays),
+    audioRetentionDays: toInt(input.audioRetentionDays, 0, 36500, 'audioRetentionDays', current.audioRetentionDays),
+    transcriptRetentionDays: toInt(input.transcriptRetentionDays, 0, 36500, 'transcriptRetentionDays', current.transcriptRetentionDays),
+    inactiveStoryDraftRetentionDays: toInt(input.inactiveStoryDraftRetentionDays, 0, 36500, 'inactiveStoryDraftRetentionDays', current.inactiveStoryDraftRetentionDays),
+    purgeRevokedVoiceConsentsAfterDays: toInt(input.purgeRevokedVoiceConsentsAfterDays, 0, 36500, 'purgeRevokedVoiceConsentsAfterDays', current.purgeRevokedVoiceConsentsAfterDays),
+    autoDeleteFailedProcessingAfterDays: toInt(input.autoDeleteFailedProcessingAfterDays, 0, 36500, 'autoDeleteFailedProcessingAfterDays', current.autoDeleteFailedProcessingAfterDays),
     deleteSourceAudioAfterProfileReady:
       input.deleteSourceAudioAfterProfileReady === undefined
         ? current.deleteSourceAudioAfterProfileReady
@@ -61,13 +61,13 @@ function normalizePolicy(input: any, current: RetentionPolicy): RetentionPolicy 
   return next
 }
 
-async function readPolicy(workspaceId: string): Promise<RetentionPolicy> {
+async function readPolicy(familyspaceId: string): Promise<RetentionPolicy> {
   const latest = await prisma.auditLog.findFirst({
     where: {
-      workspaceId,
+      familyspaceId,
       action: 'privacy.retention.update',
-      resourceType: 'workspace',
-      resourceId: workspaceId,
+      resourceType: 'familyspace',
+      resourceId: familyspaceId,
     },
     orderBy: { createdAt: 'desc' },
     select: {
@@ -97,37 +97,37 @@ async function readPolicy(workspaceId: string): Promise<RetentionPolicy> {
 }
 
 export default apiHandler({
-  // GET /api/privacy/retention - Get workspace retention policy
+  // GET /api/privacy/retention - Get familyspace retention policy
   GET: async (req, res) => {
-    const user = await getAuthUserWithWorkspace(req, res)
-    await requireWorkspaceRole(user.id, user.workspaceId, 'VIEWER')
+    const user = await getAuthUserWithFamilyspace(req, res)
+    await requireFamilyspaceRole(user.id, user.familyspaceId, 'VIEWER')
 
-    const policy = await readPolicy(user.workspaceId)
+    const policy = await readPolicy(user.familyspaceId)
 
     return successResponse(res, {
-      workspaceId: user.workspaceId,
+      familyspaceId: user.familyspaceId,
       policy,
     })
   },
 
-  // PUT /api/privacy/retention - Update workspace retention policy
+  // PUT /api/privacy/retention - Update familyspace retention policy
   PUT: async (req, res) => {
-    const user = await getAuthUserWithWorkspace(req, res)
-    await requireWorkspaceRole(user.id, user.workspaceId, 'ADMIN')
+    const user = await getAuthUserWithFamilyspace(req, res)
+    await requireFamilyspaceRole(user.id, user.familyspaceId, 'ADMIN')
 
-    const currentPolicy = await readPolicy(user.workspaceId)
+    const currentPolicy = await readPolicy(user.familyspaceId)
     const nextPolicy = normalizePolicy(req.body || {}, currentPolicy)
     const currentPolicyPayload = toPolicyPayload(currentPolicy)
     const nextPolicyPayload = toPolicyPayload(nextPolicy)
 
     await prisma.auditLog.create({
       data: {
-        workspaceId: user.workspaceId,
+        familyspaceId: user.familyspaceId,
         actorId: user.id,
         actorType: 'USER',
         action: 'privacy.retention.update',
-        resourceType: 'workspace',
-        resourceId: user.workspaceId,
+        resourceType: 'familyspace',
+        resourceId: user.familyspaceId,
         beforeState: { policy: currentPolicyPayload },
         afterState: { policy: nextPolicyPayload },
         metadata: {
@@ -138,7 +138,7 @@ export default apiHandler({
     })
 
     return successResponse(res, {
-      workspaceId: user.workspaceId,
+      familyspaceId: user.familyspaceId,
       policy: {
         ...nextPolicy,
         updatedAt: new Date().toISOString(),

@@ -484,20 +484,20 @@ fi
 
 # Generate Prisma client
 echo "  Generating Prisma client..."
-npx prisma generate --silent 2>/dev/null || npx prisma generate
+npx prisma generate --schema=../prisma/schema.prisma --silent 2>/dev/null || npx prisma generate --schema=../prisma/schema.prisma
 
 # Run migrations — resolve any failed ones first, then fall back to db push
 echo "  Running database migrations..."
-if npx prisma migrate deploy 2>/tmp/prisma-migrate.log; then
+if npx prisma migrate deploy --schema=../prisma/schema.prisma 2>/tmp/prisma-migrate.log; then
     echo "  ✓ Migrations applied"
 else
     FAILED_MIGRATION=$(grep 'The.*migration' /tmp/prisma-migrate.log | grep -oP '\`\K[^\`]+' | head -1)
     if [ -n "$FAILED_MIGRATION" ]; then
         echo "  Resolving failed migration: $FAILED_MIGRATION"
-        npx prisma migrate resolve --rolled-back "$FAILED_MIGRATION" 2>/dev/null || true
+        npx prisma migrate resolve --rolled-back "$FAILED_MIGRATION" --schema=../prisma/schema.prisma 2>/dev/null || true
     fi
     echo "  Falling back to prisma db push..."
-    npx prisma db push --accept-data-loss 2>/dev/null || {
+    npx prisma db push --accept-data-loss --schema=../prisma/schema.prisma 2>/dev/null || {
         echo -e "  ${YELLOW}⚠ Could not sync database schema — check Chat/.env DATABASE_URL${NC}"
     }
 fi
@@ -514,6 +514,19 @@ fi
 
 cd "$MAIN_APP_DIR"
 echo -e "  ${GREEN}✓ Chat System database ready${NC}"
+
+echo ""
+
+# Database setup for Main App (UI)
+echo -e "${YELLOW}Setting up Main App database...${NC}"
+cd "$UI_DIR"
+
+# Generate Prisma client using root schema
+echo "  Generating Prisma client for UI..."
+npx prisma generate --schema=../prisma/schema.prisma --silent 2>/dev/null || npx prisma generate --schema=../prisma/schema.prisma
+
+cd "$MAIN_APP_DIR"
+echo -e "  ${GREEN}✓ Main App database ready${NC}"
 
 echo ""
 

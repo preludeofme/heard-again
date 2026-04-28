@@ -1,6 +1,7 @@
 import React from 'react'
 import { Box, Typography } from '@mui/material'
 import Link from 'next/link'
+import { useRouter } from 'next/router'
 import { ProfileColors } from './ProfileConstants'
 
 interface Story {
@@ -37,12 +38,19 @@ export function NarrativeTimeline({
   onTouchMove,
   hasDragged,
 }: NarrativeTimelineProps) {
+  const router = useRouter()
   const sortedStories = [...stories].sort((a, b) => {
     if (!a.storyDate && !b.storyDate) return 0
     if (!a.storyDate) return 1
     if (!b.storyDate) return -1
     return new Date(a.storyDate).getTime() - new Date(b.storyDate).getTime()
   })
+
+  const handleCardClick = (storyId: string) => {
+    if (!hasDragged) {
+      router.push(`/stories/${storyId}`)
+    }
+  }
 
   return (
     <Box component="section" sx={{ mb: { xs: 8, md: 14 }, overflow: 'hidden' }}>
@@ -93,6 +101,7 @@ export function NarrativeTimeline({
               '&::-webkit-scrollbar': { display: 'none' },
               msOverflowStyle: 'none',
               scrollbarWidth: 'none',
+              '& *': { userDrag: 'none', WebkitUserDrag: 'none' }
             }}
           >
             {sortedStories.map(story => {
@@ -100,10 +109,8 @@ export function NarrativeTimeline({
               return (
                 <Box
                   key={story.id}
-                  component={Link}
-                  href={`/stories/${story.id}`}
-                  onClick={(e: React.MouseEvent) => { if (hasDragged) e.preventDefault() }}
-                  sx={{ flexShrink: 0, width: { xs: 240, md: 300 }, textDecoration: 'none', position: 'relative', '&:hover .story-card': { transform: 'translateY(-7px)' } }}
+                  onClick={() => handleCardClick(story.id)}
+                  sx={{ flexShrink: 0, width: { xs: 240, md: 300 }, textDecoration: 'none', position: 'relative', cursor: 'pointer', '&:hover .story-card': { transform: 'translateY(-7px)' } }}
                 >
                   <Box
                     className="story-card"
@@ -116,6 +123,7 @@ export function NarrativeTimeline({
                       background: `linear-gradient(160deg, ${ProfileColors.surfaceContainer} 0%, ${ProfileColors.surfaceContainerLow} 100%)`,
                       boxShadow: '0 8px 32px rgba(28,28,25,0.09)',
                       transition: 'transform 0.4s ease',
+                      pointerEvents: 'none',
                     }}
                   >
                     {year && (
@@ -153,7 +161,7 @@ export function NarrativeTimeline({
                     }}
                   />
 
-                  <Box sx={{ pt: 3.5 }}>
+                  <Box sx={{ pt: 3.5, pointerEvents: 'none' }}>
                     <Typography sx={{ fontFamily: 'var(--font-newsreader), serif', fontSize: '1.2rem', fontWeight: 600, color: ProfileColors.primary }}>
                       {story.title}
                     </Typography>
@@ -180,7 +188,14 @@ export function NarrativeTimeline({
             })}
 
             {/* Add chapter placeholder */}
-            <Box component={Link} href={isGlobal ? '/stories' : `/stories?subjectId=${personId}`} sx={{ flexShrink: 0, width: { xs: 240, md: 300 }, textDecoration: 'none' }}>
+            <Box 
+              onClick={() => {
+                if (!hasDragged) {
+                  router.push(isGlobal ? '/stories' : `/stories?subjectId=${personId}`)
+                }
+              }}
+              sx={{ flexShrink: 0, width: { xs: 240, md: 300 }, textDecoration: 'none', cursor: 'pointer' }}
+            >
               <Box
                 sx={{
                   aspectRatio: '3/4',
@@ -193,6 +208,7 @@ export function NarrativeTimeline({
                   flexDirection: 'column',
                   gap: 1.5,
                   transition: 'border-color 0.2s, background 0.2s',
+                  pointerEvents: 'none',
                   '&:hover': { borderColor: `${ProfileColors.primary}60`, bgcolor: ProfileColors.surfaceContainerLowest },
                 }}
               >

@@ -25,11 +25,11 @@ CREATE TYPE "IngestionJobStatus" AS ENUM ('QUEUED', 'RUNNING', 'COMPLETED', 'FAI
 -- CreateEnum: JobPriority
 CREATE TYPE "JobPriority" AS ENUM ('LOW', 'NORMAL', 'HIGH', 'URGENT');
 
--- CreateEnum: WorkspaceRole
-CREATE TYPE "WorkspaceRole" AS ENUM ('OWNER', 'ADMIN', 'MEMBER', 'VIEWER');
+-- CreateEnum: FamilyspaceRole
+CREATE TYPE "FamilyspaceRole" AS ENUM ('OWNER', 'ADMIN', 'MEMBER', 'VIEWER');
 
--- CreateTable: workspaces
-CREATE TABLE "workspaces" (
+-- CreateTable: familyspaces
+CREATE TABLE "familyspaces" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "description" TEXT,
@@ -37,26 +37,26 @@ CREATE TABLE "workspaces" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "workspaces_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "familyspaces_pkey" PRIMARY KEY ("id")
 );
 
--- CreateTable: user_workspaces
-CREATE TABLE "user_workspaces" (
+-- CreateTable: user_familyspaces
+CREATE TABLE "user_familyspaces" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
-    "workspaceId" TEXT NOT NULL,
-    "role" "WorkspaceRole" NOT NULL DEFAULT 'MEMBER',
+    "familyspaceId" TEXT NOT NULL,
+    "role" "FamilyspaceRole" NOT NULL DEFAULT 'MEMBER',
     "permissions" JSONB NOT NULL DEFAULT '[]',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "user_workspaces_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "user_familyspaces_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable: chat_sessions
 CREATE TABLE "chat_sessions" (
     "id" TEXT NOT NULL,
-    "workspaceId" TEXT NOT NULL,
+    "familyspaceId" TEXT NOT NULL,
     "personId" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
     "title" TEXT,
@@ -84,7 +84,7 @@ CREATE TABLE "chat_messages" (
 CREATE TABLE "persona_profiles" (
     "id" TEXT NOT NULL,
     "personId" TEXT NOT NULL,
-    "workspaceId" TEXT NOT NULL,
+    "familyspaceId" TEXT NOT NULL,
     "version" INTEGER NOT NULL DEFAULT 1,
     "status" "PersonaStatus" NOT NULL DEFAULT 'DRAFT',
     "writingStyle" JSONB NOT NULL,
@@ -103,7 +103,7 @@ CREATE TABLE "persona_profiles" (
 -- CreateTable: documents
 CREATE TABLE "documents" (
     "id" TEXT NOT NULL,
-    "workspaceId" TEXT NOT NULL,
+    "familyspaceId" TEXT NOT NULL,
     "personId" TEXT,
     "title" TEXT NOT NULL,
     "content" TEXT NOT NULL,
@@ -136,7 +136,7 @@ CREATE TABLE "document_chunks" (
 CREATE TABLE "ingestion_jobs" (
     "id" TEXT NOT NULL,
     "documentId" TEXT NOT NULL,
-    "workspaceId" TEXT NOT NULL,
+    "familyspaceId" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
     "type" "IngestionJobType" NOT NULL,
     "status" "IngestionJobStatus" NOT NULL DEFAULT 'QUEUED',
@@ -156,7 +156,7 @@ CREATE TABLE "ingestion_jobs" (
 -- CreateTable: audit_logs
 CREATE TABLE "audit_logs" (
     "id" TEXT NOT NULL,
-    "workspaceId" TEXT NOT NULL,
+    "familyspaceId" TEXT NOT NULL,
     "userId" TEXT,
     "action" TEXT NOT NULL,
     "resource" TEXT NOT NULL,
@@ -170,7 +170,7 @@ CREATE TABLE "audit_logs" (
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "user_workspaces_userId_workspaceId_key" ON "user_workspaces"("userId", "workspaceId");
+CREATE UNIQUE INDEX "user_familyspaces_userId_familyspaceId_key" ON "user_familyspaces"("userId", "familyspaceId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "persona_profiles_personId_key" ON "persona_profiles"("personId");
@@ -179,7 +179,7 @@ CREATE UNIQUE INDEX "persona_profiles_personId_key" ON "persona_profiles"("perso
 CREATE UNIQUE INDEX "document_chunks_documentId_chunkIndex_key" ON "document_chunks"("documentId", "chunkIndex");
 
 -- CreateIndex
-CREATE INDEX "audit_logs_workspaceId_createdAt_idx" ON "audit_logs"("workspaceId", "createdAt");
+CREATE INDEX "audit_logs_familyspaceId_createdAt_idx" ON "audit_logs"("familyspaceId", "createdAt");
 
 -- CreateIndex
 CREATE INDEX "audit_logs_userId_createdAt_idx" ON "audit_logs"("userId", "createdAt");

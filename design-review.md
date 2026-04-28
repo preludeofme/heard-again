@@ -38,7 +38,7 @@ The mobile experience is currently a subset of the platform, not a responsive eq
 
 ### Context Visibility
 The `SelectedFamilyMemberContext` is a "phantom state":
-- [x] **Desktop Blindspot**: Fixed by adding the `ActiveMemberHeader` and `WorkspaceSwitcher` to the top layout.
+- [x] **Desktop Blindspot**: Fixed by adding the `ActiveMemberHeader` and `FamilyspaceSwitcher` to the top layout.
 - [x] **Mobile Redundancy**: Cleaned up the mobile header to show a single context pill.
 - [x] **Volatility**: Fixed by moving context to `localStorage`.
 

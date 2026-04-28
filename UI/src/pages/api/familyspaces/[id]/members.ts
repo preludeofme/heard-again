@@ -1,17 +1,17 @@
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
-import { getAuthUser, requireWorkspaceRole } from '@/lib/auth-helpers'
+import { getAuthUser, requireFamilyspaceRole } from '@/lib/auth-helpers'
 
 export default apiHandler({
-  // GET /api/workspaces/[id]/members - List workspace members
+  // GET /api/familyspaces/[id]/members - List familyspace members
   GET: async (req, res) => {
     const user = await getAuthUser(req, res)
-    const workspaceId = req.query.id as string
+    const familyspaceId = req.query.id as string
 
-    await requireWorkspaceRole(user.id, workspaceId, 'VIEWER')
+    await requireFamilyspaceRole(user.id, familyspaceId, 'VIEWER')
 
     const members = await prisma.membership.findMany({
-      where: { workspaceId, status: 'ACTIVE' },
+      where: { familyspaceId, status: 'ACTIVE' },
       include: {
         user: {
           select: {

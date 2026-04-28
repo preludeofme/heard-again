@@ -38,7 +38,7 @@ Footer:
 
 - Depth from any nav item to content: **1 click** (flat architecture — good).
 - Active state correctly highlights current route including prefix matches for `/profile/*` and `/stories/*` (Layout.tsx lines 270–273).
-- The `WorkspaceSwitcher` component exists but is **not rendered in Layout.tsx**. Workspace switching is only accessible from wherever the consumer mounts it — currently absent from the primary nav.
+- The `FamilyspaceSwitcher` component exists but is **not rendered in Layout.tsx**. Familyspace switching is only accessible from wherever the consumer mounts it — currently absent from the primary nav.
 
 ### Mobile Bottom Nav
 
@@ -83,13 +83,13 @@ Defined in Layout.tsx lines 222–236:
 /export             → ExportPage
 /import             → ImportPage
 /family-merge       → FamilyMergePage
-/workspaces/[id]    → WorkspaceDetailPage
+/familyspaces/[id]    → FamilyspaceDetailPage
 /profile/[id]/[id]  → nested profile (sub-page)
 ```
 
 **IA issues:**
 - `/dashboard` silently redirects to `/profile` — the mental model of "home/dashboard" is lost.
-- The "Profile" nav item leads to the first person in the workspace, not the logged-in user's own profile. This conflation of "family member profile" and "my account" is confusing. Account settings are at `/account`.
+- The "Profile" nav item leads to the first person in the familyspace, not the logged-in user's own profile. This conflation of "family member profile" and "my account" is confusing. Account settings are at `/account`.
 - No dedicated "Chat" route — AI conversation with a persona lives within the profile page, discoverable only after opening a person's profile.
 
 ---
@@ -246,25 +246,25 @@ This flow has the most discoverability problems of any feature.
 
 ---
 
-### Flow 7: Manage Family Workspace Members
+### Flow 7: Manage Family Familyspace Members
 
 **Current path**:
-1. Access workspace settings — the `WorkspaceSwitcher` component is not rendered in Layout.tsx, so the primary entry point for workspace management is unclear
-2. Navigate to `/workspaces/[id]/settings` (if the user knows the URL, or finds it through `WorkspaceSwitcher` → "Workspace settings" menu item)
-3. From workspace settings, locate member management
-4. `MemberManagementModal` opens (used within workspace settings pages)
+1. Access familyspace settings — the `FamilyspaceSwitcher` component is not rendered in Layout.tsx, so the primary entry point for familyspace management is unclear
+2. Navigate to `/familyspaces/[id]/settings` (if the user knows the URL, or finds it through `FamilyspaceSwitcher` → "Familyspace settings" menu item)
+3. From familyspace settings, locate member management
+4. `MemberManagementModal` opens (used within familyspace settings pages)
 5. Enter email address, select role (Editor/Viewer), click "Invite"
 
 **Click count**: 3+ clicks, but discoverability is the primary problem
 
 **Friction**:
-- `WorkspaceSwitcher` is a fully built component with a "Workspace settings" menu item but is **not rendered in Layout.tsx**. The sidebar has no workspace indicator or settings entry point. Users cannot find workspace management through the primary nav at all.
+- `FamilyspaceSwitcher` is a fully built component with a "Familyspace settings" menu item but is **not rendered in Layout.tsx**. The sidebar has no familyspace indicator or settings entry point. Users cannot find familyspace management through the primary nav at all.
 - `MemberManagementModal` (line 239) only offers "Editor" and "Viewer" invite roles. Admin invite is not supported through the UI — only through direct role escalation after joining.
 - Role change menu (`getAvailableRoles`) at line 189 only shows roles below the selected member's current role, preventing promotion to a higher role. This is likely intentional for permission safety, but the UX provides no explanation for why some roles are missing from the dropdown.
 - Error handling for failed role changes (line 155) calls `console.error` only — no user-facing feedback when a role update fails.
-- There is no confirmation dialog for member removal — clicking "Remove from workspace" in the overflow menu immediately fires the DELETE request (line 160).
+- There is no confirmation dialog for member removal — clicking "Remove from familyspace" in the overflow menu immediately fires the DELETE request (line 160).
 
-**Recommendation**: Add `WorkspaceSwitcher` to the desktop sidebar and mobile header. Add a "Members" link in the sidebar for users with OWNER or ADMIN roles. Add a confirmation step before member removal.
+**Recommendation**: Add `FamilyspaceSwitcher` to the desktop sidebar and mobile header. Add a "Members" link in the sidebar for users with OWNER or ADMIN roles. Add a confirmation step before member removal.
 
 ---
 
@@ -387,7 +387,7 @@ This flow has the most discoverability problems of any feature.
 
 ### High — Feature Correctness
 
-6. **Wire `WorkspaceSwitcher` into the layout**: The component is built but not rendered. Desktop users have no way to access workspace switching or settings through the primary nav.
+6. **Wire `FamilyspaceSwitcher` into the layout**: The component is built but not rendered. Desktop users have no way to access familyspace switching or settings through the primary nav.
 
 7. **Wire VoiceConsentModal into the voice creation flow**: The consent gate exists but is not enforced. This is an ethical and legal gap — voice cloning without recorded consent creates liability.
 
@@ -472,7 +472,7 @@ The app maintains a "selected family member" via `SelectedFamilyMemberContext` (
 
 The app conflates two distinct concepts:
 
-- **"The person I am currently managing / adding content for"** — a workspace-like context, e.g. "I'm working on Grandma Evelyn's archive today"
+- **"The person I am currently managing / adding content for"** — a familyspace-like context, e.g. "I'm working on Grandma Evelyn's archive today"
 - **"The person whose content I'm browsing"** — a filter context, e.g. "Show me only Margaret's stories"
 
 Currently both are served by the same `selectedFamilyMember` context. This creates confusion: is clearing the context just "unfilter this page" or "exit this person's archive"? The "Global Archive" label on `ActiveMemberHeader` suggests the former is the default mode, but the Dashboard is always scoped to one person regardless.

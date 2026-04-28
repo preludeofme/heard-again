@@ -2,7 +2,7 @@ import { logger } from '@/lib/logger'
 import { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '@/lib/prisma'
 import { getStorageService } from '@/lib/storage/storage-service'
-import { getAuthUserWithWorkspace } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace } from '@/lib/auth-helpers'
 import path from 'path'
 import fs from 'fs'
 
@@ -22,10 +22,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const user = await getAuthUserWithWorkspace(req, res)
+    const user = await getAuthUserWithFamilyspace(req, res)
 
     const asset = await prisma.asset.findFirst({
-      where: { id, workspaceId: user.workspaceId },
+      where: { id, familyspaceId: user.familyspaceId },
       select: {
         id: true,
         filename: true,
@@ -33,7 +33,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         mimeType: true,
         storagePath: true,
         storageType: true,
-        workspaceId: true,
+        familyspaceId: true,
       },
     })
 

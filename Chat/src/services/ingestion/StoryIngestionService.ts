@@ -18,15 +18,15 @@ export class StoryIngestionService {
   }
 
   /**
-   * Ingest all published stories for a workspace into the document system
+   * Ingest all published stories for a familyspace into the document system
    */
-  async ingestWorkspaceStories(workspaceId: string): Promise<void> {
-    console.log(`[STORY_INGESTION] Starting ingestion for workspace: ${workspaceId}`)
+  async ingestFamilyspaceStories(familyspaceId: string): Promise<void> {
+    console.log(`[STORY_INGESTION] Starting ingestion for familyspace: ${familyspaceId}`)
 
-    // Get all published stories for the workspace
+    // Get all published stories for the familyspace
     const stories = await (this.prisma as any).story.findMany({
       where: {
-        workspaceId,
+        familyspaceId,
         status: 'PUBLISHED' // Only ingest published stories
       },
       include: {
@@ -52,7 +52,7 @@ export class StoryIngestionService {
       }
     }
 
-    console.log(`[STORY_INGESTION] Completed ingestion for workspace: ${workspaceId}`)
+    console.log(`[STORY_INGESTION] Completed ingestion for familyspace: ${familyspaceId}`)
   }
 
   /**
@@ -63,7 +63,7 @@ export class StoryIngestionService {
     const personId = story.subjectId || story.speakerId
 
     // Check if story is already ingested by searching for documents with this sourceId
-    const existingDocs = await this.documentRepository.listDocuments(story.workspaceId || 'default', {
+    const existingDocs = await this.documentRepository.listDocuments(story.familyspaceId || 'default', {
       personId: personId || undefined
     })
     const existingDoc = existingDocs.find(doc => doc.metadata.sourceId === storyId)
@@ -106,7 +106,7 @@ export class StoryIngestionService {
     const createdDoc = await this.documentRepository.createDocument({
       ...document,
       id: uuidv4(),
-      workspaceId: story.workspaceId
+      familyspaceId: story.familyspaceId
     })
     console.log(`[STORY_INGESTION] Created document ${createdDoc.id} for story ${storyId}`)
 
@@ -166,7 +166,7 @@ export class StoryIngestionService {
 
     try {
       // Get collection
-      const collectionName = this.getCollectionName(document.workspaceId || 'default')
+      const collectionName = this.getCollectionName(document.familyspaceId || 'default')
       const embedder = new DefaultEmbeddingFunction()
       const collection = await this.chromaClient.getCollection({ 
         name: collectionName,
@@ -241,10 +241,10 @@ export class StoryIngestionService {
   }
 
   /**
-   * Get collection name for workspace
+   * Get collection name for familyspace
    */
-  private getCollectionName(workspaceId: string): string {
-    return `workspace_${workspaceId}_documents`
+  private getCollectionName(familyspaceId: string): string {
+    return `familyspace_${familyspaceId}_documents`
   }
 
   /**
@@ -257,7 +257,7 @@ export class StoryIngestionService {
     if (document) {
       // Remove from ChromaDB
       try {
-        const collectionName = this.getCollectionName(document.workspaceId || 'default')
+        const collectionName = this.getCollectionName(document.familyspaceId || 'default')
         const collection = await this.chromaClient.getCollection({ 
           name: collectionName,
           embeddingFunction: new DefaultEmbeddingFunction()
@@ -281,15 +281,15 @@ export class StoryIngestionService {
   }
 
   /**
-   * Sync all stories for all workspaces (useful for initial setup)
+   * Sync all stories for all familyspaces (useful for initial setup)
    */
   async syncAllStories(): Promise<void> {
-    const workspaces = await (this.prisma as any).workspace.findMany({
+    const familyspaces = await (this.prisma as any).familyspace.findMany({
       select: { id: true }
     })
 
-    for (const workspace of workspaces) {
-      await this.ingestWorkspaceStories(workspace.id)
+    for (const familyspace of familyspaces) {
+      await this.ingestFamilyspaceStories(familyspace.id)
     }
   }
 }

@@ -1,11 +1,11 @@
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse } from '@/lib/api-helpers'
-import { getAuthUserWithWorkspace } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace } from '@/lib/auth-helpers'
 
 export default apiHandler({
   // GET /api/search/people?q=... - Search people subset endpoint
   GET: async (req, res) => {
-    const user = await getAuthUserWithWorkspace(req, res)
+    const user = await getAuthUserWithFamilyspace(req, res)
     const query = ((req.query.q as string) || '').trim()
     const limit = Math.min(parseInt(req.query.limit as string, 10) || 20, 50)
 
@@ -15,7 +15,7 @@ export default apiHandler({
 
     const people = await prisma.person.findMany({
       where: {
-        workspaceId: user.workspaceId,
+        familyspaceId: user.familyspaceId,
         OR: [
           { firstName: { contains: query, mode: 'insensitive' } },
           { lastName: { contains: query, mode: 'insensitive' } },

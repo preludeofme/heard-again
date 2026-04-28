@@ -1,14 +1,14 @@
 import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '@/lib/prisma'
-import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 import fs from 'fs'
 import path from 'path'
 
 /**
  * GET /api/voice/training-data
  * 
- * List all prepared training data for the workspace,
+ * List all prepared training data for the familyspace,
  * or get details for a specific training profile.
  */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -17,8 +17,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const user = await getAuthUserWithWorkspace(req, res)
-    await requireWorkspaceRole(user.id, user.workspaceId, 'VIEWER')
+    const user = await getAuthUserWithFamilyspace(req, res)
+    await requireFamilyspaceRole(user.id, user.familyspaceId, 'VIEWER')
 
     const { profileName } = req.query
     const baseDir = process.env.VOICE_TRAINING_DATA_DIR || './tts-service/training_data'

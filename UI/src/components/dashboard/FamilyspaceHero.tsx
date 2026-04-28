@@ -1,9 +1,9 @@
 import { Box, Typography, Chip } from '@mui/material'
 import { ProfileColors } from '@/components/profile/ProfileConstants'
-import type { DashboardWorkspace, DashboardUserContext, DashboardStats } from '@/controllers/useDashboardController'
+import type { DashboardFamilyspace, DashboardUserContext, DashboardStats } from '@/controllers/useDashboardController'
 
-interface WorkspaceHeroProps {
-  workspace: DashboardWorkspace | null
+interface FamilyspaceHeroProps {
+  familyspace: DashboardFamilyspace | null
   userContext: DashboardUserContext | null
   stats: DashboardStats
   pendingInvites: number
@@ -26,8 +26,8 @@ function buildSummary(stats: DashboardStats): string {
   return `${parts.join(' · ')} preserved`
 }
 
-export function WorkspaceHero({ workspace, userContext, stats, pendingInvites }: WorkspaceHeroProps) {
-  const name = workspace?.name ?? 'Family Vault'
+export function FamilyspaceHero({ familyspace, userContext, stats, pendingInvites }: FamilyspaceHeroProps) {
+  const name = familyspace?.name ?? 'Family Vault'
   const greeting = userContext?.displayName ? `Welcome back, ${userContext.displayName.split(' ')[0]}` : 'Welcome back'
   const role = userContext?.role
   const summary = buildSummary(stats)

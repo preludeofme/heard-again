@@ -30,7 +30,7 @@
     "e2e:test": "playwright test",
     "e2e:test:ui": "playwright test --ui"
   },
-  "workspaces": [
+  "familyspaces": [
     "UI",
     "Chat"
   ]

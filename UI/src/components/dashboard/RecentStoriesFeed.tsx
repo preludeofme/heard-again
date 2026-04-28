@@ -1,4 +1,4 @@
-import { Box, Typography, Chip } from '@mui/material'
+import { Box, Typography, Chip, Avatar } from '@mui/material'
 import { useRouter } from 'next/router'
 import {
   PushPinRounded,
@@ -150,6 +150,11 @@ export function RecentStoriesFeed({ stories }: RecentStoriesFeedProps) {
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mt: 1.5, flexWrap: 'wrap' }}>
                 {story.subject && (
                   <Chip
+                    avatar={
+                      story.subject.avatarAssetId ? (
+                        <Avatar src={`/api/assets/serve/${story.subject.avatarAssetId}`} />
+                      ) : undefined
+                    }
                     label={story.subject.name}
                     size="small"
                     onClick={(e) => {

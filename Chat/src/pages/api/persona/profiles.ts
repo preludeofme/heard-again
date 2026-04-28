@@ -20,23 +20,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!verifyServiceToken(req, res)) return
 
   const { method } = req
-  const workspaceId = req.headers['x-workspace-id'] as string
+  const familyspaceId = req.headers['x-familyspace-id'] as string
   const userId = req.headers['x-user-id'] as string
 
-  if (!workspaceId || !userId) {
+  if (!familyspaceId || !userId) {
     return res.status(400).json({
       success: false,
-      error: 'Missing required headers: x-workspace-id, x-user-id'
+      error: 'Missing required headers: x-familyspace-id, x-user-id'
     })
   }
 
   try {
     switch (method) {
       case 'GET':
-        await handleGetProfiles(req, res, workspaceId)
+        await handleGetProfiles(req, res, familyspaceId)
         break
       case 'POST':
-        await handleCreateProfile(req, res, workspaceId, userId)
+        await handleCreateProfile(req, res, familyspaceId, userId)
         break
       default:
         res.setHeader('Allow', ['GET', 'POST'])
@@ -54,15 +54,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 }
 
-async function handleGetProfiles(req: NextApiRequest, res: NextApiResponse, workspaceId: string) {
+async function handleGetProfiles(req: NextApiRequest, res: NextApiResponse, familyspaceId: string) {
   const { personId } = req.query
 
   if (personId && typeof personId === 'string') {
     // Get specific persona profile
-    const profile = await personaService.getPersonaProfile(personId, workspaceId)
+    const profile = await personaService.getPersonaProfile(personId, familyspaceId)
     
     // Ownership check — surface as 404 to prevent enumeration
-    if (!profile || profile.workspaceId !== workspaceId) {
+    if (!profile || profile.familyspaceId !== familyspaceId) {
       return res.status(404).json({
         success: false,
         error: 'Persona profile not found'
@@ -74,8 +74,8 @@ async function handleGetProfiles(req: NextApiRequest, res: NextApiResponse, work
       profile
     })
   } else {
-    // List all persona profiles for workspace
-    const profiles = await personaService.listPersonaProfiles(workspaceId)
+    // List all persona profiles for familyspace
+    const profiles = await personaService.listPersonaProfiles(familyspaceId)
     
     return res.status(200).json({
       success: true,
@@ -87,7 +87,7 @@ async function handleGetProfiles(req: NextApiRequest, res: NextApiResponse, work
 async function handleCreateProfile(
   req: NextApiRequest, 
   res: NextApiResponse, 
-  workspaceId: string, 
+  familyspaceId: string, 
   userId: string
 ) {
   const { personId, options } = req.body
@@ -111,7 +111,7 @@ async function handleCreateProfile(
   }
 
   try {
-    const profile = await personaService.generatePersonaProfile(personId, workspaceId, generationOptions)
+    const profile = await personaService.generatePersonaProfile(personId, familyspaceId, generationOptions)
     
     return res.status(201).json({
       success: true,

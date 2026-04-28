@@ -2,14 +2,14 @@ import { BaseRepository } from './BaseRepository'
 import type { Prisma, Document } from '@prisma/client'
 
 export class DocumentRepository extends BaseRepository {
-  async findById(id: string, workspaceId: string, include?: Prisma.DocumentInclude): Promise<Document | null> {
+  async findById(id: string, familyspaceId: string, include?: Prisma.DocumentInclude): Promise<Document | null> {
     return this.prisma.document.findFirst({
-      where: { id, workspaceId },
+      where: { id, familyspaceId },
       include,
     })
   }
 
-  async findMany(workspaceId: string, options: { 
+  async findMany(familyspaceId: string, options: { 
     skip?: number, 
     take?: number,
     where?: Prisma.DocumentWhereInput,
@@ -18,7 +18,7 @@ export class DocumentRepository extends BaseRepository {
     return this.prisma.document.findMany({
       where: { 
         ...options.where,
-        workspaceId,
+        familyspaceId,
       },
       skip: options.skip,
       take: options.take,
@@ -31,9 +31,9 @@ export class DocumentRepository extends BaseRepository {
     return this.prisma.document.create({ data })
   }
 
-  async update(id: string, workspaceId: string, data: Prisma.DocumentUpdateInput): Promise<Document> {
+  async update(id: string, familyspaceId: string, data: Prisma.DocumentUpdateInput): Promise<Document> {
     await this.prisma.document.findFirstOrThrow({
-      where: { id, workspaceId },
+      where: { id, familyspaceId },
     })
 
     return this.prisma.document.update({
@@ -42,9 +42,9 @@ export class DocumentRepository extends BaseRepository {
     })
   }
 
-  async delete(id: string, workspaceId: string): Promise<Document> {
+  async delete(id: string, familyspaceId: string): Promise<Document> {
     await this.prisma.document.findFirstOrThrow({
-      where: { id, workspaceId },
+      where: { id, familyspaceId },
     })
 
     return this.prisma.document.delete({

@@ -18,11 +18,13 @@ interface CreateStoryInput {
   subjectId?: string
   storyDate?: string
   location?: string
+  authorRelationship?: string
+  isPublic?: boolean
 }
 
 interface StoriesControllerActions {
   submitStory: (input: CreateStoryInput) => Promise<void>
-  submitAudioStory: (audioBlob: Blob, duration: number, title?: string) => Promise<void>
+  submitAudioStory: (audioBlob: Blob, duration: number, title?: string, relationship?: string) => Promise<void>
   refreshStories: () => Promise<void>
 }
 
@@ -41,26 +43,39 @@ interface StoryApiResponse {
   createdBy?: {
     displayName?: string
     email?: string
+    avatarUrl?: string | null
   }
+  subject?: {
+    firstName?: string
+    lastName?: string
+    avatarUrl?: string | null
+  } | null
   excerpt?: string
   title?: string
   createdAt: string
   hasAudio?: boolean
   audioUrl?: string
   durationSeconds?: number
+  authorRelationship?: string | null
+  isPublic?: boolean
+  narrationStatus?: string
 }
 
 function mapStoryToContribution(s: StoryApiResponse): StoryContribution {
+  const creatorName = s.createdBy?.displayName || s.createdBy?.email?.split('@')[0] || 'Unknown'
   return {
     id: s.id,
-    authorName: s.createdBy?.displayName || s.createdBy?.email || 'Unknown',
+    authorName: creatorName,
     authorRole: 'Family',
-    authorAvatarUrl: '',
+    authorAvatarUrl: s.subject?.avatarUrl || s.createdBy?.avatarUrl || '',
     content: s.excerpt || s.title || '',
     createdAt: new Date(s.createdAt),
     type: s.hasAudio ? 'audio' : 'text',
     audioUrl: s.audioUrl,
     audioDurationSeconds: s.durationSeconds,
+    authorRelationship: s.authorRelationship,
+    isPublic: s.isPublic,
+    hasNarration: s.narrationStatus === 'APPROVED' || s.narrationStatus === 'READY',
   }
 }
 
@@ -140,7 +155,7 @@ const fetchStories = useCallback(async () => {
     await fetchStories()
   }, [fetchStories])
 
-  const submitAudioStory = useCallback(async (audioBlob: Blob, duration: number, title?: string) => {
+  const submitAudioStory = useCallback(async (audioBlob: Blob, duration: number, title?: string, relationship?: string) => {
     setState(prev => ({
       ...prev,
       isSubmitting: true,
@@ -164,7 +179,24 @@ const fetchStories = useCallback(async () => {
       const uploadData = await uploadRes.json()
       const assetId = uploadData.data.id
 
-      // Step 2: Create story with audio asset
+      // Step 2: Transcribe audio
+      let transcript = ''
+      try {
+        const transcribeFormData = new FormData()
+        transcribeFormData.append('file', audioBlob, 'recording.webm')
+        const transcribeRes = await fetchWithCSRFAndFormData('/api/voice/transcribe', transcribeFormData, {
+          credentials: 'include',
+        })
+        if (transcribeRes.ok) {
+          const transcribeData = await transcribeRes.json()
+          transcript = transcribeData.data?.transcript || ''
+        }
+      } catch (transcribeErr) {
+        console.warn('Transcription failed:', transcribeErr)
+        // Non-fatal, we continue with just the recording
+      }
+
+      // Step 3: Create story with audio asset and transcript
       const storyTitle = title || `Audio Recording ${new Date().toLocaleDateString()}`
       const response = await fetchWithCSRF('/api/stories', {
         method: 'POST',
@@ -172,10 +204,11 @@ const fetchStories = useCallback(async () => {
         credentials: 'include',
         body: JSON.stringify({
           title: storyTitle,
-          content: `Audio recording (${Math.round(duration)} seconds)`,
+          content: transcript || `Audio recording (${Math.round(duration)} seconds)`,
           storyType: 'RECORDING',
           subjectId,
           assetIds: [assetId],
+          authorRelationship: relationship,
         }),
       })
 

@@ -25,7 +25,7 @@ import {
 import { useApi } from '@/hooks/useApi'
 import Link from 'next/link'
 
-interface Workspace {
+interface Familyspace {
   id: string
   name: string
   slug: string
@@ -42,15 +42,15 @@ interface Workspace {
   createdAt: string
 }
 
-export function WorkspaceSwitcher() {
+export function FamilyspaceSwitcher() {
   const theme = useTheme()
   const { data: session, update } = useSession()
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
   const [isSwitching, setIsSwitching] = useState<string | null>(null)
 
-  const { data: workspaces, isLoading, error } = useApi<Workspace[]>({ url: '/api/workspaces' })
+  const { data: familyspaces, isLoading, error } = useApi<Familyspace[]>({ url: '/api/familyspaces' })
 
-  const currentWorkspace = workspaces?.find((w) => w.isDefault) || workspaces?.[0]
+  const currentFamilyspace = familyspaces?.find((w) => w.isDefault) || familyspaces?.[0]
 
   const handleOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget)
@@ -60,36 +60,36 @@ export function WorkspaceSwitcher() {
     setAnchorEl(null)
   }
 
-  const handleSwitchWorkspace = useCallback(async (workspaceId: string) => {
-    if (workspaceId === currentWorkspace?.id) {
+  const handleSwitchFamilyspace = useCallback(async (familyspaceId: string) => {
+    if (familyspaceId === currentFamilyspace?.id) {
       handleClose()
       return
     }
 
-    setIsSwitching(workspaceId)
+    setIsSwitching(familyspaceId)
 
     try {
-      const response = await fetch(`/api/workspaces/${workspaceId}/switch`, {
+      const response = await fetch(`/api/familyspaces/${familyspaceId}/switch`, {
         method: 'POST',
         credentials: 'include',
       })
 
       if (!response.ok) {
-        throw new Error('Failed to switch workspace')
+        throw new Error('Failed to switch familyspace')
       }
 
-      // Update session to reflect new default workspace
+      // Update session to reflect new default familyspace
       await update()
 
-      // Reload page to refresh data for new workspace
+      // Reload page to refresh data for new familyspace
       window.location.reload()
     } catch (error) {
-      console.error('Failed to switch workspace:', error)
+      console.error('Failed to switch familyspace:', error)
     } finally {
       setIsSwitching(null)
       handleClose()
     }
-  }, [currentWorkspace?.id, update])
+  }, [currentFamilyspace?.id, update])
 
   const getRoleColor = (role: string) => {
     switch (role) {
@@ -138,23 +138,23 @@ export function WorkspaceSwitcher() {
     )
   }
 
-  if (error || !workspaces || workspaces.length === 0) {
+  if (error || !familyspaces || familyspaces.length === 0) {
     return (
       <Button
         component={Link}
-        href="/workspace/new"
+        href="/familyspace/new"
         variant="contained"
         size="small"
         startIcon={<AddIcon />}
       >
-        Create Workspace
+        Create Familyspace
       </Button>
     )
   }
 
   return (
     <>
-      <Tooltip title="Switch workspace">
+      <Tooltip title="Switch familyspace">
         <Button
           onClick={handleOpen}
           variant="text"
@@ -181,7 +181,7 @@ export function WorkspaceSwitcher() {
               fontWeight: 600,
             }}
           >
-            {currentWorkspace?.name?.[0]?.toUpperCase() || 'W'}
+            {currentFamilyspace?.name?.[0]?.toUpperCase() || 'W'}
           </Avatar>
           <Box sx={{ textAlign: 'left', overflow: 'hidden' }}>
             <Typography
@@ -194,7 +194,7 @@ export function WorkspaceSwitcher() {
                 maxWidth: 140,
               }}
             >
-              {currentWorkspace?.name}
+              {currentFamilyspace?.name}
             </Typography>
             <Typography
               variant="caption"
@@ -204,7 +204,7 @@ export function WorkspaceSwitcher() {
                 whiteSpace: 'nowrap',
               }}
             >
-              {getPlanLabel(currentWorkspace?.planType || 'FREE')}
+              {getPlanLabel(currentFamilyspace?.planType || 'FREE')}
             </Typography>
           </Box>
         </Button>
@@ -226,18 +226,18 @@ export function WorkspaceSwitcher() {
       >
         <Box sx={{ px: 2, py: 1.5 }}>
           <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>
-            Your Workspaces
+            Your Familyspaces
           </Typography>
         </Box>
 
         <Divider />
 
-        {workspaces.map((workspace) => (
+        {familyspaces.map((familyspace) => (
           <MenuItem
-            key={workspace.id}
-            onClick={() => handleSwitchWorkspace(workspace.id)}
-            disabled={isSwitching === workspace.id}
-            selected={workspace.id === currentWorkspace?.id}
+            key={familyspace.id}
+            onClick={() => handleSwitchFamilyspace(familyspace.id)}
+            disabled={isSwitching === familyspace.id}
+            selected={familyspace.id === currentFamilyspace?.id}
             sx={{
               py: 1.5,
               px: 2,
@@ -251,13 +251,13 @@ export function WorkspaceSwitcher() {
                 sx={{
                   width: 36,
                   height: 36,
-                  bgcolor: workspace.id === currentWorkspace?.id
+                  bgcolor: familyspace.id === currentFamilyspace?.id
                     ? theme.palette.primary.main
                     : theme.palette.grey[300],
                   fontSize: '0.875rem',
                 }}
               >
-                {workspace.name[0]?.toUpperCase()}
+                {familyspace.name[0]?.toUpperCase()}
               </Avatar>
             </ListItemIcon>
             <ListItemText
@@ -266,16 +266,16 @@ export function WorkspaceSwitcher() {
                   <Typography
                     variant="body2"
                     sx={{
-                      fontWeight: workspace.id === currentWorkspace?.id ? 600 : 400,
+                      fontWeight: familyspace.id === currentFamilyspace?.id ? 600 : 400,
                       whiteSpace: 'nowrap',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       maxWidth: 140,
                     }}
                   >
-                    {workspace.name}
+                    {familyspace.name}
                   </Typography>
-                  {workspace.id === currentWorkspace?.id && (
+                  {familyspace.id === currentFamilyspace?.id && (
                     <CheckIcon sx={{ fontSize: 16, color: 'primary.main' }} />
                   )}
                 </Box>
@@ -283,9 +283,9 @@ export function WorkspaceSwitcher() {
               secondary={
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
                   <Chip
-                    label={workspace.role}
+                    label={familyspace.role}
                     size="small"
-                    color={getRoleColor(workspace.role) as any}
+                    color={getRoleColor(familyspace.role) as any}
                     sx={{
                       height: 20,
                       fontSize: '0.65rem',
@@ -294,10 +294,11 @@ export function WorkspaceSwitcher() {
                     }}
                   />
                   <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                    {workspace.counts.members} members
+                    {familyspace.counts.members} members
                   </Typography>
                 </Box>
               }
+              secondaryTypographyProps={{ component: 'div' }}
             />
           </MenuItem>
         ))}
@@ -306,27 +307,27 @@ export function WorkspaceSwitcher() {
 
         <MenuItem
           component={Link}
-          href="/workspace/new"
+          href="/familyspace/new"
           onClick={handleClose}
           sx={{ py: 1.5 }}
         >
           <ListItemIcon>
             <AddIcon fontSize="small" />
           </ListItemIcon>
-          <ListItemText primary="Create new workspace" />
+          <ListItemText primary="Create new familyspace" />
         </MenuItem>
 
-        {currentWorkspace?.role === 'OWNER' || currentWorkspace?.role === 'ADMIN' ? (
+        {currentFamilyspace?.role === 'OWNER' || currentFamilyspace?.role === 'ADMIN' ? (
           <MenuItem
             component={Link}
-            href={`/workspaces/${currentWorkspace?.id}/settings`}
+            href={`/familyspaces/${currentFamilyspace?.id}/settings`}
             onClick={handleClose}
             sx={{ py: 1.5 }}
           >
             <ListItemIcon>
               <SettingsIcon fontSize="small" />
             </ListItemIcon>
-            <ListItemText primary="Workspace settings" />
+            <ListItemText primary="Familyspace settings" />
           </MenuItem>
         ) : null}
       </Menu>

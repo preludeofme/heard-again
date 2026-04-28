@@ -6,7 +6,7 @@
 import type { PrismaClient } from '@prisma/client'
 
 export interface SearchQuery {
-  workspaceId: string
+  familyspaceId: string
   query: string
   limit: number
 }
@@ -61,7 +61,7 @@ export class SearchService {
    * Search across stories, people, and assets
    */
   async search(request: SearchQuery): Promise<SearchResult> {
-    const { workspaceId, query, limit } = request
+    const { familyspaceId, query, limit } = request
     const searchLimit = Math.min(limit || DEFAULT_SEARCH_LIMIT, MAX_SEARCH_LIMIT)
 
     // Return empty results for empty query
@@ -70,9 +70,9 @@ export class SearchService {
     }
 
     const [stories, people, assets] = await Promise.all([
-      this.searchStories(workspaceId, query, searchLimit),
-      this.searchPeople(workspaceId, query, searchLimit),
-      this.searchAssets(workspaceId, query, searchLimit),
+      this.searchStories(familyspaceId, query, searchLimit),
+      this.searchPeople(familyspaceId, query, searchLimit),
+      this.searchAssets(familyspaceId, query, searchLimit),
     ])
 
     return {
@@ -87,13 +87,13 @@ export class SearchService {
    * Search stories by title, content, or tags
    */
   private async searchStories(
-    workspaceId: string,
+    familyspaceId: string,
     query: string,
     limit: number
   ): Promise<SearchResult['stories']> {
     return this.prisma.story.findMany({
       where: {
-        workspaceId,
+        familyspaceId,
         OR: [
           { title: { contains: query, mode: 'insensitive' } },
           { content: { contains: query, mode: 'insensitive' } },
@@ -118,13 +118,13 @@ export class SearchService {
    * Search people by name or bio
    */
   private async searchPeople(
-    workspaceId: string,
+    familyspaceId: string,
     query: string,
     limit: number
   ): Promise<SearchResult['people']> {
     return this.prisma.person.findMany({
       where: {
-        workspaceId,
+        familyspaceId,
         OR: [
           { firstName: { contains: query, mode: 'insensitive' } },
           { lastName: { contains: query, mode: 'insensitive' } },
@@ -151,13 +151,13 @@ export class SearchService {
    * Search assets by name or transcript
    */
   private async searchAssets(
-    workspaceId: string,
+    familyspaceId: string,
     query: string,
     limit: number
   ): Promise<SearchResult['assets']> {
     return this.prisma.asset.findMany({
       where: {
-        workspaceId,
+        familyspaceId,
         OR: [
           { originalName: { contains: query, mode: 'insensitive' } },
           { transcript: { contains: query, mode: 'insensitive' } },
@@ -179,7 +179,7 @@ export class SearchService {
    * Get search suggestions (lightweight autocomplete)
    */
   async getSuggestions(
-    workspaceId: string,
+    familyspaceId: string,
     query: string,
     limit: number = 5
   ): Promise<SearchSuggestion[]> {
@@ -188,7 +188,7 @@ export class SearchService {
     const [people, stories, assets] = await Promise.all([
       this.prisma.person.findMany({
         where: {
-          workspaceId,
+          familyspaceId,
           OR: [
             { firstName: { contains: query, mode: 'insensitive' } },
             { lastName: { contains: query, mode: 'insensitive' } },
@@ -208,7 +208,7 @@ export class SearchService {
       }),
       this.prisma.story.findMany({
         where: {
-          workspaceId,
+          familyspaceId,
           OR: [
             { title: { contains: query, mode: 'insensitive' } },
             { content: { contains: query, mode: 'insensitive' } },
@@ -225,7 +225,7 @@ export class SearchService {
       }),
       this.prisma.asset.findMany({
         where: {
-          workspaceId,
+          familyspaceId,
           OR: [
             { originalName: { contains: query, mode: 'insensitive' } },
             { transcript: { contains: query, mode: 'insensitive' } },

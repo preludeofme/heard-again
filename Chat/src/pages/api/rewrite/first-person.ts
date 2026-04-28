@@ -17,9 +17,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ success: false, error: `Method ${req.method} Not Allowed` })
   }
 
-  const workspaceId = req.headers['x-workspace-id'] as string | undefined
-  if (!workspaceId) {
-    return res.status(400).json({ success: false, error: 'Missing x-workspace-id header' })
+  const familyspaceId = req.headers['x-familyspace-id'] as string | undefined
+  if (!familyspaceId) {
+    return res.status(400).json({ success: false, error: 'Missing x-familyspace-id header' })
   }
 
   const { content, subjectName, speakerName, styleHints } = req.body ?? {}
@@ -42,13 +42,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       styleHints: typeof styleHints === 'string' ? styleHints : undefined,
     })
 
-    logger.info('[rewrite] first-person rewrite complete', {
-      workspaceId,
-      model: result.model,
-      processingTimeMs: result.processingTimeMs,
-      inputChars: content.length,
-      outputChars: result.rewrittenContent.length,
-    })
+    logger.info(
+      {
+        familyspaceId,
+        model: result.model,
+        processingTimeMs: result.processingTimeMs,
+        inputChars: content.length,
+        outputChars: result.rewrittenContent.length,
+      },
+      '[rewrite] first-person rewrite complete'
+    )
 
     return res.status(200).json({
       success: true,
@@ -59,7 +62,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       },
     })
   } catch (error) {
-    logger.error('[rewrite] first-person rewrite failed', { workspaceId, error })
+    logger.error({ familyspaceId, error }, '[rewrite] first-person rewrite failed')
     const message = error instanceof Error ? error.message : 'Rewrite failed'
     return res.status(502).json({ success: false, error: message })
   }

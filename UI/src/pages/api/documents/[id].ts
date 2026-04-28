@@ -3,16 +3,16 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 import { sanitizeDocumentResponse } from '@/lib/api-helpers'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    // Authenticate user and get workspace context
-    const user = await getAuthUserWithWorkspace(req, res)
+    // Authenticate user and get familyspace context
+    const user = await getAuthUserWithFamilyspace(req, res)
     
     // Require EDITOR role for document operations
-    await requireWorkspaceRole(user.id, user.workspaceId, 'EDITOR')
+    await requireFamilyspaceRole(user.id, user.familyspaceId, 'EDITOR')
 
     const { id } = req.query
     const documentId = id as string
@@ -25,12 +25,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     switch (method) {
       case 'GET':
-        return await getDocument(req, res, documentId, user.workspaceId)
+        return await getDocument(req, res, documentId, user.familyspaceId)
       case 'PUT':
       case 'PATCH':
-        return await updateDocument(req, res, documentId, user.id, user.workspaceId)
+        return await updateDocument(req, res, documentId, user.id, user.familyspaceId)
       case 'DELETE':
-        return await deleteDocument(req, res, documentId, user.id, user.workspaceId)
+        return await deleteDocument(req, res, documentId, user.id, user.familyspaceId)
       default:
         return res.status(405).json({ success: false, error: 'Method not allowed' })
     }
@@ -49,11 +49,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 }
 
-async function getDocument(req: NextApiRequest, res: NextApiResponse, documentId: string, workspaceId: string) {
+async function getDocument(req: NextApiRequest, res: NextApiResponse, documentId: string, familyspaceId: string) {
   const document = await prisma.document.findFirst({
     where: { 
       id: documentId,
-      workspaceId: workspaceId // ✅ Critical: Workspace-scoped query
+      familyspaceId: familyspaceId // ✅ Critical: Familyspace-scoped query
     },
     include: {
       asset: {
@@ -110,7 +110,7 @@ async function updateDocument(
   res: NextApiResponse,
   documentId: string,
   userId: string,
-  workspaceId: string
+  familyspaceId: string
 ) {
   const {
     title,
@@ -126,7 +126,7 @@ async function updateDocument(
   const existingDoc = await prisma.document.findFirst({
     where: { 
       id: documentId,
-      workspaceId: workspaceId // ✅ Critical: Workspace-scoped query
+      familyspaceId: familyspaceId // ✅ Critical: Familyspace-scoped query
     },
     include: { people: true },
   })
@@ -206,7 +206,7 @@ async function deleteDocument(
   res: NextApiResponse,
   documentId: string,
   userId: string,
-  workspaceId: string
+  familyspaceId: string
 ) {
   const { permanent } = req.query
 
@@ -214,7 +214,7 @@ async function deleteDocument(
   const existingDoc = await prisma.document.findFirst({
     where: { 
       id: documentId,
-      workspaceId: workspaceId // ✅ Critical: Workspace-scoped query
+      familyspaceId: familyspaceId // ✅ Critical: Familyspace-scoped query
     },
   })
 

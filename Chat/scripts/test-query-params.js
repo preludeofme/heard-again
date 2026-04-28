@@ -6,7 +6,7 @@ async function testQuery() {
   
   try {
     const collection = await client.getCollection({ 
-      name: 'workspace_931638b2-8341-41fc-a064-0883a9911d54_documents',
+      name: 'familyspace_931638b2-8341-41fc-a064-0883a9911d54_documents',
       embeddingFunction: embedder
     });
 

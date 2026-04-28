@@ -1,14 +1,23 @@
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
-import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
+
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '5mb',
+    },
+  },
+}
+
 export default apiHandler({
   // GET /api/voice/profiles - List voice profiles from DB
   GET: async (req, res) => {
-    const user = await getAuthUserWithWorkspace(req, res)
+    const user = await getAuthUserWithFamilyspace(req, res)
     const { personId } = req.query
 
     const where: any = {
-      workspaceId: user.workspaceId,
+      familyspaceId: user.familyspaceId,
     }
     if (personId && typeof personId === 'string') {
       where.personId = personId
@@ -60,8 +69,8 @@ export default apiHandler({
   // POST /api/voice/profiles - Create a voice profile (DB record)
   POST: async (req, res) => {
 
-    const user = await getAuthUserWithWorkspace(req, res)
-    await requireWorkspaceRole(user.id, user.workspaceId, 'EDITOR')
+    const user = await getAuthUserWithFamilyspace(req, res)
+    await requireFamilyspaceRole(user.id, user.familyspaceId, 'EDITOR')
 
     const { name, description, personId, isCloned, modelType, styleParams, engineName, engineVersion } = req.body
 
@@ -69,17 +78,17 @@ export default apiHandler({
       throw Errors.badRequest('Name is required')
     }
 
-    // Verify person belongs to workspace if provided
+    // Verify person belongs to familyspace if provided
     if (personId) {
       const person = await prisma.person.findFirst({
-        where: { id: personId, workspaceId: user.workspaceId },
+        where: { id: personId, familyspaceId: user.familyspaceId },
       })
       if (!person) throw Errors.notFound('Person')
     }
 
     const profile = await prisma.voiceProfile.create({
       data: {
-        workspaceId: user.workspaceId,
+        familyspaceId: user.familyspaceId,
         createdById: user.id,
         name,
         description: description || null,

@@ -59,7 +59,7 @@ describe('Narration Worker', () => {
     id: 'job-1',
     data: {
       storyId: 'story-1',
-      workspaceId: 'ws-1',
+      familyspaceId: 'ws-1',
       voiceProfileId: 'voice-1',
       userId: 'user-1',
       voiceGenerationJobId: 'vjob-1',
@@ -112,7 +112,7 @@ describe('Narration Worker', () => {
       })
 
       const count = await pruneSiblingAssetsForPair({
-        workspaceId: 'ws-1',
+        familyspaceId: 'ws-1',
         storyId: 'story-1',
         voiceProfileId: 'voice-1',
         keepAssetId: 'new-asset-id',

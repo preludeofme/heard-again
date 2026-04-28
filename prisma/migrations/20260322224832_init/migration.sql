@@ -8,10 +8,10 @@ CREATE TYPE "PlanType" AS ENUM ('FREE', 'CONNECTED', 'HYBRID', 'CLOUD');
 CREATE TYPE "DeploymentMode" AS ENUM ('LOCAL', 'TUNNELED', 'CLOUD');
 
 -- CreateEnum
-CREATE TYPE "WorkspaceStatus" AS ENUM ('ACTIVE', 'SUSPENDED', 'CANCELLED');
+CREATE TYPE "FamilyspaceStatus" AS ENUM ('ACTIVE', 'SUSPENDED', 'CANCELLED');
 
 -- CreateEnum
-CREATE TYPE "WorkspaceRole" AS ENUM ('OWNER', 'ADMIN', 'EDITOR', 'VIEWER', 'LEGACY');
+CREATE TYPE "FamilyspaceRole" AS ENUM ('OWNER', 'ADMIN', 'EDITOR', 'VIEWER', 'LEGACY');
 
 -- CreateEnum
 CREATE TYPE "MembershipStatus" AS ENUM ('ACTIVE', 'SUSPENDED', 'REMOVED');
@@ -104,13 +104,13 @@ CREATE TABLE "User" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "lastLoginAt" TIMESTAMP(3),
-    "defaultWorkspaceId" TEXT,
+    "defaultFamilyspaceId" TEXT,
 
     CONSTRAINT "User_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "Workspace" (
+CREATE TABLE "Familyspace" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "slug" TEXT NOT NULL,
@@ -123,19 +123,19 @@ CREATE TABLE "Workspace" (
     "storageQuotaBytes" BIGINT NOT NULL DEFAULT 0,
     "memberQuota" INTEGER NOT NULL DEFAULT 1,
     "generationMinuteQuota" INTEGER NOT NULL DEFAULT 0,
-    "status" "WorkspaceStatus" NOT NULL DEFAULT 'ACTIVE',
+    "status" "FamilyspaceStatus" NOT NULL DEFAULT 'ACTIVE',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "Workspace_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "Familyspace_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "Membership" (
     "id" TEXT NOT NULL,
-    "workspaceId" TEXT NOT NULL,
+    "familyspaceId" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
-    "role" "WorkspaceRole" NOT NULL DEFAULT 'VIEWER',
+    "role" "FamilyspaceRole" NOT NULL DEFAULT 'VIEWER',
     "invitedById" TEXT,
     "invitedAt" TIMESTAMP(3),
     "joinedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -156,7 +156,7 @@ CREATE TABLE "Membership" (
 -- CreateTable
 CREATE TABLE "Instance" (
     "id" TEXT NOT NULL,
-    "workspaceId" TEXT NOT NULL,
+    "familyspaceId" TEXT NOT NULL,
     "type" "InstanceType" NOT NULL,
     "status" "InstanceStatus" NOT NULL DEFAULT 'REGISTERING',
     "version" TEXT NOT NULL,
@@ -183,7 +183,7 @@ CREATE TABLE "Instance" (
 -- CreateTable
 CREATE TABLE "Subscription" (
     "id" TEXT NOT NULL,
-    "workspaceId" TEXT NOT NULL,
+    "familyspaceId" TEXT NOT NULL,
     "planId" TEXT NOT NULL,
     "billingStatus" "BillingStatus" NOT NULL DEFAULT 'TRIAL',
     "stripeSubscriptionId" TEXT,
@@ -225,7 +225,7 @@ CREATE TABLE "Plan" (
 -- CreateTable
 CREATE TABLE "Person" (
     "id" TEXT NOT NULL,
-    "workspaceId" TEXT NOT NULL,
+    "familyspaceId" TEXT NOT NULL,
     "firstName" TEXT NOT NULL,
     "lastName" TEXT,
     "displayName" TEXT,
@@ -264,7 +264,7 @@ CREATE TABLE "PersonRelationship" (
 -- CreateTable
 CREATE TABLE "Story" (
     "id" TEXT NOT NULL,
-    "workspaceId" TEXT NOT NULL,
+    "familyspaceId" TEXT NOT NULL,
     "title" TEXT NOT NULL,
     "content" TEXT NOT NULL,
     "storyType" "StoryType" NOT NULL DEFAULT 'MEMORY',
@@ -301,7 +301,7 @@ CREATE TABLE "StoryComment" (
 -- CreateTable
 CREATE TABLE "Asset" (
     "id" TEXT NOT NULL,
-    "workspaceId" TEXT NOT NULL,
+    "familyspaceId" TEXT NOT NULL,
     "filename" TEXT NOT NULL,
     "originalName" TEXT NOT NULL,
     "mimeType" TEXT NOT NULL,
@@ -350,7 +350,7 @@ CREATE TABLE "StoryAsset" (
 -- CreateTable
 CREATE TABLE "VoiceProfile" (
     "id" TEXT NOT NULL,
-    "workspaceId" TEXT NOT NULL,
+    "familyspaceId" TEXT NOT NULL,
     "personId" TEXT,
     "createdById" TEXT NOT NULL,
     "name" TEXT NOT NULL,
@@ -399,7 +399,7 @@ CREATE TABLE "VoiceGenerationJob" (
 -- CreateTable
 CREATE TABLE "AuditLog" (
     "id" TEXT NOT NULL,
-    "workspaceId" TEXT NOT NULL,
+    "familyspaceId" TEXT NOT NULL,
     "actorId" TEXT,
     "actorType" "ActorType" NOT NULL,
     "action" TEXT NOT NULL,
@@ -416,11 +416,11 @@ CREATE TABLE "AuditLog" (
 );
 
 -- CreateTable
-CREATE TABLE "WorkspaceInvite" (
+CREATE TABLE "FamilyspaceInvite" (
     "id" TEXT NOT NULL,
-    "workspaceId" TEXT NOT NULL,
+    "familyspaceId" TEXT NOT NULL,
     "email" TEXT NOT NULL,
-    "role" "WorkspaceRole" NOT NULL DEFAULT 'VIEWER',
+    "role" "FamilyspaceRole" NOT NULL DEFAULT 'VIEWER',
     "invitedById" TEXT NOT NULL,
     "token" TEXT NOT NULL,
     "status" "InviteStatus" NOT NULL DEFAULT 'PENDING',
@@ -430,13 +430,13 @@ CREATE TABLE "WorkspaceInvite" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "WorkspaceInvite_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "FamilyspaceInvite_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "ImportJob" (
     "id" TEXT NOT NULL,
-    "workspaceId" TEXT NOT NULL,
+    "familyspaceId" TEXT NOT NULL,
     "sourceType" "ImportSourceType" NOT NULL,
     "sourceAssetId" TEXT,
     "status" "JobStatus" NOT NULL DEFAULT 'PENDING',
@@ -454,7 +454,7 @@ CREATE TABLE "ImportJob" (
 -- CreateTable
 CREATE TABLE "ExportJob" (
     "id" TEXT NOT NULL,
-    "workspaceId" TEXT NOT NULL,
+    "familyspaceId" TEXT NOT NULL,
     "exportType" "ExportType" NOT NULL,
     "status" "JobStatus" NOT NULL DEFAULT 'PENDING',
     "errorMessage" TEXT,
@@ -471,7 +471,7 @@ CREATE TABLE "ExportJob" (
 -- CreateTable
 CREATE TABLE "VoiceConsent" (
     "id" TEXT NOT NULL,
-    "workspaceId" TEXT NOT NULL,
+    "familyspaceId" TEXT NOT NULL,
     "personId" TEXT,
     "voiceProfileId" TEXT,
     "consentType" "ConsentType" NOT NULL,
@@ -490,7 +490,7 @@ CREATE TABLE "VoiceConsent" (
 -- CreateTable
 CREATE TABLE "Collection" (
     "id" TEXT NOT NULL,
-    "workspaceId" TEXT NOT NULL,
+    "familyspaceId" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "description" TEXT,
     "createdById" TEXT NOT NULL,
@@ -573,34 +573,34 @@ CREATE INDEX "User_email_idx" ON "User"("email");
 CREATE INDEX "User_oauthProvider_oauthId_idx" ON "User"("oauthProvider", "oauthId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Workspace_slug_key" ON "Workspace"("slug");
+CREATE UNIQUE INDEX "Familyspace_slug_key" ON "Familyspace"("slug");
 
 -- CreateIndex
-CREATE INDEX "Workspace_ownerId_idx" ON "Workspace"("ownerId");
+CREATE INDEX "Familyspace_ownerId_idx" ON "Familyspace"("ownerId");
 
 -- CreateIndex
-CREATE INDEX "Workspace_slug_idx" ON "Workspace"("slug");
+CREATE INDEX "Familyspace_slug_idx" ON "Familyspace"("slug");
 
 -- CreateIndex
-CREATE INDEX "Membership_workspaceId_idx" ON "Membership"("workspaceId");
+CREATE INDEX "Membership_familyspaceId_idx" ON "Membership"("familyspaceId");
 
 -- CreateIndex
 CREATE INDEX "Membership_userId_idx" ON "Membership"("userId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Membership_workspaceId_userId_key" ON "Membership"("workspaceId", "userId");
+CREATE UNIQUE INDEX "Membership_familyspaceId_userId_key" ON "Membership"("familyspaceId", "userId");
 
 -- CreateIndex
-CREATE INDEX "Instance_workspaceId_idx" ON "Instance"("workspaceId");
+CREATE INDEX "Instance_familyspaceId_idx" ON "Instance"("familyspaceId");
 
 -- CreateIndex
 CREATE INDEX "Instance_tunnelSubdomain_idx" ON "Instance"("tunnelSubdomain");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Subscription_workspaceId_key" ON "Subscription"("workspaceId");
+CREATE UNIQUE INDEX "Subscription_familyspaceId_key" ON "Subscription"("familyspaceId");
 
 -- CreateIndex
-CREATE INDEX "Subscription_workspaceId_idx" ON "Subscription"("workspaceId");
+CREATE INDEX "Subscription_familyspaceId_idx" ON "Subscription"("familyspaceId");
 
 -- CreateIndex
 CREATE INDEX "Subscription_stripeSubscriptionId_idx" ON "Subscription"("stripeSubscriptionId");
@@ -609,7 +609,7 @@ CREATE INDEX "Subscription_stripeSubscriptionId_idx" ON "Subscription"("stripeSu
 CREATE UNIQUE INDEX "Plan_name_key" ON "Plan"("name");
 
 -- CreateIndex
-CREATE INDEX "Person_workspaceId_idx" ON "Person"("workspaceId");
+CREATE INDEX "Person_familyspaceId_idx" ON "Person"("familyspaceId");
 
 -- CreateIndex
 CREATE INDEX "Person_firstName_lastName_idx" ON "Person"("firstName", "lastName");
@@ -627,7 +627,7 @@ CREATE INDEX "PersonRelationship_targetPersonId_idx" ON "PersonRelationship"("ta
 CREATE UNIQUE INDEX "PersonRelationship_sourcePersonId_targetPersonId_relationsh_key" ON "PersonRelationship"("sourcePersonId", "targetPersonId", "relationshipType");
 
 -- CreateIndex
-CREATE INDEX "Story_workspaceId_idx" ON "Story"("workspaceId");
+CREATE INDEX "Story_familyspaceId_idx" ON "Story"("familyspaceId");
 
 -- CreateIndex
 CREATE INDEX "Story_subjectId_idx" ON "Story"("subjectId");
@@ -651,7 +651,7 @@ CREATE INDEX "StoryComment_userId_idx" ON "StoryComment"("userId");
 CREATE INDEX "StoryComment_parentId_idx" ON "StoryComment"("parentId");
 
 -- CreateIndex
-CREATE INDEX "Asset_workspaceId_idx" ON "Asset"("workspaceId");
+CREATE INDEX "Asset_familyspaceId_idx" ON "Asset"("familyspaceId");
 
 -- CreateIndex
 CREATE INDEX "Asset_assetType_idx" ON "Asset"("assetType");
@@ -678,7 +678,7 @@ CREATE INDEX "StoryAsset_assetId_idx" ON "StoryAsset"("assetId");
 CREATE UNIQUE INDEX "StoryAsset_storyId_assetId_key" ON "StoryAsset"("storyId", "assetId");
 
 -- CreateIndex
-CREATE INDEX "VoiceProfile_workspaceId_idx" ON "VoiceProfile"("workspaceId");
+CREATE INDEX "VoiceProfile_familyspaceId_idx" ON "VoiceProfile"("familyspaceId");
 
 -- CreateIndex
 CREATE INDEX "VoiceProfile_personId_idx" ON "VoiceProfile"("personId");
@@ -696,7 +696,7 @@ CREATE INDEX "VoiceGenerationJob_status_idx" ON "VoiceGenerationJob"("status");
 CREATE INDEX "VoiceGenerationJob_queuedAt_idx" ON "VoiceGenerationJob"("queuedAt");
 
 -- CreateIndex
-CREATE INDEX "AuditLog_workspaceId_idx" ON "AuditLog"("workspaceId");
+CREATE INDEX "AuditLog_familyspaceId_idx" ON "AuditLog"("familyspaceId");
 
 -- CreateIndex
 CREATE INDEX "AuditLog_action_idx" ON "AuditLog"("action");
@@ -708,31 +708,31 @@ CREATE INDEX "AuditLog_resourceType_resourceId_idx" ON "AuditLog"("resourceType"
 CREATE INDEX "AuditLog_createdAt_idx" ON "AuditLog"("createdAt");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "WorkspaceInvite_token_key" ON "WorkspaceInvite"("token");
+CREATE UNIQUE INDEX "FamilyspaceInvite_token_key" ON "FamilyspaceInvite"("token");
 
 -- CreateIndex
-CREATE INDEX "WorkspaceInvite_workspaceId_idx" ON "WorkspaceInvite"("workspaceId");
+CREATE INDEX "FamilyspaceInvite_familyspaceId_idx" ON "FamilyspaceInvite"("familyspaceId");
 
 -- CreateIndex
-CREATE INDEX "WorkspaceInvite_email_idx" ON "WorkspaceInvite"("email");
+CREATE INDEX "FamilyspaceInvite_email_idx" ON "FamilyspaceInvite"("email");
 
 -- CreateIndex
-CREATE INDEX "WorkspaceInvite_token_idx" ON "WorkspaceInvite"("token");
+CREATE INDEX "FamilyspaceInvite_token_idx" ON "FamilyspaceInvite"("token");
 
 -- CreateIndex
-CREATE INDEX "ImportJob_workspaceId_idx" ON "ImportJob"("workspaceId");
+CREATE INDEX "ImportJob_familyspaceId_idx" ON "ImportJob"("familyspaceId");
 
 -- CreateIndex
 CREATE INDEX "ImportJob_status_idx" ON "ImportJob"("status");
 
 -- CreateIndex
-CREATE INDEX "ExportJob_workspaceId_idx" ON "ExportJob"("workspaceId");
+CREATE INDEX "ExportJob_familyspaceId_idx" ON "ExportJob"("familyspaceId");
 
 -- CreateIndex
 CREATE INDEX "ExportJob_status_idx" ON "ExportJob"("status");
 
 -- CreateIndex
-CREATE INDEX "VoiceConsent_workspaceId_idx" ON "VoiceConsent"("workspaceId");
+CREATE INDEX "VoiceConsent_familyspaceId_idx" ON "VoiceConsent"("familyspaceId");
 
 -- CreateIndex
 CREATE INDEX "VoiceConsent_personId_idx" ON "VoiceConsent"("personId");
@@ -741,7 +741,7 @@ CREATE INDEX "VoiceConsent_personId_idx" ON "VoiceConsent"("personId");
 CREATE INDEX "VoiceConsent_voiceProfileId_idx" ON "VoiceConsent"("voiceProfileId");
 
 -- CreateIndex
-CREATE INDEX "Collection_workspaceId_idx" ON "Collection"("workspaceId");
+CREATE INDEX "Collection_familyspaceId_idx" ON "Collection"("familyspaceId");
 
 -- CreateIndex
 CREATE INDEX "Collection_createdById_idx" ON "Collection"("createdById");
@@ -771,28 +771,28 @@ CREATE UNIQUE INDEX "verificationtokens_token_key" ON "verificationtokens"("toke
 CREATE UNIQUE INDEX "verificationtokens_identifier_token_key" ON "verificationtokens"("identifier", "token");
 
 -- AddForeignKey
-ALTER TABLE "User" ADD CONSTRAINT "User_defaultWorkspaceId_fkey" FOREIGN KEY ("defaultWorkspaceId") REFERENCES "Workspace"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "User" ADD CONSTRAINT "User_defaultFamilyspaceId_fkey" FOREIGN KEY ("defaultFamilyspaceId") REFERENCES "Familyspace"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Workspace" ADD CONSTRAINT "Workspace_ownerId_fkey" FOREIGN KEY ("ownerId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Familyspace" ADD CONSTRAINT "Familyspace_ownerId_fkey" FOREIGN KEY ("ownerId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Membership" ADD CONSTRAINT "Membership_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "Membership" ADD CONSTRAINT "Membership_familyspaceId_fkey" FOREIGN KEY ("familyspaceId") REFERENCES "Familyspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Membership" ADD CONSTRAINT "Membership_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Instance" ADD CONSTRAINT "Instance_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "Instance" ADD CONSTRAINT "Instance_familyspaceId_fkey" FOREIGN KEY ("familyspaceId") REFERENCES "Familyspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Subscription" ADD CONSTRAINT "Subscription_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "Subscription" ADD CONSTRAINT "Subscription_familyspaceId_fkey" FOREIGN KEY ("familyspaceId") REFERENCES "Familyspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Subscription" ADD CONSTRAINT "Subscription_planId_fkey" FOREIGN KEY ("planId") REFERENCES "Plan"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Person" ADD CONSTRAINT "Person_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "Person" ADD CONSTRAINT "Person_familyspaceId_fkey" FOREIGN KEY ("familyspaceId") REFERENCES "Familyspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Person" ADD CONSTRAINT "Person_avatarAssetId_fkey" FOREIGN KEY ("avatarAssetId") REFERENCES "Asset"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -807,7 +807,7 @@ ALTER TABLE "PersonRelationship" ADD CONSTRAINT "PersonRelationship_sourcePerson
 ALTER TABLE "PersonRelationship" ADD CONSTRAINT "PersonRelationship_targetPersonId_fkey" FOREIGN KEY ("targetPersonId") REFERENCES "Person"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Story" ADD CONSTRAINT "Story_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "Story" ADD CONSTRAINT "Story_familyspaceId_fkey" FOREIGN KEY ("familyspaceId") REFERENCES "Familyspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Story" ADD CONSTRAINT "Story_subjectId_fkey" FOREIGN KEY ("subjectId") REFERENCES "Person"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -834,7 +834,7 @@ ALTER TABLE "StoryComment" ADD CONSTRAINT "StoryComment_userId_fkey" FOREIGN KEY
 ALTER TABLE "StoryComment" ADD CONSTRAINT "StoryComment_parentId_fkey" FOREIGN KEY ("parentId") REFERENCES "StoryComment"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Asset" ADD CONSTRAINT "Asset_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "Asset" ADD CONSTRAINT "Asset_familyspaceId_fkey" FOREIGN KEY ("familyspaceId") REFERENCES "Familyspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Asset" ADD CONSTRAINT "Asset_uploadedById_fkey" FOREIGN KEY ("uploadedById") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -852,7 +852,7 @@ ALTER TABLE "StoryAsset" ADD CONSTRAINT "StoryAsset_storyId_fkey" FOREIGN KEY ("
 ALTER TABLE "StoryAsset" ADD CONSTRAINT "StoryAsset_assetId_fkey" FOREIGN KEY ("assetId") REFERENCES "Asset"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "VoiceProfile" ADD CONSTRAINT "VoiceProfile_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "VoiceProfile" ADD CONSTRAINT "VoiceProfile_familyspaceId_fkey" FOREIGN KEY ("familyspaceId") REFERENCES "Familyspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "VoiceProfile" ADD CONSTRAINT "VoiceProfile_personId_fkey" FOREIGN KEY ("personId") REFERENCES "Person"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -876,16 +876,16 @@ ALTER TABLE "VoiceGenerationJob" ADD CONSTRAINT "VoiceGenerationJob_storyId_fkey
 ALTER TABLE "VoiceGenerationJob" ADD CONSTRAINT "VoiceGenerationJob_outputAssetId_fkey" FOREIGN KEY ("outputAssetId") REFERENCES "Asset"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "AuditLog" ADD CONSTRAINT "AuditLog_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "AuditLog" ADD CONSTRAINT "AuditLog_familyspaceId_fkey" FOREIGN KEY ("familyspaceId") REFERENCES "Familyspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "WorkspaceInvite" ADD CONSTRAINT "WorkspaceInvite_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "FamilyspaceInvite" ADD CONSTRAINT "FamilyspaceInvite_familyspaceId_fkey" FOREIGN KEY ("familyspaceId") REFERENCES "Familyspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "WorkspaceInvite" ADD CONSTRAINT "WorkspaceInvite_invitedById_fkey" FOREIGN KEY ("invitedById") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "FamilyspaceInvite" ADD CONSTRAINT "FamilyspaceInvite_invitedById_fkey" FOREIGN KEY ("invitedById") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "ImportJob" ADD CONSTRAINT "ImportJob_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "ImportJob" ADD CONSTRAINT "ImportJob_familyspaceId_fkey" FOREIGN KEY ("familyspaceId") REFERENCES "Familyspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "ImportJob" ADD CONSTRAINT "ImportJob_sourceAssetId_fkey" FOREIGN KEY ("sourceAssetId") REFERENCES "Asset"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -894,7 +894,7 @@ ALTER TABLE "ImportJob" ADD CONSTRAINT "ImportJob_sourceAssetId_fkey" FOREIGN KE
 ALTER TABLE "ImportJob" ADD CONSTRAINT "ImportJob_importedById_fkey" FOREIGN KEY ("importedById") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "ExportJob" ADD CONSTRAINT "ExportJob_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "ExportJob" ADD CONSTRAINT "ExportJob_familyspaceId_fkey" FOREIGN KEY ("familyspaceId") REFERENCES "Familyspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "ExportJob" ADD CONSTRAINT "ExportJob_requestedById_fkey" FOREIGN KEY ("requestedById") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -903,7 +903,7 @@ ALTER TABLE "ExportJob" ADD CONSTRAINT "ExportJob_requestedById_fkey" FOREIGN KE
 ALTER TABLE "ExportJob" ADD CONSTRAINT "ExportJob_outputAssetId_fkey" FOREIGN KEY ("outputAssetId") REFERENCES "Asset"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "VoiceConsent" ADD CONSTRAINT "VoiceConsent_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "VoiceConsent" ADD CONSTRAINT "VoiceConsent_familyspaceId_fkey" FOREIGN KEY ("familyspaceId") REFERENCES "Familyspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "VoiceConsent" ADD CONSTRAINT "VoiceConsent_personId_fkey" FOREIGN KEY ("personId") REFERENCES "Person"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -915,7 +915,7 @@ ALTER TABLE "VoiceConsent" ADD CONSTRAINT "VoiceConsent_voiceProfileId_fkey" FOR
 ALTER TABLE "VoiceConsent" ADD CONSTRAINT "VoiceConsent_grantedByUserId_fkey" FOREIGN KEY ("grantedByUserId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Collection" ADD CONSTRAINT "Collection_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "Collection" ADD CONSTRAINT "Collection_familyspaceId_fkey" FOREIGN KEY ("familyspaceId") REFERENCES "Familyspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Collection" ADD CONSTRAINT "Collection_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

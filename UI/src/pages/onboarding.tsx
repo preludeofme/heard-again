@@ -131,7 +131,7 @@ export default function OnboardingPage() {
                   What should we call your family archive?
                 </Typography>
                 <Typography variant="body1" sx={{ color: 'secondary.main' }}>
-                  This will be the name of your family workspace. You can always change it later.
+                  This will be the name of your family familyspace. You can always change it later.
                 </Typography>
               </Box>
 

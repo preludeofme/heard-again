@@ -1,16 +1,16 @@
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
-import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 
 export default apiHandler({
   // POST /api/collections/[id]/stories - Add a story to collection
   POST: async (req, res) => {
-    const user = await getAuthUserWithWorkspace(req, res)
+    const user = await getAuthUserWithFamilyspace(req, res)
     const collectionId = req.query.id as string
-    await requireWorkspaceRole(user.id, user.workspaceId, 'EDITOR')
+    await requireFamilyspaceRole(user.id, user.familyspaceId, 'EDITOR')
 
     const collection = await prisma.collection.findFirst({
-      where: { id: collectionId, workspaceId: user.workspaceId },
+      where: { id: collectionId, familyspaceId: user.familyspaceId },
     })
     if (!collection) throw Errors.notFound('Collection')
 
@@ -18,7 +18,7 @@ export default apiHandler({
     if (!storyId) throw Errors.badRequest('storyId is required')
 
     const story = await prisma.story.findFirst({
-      where: { id: storyId, workspaceId: user.workspaceId },
+      where: { id: storyId, familyspaceId: user.familyspaceId },
     })
     if (!story) throw Errors.notFound('Story')
 
@@ -49,15 +49,15 @@ export default apiHandler({
 
   // DELETE /api/collections/[id]/stories - Remove a story from collection
   DELETE: async (req, res) => {
-    const user = await getAuthUserWithWorkspace(req, res)
+    const user = await getAuthUserWithFamilyspace(req, res)
     const collectionId = req.query.id as string
-    await requireWorkspaceRole(user.id, user.workspaceId, 'EDITOR')
+    await requireFamilyspaceRole(user.id, user.familyspaceId, 'EDITOR')
 
     const { storyId } = req.body
     if (!storyId) throw Errors.badRequest('storyId is required')
 
     const collection = await prisma.collection.findFirst({
-      where: { id: collectionId, workspaceId: user.workspaceId },
+      where: { id: collectionId, familyspaceId: user.familyspaceId },
     })
     if (!collection) throw Errors.notFound('Collection')
 

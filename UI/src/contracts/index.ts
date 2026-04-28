@@ -85,6 +85,8 @@ export interface StoryListItem {
   storyDate: Date | null
   storyDatePrecision: DatePrecision
   tags: string[]
+  authorRelationship: string | null
+  isPublic: boolean
   subject: StorySubject | null
   speaker: StorySpeaker | null
   createdBy: StoryCreator
@@ -108,6 +110,8 @@ export interface CreateStoryRequest {
   tags?: string[]
   status?: StoryStatus
   assetIds?: string[]
+  authorRelationship?: string | null
+  isPublic?: boolean
 }
 
 export interface CreateStoryResponse {

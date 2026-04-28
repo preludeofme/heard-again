@@ -9,20 +9,20 @@ import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
  */
 export default apiHandler({
   GET: async (req, res) => {
-    const { token, workspaceId } = req.query
+    const { token, familyspaceId } = req.query
 
     // If token provided, validate it against an instance
-    if (token && typeof token === 'string' && workspaceId && typeof workspaceId === 'string') {
+    if (token && typeof token === 'string' && familyspaceId && typeof familyspaceId === 'string') {
       const instance = await prisma.instance.findFirst({
         where: {
-          workspaceId,
+          familyspaceId,
           tunnelToken: token,
           tunnelEnabled: true,
         },
       })
 
       if (!instance) {
-        throw Errors.unauthorized('Invalid token or workspace')
+        throw Errors.unauthorized('Invalid token or familyspace')
       }
 
       // Check if token is expired
@@ -42,7 +42,7 @@ export default apiHandler({
       return successResponse(res, {
         healthy: true,
         instanceId: instance.id,
-        workspaceId: instance.workspaceId,
+        familyspaceId: instance.familyspaceId,
         tunnelEnabled: instance.tunnelEnabled,
         timestamp: new Date().toISOString(),
       })

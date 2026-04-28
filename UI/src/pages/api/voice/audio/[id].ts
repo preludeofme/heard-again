@@ -1,7 +1,7 @@
 import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { TTS_SERVICE_URL } from '@/lib/tts-client'
-import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 import { prisma } from '@/lib/prisma'
 
 const TTS_SERVICE_TOKEN = process.env.TTS_SERVICE_TOKEN
@@ -12,11 +12,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // Add authentication and workspace context
-    const user = await getAuthUserWithWorkspace(req, res)
+    // Add authentication and familyspace context
+    const user = await getAuthUserWithFamilyspace(req, res)
     
     // Require VIEWER role for audio access (lowest privilege)
-    await requireWorkspaceRole(user.id, user.workspaceId, 'VIEWER')
+    await requireFamilyspaceRole(user.id, user.familyspaceId, 'VIEWER')
 
     const { id } = req.query
     const inputId = id as string
@@ -31,7 +31,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     let audioAsset = await prisma.asset.findFirst({
       where: {
         id: inputId,
-        workspaceId: user.workspaceId,
+        familyspaceId: user.familyspaceId,
         assetType: { in: ['GENERATED_AUDIO', 'AUDIO'] },
       },
       select: {
@@ -48,10 +48,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     } else {
       // 2. If no asset found by ID, maybe the caller passed the ttsAudioId directly
-      // Verify this ttsAudioId belongs to an asset in the user's workspace
+      // Verify this ttsAudioId belongs to an asset in the user's familyspace
       audioAsset = await prisma.asset.findFirst({
         where: {
-          workspaceId: user.workspaceId,
+          familyspaceId: user.familyspaceId,
           assetType: { in: ['GENERATED_AUDIO', 'AUDIO'] },
           metadata: {
             path: ['ttsAudioId'],
@@ -68,7 +68,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // Fallback: check if it's a direct file ID from TTS service that we haven't mapped yet
         // but only if the user is an EDITOR+ (security safeguard)
         try {
-          await requireWorkspaceRole(user.id, user.workspaceId, 'EDITOR')
+          await requireFamilyspaceRole(user.id, user.familyspaceId, 'EDITOR')
         } catch (err) {
           return res.status(404).json({ error: 'Audio not found' })
         }
@@ -81,7 +81,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${TTS_SERVICE_TOKEN}`,
-        'X-Workspace-Id': user.workspaceId,
+        'X-Familyspace-Id': user.familyspaceId,
       },
     })
 
@@ -90,7 +90,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       logger.error('[AUDIO_PROXY] TTS service error:', {
         status: response.status,
         audioId,
-        workspaceId: user.workspaceId,
+        familyspaceId: user.familyspaceId,
         userId: user.id
       })
       

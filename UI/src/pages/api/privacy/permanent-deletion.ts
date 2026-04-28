@@ -41,18 +41,18 @@ export default apiHandler({
     const redactedEmail = buildRedactedEmail(user.id)
 
     await prisma.$transaction(async (tx) => {
-      // Find all workspaces owned by this user
-      const ownedWorkspaces = await tx.workspace.findMany({
+      // Find all familyspaces owned by this user
+      const ownedFamilyspaces = await tx.familyspace.findMany({
         where: { ownerId: user.id },
         select: { id: true }
       })
 
-      // For each owned workspace, perform a deep delete
-      for (const workspace of ownedWorkspaces) {
+      // For each owned familyspace, perform a deep delete
+      for (const familyspace of ownedFamilyspaces) {
         // Delete all associated data - Prisma cascades will handle most, 
-        // but we need to ensure the workspace itself is removed.
-        await tx.workspace.delete({
-          where: { id: workspace.id }
+        // but we need to ensure the familyspace itself is removed.
+        await tx.familyspace.delete({
+          where: { id: familyspace.id }
         })
       }
 
@@ -69,7 +69,7 @@ export default apiHandler({
           oauthId: null,
           displayName: null,
           avatarUrl: null,
-          defaultWorkspaceId: null,
+          defaultFamilyspaceId: null,
         },
       })
     })

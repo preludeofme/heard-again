@@ -20,7 +20,7 @@ export class SimpleIngestionService implements IngestionService {
     const job: IngestionJob = {
       id: uuidv4(),
       documentId,
-      workspaceId: document.workspaceId,
+      familyspaceId: document.familyspaceId,
       userId: 'system', // Would get from context
       type: IngestionJobType.DOCUMENT_PROCESSING,
       status: IngestionJobStatus.RUNNING,

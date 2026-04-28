@@ -1,12 +1,12 @@
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
-import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 import { validate, rules } from '@/lib/validation'
 export default apiHandler({
   // POST /api/billing/subscribe - Subscribe to a plan
   POST: async (req, res) => {
-    const user = await getAuthUserWithWorkspace(req, res)
-    await requireWorkspaceRole(user.id, user.workspaceId, 'OWNER')
+    const user = await getAuthUserWithFamilyspace(req, res)
+    await requireFamilyspaceRole(user.id, user.familyspaceId, 'OWNER')
 
     const { valid, errors } = validate(req.body, {
       planId: [rules.required],
@@ -28,9 +28,9 @@ export default apiHandler({
       throw Errors.notFound('Plan')
     }
 
-    // Check if workspace already has a subscription
+    // Check if familyspace already has a subscription
     const existingSubscription = await prisma.subscription.findUnique({
-      where: { workspaceId: user.workspaceId },
+      where: { familyspaceId: user.familyspaceId },
     })
 
     // For now, simulate Stripe integration
@@ -45,7 +45,7 @@ export default apiHandler({
       : new Date(now.getFullYear(), now.getMonth() + 1, now.getDate())
 
     const subscription = await prisma.subscription.upsert({
-      where: { workspaceId: user.workspaceId },
+      where: { familyspaceId: user.familyspaceId },
       update: {
         planId: plan.id,
         billingStatus: 'ACTIVE',
@@ -58,7 +58,7 @@ export default apiHandler({
         lastBillingResetAt: now,
       },
       create: {
-        workspaceId: user.workspaceId,
+        familyspaceId: user.familyspaceId,
         planId: plan.id,
         billingStatus: 'ACTIVE',
         stripeSubscriptionId: mockStripeSubscriptionId,
@@ -70,9 +70,9 @@ export default apiHandler({
       },
     })
 
-    // Update workspace entitlements from plan
-    await prisma.workspace.update({
-      where: { id: user.workspaceId },
+    // Update familyspace entitlements from plan
+    await prisma.familyspace.update({
+      where: { id: user.familyspaceId },
       data: {
         planType: plan.planType,
         tunnelEnabled: plan.tunnelEnabled,

@@ -13,7 +13,7 @@ export interface IngestionService {
 export interface IngestionJob {
   id: string
   documentId: string
-  workspaceId: string
+  familyspaceId: string
   userId: string
   type: IngestionJobType
   status: IngestionJobStatus

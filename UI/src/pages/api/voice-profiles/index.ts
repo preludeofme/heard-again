@@ -20,7 +20,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const person = await prisma.person.findFirst({
       where: {
         id: personId,
-        workspace: {
+        familyspace: {
           members: {
             some: {
               userId: session.user.id,
@@ -38,7 +38,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const voiceProfiles = await prisma.voiceProfile.findMany({
         where: {
           personId,
-          workspaceId: person.workspaceId,
+          familyspaceId: person.familyspaceId,
         },
         select: {
           id: true,

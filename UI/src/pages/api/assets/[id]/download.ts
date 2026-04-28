@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { errorResponse } from '@/lib/api-helpers'
-import { getAuthUserWithWorkspace } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace } from '@/lib/auth-helpers'
 import { withRateLimit } from '@/lib/security/rate-limiter'
 import { withSecurityHeaders } from '@/lib/security/security-headers'
 import { logger } from '@/lib/logger'
@@ -35,7 +35,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 
   try {
-    const user = await getAuthUserWithWorkspace(req, res)
+    const user = await getAuthUserWithFamilyspace(req, res)
     const assetId = req.query.id as string
 
     if (!assetId || typeof assetId !== 'string') {
@@ -43,10 +43,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     }
 
     const asset = await prisma.asset.findFirst({
-      where: { id: assetId, workspaceId: user.workspaceId },
+      where: { id: assetId, familyspaceId: user.familyspaceId },
       select: {
         id: true,
-        workspaceId: true,
+        familyspaceId: true,
         mimeType: true,
         originalName: true,
         storagePath: true,
@@ -58,13 +58,13 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       return errorResponse(res, 'Asset not found', 404)
     }
 
-    // Defense-in-depth: the workspace filter above already enforces tenant isolation,
-    // but log+reject any row that somehow leaks across workspaces.
-    if (asset.workspaceId !== user.workspaceId) {
+    // Defense-in-depth: the familyspace filter above already enforces tenant isolation,
+    // but log+reject any row that somehow leaks across familyspaces.
+    if (asset.familyspaceId !== user.familyspaceId) {
       logger.error('Tenant isolation violation attempt on asset download', {
         assetId: asset.id,
-        assetWorkspaceId: asset.workspaceId,
-        userWorkspaceId: user.workspaceId,
+        assetFamilyspaceId: asset.familyspaceId,
+        userFamilyspaceId: user.familyspaceId,
         userId: user.id,
       })
       return errorResponse(res, 'Asset not found', 404)
@@ -115,7 +115,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     logger.info('Asset download served', {
       assetId: asset.id,
-      workspaceId: asset.workspaceId,
+      familyspaceId: asset.familyspaceId,
       userId: user.id,
       mimeType: asset.mimeType,
       sizeBytes: stat.size,

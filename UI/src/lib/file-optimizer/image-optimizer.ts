@@ -18,7 +18,7 @@ export class ImageOptimizer {
     options: OptimizationOptions = {}
   ): Promise<OptimizationResult> {
     const originalSize = file.length
-    const quality = options.quality || 80
+    const quality = options.quality || 75
     const maxWidth = options.maxWidth || 2048
     const maxHeight = options.maxHeight || 2048
 
@@ -54,7 +54,10 @@ export class ImageOptimizer {
             .jpeg({ 
               quality, 
               progressive: true,
-              mozjpeg: true // Better compression
+              mozjpeg: true, // TinyPNG-like JPEG optimization
+              trellisQuantisation: true,
+              overshootDeringing: true,
+              optimiseScans: true
             })
             .toBuffer()
           break
@@ -62,10 +65,11 @@ export class ImageOptimizer {
         case 'image/png':
           optimizedBuffer = await sharpInstance
             .png({ 
-              quality,
               progressive: true,
               compressionLevel: 9,
-              palette: metadata.hasAlpha ? true : false // Use palette for images with transparency
+              palette: true, // TinyPNG-like PNG optimization (uses 8-bit palette)
+              colors: 256,
+              quality: quality + 5 // PNG quality is a bit different, nudge it up
             })
             .toBuffer()
           break
@@ -74,7 +78,9 @@ export class ImageOptimizer {
           optimizedBuffer = await sharpInstance
             .webp({ 
               quality,
-              effort: 6 // Higher effort = better compression
+              effort: 6, // Higher effort = better compression
+              lossless: false,
+              smartSubsample: true
             })
             .toBuffer()
           break
@@ -82,24 +88,27 @@ export class ImageOptimizer {
         case 'image/tiff':
           // Convert TIFF to JPEG for better compression
           optimizedBuffer = await sharpInstance
-            .jpeg({ quality, progressive: true })
+            .jpeg({ 
+              quality, 
+              progressive: true,
+              mozjpeg: true
+            })
             .toBuffer()
           outputFormat = 'image/jpeg'
           optimizationMethod = 'sharp-tiff-to-jpeg'
           break
 
         case 'image/gif':
-          // For GIFs, we might want to keep them as-is or convert to WebP
-          // Check for animated GIF using pages property (sharp uses 'pages' not 'pageCount')
+          // For GIFs, we primarily convert static ones to WebP
           const pages = (metadata as any).pages || (metadata as any).pageCount
           if (pages && pages > 1) {
-            // Animated GIF - keep original
+            // Animated GIF - keep original for now as sharp animation support varies
             optimizedBuffer = file
             optimizationMethod = 'none'
           } else {
-            // Static GIF - convert to WebP
+            // Static GIF - convert to WebP (much smaller)
             optimizedBuffer = await sharpInstance
-              .webp({ quality })
+              .webp({ quality, effort: 6 })
               .toBuffer()
             outputFormat = 'image/webp'
             optimizationMethod = 'sharp-gif-to-webp'

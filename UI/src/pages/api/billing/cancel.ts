@@ -1,14 +1,14 @@
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
-import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 export default apiHandler({
   // POST /api/billing/cancel - Cancel subscription
   POST: async (req, res) => {
-    const user = await getAuthUserWithWorkspace(req, res)
-    await requireWorkspaceRole(user.id, user.workspaceId, 'OWNER')
+    const user = await getAuthUserWithFamilyspace(req, res)
+    await requireFamilyspaceRole(user.id, user.familyspaceId, 'OWNER')
 
     const subscription = await prisma.subscription.findUnique({
-      where: { workspaceId: user.workspaceId },
+      where: { familyspaceId: user.familyspaceId },
       include: { plan: true },
     })
 
@@ -35,7 +35,7 @@ export default apiHandler({
       },
     })
 
-    // Downgrade workspace to free plan
+    // Downgrade familyspace to free plan
     const freePlan = await prisma.plan.findFirst({
       where: { planType: 'FREE', isActive: true },
     })
@@ -52,8 +52,8 @@ export default apiHandler({
         },
       })
 
-      await prisma.workspace.update({
-        where: { id: user.workspaceId },
+      await prisma.familyspace.update({
+        where: { id: user.familyspaceId },
         data: {
           planType: 'FREE',
           tunnelEnabled: false,
@@ -70,7 +70,7 @@ export default apiHandler({
         billingStatus: 'CANCELLED',
         cancelledAt: updatedSubscription.cancelledAt,
       },
-      message: 'Subscription cancelled successfully. Your workspace has been downgraded to the free plan.',
+      message: 'Subscription cancelled successfully. Your familyspace has been downgraded to the free plan.',
     })
   },
 })

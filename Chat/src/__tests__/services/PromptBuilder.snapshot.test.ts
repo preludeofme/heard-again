@@ -9,7 +9,7 @@ const FIXED_DATE = new Date('2026-04-01T00:00:00.000Z')
 const STABLE_PERSONA: PersonaProfile = {
   id: 'persona-fixed',
   personId: 'person-fixed',
-  workspaceId: 'workspace-fixed',
+  familyspaceId: 'familyspace-fixed',
   version: 1,
   status: 'active',
   systemPrompt: 'You are Eleanor, a piano teacher who raised three children.',

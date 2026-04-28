@@ -1,12 +1,12 @@
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
-import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 
 export default apiHandler({
   // GET /api/family-merge/proposals/[id] - Get a specific merge proposal
   GET: async (req, res) => {
-    const user = await getAuthUserWithWorkspace(req, res)
-    await requireWorkspaceRole(user.id, user.workspaceId, 'ADMIN')
+    const user = await getAuthUserWithFamilyspace(req, res)
+    await requireFamilyspaceRole(user.id, user.familyspaceId, 'ADMIN')
     
     const { id } = req.query
     
@@ -14,15 +14,15 @@ export default apiHandler({
       where: {
         id: id as string,
         OR: [
-          { targetWorkspaceId: user.workspaceId },
-          { sourceWorkspaceId: user.workspaceId }
+          { targetFamilyspaceId: user.familyspaceId },
+          { sourceFamilyspaceId: user.familyspaceId }
         ]
       },
       include: {
-        targetWorkspace: {
+        targetFamilyspace: {
           select: { id: true, name: true, slug: true }
         },
-        sourceWorkspace: {
+        sourceFamilyspace: {
           select: { id: true, name: true, slug: true }
         },
         proposedBy: {
@@ -65,8 +65,8 @@ export default apiHandler({
 
   // PATCH /api/family-merge/proposals/[id] - Update proposal status or matches
   PATCH: async (req, res) => {
-    const user = await getAuthUserWithWorkspace(req, res)
-    await requireWorkspaceRole(user.id, user.workspaceId, 'ADMIN')
+    const user = await getAuthUserWithFamilyspace(req, res)
+    await requireFamilyspaceRole(user.id, user.familyspaceId, 'ADMIN')
     
     const { id } = req.query
     const { status, matchUpdates } = req.body
@@ -75,8 +75,8 @@ export default apiHandler({
       where: {
         id: id as string,
         OR: [
-          { targetWorkspaceId: user.workspaceId },
-          { sourceWorkspaceId: user.workspaceId }
+          { targetFamilyspaceId: user.familyspaceId },
+          { sourceFamilyspaceId: user.familyspaceId }
         ]
       }
     })
@@ -124,10 +124,10 @@ export default apiHandler({
     const updatedProposal = await prisma.familyMergeProposal.findUnique({
       where: { id: id as string },
       include: {
-        targetWorkspace: {
+        targetFamilyspace: {
           select: { id: true, name: true, slug: true }
         },
-        sourceWorkspace: {
+        sourceFamilyspace: {
           select: { id: true, name: true, slug: true }
         },
         proposedBy: {
@@ -163,8 +163,8 @@ export default apiHandler({
 
   // DELETE /api/family-merge/proposals/[id] - Delete a proposal
   DELETE: async (req, res) => {
-    const user = await getAuthUserWithWorkspace(req, res)
-    await requireWorkspaceRole(user.id, user.workspaceId, 'ADMIN')
+    const user = await getAuthUserWithFamilyspace(req, res)
+    await requireFamilyspaceRole(user.id, user.familyspaceId, 'ADMIN')
     
     const { id } = req.query
     
@@ -172,8 +172,8 @@ export default apiHandler({
       where: {
         id: id as string,
         OR: [
-          { targetWorkspaceId: user.workspaceId },
-          { sourceWorkspaceId: user.workspaceId }
+          { targetFamilyspaceId: user.familyspaceId },
+          { sourceFamilyspaceId: user.familyspaceId }
         ]
       }
     })
@@ -182,9 +182,9 @@ export default apiHandler({
       throw Errors.notFound('FamilyMergeProposal')
     }
     
-    // Only allow deletion by proposal creator or target workspace owner
-    if (proposal.proposedById !== user.id && proposal.targetWorkspaceId !== user.workspaceId) {
-      throw Errors.forbidden('Only the proposal creator or target workspace admin can delete this proposal')
+    // Only allow deletion by proposal creator or target familyspace owner
+    if (proposal.proposedById !== user.id && proposal.targetFamilyspaceId !== user.familyspaceId) {
+      throw Errors.forbidden('Only the proposal creator or target familyspace admin can delete this proposal')
     }
     
     // Cannot delete already merged proposals

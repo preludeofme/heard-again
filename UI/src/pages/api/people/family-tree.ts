@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
-import { getAuthUserWithWorkspace } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace } from '@/lib/auth-helpers'
 
 interface RelationshipEdge {
   id: string
@@ -34,11 +34,11 @@ interface PersonWithRelationships {
 export default apiHandler({
   // GET /api/people/family-tree - Get all people with relationships for family tree
   GET: async (req, res) => {
-    const user = await getAuthUserWithWorkspace(req, res)
+    const user = await getAuthUserWithFamilyspace(req, res)
 
-    // Get all people in workspace with minimal fields
+    // Get all people in familyspace with minimal fields
     const people = await prisma.person.findMany({
-      where: { workspaceId: user.workspaceId },
+      where: { familyspaceId: user.familyspaceId },
       select: {
         id: true,
         firstName: true,
@@ -50,6 +50,7 @@ export default apiHandler({
         deathDate: true,
         personType: true,
         bio: true,
+        sex: true,
       },
       orderBy: [
         { birthDate: 'asc' },
@@ -61,7 +62,7 @@ export default apiHandler({
     // Get all family units for these people in one query
     const familyUnits = await prisma.familyUnit.findMany({
       where: {
-        workspaceId: user.workspaceId,
+        familyspaceId: user.familyspaceId,
         OR: [
           { parents: { some: { parentId: { in: people.map((p: any) => p.id) } } } },
           { children: { some: { childId: { in: people.map((p: any) => p.id) } } } },

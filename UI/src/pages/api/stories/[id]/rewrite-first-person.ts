@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
-import { getAuthUserWithWorkspace, requireWorkspaceRole } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 import { logger } from '@/lib/logger'
 
 const CHAT_SERVICE_URL =
@@ -19,12 +19,12 @@ export default apiHandler({
         .json({ success: false, error: 'Narration rewrite is not enabled' })
     }
 
-    const user = await getAuthUserWithWorkspace(req, res)
+    const user = await getAuthUserWithFamilyspace(req, res)
     const storyId = req.query.id as string
-    await requireWorkspaceRole(user.id, user.workspaceId, 'EDITOR')
+    await requireFamilyspaceRole(user.id, user.familyspaceId, 'EDITOR')
 
     const story = await prisma.story.findFirst({
-      where: { id: storyId, workspaceId: user.workspaceId },
+      where: { id: storyId, familyspaceId: user.familyspaceId },
       include: {
         subject: { select: { firstName: true, lastName: true, nickname: true } },
         speaker: { select: { firstName: true, lastName: true, nickname: true } },
@@ -55,6 +55,13 @@ export default apiHandler({
     const subjectName = formatPersonName(story.subject)
     const speakerName = formatPersonName(story.speaker)
 
+    // Ensure we only send the text content, stripping media and HTML/Markdown formatting
+    const cleanContent = stripMediaAndFormatting(story.content)
+
+    if (cleanContent.length === 0) {
+      throw Errors.badRequest('Story has no readable text content to rewrite')
+    }
+
     try {
       logger.info('[narration] calling rewrite service', { url: `${CHAT_SERVICE_URL}/api/rewrite/first-person`, storyId })
       
@@ -63,11 +70,11 @@ export default apiHandler({
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${secret}`,
-          'x-workspace-id': user.workspaceId,
+          'x-familyspace-id': user.familyspaceId,
           'x-user-id': user.id,
         },
         body: JSON.stringify({
-          content: story.content,
+          content: cleanContent,
           subjectName,
           speakerName,
         }),
@@ -150,4 +157,31 @@ function formatPersonName(
   if (!person) return undefined
   if (person.nickname) return person.nickname
   return `${person.firstName}${person.lastName ? ' ' + person.lastName : ''}`
+}
+
+/**
+ * Strips HTML tags, Markdown images, and normalizes whitespace
+ * to ensure only readable text is sent to the LLM.
+ */
+function stripMediaAndFormatting(content: string): string {
+  if (!content) return ''
+  
+  // 1. Decode entities first in case tags are escaped (e.g. &lt;p&gt;)
+  let text = content
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+
+  // 2. Remove Markdown images: ![alt](url)
+  text = text.replace(/!\[.*?\]\(.*?\)/g, '')
+  
+  // 3. Remove HTML tags (including those that span multiple lines 
+  // or are unclosed at the end of the string)
+  text = text.replace(/<[\s\S]*?(?:>|$)/g, ' ')
+  
+  // 4. Final normalization of whitespace
+  return text.replace(/\s+/g, ' ').trim()
 }

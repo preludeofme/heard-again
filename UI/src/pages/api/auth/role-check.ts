@@ -19,17 +19,17 @@ export default async function handler(
       return res.status(401).json({ error: 'Unauthorized' })
     }
 
-    const { workspace_id } = req.query
+    const { familyspace_id } = req.query
     
-    if (!workspace_id || typeof workspace_id !== 'string') {
-      return res.status(400).json({ error: 'workspace_id is required' })
+    if (!familyspace_id || typeof familyspace_id !== 'string') {
+      return res.status(400).json({ error: 'familyspace_id is required' })
     }
 
-    // Check if user is member of the workspace
+    // Check if user is member of the familyspace
     const membership = await prisma.membership.findUnique({
       where: {
-        workspaceId_userId: {
-          workspaceId: workspace_id,
+        familyspaceId_userId: {
+          familyspaceId: familyspace_id,
           userId: session.user.id
         }
       },
@@ -39,14 +39,14 @@ export default async function handler(
     })
 
     if (!membership) {
-      return res.status(403).json({ error: 'Not a member of this workspace' })
+      return res.status(403).json({ error: 'Not a member of this familyspace' })
     }
 
-    // Return the user's role in the workspace
+    // Return the user's role in the familyspace
     return res.status(200).json({
       role: membership.role,
       userId: session.user.id,
-      workspaceId: workspace_id
+      familyspaceId: familyspace_id
     })
 
   } catch (error) {

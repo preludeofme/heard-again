@@ -9,6 +9,8 @@ import {
 import {
   ArrowBack, Favorite, FavoriteBorder,
   Edit, Schedule, Send, Person, Comment as CommentIcon,
+  Share, ShareOutlined,
+  Mic, AutoStories, AudioFile,
 } from '@mui/icons-material'
 import { formatDistanceToNow, format } from 'date-fns'
 import { NarrationPreparationBanner } from '@/components/stories/NarrationPreparationBanner'
@@ -34,6 +36,8 @@ interface StoryDetail {
   storyType: string
   status: string
   isPinned: boolean
+  isPublic: boolean
+  authorRelationship?: string | null
   storyDate?: string
   tags: string[]
   subject?: { id: string; firstName: string; lastName?: string; nickname?: string }
@@ -297,6 +301,33 @@ export default function StoryDetailPage() {
             <IconButton onClick={handleToggleFavorite} sx={{ color: isFavorited ? '#e53935' : '#546669' }}>
               {isFavorited ? <Favorite /> : <FavoriteBorder />}
             </IconButton>
+            <IconButton
+              onClick={async () => {
+                try {
+                  const newIsPublic = !story.isPublic
+                  await fetch(`/api/stories/${story.id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ isPublic: newIsPublic }),
+                  })
+                  setStory({ ...story, isPublic: newIsPublic })
+                  if (newIsPublic) {
+                    const shareUrl = `${window.location.origin}/stories/${story.id}`
+                    await navigator.clipboard.writeText(shareUrl)
+                    alert('Story is now public! Anyone with the link can view this story. Link copied to clipboard.')
+                  } else {
+                    alert('Story is now private.')
+                  }
+                } catch (err) {
+                  console.error('Failed to update sharing:', err)
+                }
+              }}
+              sx={{ color: story.isPublic ? '#2e7d32' : '#546669' }}
+              title={story.isPublic ? 'Publicly Shared' : 'Private Story'}
+            >
+              {story.isPublic ? <Share /> : <ShareOutlined />}
+            </IconButton>
             <IconButton onClick={() => router.push(`/stories/${story.id}/edit`)} sx={{ color: '#546669' }}>
               <Edit />
             </IconButton>
@@ -342,6 +373,7 @@ export default function StoryDetailPage() {
                   <Person sx={{ fontSize: 16, color: '#546669' }} />
                   <Typography variant="caption" sx={{ color: '#546669' }}>
                     About {personName(story.subject)}
+                    {story.authorRelationship && ` (${story.authorRelationship})`}
                   </Typography>
                 </Box>
               )}
@@ -476,19 +508,69 @@ export default function StoryDetailPage() {
               )}
             </Box>
 
+            {/* Versions Bar */}
+            <Box sx={{ display: 'flex', gap: 2, mb: 4, flexWrap: 'wrap' }}>
+              {story.storyType === 'RECORDING' && (
+                <Chip
+                  icon={<Mic sx={{ fontSize: '18px !important' }} />}
+                  label="Raw Audio"
+                  variant="outlined"
+                  size="small"
+                  sx={{ borderColor: '#d0e3e6', color: '#16334a' }}
+                />
+              )}
+              <Chip
+                icon={<AutoStories sx={{ fontSize: '18px !important' }} />}
+                label="Transcript"
+                variant="outlined"
+                size="small"
+                sx={{ borderColor: '#d0e3e6', color: '#16334a' }}
+              />
+              {story.narrationStatus === 'APPROVED' && (
+                <Chip
+                  icon={<AudioFile sx={{ fontSize: '18px !important' }} />}
+                  label="AI Narration"
+                  variant="outlined"
+                  size="small"
+                  sx={{ borderColor: '#d0e3e6', color: '#16334a' }}
+                />
+              )}
+            </Box>
+
             {/* Story Content */}
-            <Typography
-              variant="body1"
+            <Box
+              className="story-content"
+              dangerouslySetInnerHTML={{ __html: story.content }}
               sx={{
                 color: '#333',
                 lineHeight: 1.9,
                 fontSize: '1.15rem',
-                whiteSpace: 'pre-wrap',
                 mb: 6,
+                '& p': { mb: 2 },
+                '& img': {
+                  maxWidth: '100%',
+                  height: 'auto',
+                  borderRadius: 3,
+                  my: 3,
+                  display: 'block',
+                  boxShadow: 2,
+                },
+                '& blockquote': {
+                  borderLeft: '4px solid #d0e3e6',
+                  pl: 3,
+                  py: 1,
+                  my: 3,
+                  fontStyle: 'italic',
+                  color: '#546669',
+                  bgcolor: '#f6f3ee',
+                  borderRadius: '0 12px 12px 0',
+                },
+                '& ul, & ol': {
+                  pl: 4,
+                  mb: 2,
+                },
               }}
-            >
-              {story.content}
-            </Typography>
+            />
 
             {/* Attached Assets */}
             {story.assets.length > 0 && (

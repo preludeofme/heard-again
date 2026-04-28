@@ -4,7 +4,7 @@ import { logger } from '@/lib/logger'
 
 interface UrlRequest {
   assetId: string
-  workspaceId: string
+  familyspaceId: string
   userId: string
   ipAddress: string
   userAgent: string
@@ -19,18 +19,18 @@ interface SignedUrlResponse {
 export async function generateSecureAssetUrl(
   request: UrlRequest
 ): Promise<SignedUrlResponse | null> {
-  // Verify asset belongs to workspace
+  // Verify asset belongs to familyspace
   const asset = await prisma.asset.findFirst({
     where: {
       id: request.assetId,
-      workspaceId: request.workspaceId,
+      familyspaceId: request.familyspaceId,
     },
   })
   
   if (!asset) {
     logger.warn({
       assetId: request.assetId,
-      workspaceId: request.workspaceId,
+      familyspaceId: request.familyspaceId,
       userId: request.userId,
       ipAddress: request.ipAddress,
     }, 'Attempted access to non-existent or unauthorized asset')
@@ -61,7 +61,7 @@ export async function generateSecureAssetUrl(
     audit: true,
     action: 'asset.access',
     assetId: request.assetId,
-    workspaceId: request.workspaceId,
+    familyspaceId: request.familyspaceId,
     userId: request.userId,
     requestId,
     ipAddress: request.ipAddress,

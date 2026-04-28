@@ -69,10 +69,10 @@ export class IngestionWorker {
   }
 
   private async processJob(job: any): Promise<any> {
-    const { documentId, filePath, workspaceId, mimeType, title, personId, config, traceId } = job.data
+    const { documentId, filePath, familyspaceId, mimeType, title, personId, config, traceId } = job.data
     const startMs = Date.now()
 
-    logger.info({ jobId: job.id, documentId, workspaceId, mimeType, title, traceId }, 'RAG ingestion job started')
+    logger.info({ jobId: job.id, documentId, familyspaceId, mimeType, title, traceId }, 'RAG ingestion job started')
 
     try {
       // Step 1: Extract text
@@ -155,7 +155,7 @@ export class IngestionWorker {
 
       await this.storeDocument({
         id: documentId,
-        workspaceId,
+        familyspaceId,
         title: sanitizedTitle,
         content: textResult.text,
         mimeType,
@@ -322,7 +322,7 @@ export class IngestionWorker {
       // so that document embeddings match the query embeddings in RetrievalService.
       // We pass text (documents) instead of raw Ollama embeddings — the client
       // generates consistent embeddings using the same model as retrieval queries.
-      const collectionName = `workspace_${documentData.workspaceId}_documents`
+      const collectionName = `familyspace_${documentData.familyspaceId}_documents`
       const chromaClient = new ChromaClient({ path: chromaUrl })
       const embedder = new DefaultEmbeddingFunction()
 
@@ -336,7 +336,7 @@ export class IngestionWorker {
       const documents = documentData.chunks.map((c: any) => c.content)
       const metadatas = documentData.chunks.map((c: any, i: number) => ({
         documentId: documentData.id,
-        workspaceId: documentData.workspaceId,
+        familyspaceId: documentData.familyspaceId,
         title: documentData.title,
         mimeType: documentData.mimeType,
         personId: documentData.personId || '',
@@ -355,7 +355,7 @@ export class IngestionWorker {
         metadatas,
       })
 
-      logger.info({ documentId: documentData.id, workspaceId: documentData.workspaceId, chunkCount: documentData.chunks.length }, 'Chunks upserted to ChromaDB via client (DefaultEmbeddingFunction)')
+      logger.info({ documentId: documentData.id, familyspaceId: documentData.familyspaceId, chunkCount: documentData.chunks.length }, 'Chunks upserted to ChromaDB via client (DefaultEmbeddingFunction)')
     } catch (error) {
       logger.error({ documentId: documentData.id, err: error instanceof Error ? error.message : String(error) }, 'Failed to store document in Postgres/Chroma')
       throw error

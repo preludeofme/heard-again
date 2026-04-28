@@ -24,32 +24,32 @@ export default apiHandler({
       throw Errors.badRequest('Validation failed', errors)
     }
 
-    // Get user's default workspace
-    const userWithWorkspace = await prisma.user.findUnique({
+    // Get user's default familyspace
+    const userWithFamilyspace = await prisma.user.findUnique({
       where: { id: user.id },
       include: {
-        defaultWorkspace: true,
+        defaultFamilyspace: true,
       },
     })
 
-    if (!userWithWorkspace?.defaultWorkspace) {
-      throw Errors.notFound('No workspace found for user')
+    if (!userWithFamilyspace?.defaultFamilyspace) {
+      throw Errors.notFound('No familyspace found for user')
     }
 
-    const workspace = userWithWorkspace.defaultWorkspace
+    const familyspace = userWithFamilyspace.defaultFamilyspace
 
     // Use transaction to ensure all operations succeed or fail together
     const result = await prisma.$transaction(async (tx) => {
-      // Update workspace with family name
-      const updatedWorkspace = await tx.workspace.update({
-        where: { id: workspace.id },
+      // Update familyspace with family name
+      const updatedFamilyspace = await tx.familyspace.update({
+        where: { id: familyspace.id },
         data: { name: familyName },
       })
 
       // Create person record for the user
       const person = await tx.person.create({
         data: {
-          workspaceId: workspace.id,
+          familyspaceId: familyspace.id,
           firstName: firstName,
           lastName: lastName || null,
           displayName: `${firstName} ${lastName || ''}`.trim(),
@@ -62,7 +62,7 @@ export default apiHandler({
       // This allows children, parents, or any family role to sign up without
       // incorrect assumptions about their position in the family structure
 
-      return { updatedWorkspace, person }
+      return { updatedFamilyspace, person }
     })
 
     // Update user display name outside transaction (optional field)
@@ -77,8 +77,8 @@ export default apiHandler({
 
     return successResponse(res, {
       message: 'Onboarding completed successfully',
-      workspace: {
-        id: result.updatedWorkspace.id,
+      familyspace: {
+        id: result.updatedFamilyspace.id,
         name: familyName,
       },
       person: {

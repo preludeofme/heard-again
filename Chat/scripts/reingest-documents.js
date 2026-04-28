@@ -1,5 +1,5 @@
 /**
- * Re-ingestion script: Re-queues all documents for a workspace through the fixed ingestion pipeline.
+ * Re-ingestion script: Re-queues all documents for a familyspace through the fixed ingestion pipeline.
  * Run this AFTER cleanup-test-docs.js and AFTER starting the ingestion worker.
  * 
  * Usage: node scripts/reingest-documents.js
@@ -13,7 +13,7 @@ const { PrismaClient } = require('@prisma/client');
 const { Queue } = require('bullmq');
 const { v4: uuidv4 } = require('uuid');
 
-const WORKSPACE_ID = process.env.WORKSPACE_ID || '931638b2-8341-41fc-a064-0883a9911d54';
+const FAMILYSPACE_ID = process.env.FAMILYSPACE_ID || '931638b2-8341-41fc-a064-0883a9911d54';
 
 const redisConfig = {
   host: process.env.REDIS_HOST || 'localhost',
@@ -25,13 +25,13 @@ async function reingest() {
   const prisma = new PrismaClient();
 
   try {
-    // 1. Find all documents for this workspace
+    // 1. Find all documents for this familyspace
     const documents = await prisma.document.findMany({
-      where: { workspaceId: WORKSPACE_ID },
+      where: { familyspaceId: FAMILYSPACE_ID },
       orderBy: { createdAt: 'asc' },
     });
 
-    console.log(`Found ${documents.length} documents in workspace ${WORKSPACE_ID}\n`);
+    console.log(`Found ${documents.length} documents in familyspace ${FAMILYSPACE_ID}\n`);
 
     if (documents.length === 0) {
       console.log('No documents to re-ingest. Upload documents through the UI first.');
@@ -46,7 +46,7 @@ async function reingest() {
     // 3. Check if temp files still exist, and find asset storage paths
     const fs = require('fs');
     const path = require('path');
-    const tempDir = path.join(process.cwd(), 'temp-ingestion', WORKSPACE_ID);
+    const tempDir = path.join(process.cwd(), 'temp-ingestion', FAMILYSPACE_ID);
 
     // 4. Create ingestion queue
     const queue = new Queue('document-ingestion', {
@@ -132,7 +132,7 @@ async function reingest() {
         documentId: doc.id,
         filePath,
         mimeType,
-        workspaceId: WORKSPACE_ID,
+        familyspaceId: FAMILYSPACE_ID,
         title: doc.title,
         personId: doc.personId || null,
         traceId,

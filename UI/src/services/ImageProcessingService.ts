@@ -124,7 +124,7 @@ export class ImageProcessingService {
    * Creates optimized versions for different use cases
    */
   async processImageUpload(
-    workspaceId: string,
+    familyspaceId: string,
     fileId: string,
     originalBuffer: Buffer,
     filename: string,
@@ -141,7 +141,7 @@ export class ImageProcessingService {
     } = { original: { path: '', url: '', width: 0, height: 0, format: '', sizeBytes: 0, originalSizeBytes: 0, savingsPercent: 0 } }
 
     // Store original
-    const originalStored = await this.storage.saveFile(workspaceId, fileId, originalBuffer, {
+    const originalStored = await this.storage.saveFile(familyspaceId, fileId, originalBuffer, {
       mimeType,
       filename,
       assetType: 'IMAGE',
@@ -171,7 +171,7 @@ export class ImageProcessingService {
       })
       
       const thumbnailStored = await this.storage.saveFile(
-        workspaceId,
+        familyspaceId,
         `${fileId}_thumb`,
         thumbnailBuffer,
         { mimeType: 'image/webp', filename: `thumb_${filename}.webp`, assetType: 'IMAGE' }
@@ -202,7 +202,7 @@ export class ImageProcessingService {
       })
       
       const previewStored = await this.storage.saveFile(
-        workspaceId,
+        familyspaceId,
         `${fileId}_preview`,
         previewBuffer,
         { mimeType: 'image/webp', filename: `preview_${filename}.webp`, assetType: 'IMAGE' }

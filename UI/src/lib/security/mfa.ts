@@ -11,7 +11,7 @@ import speakeasy from 'speakeasy'
 export const SENSITIVE_OPERATIONS = {
   VOICE_TRAINING: 'voice_training',
   BULK_EXPORT: 'bulk_export',
-  WORKSPACE_DELETION: 'workspace_deletion',
+  FAMILYSPACE_DELETION: 'familyspace_deletion',
   USER_DELETION: 'user_deletion',
   ADMIN_ACTIONS: 'admin_actions',
 } as const

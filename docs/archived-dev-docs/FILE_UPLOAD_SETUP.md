@@ -149,15 +149,15 @@ await storageService.deleteFile(result.storagePath)
 
 ## File Organization
 
-Files are organized by workspace:
+Files are organized by familyspace:
 
 ```
 uploads/
-├── workspace-123/
+├── familyspace-123/
 │   ├── image-1234567890-abc123.jpg
 │   ├── document-1234567891-def456.pdf
 │   └── audio-1234567892-ghi789.mp3
-└── workspace-456/
+└── familyspace-456/
     └── video-1234567893-jkl012.mp4
 ```
 
@@ -172,7 +172,7 @@ uploads/
 
 1. **File Size Limits**: Default 100MB per file
 2. **File Type Validation**: Server-side MIME type checking
-3. **Access Control**: Workspace-based permissions
+3. **Access Control**: Familyspace-based permissions
 4. **Private Storage**: Configure bucket permissions appropriately
 
 ## Production Deployment
