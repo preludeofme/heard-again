@@ -241,7 +241,13 @@ export function apiHandler(handlers: RouteHandlers, options: ApiHandlerOptions =
     } catch (error: unknown) {
       const duration = Date.now() - startTime
       const err = error instanceof Error ? error : new Error(String(error))
-      logger.error(`[API ERROR] ${endpoint} (${duration}ms):`, err.message)
+      
+      // Log extra details if it's an AppError (like validation failures)
+      if (error instanceof AppError && error.details) {
+        logger.error(`[API ERROR] ${endpoint} (${duration}ms): ${err.message}`, { details: error.details })
+      } else {
+        logger.error(`[API ERROR] ${endpoint} (${duration}ms):`, err.message)
+      }
 
       if (error instanceof AppError) {
         return errorResponse(res, error.message, error.statusCode, error.code, error.details)

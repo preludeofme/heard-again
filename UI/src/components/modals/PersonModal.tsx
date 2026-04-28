@@ -6,7 +6,7 @@ import {
 } from '@mui/material'
 import {
   Close, Edit, Save, Delete, Person, CalendarToday, Tag,
-  Mic, AutoStories, FamilyRestroom, Cancel,
+  Mic, AutoStories, FamilyRestroom, Cancel, OpenInNew,
 } from '@mui/icons-material'
 import { format } from 'date-fns'
 import { fetchWithCSRFAndJSON, fetchWithCSRF } from '@/lib/api-client'
@@ -66,6 +66,7 @@ interface PersonModalProps {
   onClose: () => void
   onSave?: (person: PersonData) => void
   onDelete?: (personId: string) => void
+  onViewFullProfile?: (personId: string) => void
 }
 
 const PERSON_TYPES = [
@@ -87,7 +88,7 @@ const RELATIONSHIP_KINDS = [
   { value: 'STEP', label: 'Step' },
 ]
 
-export function PersonModal({ open, personId, initialTab = 'overview', onClose, onSave, onDelete }: PersonModalProps) {
+export function PersonModal({ open, personId, initialTab = 'overview', onClose, onSave, onDelete, onViewFullProfile }: PersonModalProps) {
   const [person, setPerson] = useState<PersonData | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -296,7 +297,7 @@ export function PersonModal({ open, personId, initialTab = 'overview', onClose, 
                   {person.displayName}
                 </Typography>
               )}
-              <Box sx={{ display: 'flex', gap: 1, mt: 1, flexWrap: 'wrap' }}>
+              <Box sx={{ display: 'flex', gap: 1, mt: 1, flexWrap: 'wrap', alignItems: 'center' }}>
                 <Chip
                   size="small"
                   label={person.personType}
@@ -308,6 +309,16 @@ export function PersonModal({ open, personId, initialTab = 'overview', onClose, 
                     label="Deceased"
                     sx={{ backgroundColor: '#f6f3ee', color: '#666' }}
                   />
+                )}
+                {!isEditing && (
+                  <Button
+                    size="small"
+                    startIcon={<OpenInNew />}
+                    onClick={() => person && person.id && onViewFullProfile?.(person.id)}
+                    sx={{ textTransform: 'none', ml: 1, color: '#1a6b5a', fontWeight: 600 }}
+                  >
+                    View Full Profile
+                  </Button>
                 )}
               </Box>
             </Box>

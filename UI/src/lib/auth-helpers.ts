@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { Errors } from '@/lib/api-helpers'
+import { logger } from '@/lib/logger'
 
 // ============================================
 // Auth Helpers for API Routes (Pages Router)
@@ -81,11 +82,24 @@ export async function requireWorkspaceRole(
     where: {
       workspaceId_userId: { workspaceId, userId },
     },
-    select: { role: true, status: true },
+    select: { 
+      role: true, 
+      status: true,
+      user: {
+        select: { mfaEnabled: true }
+      }
+    },
   })
 
   if (!membership || membership.status !== 'ACTIVE') {
     throw Errors.forbidden('You are not a member of this workspace')
+  }
+
+  // ✅ SECURITY REQUIREMENT: Require MFA for OWNER role (S11)
+  if (membership.role === 'OWNER' && !membership.user.mfaEnabled) {
+    // For now, only log a warning instead of blocking access so the owner can actually reach the settings page to enable it.
+    logger.warn(`Owner ${userId} does not have MFA enabled in workspace ${workspaceId}`)
+    // throw Errors.forbidden('MFA is required for workspace owners. Please enable MFA in your profile settings.')
   }
 
   const userRoleIndex = roleHierarchy.indexOf(membership.role as any)

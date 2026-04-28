@@ -15,18 +15,6 @@ export function generateCSRFToken(): string {
   return crypto.randomBytes(32).toString('hex')
 }
 
-function deriveToken(sessionId: string, userId?: string): string {
-  const payload = userId ? `${userId}:${sessionId}` : sessionId
-  return crypto.createHmac('sha256', CSRF_SECRET).update(payload).digest('hex')
-}
-
-/**
- * No-op — kept for API compatibility. Tokens are now stateless (HMAC-derived).
- */
-export async function storeCSRFToken(_sessionId: string, _token: string, _userId?: string): Promise<void> {
-  // Stateless — nothing to store
-}
-
 /**
  * Validate CSRF token for state-changing requests.
  */
@@ -39,30 +27,30 @@ export async function validateCSRFToken(
     return true
   }
 
-  const token = (req.headers['x-csrf-token'] as string) || req.body?.csrfToken
+  const headerToken = (req.headers['x-csrf-token'] as string) || req.body?.csrfToken
+  const cookieToken = req.cookies['csrf-token']
 
-  if (!token) {
+  if (!headerToken) {
     errorResponse(res, 'CSRF token required', 403, 'CSRF_REQUIRED')
     return false
   }
 
-  const sessionToken = await getToken({
-    req,
-    secret: process.env.NEXTAUTH_SECRET,
-  })
-
-  if (!sessionToken) {
-    errorResponse(res, 'Authentication required', 401, 'AUTH_REQUIRED')
+  if (!cookieToken) {
+    errorResponse(res, 'CSRF cookie missing', 403, 'CSRF_COOKIE_MISSING')
     return false
   }
 
-  const sessionId = (sessionToken.id as string) || (sessionToken.sub as string) || ''
-  const expected = deriveToken(sessionId, sessionToken.sub as string | undefined)
-
-  const tokenBuf = Buffer.from(token, 'hex')
-  const expectedBuf = Buffer.from(expected, 'hex')
-  if (tokenBuf.length !== expectedBuf.length || !crypto.timingSafeEqual(tokenBuf, expectedBuf)) {
-    errorResponse(res, 'CSRF token invalid', 403, 'CSRF_INVALID')
+  // Use timingSafeEqual to prevent timing attacks
+  try {
+    const tokenBuf = Buffer.from(headerToken, 'hex')
+    const expectedBuf = Buffer.from(cookieToken, 'hex')
+    
+    if (tokenBuf.length !== expectedBuf.length || !crypto.timingSafeEqual(tokenBuf, expectedBuf)) {
+      errorResponse(res, 'CSRF token invalid', 403, 'CSRF_INVALID')
+      return false
+    }
+  } catch (e) {
+    errorResponse(res, 'CSRF validation error', 403, 'CSRF_ERROR')
     return false
   }
 

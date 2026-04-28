@@ -14,7 +14,7 @@ interface StoriesControllerState {
 interface CreateStoryInput {
   title: string
   content: string
-  storyType: 'MEMORY' | 'AUDIO_RECORDING'
+  storyType: 'MEMORY' | 'RECORDING'
   subjectId?: string
   storyDate?: string
   location?: string
@@ -46,6 +46,8 @@ interface StoryApiResponse {
   title?: string
   createdAt: string
   hasAudio?: boolean
+  audioUrl?: string
+  durationSeconds?: number
 }
 
 function mapStoryToContribution(s: StoryApiResponse): StoryContribution {
@@ -57,9 +59,11 @@ function mapStoryToContribution(s: StoryApiResponse): StoryContribution {
     content: s.excerpt || s.title || '',
     createdAt: new Date(s.createdAt),
     type: s.hasAudio ? 'audio' : 'text',
-    audioDurationSeconds: undefined,
+    audioUrl: s.audioUrl,
+    audioDurationSeconds: s.durationSeconds,
   }
 }
+
 
 const fetchStories = useCallback(async () => {
     setState(prev => ({ ...prev, isLoading: true, hasError: false, errorMessage: null }))
@@ -130,7 +134,7 @@ const fetchStories = useCallback(async () => {
         errorMessage: apiError.message,
       }))
     }
-  }, [fetchStories])
+  }, [fetchStories, subjectId])
 
   const refreshStories = useCallback(async () => {
     await fetchStories()
@@ -169,7 +173,8 @@ const fetchStories = useCallback(async () => {
         body: JSON.stringify({
           title: storyTitle,
           content: `Audio recording (${Math.round(duration)} seconds)`,
-          storyType: 'AUDIO_RECORDING',
+          storyType: 'RECORDING',
+          subjectId,
           assetIds: [assetId],
         }),
       })
@@ -191,7 +196,7 @@ const fetchStories = useCallback(async () => {
         errorMessage: apiError.message,
       }))
     }
-  }, [fetchStories])
+  }, [fetchStories, subjectId])
 
   return {
     ...state,

@@ -299,20 +299,43 @@ export function PersonDetailModal({
             </Avatar>
 
             <Box sx={{ flex: 1 }}>
-              <Typography
-                variant="h4"
-                sx={{
-                  fontFamily: 'var(--font-newsreader), serif',
-                  fontWeight: 600,
-                  mb: 0.5,
-                }}
-              >
-                {displayName}
-              </Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <Box>
+                  <Typography
+                    variant="h4"
+                    sx={{
+                      fontFamily: 'var(--font-newsreader), serif',
+                      fontWeight: 600,
+                      mb: 0.5,
+                    }}
+                  >
+                    {displayName}
+                  </Typography>
 
-              <Typography variant="body1" sx={{ opacity: 0.8, mb: 1 }}>
-                {getLifespanText()}
-              </Typography>
+                  <Typography variant="body1" sx={{ opacity: 0.8, mb: 1 }}>
+                    {getLifespanText()}
+                  </Typography>
+                </Box>
+                
+                <Button
+                  variant="contained"
+                  size="small"
+                  startIcon={<OpenInNewIcon />}
+                  onClick={() => person && person.id && onViewFullProfile?.(person.id)}
+                  sx={{
+                    backgroundColor: 'rgba(255,255,255,0.2)',
+                    backdropFilter: 'blur(4px)',
+                    color: 'white',
+                    textTransform: 'none',
+                    borderRadius: 2,
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    '&:hover': { backgroundColor: 'rgba(255,255,255,0.3)' },
+                    display: { xs: 'none', sm: 'flex' }
+                  }}
+                >
+                  Full Profile
+                </Button>
+              </Box>
 
               <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                 {person?.role && (

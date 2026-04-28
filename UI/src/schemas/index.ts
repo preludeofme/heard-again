@@ -42,21 +42,23 @@ export const datePrecisionSchema = z.enum(['EXACT', 'YEAR_MONTH', 'YEAR', 'DECAD
 export const createStorySchema = z.object({
   title: z.string().min(1).max(500),
   content: z.string().min(1),
-  storyType: storyTypeSchema.optional(),
-  subjectId: uuidSchema.optional(),
-  speakerId: uuidSchema.optional(),
-  excerpt: z.string().max(500).optional(),
-  storyDate: z.string().datetime().or(z.string().date()).optional(),
-  storyDatePrecision: datePrecisionSchema.optional(),
-  location: z.string().max(255).optional(),
-  tags: z.array(z.string().max(50)).max(20).optional(),
-  status: storyStatusSchema.optional(),
+  storyType: storyTypeSchema.optional().nullable(),
+  subjectId: uuidSchema.optional().nullable(),
+  speakerId: uuidSchema.optional().nullable(),
+  excerpt: z.string().max(500).optional().nullable(),
+  storyDate: z.string().datetime().or(z.string().date()).optional().nullable(),
+  storyDatePrecision: datePrecisionSchema.optional().nullable(),
+  location: z.string().max(255).optional().nullable(),
+  tags: z.array(z.string().max(50)).max(20).optional().nullable(),
+  status: storyStatusSchema.optional().nullable(),
+  assetIds: z.array(z.string().uuid()).optional().nullable(),
 })
 
 export type CreateStoryInput = z.infer<typeof createStorySchema>
 
 export const updateStorySchema = createStorySchema.partial().extend({
-  id: uuidSchema,
+  id: uuidSchema.optional(),
+  regenerateNarration: z.boolean().optional(),
 })
 
 export type UpdateStoryInput = z.infer<typeof updateStorySchema>
@@ -131,7 +133,7 @@ export type CreatePersonInput = z.infer<typeof createPersonSchema>
 export const updatePersonSchema = basePersonSchema
   .partial()
   .extend({
-    id: uuidSchema,
+    id: uuidSchema.optional(),
   })
   .refine(personRefinements[0], personRefinementMessages[0])
   .refine(personRefinements[1], personRefinementMessages[1])

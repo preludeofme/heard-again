@@ -65,16 +65,16 @@ Updated as work lands on `feat/mvp-release`. Mark `[x]` when merged to the branc
 - [x] Auto-delete reference `.wav` after profile training — Implemented in `TTS/app/main.py` after successful profile creation.
 
 ### Phase 4 — Production readiness
-- [ ] Decompose FamilyTreePage / account / self-hosting / family-merge (R3)
+- [x] Decompose FamilyTreePage / account / self-hosting / family-merge (R3) — `FamilyTreePage.tsx` decomposed into specialized hook and components in `family-tree/` directory; reduced from 1583 to 319 lines.
 - [x] Queue GEDCOM + family-merge jobs in BullMQ (R9) — GEDCOM import moved to `importQueue` with background worker.
-- [ ] Second-pass LLM judge in `ResponseValidationService` (R11)
-- [ ] Data-retention enforcement worker
-- [ ] GDPR data flow documented + cascade on owner delete (S10)
+- [x] Second-pass LLM judge in `ResponseValidationService` (R11) — Implemented `validateWithLLMJudge` using Ollama to verify factual claims against evidence.
+- [x] Data-retention enforcement worker — `RetentionWorker` in `UI/src/workers/retentionWorker.ts` enforces workspace-specific retention policies for audio and drafts.
+- [x] GDPR data flow documented + cascade on owner delete (S10) — Documented in `docs/GDPR_DATA_FLOW.md`; implemented cascade workspace deletion in `permanent-deletion.ts`.
 
 ### Cross-cutting security findings
 - [x] S3 — Field decryption errors throw, not warn — Fixed in `field-encryption.ts`.
-- [ ] S7 — Sanitize filenames before RAG ingest
+- [x] S7 — Sanitize filenames before RAG ingest
 - [x] S9 — Hash email/filename before audit logging — Implemented in `SecurityLogger`.
-- [ ] S11 — Require MFA for OWNER role
+- [x] S11 — Require MFA for OWNER role
 - [x] S12 — CORS allowlist from env — Implemented in `middleware.ts`.
-- [ ] S13 — Hard-fail in production when ClamAV unreachable
+- [x] S13 — Hard-fail in production when ClamAV unreachable

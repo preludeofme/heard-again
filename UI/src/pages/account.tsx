@@ -45,8 +45,10 @@ import {
   Storage,
   RecordVoiceOver,
   Group,
+  Security as SecurityIcon,
 } from '@mui/icons-material'
 import { Layout } from '@/components/layout/Layout'
+import { SecuritySettings } from '@/components/account/SecuritySettings'
 
 interface User {
   id: string
@@ -274,6 +276,7 @@ export default function AccountPage() {
           <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
             <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)}>
               <Tab icon={<Person />} label="Profile" />
+              <Tab icon={<SecurityIcon />} label="Security" />
               <Tab icon={<CreditCard />} label="Subscription" />
               <Tab icon={<Cloud />} label="Instance & Tunnel" />
             </Tabs>
@@ -327,8 +330,13 @@ export default function AccountPage() {
             </Card>
           </TabPanel>
 
-          {/* Subscription Tab */}
+          {/* Security Tab */}
           <TabPanel value={activeTab} index={1}>
+            <SecuritySettings />
+          </TabPanel>
+
+          {/* Subscription Tab */}
+          <TabPanel value={activeTab} index={2}>
             <Stack spacing={3}>
               {/* Current Plan */}
               <Card>
@@ -480,7 +488,7 @@ export default function AccountPage() {
           </TabPanel>
 
           {/* Instance & Tunnel Tab */}
-          <TabPanel value={activeTab} index={2}>
+          <TabPanel value={activeTab} index={3}>
             <Stack spacing={3}>
               {/* Instance Status */}
               <Card>

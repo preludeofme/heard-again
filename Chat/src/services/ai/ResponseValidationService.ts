@@ -1,3 +1,4 @@
+import axios from 'axios'
 import {
   ValidatedResponse,
   ContentViolation,
@@ -25,6 +26,9 @@ export interface ValidationContext {
 }
 
 export class ResponseValidationService {
+  private ollamaUrl: string = process.env.OLLAMA_URL || 'http://localhost:11434'
+  private judgeModel: string = process.env.OLLAMA_PRIMARY_MODEL || 'qwen3.5:8b-instruct'
+
   async validateResponse(response: string, context?: ValidationContext): Promise<ValidatedResponse> {
     const violations: ContentViolation[] = []
     const normalizedResponse = this.normalizeText(response)
@@ -103,7 +107,7 @@ export class ResponseValidationService {
       }
     }
 
-    // === HALLUCINATION DETECTION ===
+    // === HEURISTIC HALLUCINATION DETECTION ===
     
     // Check for speculative language that suggests fabrication
     const uncertaintyStylePatterns = [
@@ -127,47 +131,93 @@ export class ResponseValidationService {
       }
     }
 
-    // Check for specific name/date/place invention patterns
-    const inventionPatterns = [
-      { pattern: /\b(my (wife|husband|spouse|partner) (was|is named|name was)\s+)([A-Z][a-z]+)/g, severity: 'high' },
-      { pattern: /\b(my (son|daughter|child) (was|is named|name was)\s+)([A-Z][a-z]+)/g, severity: 'high' },
-      { pattern: /\b(I had \d+ (children|kids|sons|daughters))/gi, severity: 'high' },
-      { pattern: /\b(we moved to|I moved to|I lived in|we lived in)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/g, severity: 'high' },
-      { pattern: /\b(I was born in|born on)\s+(\d{1,4}|January|February|March|April|May|June|July|August|September|October|November|December)/gi, severity: 'high' },
-    ]
-
-    for (const { pattern, severity } of inventionPatterns) {
-      const matches = [...response.matchAll(pattern)]
-      for (const match of matches) {
-        violations.push({
-          type: 'potential_hallucination',
-          severity: severity as 'low' | 'medium' | 'high',
-          description: `Potential fabricated detail: "${match[0]}"`,
-          position: {
-            start: match.index || 0,
-            end: (match.index || 0) + match[0].length
-          }
-        })
-      }
-    }
-
-    // Check if response contradicts provided context (if available)
+    // === SECOND-PASS LLM JUDGE (R11) ===
     if (context?.documents && context.documents.length > 0) {
-      const documentSupport = this.checkDocumentSupport(
-        response,
-        context.documents,
-        context.knownFacts || []
-      )
+      try {
+        const llmViolations = await this.validateWithLLMJudge(response, context.documents, context.knownFacts || [])
+        violations.push(...llmViolations)
+      } catch (err) {
+        console.error('LLM Judge failed, falling back to heuristics:', err)
+        
+        // Fallback to heuristic check if LLM judge fails
+        const documentSupport = this.checkDocumentSupport(
+          response,
+          context.documents,
+          context.knownFacts || []
+        )
 
-      if (!documentSupport.supported && documentSupport.unsupportedClaims.length > 0) {
-        const unsupportedHighSpecificityCount = documentSupport.unsupportedClaims.filter(c => c.highSpecificity).length
-        violations.push({
-          type: 'unsupported_claim',
-          severity: unsupportedHighSpecificityCount > 0 ? 'high' : 'medium',
-          description: `Claims without evidence support: ${documentSupport.unsupportedClaims.slice(0, 3).map(c => c.claim).join(', ')}${documentSupport.unsupportedClaims.length > 3 ? '...' : ''}`,
-        })
+        if (!documentSupport.supported && documentSupport.unsupportedClaims.length > 0) {
+          const unsupportedHighSpecificityCount = documentSupport.unsupportedClaims.filter(c => c.highSpecificity).length
+          violations.push({
+            type: 'unsupported_claim',
+            severity: unsupportedHighSpecificityCount > 0 ? 'high' : 'medium',
+            description: `Claims without evidence support: ${documentSupport.unsupportedClaims.slice(0, 3).map(c => c.claim).join(', ')}`,
+          })
+        }
       }
     }
+
+    const isValid = violations.length === 0 || violations.every(v => v.severity === 'low')
+
+    return {
+      isValid,
+      content: response,
+      violations,
+      filteredContent: isValid ? response : this.filterContent(response, violations)
+    }
+  }
+
+  private async validateWithLLMJudge(
+    response: string,
+    documents: string[],
+    knownFacts: string[]
+  ): Promise<ContentViolation[]> {
+    const evidence = [...documents, ...knownFacts].join('\n---\n')
+    
+    const judgePrompt = `You are a strict family history archive judge. Verify if the RESPONSE is fully supported by the EVIDENCE.
+
+EVIDENCE:
+${evidence}
+
+RESPONSE:
+${response}
+
+RULES:
+1. Identify any factual claims (names, dates, locations, events) in the RESPONSE that are NOT supported by the EVIDENCE.
+2. If a claim is supported, do not list it.
+3. If a claim is NOT supported, label it as a hallucination.
+4. Output your findings as a JSON array of violations. Each violation must have:
+   - type: "hallucination"
+   - severity: "high" (for fabricated names/dates) or "medium" (for inferred details)
+   - description: A brief explanation of why the claim is unsupported.
+
+If no hallucinations are found, return an empty array [].
+Respond ONLY with the JSON array.`
+
+    const result = await axios.post(`${this.ollamaUrl}/api/generate`, {
+      model: this.judgeModel,
+      prompt: judgePrompt,
+      stream: false,
+      options: {
+        temperature: 0.1, // Very deterministic for judging
+        num_predict: 512
+      }
+    })
+
+    const llmOutput = result.data.response.trim()
+    
+    try {
+      // Extract JSON array from LLM output (in case it added preamble)
+      const jsonMatch = llmOutput.match(/\[[\s\S]*\]/)
+      if (jsonMatch) {
+        return JSON.parse(jsonMatch[0])
+      }
+      return []
+    } catch (err) {
+      console.warn('Failed to parse LLM Judge output:', llmOutput)
+      return []
+    }
+  }
 
     // Check for "I don't know" variations that might be bypassing uncertainty phrases
     const bypassPatterns = [

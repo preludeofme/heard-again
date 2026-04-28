@@ -41,6 +41,21 @@ export default apiHandler({
     const redactedEmail = buildRedactedEmail(user.id)
 
     await prisma.$transaction(async (tx) => {
+      // Find all workspaces owned by this user
+      const ownedWorkspaces = await tx.workspace.findMany({
+        where: { ownerId: user.id },
+        select: { id: true }
+      })
+
+      // For each owned workspace, perform a deep delete
+      for (const workspace of ownedWorkspaces) {
+        // Delete all associated data - Prisma cascades will handle most, 
+        // but we need to ensure the workspace itself is removed.
+        await tx.workspace.delete({
+          where: { id: workspace.id }
+        })
+      }
+
       await tx.$executeRaw`DELETE FROM sessions WHERE user_id = ${user.id}`
       await tx.$executeRaw`DELETE FROM accounts WHERE user_id = ${user.id}`
 

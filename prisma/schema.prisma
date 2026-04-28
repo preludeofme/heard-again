@@ -771,7 +771,7 @@ model VoiceConsent {
   allowsCloudProcessing Boolean       @default(false)
   allowsSharing         Boolean       @default(false)
   recordedAt            DateTime      @default(now())
-  updatedAt             DateTime      @updatedAt
+  updatedAt             DateTime      @default(now()) @updatedAt
   revokedAt             DateTime?
   metadata              Json?
   grantedByUser         User          @relation(fields: [grantedByUserId], references: [id])
@@ -1072,6 +1072,7 @@ enum StoryType {
   DOCUMENT
   TRIBUTE
   PODCAST
+  RECORDING
 }
 
 enum DatePrecision {

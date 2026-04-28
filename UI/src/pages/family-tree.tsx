@@ -522,7 +522,7 @@ export default function FamilyTree() {
       displayName: person.name,
       avatarUrl: person.avatar || undefined,
     })
-    router.push(`/profile/${person.id}`)
+    // No longer navigating directly - the detail modal will open via useFamilyTree logic
   }
 
   const handleEditRelationships = (personId: string) => {
@@ -655,6 +655,9 @@ export default function FamilyTree() {
         }}
         onSave={() => fetchPeople()}
         onDelete={() => fetchPeople()}
+        onViewFullProfile={(id) => {
+          router.push(`/profile/${id}`)
+        }}
       />
       
       <AddEditPersonModal

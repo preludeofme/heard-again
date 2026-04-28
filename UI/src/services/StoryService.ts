@@ -20,6 +20,7 @@ type StoryInclude = {
   subject: { select: { id: true; firstName: true; lastName: true } }
   speaker: { select: { id: true; firstName: true; lastName: true } }
   createdBy: { select: { id: true; displayName: true; email: true } }
+  generatedAudioAsset: { select: { id: true; storagePath: true; durationSeconds: true } }
   _count: { select: { comments: true; assets: true; favorites: true } }
 }
 
@@ -27,6 +28,7 @@ const STORY_INCLUDE: StoryInclude = {
   subject: { select: { id: true, firstName: true, lastName: true } },
   speaker: { select: { id: true, firstName: true, lastName: true } },
   createdBy: { select: { id: true, displayName: true, email: true } },
+  generatedAudioAsset: { select: { id: true, storagePath: true, durationSeconds: true } },
   _count: { select: { comments: true, assets: true, favorites: true } },
 }
 
@@ -89,6 +91,12 @@ export class StoryService {
     // Validate subject/speaker belong to workspace if provided
     await this.validateStoryReferences(workspaceId, data.subjectId, data.speakerId)
 
+    // Handle audio asset for recordings
+    let generatedAudioAssetId = null
+    if (data.storyType === StoryType.RECORDING && data.assetIds?.length) {
+      generatedAudioAssetId = data.assetIds[0]
+    }
+
     const story = await this.repo.create({
       workspaceId,
       createdById: userId,
@@ -97,6 +105,7 @@ export class StoryService {
       storyType: data.storyType ?? StoryType.MEMORY,
       subjectId: data.subjectId ?? null,
       speakerId: data.speakerId ?? null,
+      generatedAudioAssetId,
       excerpt: data.excerpt ?? data.content.substring(0, 200),
       storyDate: data.storyDate ? new Date(data.storyDate) : null,
       storyDatePrecision: data.storyDatePrecision ?? DatePrecision.EXACT,
@@ -104,6 +113,12 @@ export class StoryService {
       tags: data.tags ?? [],
       status: data.status ?? StoryStatus.PUBLISHED,
     }, userId)
+
+    // Link other assets if any
+    if (data.assetIds && data.assetIds.length > 0) {
+      // In a real implementation, we would create StoryAsset records here
+      // For now, focusing on the primary audio recording
+    }
 
     return {
       id: story.id,
@@ -145,6 +160,18 @@ export class StoryService {
     if (data.storyDatePrecision !== undefined) updateData.storyDatePrecision = data.storyDatePrecision
     if (data.tags !== undefined) updateData.tags = data.tags
     if (data.status !== undefined) updateData.status = data.status
+
+    // Handle audio asset for recordings if provided
+    if (data.assetIds?.length) {
+      // Determine if this is currently a recording or being changed to one
+      const currentStory = await this.repo.findById(storyId, workspaceId)
+      const isRecording = data.storyType === StoryType.RECORDING || 
+                         (!data.storyType && currentStory?.storyType === StoryType.RECORDING)
+      
+      if (isRecording) {
+        updateData.generatedAudioAssetId = data.assetIds[0]
+      }
+    }
 
     const story = await this.repo.update(storyId, workspaceId, updateData, userId)
 
@@ -266,10 +293,14 @@ export class StoryService {
       status: story.status as StoryStatus,
       isPinned: story.isPinned,
       storyDate: story.storyDate,
+      storyDatePrecision: story.storyDatePrecision as DatePrecision,
+      tags: story.tags,
       subject: story.subject,
       speaker: story.speaker,
       createdBy: story.createdBy,
       hasAudio: !!story.generatedAudioAssetId,
+      audioUrl: story.generatedAudioAsset?.storagePath || null,
+      durationSeconds: story.generatedAudioAsset?.durationSeconds || null,
       counts: story._count,
       createdAt: story.createdAt,
       updatedAt: story.updatedAt,
@@ -291,8 +322,20 @@ export class StoryService {
 
     if (filters.status) where.status = filters.status
     if (filters.type) where.storyType = filters.type
-    if (filters.subjectId) where.subjectId = filters.subjectId
-    if (filters.speakerId) where.speakerId = filters.speakerId
+    
+    // If a subjectId is provided, show stories where they are subject OR speaker
+    if (filters.subjectId) {
+      where.OR = [
+        { subjectId: filters.subjectId },
+        { speakerId: filters.subjectId },
+      ]
+    } else if (filters.speakerId) {
+      // Fallback for speakerId if subjectId not provided
+      where.OR = [
+        { subjectId: filters.speakerId },
+        { speakerId: filters.speakerId },
+      ]
+    }
 
     return where
   }

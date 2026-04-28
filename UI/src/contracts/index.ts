@@ -36,6 +36,7 @@ export const StoryType = {
   DOCUMENT: 'DOCUMENT',
   TRIBUTE: 'TRIBUTE',
   PODCAST: 'PODCAST',
+  RECORDING: 'RECORDING',
 } as const
 
 export const DatePrecision = {
@@ -88,6 +89,8 @@ export interface StoryListItem {
   speaker: StorySpeaker | null
   createdBy: StoryCreator
   hasAudio: boolean
+  audioUrl?: string | null
+  durationSeconds?: number | null
   counts: StoryCounts
   createdAt: Date
   updatedAt: Date
@@ -104,6 +107,7 @@ export interface CreateStoryRequest {
   storyDatePrecision?: DatePrecision
   tags?: string[]
   status?: StoryStatus
+  assetIds?: string[]
 }
 
 export interface CreateStoryResponse {

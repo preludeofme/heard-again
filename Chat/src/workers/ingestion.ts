@@ -149,10 +149,14 @@ export class IngestionWorker {
       })
 
       // Step 5: Store in database
+      const sanitizedTitle = title 
+        ? title.replace(/[\/\?<>\\:\*\|":]/g, '_').replace(/\.\.+/g, '.') 
+        : 'Untitled Document'
+
       await this.storeDocument({
         id: documentId,
         workspaceId,
-        title,
+        title: sanitizedTitle,
         content: textResult.text,
         mimeType,
         personId: personId || null,
@@ -163,7 +167,7 @@ export class IngestionWorker {
         })),
         structure,
         metadata: {
-          originalFileName: title,
+          originalFileName: sanitizedTitle,
           fileSize: buffer.length,
           extractedAt: new Date(),
           processingTime: Date.now() - job.timestamp,
