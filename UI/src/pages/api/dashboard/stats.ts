@@ -300,7 +300,7 @@ export default apiHandler({
       suggestions.push({
         key: 'add-story',
         label: `Add a story for ${personName}`,
-        href: `/stories/new?subjectId=${personWithoutStories.id}`,
+        href: `/stories?subjectId=${personWithoutStories.id}#contribution-hub`,
       })
     }
     if (livingPersonWithoutVoice) {
@@ -317,7 +317,7 @@ export default apiHandler({
       suggestions.push({
         key: 'tag-stories',
         label: `Tag ${untaggedStoriesCount} untagged ${untaggedStoriesCount === 1 ? 'story' : 'stories'}`,
-        href: '/stories?filter=untagged',
+        href: '/stories',
       })
     }
 

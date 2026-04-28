@@ -69,7 +69,7 @@ export function SubscriptionStatusCard({ usage, planType }: SubscriptionStatusCa
           {planType} plan
         </Typography>
         <Box
-          onClick={() => router.push('/account/billing')}
+          onClick={() => router.push('/account')}
           sx={{
             display: 'inline-flex',
             alignItems: 'center',

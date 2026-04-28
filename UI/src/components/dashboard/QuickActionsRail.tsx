@@ -23,7 +23,7 @@ interface Action {
 }
 
 const ALL_ACTIONS: Action[] = [
-  { key: 'story', label: 'New Story', icon: <AutoStoriesRounded />, href: '/stories/new' },
+  { key: 'story', label: 'New Story', icon: <AutoStoriesRounded />, href: '/stories#contribution-hub' },
   { key: 'person', label: 'Add Person', icon: <PersonAddAlt1Rounded />, href: '/family-tree' },
   { key: 'upload', label: 'Upload', icon: <CloudUploadRounded />, href: '/documents' },
   { key: 'chat', label: 'Open Chat', icon: <ChatBubbleOutlineRounded />, href: '/chat' },

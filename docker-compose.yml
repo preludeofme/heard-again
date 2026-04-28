@@ -6,13 +6,12 @@ services:
     build:
       context: ./Chat
       dockerfile: docker/Dockerfile
-    # No public port binding — chat is accessed only via the internal network
     expose:
       - "4778"
     environment:
       - NODE_ENV=production
       - PORT=4778
-      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/heard_again
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/heard_again?connection_limit=10
       - REDIS_URL=redis://redis:6379
       - CHROMA_URL=http://chromadb:8000
       - OLLAMA_URL=http://ollama:11434
@@ -29,16 +28,22 @@ services:
         condition: service_healthy
     volumes:
       - uploads:/app/uploads
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          memory: 1G
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
     cap_drop:
       - ALL
 
-  # Ollama LLM Service (optional - requires GPU) — internal only
+  # Ollama LLM Service
   ollama:
     image: ollama/ollama:latest
-    # No public port binding
     expose:
       - "11434"
     networks:
@@ -49,7 +54,10 @@ services:
       - OLLAMA_HOST=0.0.0.0
     deploy:
       resources:
+        limits:
+          memory: 16G
         reservations:
+          memory: 4G
           devices:
             - driver: nvidia
               count: 1
@@ -66,7 +74,7 @@ services:
     ports:
       - "4777:4777"
     environment:
-      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/heard_again
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/heard_again?connection_limit=20
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-change-this-in-production}
       - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:4777}
       - TTS_SERVICE_URL=${TTS_SERVICE_URL:-http://tts:4779}
@@ -91,7 +99,14 @@ services:
         condition: service_healthy
     volumes:
       - uploads:/app/uploads
-      - generated:/app/generated
+      - generated_audio:/app/generated
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'
+          memory: 4G
+        reservations:
+          memory: 2G
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
@@ -123,6 +138,11 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - internal
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
@@ -130,7 +150,7 @@ services:
       timeout: 5s
       retries: 5
 
-  # ClamAV antivirus service (mandatory for production)
+  # ClamAV antivirus service
   clamav:
     image: clamav/clamav:stable
     container_name: clamav
@@ -143,6 +163,11 @@ services:
       - /var/run/clamav:/var/run/clamav
     networks:
       - internal
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2G
     ports:
       - "3310:3310"
     healthcheck:
@@ -159,6 +184,11 @@ services:
       - redis_data:/data
     networks:
       - internal
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 1G
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -166,7 +196,7 @@ services:
       timeout: 3s
       retries: 5
 
-  # TTS Service (optional - requires GPU)
+  # TTS Service
   tts:
     build:
       context: ./TTS
@@ -181,12 +211,17 @@ services:
       - STAGING_URL=${STAGING_URL}
     volumes:
       - tts_models:/app/models
-      - ./TTS/generated:/app/generated
+      - generated_audio:/app/generated
+      - reference_audio:/app/reference_audio
+      - voice_profiles:/app/voice_profiles
     networks:
       - internal
     deploy:
       resources:
+        limits:
+          memory: 12G
         reservations:
+          memory: 4G
           devices:
             - driver: nvidia
               count: 1
@@ -199,10 +234,9 @@ services:
     profiles:
       - with-tts
 
-  # ChromaDB for vector search (RAG) — internal only, not reachable from the host
+  # ChromaDB for vector search (RAG)
   chromadb:
     image: chromadb/chroma:latest
-    # No public port binding — only the chat service needs to reach chromadb
     expose:
       - "8000"
     environment:
@@ -215,6 +249,11 @@ services:
       - chroma_data:/chroma/chroma
     networks:
       - internal
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 4G
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
@@ -223,24 +262,23 @@ services:
       retries: 5
       start_period: 10s
 
-  # Ingestion Worker for document processing
+  # Ingestion Worker
   ingestion-worker:
     build:
       context: ./Chat
       dockerfile: docker/Dockerfile.worker
-    # No public port binding - health check is internal
     expose:
       - "4779"
     environment:
       - NODE_ENV=production
-      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/heard_again
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/heard_again?connection_limit=5
       - REDIS_URL=redis://redis:6379
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - CHROMA_URL=http://chromadb:8000
       - OLLAMA_URL=http://ollama:11434
       - CHAT_SERVICE_SECRET=${CHAT_SERVICE_SECRET:?CHAT_SERVICE_SECRET must be set}
-      - PORT=4779  # Worker health check port
+      - PORT=4779
     networks:
       - internal
     depends_on:
@@ -255,6 +293,11 @@ services:
     volumes:
       - uploads:/app/uploads
       - temp_ingestion:/app/temp-ingestion
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2G
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
@@ -276,8 +319,10 @@ networks:
 volumes:
   postgres_data:
   uploads:
-  generated:
+  generated_audio:
   tts_models:
+  reference_audio:
+  voice_profiles:
   redis_data:
   clamav_db:
   chroma_data:

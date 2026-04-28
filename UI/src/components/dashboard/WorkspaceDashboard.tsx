@@ -97,7 +97,7 @@ export function WorkspaceDashboard() {
 
         {!allOnboardingDone && (
           <Grid size={{ xs: 12 }}>
-            <OnboardingChecklist state={onboardingState} role={role} />
+            <OnboardingChecklist state={onboardingState} role={role} workspaceId={workspace?.id ?? null} />
           </Grid>
         )}
 

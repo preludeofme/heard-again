@@ -62,7 +62,7 @@ export function RecentStoriesFeed({ stories }: RecentStoriesFeedProps) {
 
       {stories.length === 0 ? (
         <Box
-          onClick={() => router.push('/stories/new')}
+          onClick={() => router.push('/stories#contribution-hub')}
           sx={{
             textAlign: 'center',
             py: 6,

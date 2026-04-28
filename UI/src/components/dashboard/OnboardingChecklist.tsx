@@ -7,6 +7,7 @@ import type { OnboardingState, WorkspaceRole } from '@/controllers/useDashboardC
 interface OnboardingChecklistProps {
   state: OnboardingState
   role: WorkspaceRole
+  workspaceId: string | null
 }
 
 interface Step {
@@ -17,22 +18,22 @@ interface Step {
   done: boolean
 }
 
-export function OnboardingChecklist({ state, role }: OnboardingChecklistProps) {
+export function OnboardingChecklist({ state, role, workspaceId }: OnboardingChecklistProps) {
   const router = useRouter()
 
   const steps: Step[] = [
     { key: 'hasFirstPerson', label: 'Add your first family member', hint: 'A name and a few details to start the tree', href: '/family-tree', done: state.hasFirstPerson },
-    { key: 'hasFirstStory', label: 'Capture your first story', hint: 'Write a memory or record one with the chat', href: '/stories', done: state.hasFirstStory },
+    { key: 'hasFirstStory', label: 'Capture your first story', hint: 'Write a memory or record one with the chat', href: '/stories#contribution-hub', done: state.hasFirstStory },
     { key: 'hasFirstDocument', label: 'Upload a photo or document', hint: 'Add to the archive — letters, photos, certificates', href: '/documents', done: state.hasFirstDocument },
     { key: 'hasFirstVoice', label: 'Create a voice profile', hint: 'Clone a voice to read stories aloud', href: '/voice-lab', done: state.hasFirstVoice },
   ]
 
-  if (role === 'OWNER' || role === 'ADMIN') {
+  if ((role === 'OWNER' || role === 'ADMIN') && workspaceId) {
     steps.push({
       key: 'hasInvitedMember',
       label: 'Invite a family member',
       hint: 'Share the vault with relatives',
-      href: '/workspaces/settings',
+      href: `/workspaces/${workspaceId}/settings`,
       done: state.hasInvitedMember,
     })
   }
