@@ -222,7 +222,7 @@ export default function StoryDetailPage() {
     if (!story) return
     try {
       const method = isFavorited ? 'DELETE' : 'POST'
-      await fetch(`/api/stories/${story.id}/favorite`, { method, credentials: 'include' })
+      await fetchWithCSRF(`/api/stories/${story.id}/favorite`, { method, credentials: 'include' })
       setIsFavorited(!isFavorited)
     } catch {
       // Silently fail
@@ -233,7 +233,7 @@ export default function StoryDetailPage() {
     if (!story || !commentText.trim()) return
     setIsSubmittingComment(true)
     try {
-      const res = await fetch(`/api/stories/${story.id}/comments`, {
+      const res = await fetchWithCSRF(`/api/stories/${story.id}/comments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -305,7 +305,7 @@ export default function StoryDetailPage() {
               onClick={async () => {
                 try {
                   const newIsPublic = !story.isPublic
-                  await fetch(`/api/stories/${story.id}`, {
+                  await fetchWithCSRF(`/api/stories/${story.id}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',

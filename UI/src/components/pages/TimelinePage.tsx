@@ -524,6 +524,17 @@ export function TimelinePageComponent({ events, isLoading, hasMore, onLoadMore, 
                             {event.title}
                           </Typography>
 
+                          {event.metadata?.imageAssetId && (
+                            <Box sx={{ mb: 2, borderRadius: 2, overflow: 'hidden', height: 120 }}>
+                              <Box 
+                                component="img"
+                                src={`/api/assets/serve/${event.metadata.imageAssetId}`}
+                                alt={event.title}
+                                sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                              />
+                            </Box>
+                          )}
+
                           {event.description && (
                             <Typography 
                               variant="body2" 
@@ -665,6 +676,17 @@ export function TimelinePageComponent({ events, isLoading, hasMore, onLoadMore, 
                         {event.title}
                       </Typography>
 
+                      {event.metadata?.imageAssetId && (
+                        <Box sx={{ mb: 2, borderRadius: 2, overflow: 'hidden', height: 100 }}>
+                          <Box 
+                            component="img"
+                            src={`/api/assets/serve/${event.metadata.imageAssetId}`}
+                            alt={event.title}
+                            sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          />
+                        </Box>
+                      )}
+
                       {event.description && (
                         <Typography 
                           variant="body2" 
@@ -789,6 +811,17 @@ export function TimelinePageComponent({ events, isLoading, hasMore, onLoadMore, 
             </Box>
             
             <DialogContent sx={{ p: 4 }}>
+              {selectedEvent.metadata?.imageAssetId && (
+                <Box sx={{ mb: 3, borderRadius: 3, overflow: 'hidden', boxShadow: 2 }}>
+                  <Box 
+                    component="img"
+                    src={`/api/assets/serve/${selectedEvent.metadata.imageAssetId}`}
+                    alt={selectedEvent.title}
+                    sx={{ width: '100%', height: 'auto', display: 'block' }}
+                  />
+                </Box>
+              )}
+
               <Typography
                 variant="subtitle2"
                 sx={{

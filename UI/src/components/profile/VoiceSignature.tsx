@@ -1,6 +1,6 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { Box, Typography, IconButton, CircularProgress } from '@mui/material'
-import { Replay10, Forward30, PlayArrow, Stop } from '@mui/icons-material'
+import { Replay10, Forward30, PlayArrow, Stop, ChevronLeft, ChevronRight } from '@mui/icons-material'
 import Link from 'next/link'
 import { ProfileColors, WAVEFORM_HEIGHTS } from './ProfileConstants'
 import { fetchWithCSRFAndJSON } from '@/lib/api-client'
@@ -25,13 +25,41 @@ export function VoiceSignature({
   isGlobal = false,
   stats 
 }: VoiceSignatureProps) {
-  const defaultVoice = voiceProfiles?.find(v => v.isDefault) ?? voiceProfiles?.[0] ?? null
-  const hasClonedVoice = !!defaultVoice?.isCloned
+  const [currentIndex, setCurrentIndex] = useState(0)
+  
+  // Set initial index to the default voice if available
+  useEffect(() => {
+    if (voiceProfiles && voiceProfiles.length > 0) {
+      const defaultIdx = voiceProfiles.findIndex(v => v.isDefault)
+      if (defaultIdx !== -1) setCurrentIndex(defaultIdx)
+    }
+  }, [voiceProfiles])
+
+  const currentVoice = voiceProfiles?.[currentIndex] ?? null
+  const hasClonedVoice = !!currentVoice?.isCloned
   const hasAnyVoice = voiceProfiles && voiceProfiles.length > 0
   
   const [isPlaying, setIsPlaying] = useState(false)
   const [isSynthesizing, setIsSynthesizing] = useState(false)
   const audioRef = useRef<HTMLAudioElement | null>(null)
+
+  const handlePrev = () => {
+    if (!voiceProfiles || voiceProfiles.length <= 1) return
+    setCurrentIndex((prev) => (prev === 0 ? voiceProfiles.length - 1 : prev - 1))
+    if (isPlaying && audioRef.current) {
+      audioRef.current.pause()
+      setIsPlaying(false)
+    }
+  }
+
+  const handleNext = () => {
+    if (!voiceProfiles || voiceProfiles.length <= 1) return
+    setCurrentIndex((prev) => (prev === voiceProfiles.length - 1 ? 0 : prev + 1))
+    if (isPlaying && audioRef.current) {
+      audioRef.current.pause()
+      setIsPlaying(false)
+    }
+  }
 
   const handlePlaySample = async () => {
     if (isPlaying) {
@@ -43,26 +71,31 @@ export function VoiceSignature({
       return
     }
 
-    if (!defaultVoice) return
+    if (!currentVoice) return
 
     setIsSynthesizing(true)
     try {
       const response = await fetchWithCSRFAndJSON('/api/voice/synthesize', {
-        modelId: defaultVoice.id,
+        modelId: currentVoice.id,
         text: `Hello, this is a sample of my digital voice clone for ${firstName || 'the family archive'}.`,
       })
 
       if (!response.ok) throw new Error('Failed to synthesize')
       
-      const blob = await response.blob()
-      const url = URL.createObjectURL(blob)
-      const audio = new Audio(url)
+      const result = await response.json()
+      // Extract from { success: true, data: { audioUrl: ... } } structure
+      const audioUrl = result.data?.audioUrl || result.audioUrl
+      
+      if (!audioUrl) {
+        throw new Error('No audio URL in response')
+      }
+      
+      const audio = new Audio(audioUrl)
       audioRef.current = audio
       
       audio.onended = () => {
         setIsPlaying(false)
         audioRef.current = null
-        URL.revokeObjectURL(url)
       }
 
       setIsPlaying(true)
@@ -91,9 +124,16 @@ export function VoiceSignature({
     >
       <Box>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 4 }}>
-          <Typography sx={{ fontFamily: 'var(--font-newsreader), serif', fontSize: '1.875rem', fontWeight: 700, color: ProfileColors.primary }}>
-            {isGlobal ? 'Archive Voice' : 'Voice Signature'}
-          </Typography>
+          <Box>
+            <Typography sx={{ fontFamily: 'var(--font-newsreader), serif', fontSize: '1.875rem', fontWeight: 700, color: ProfileColors.primary }}>
+              {isGlobal ? 'Archive Voice' : 'Voice Signature'}
+            </Typography>
+            {currentVoice && !isGlobal && (
+              <Typography sx={{ fontFamily: 'var(--font-manrope), sans-serif', fontSize: '0.85rem', color: ProfileColors.onSurfaceVariant, mt: 0.5 }}>
+                Model: {currentVoice.name}
+              </Typography>
+            )}
+          </Box>
           
           {isGlobal ? (
             <Box sx={{ bgcolor: ProfileColors.secondaryContainer, color: ProfileColors.onSecondaryContainer, px: 2, py: 0.5, borderRadius: '9999px', fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', fontFamily: 'var(--font-manrope), sans-serif' }}>
@@ -147,7 +187,12 @@ export function VoiceSignature({
         </Box>
 
         {/* Controls */}
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: { xs: 1, md: 3 } }}>
+          {voiceProfiles && voiceProfiles.length > 1 && (
+            <IconButton onClick={handlePrev} sx={{ color: ProfileColors.primary }} aria-label="Previous voice model">
+              <ChevronLeft fontSize="large" />
+            </IconButton>
+          )}
           <IconButton sx={{ color: ProfileColors.primary, opacity: 0.35 }} aria-label="Replay 10 seconds">
             <Replay10 sx={{ fontSize: 28 }} />
           </IconButton>
@@ -182,6 +227,11 @@ export function VoiceSignature({
           <IconButton sx={{ color: ProfileColors.primary, opacity: 0.35 }} aria-label="Forward 30 seconds">
             <Forward30 sx={{ fontSize: 28 }} />
           </IconButton>
+          {voiceProfiles && voiceProfiles.length > 1 && (
+            <IconButton onClick={handleNext} sx={{ color: ProfileColors.primary }} aria-label="Next voice model">
+              <ChevronRight fontSize="large" />
+            </IconButton>
+          )}
         </Box>
       </Box>
 

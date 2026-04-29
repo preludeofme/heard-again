@@ -50,6 +50,7 @@
     [x] Stories Narration
         [ ] validated
         [x] The way the audio is stitched together does not flow, it is all one audio file but the audio cuts out between files for a split second, need to tighten up the stitching so that the audio doesn't sound stuttery. (Fixed by reducing silence padding to 50ms in worker)
+            [ ]
             [ ] validated
     [x] Stories Voice Record
         [ ] validated
@@ -80,25 +81,25 @@
     [x] Stories should show the name of the user posting not the email address
         [ ] validated
     [x] Need to have a share story link that will allow the story to be shared publicly without accounts 
-        [ ] validated
+        [x] validated
         [x] Make sure to add a disclaimer that anyone with the link will be able to access it (they can also set their sharing settings for their family/person in the familyspace settings)
-            [ ] validated
+            [x] validated
 [x] Timeline page 
     [ ] validated
     [x] should have the ability to filter for specific family member
-        [ ] validated
+        [x] validated
     [x] Should be draggable link the Narrative view in the profile page.
-        [ ] validated
+        [x] validated
     [x] Have the ability to switch between horizontal view and vertical view
-        [ ] validated
+        [x] validated
         [x] I like the way the narrative component looks and works in the profile, just want to expand it and add a little more features to make it a more full experience
-            [ ] validated
+            [x] validated
     [x] Each item on the timeline should have a way to view the full details of the event (in modal view not in a routing, i don't want them navigated away)
         [ ] validated
 [x] Family Tree
     [ ] validated
     [x] Need to set the drag option as the default instead of the pointer
-        [ ] validated
+        [x] validated
     [x] Need to show relationship on modal to show how they're related
         [ ] validated
     [x] If it helps to show that on the family tree diagram and it make sense, add it
@@ -108,8 +109,8 @@
     [x] Need ability to export to GedCom format
         [ ] validated
 [x] Privacy page
-    [ ] validated
+    [x] validated
     [x] Review if there's a legal requirement to include the Data Retention Policy (thinking mainly for like the UK users etc)
-        [ ] validated
+        [x] validated
     [x] If there is, see if we can include a don't remove data unless asked as the purpose of this site is to document family memories etc. like audio files
-        [ ] validated
+        [x] validated

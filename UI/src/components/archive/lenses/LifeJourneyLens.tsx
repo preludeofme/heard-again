@@ -1,8 +1,6 @@
-import Head from 'next/head'
-import { Layout } from '@/components/layout/Layout'
-import { TimelinePageComponent } from '@/components/pages/TimelinePage'
 import { useState, useEffect, useCallback } from 'react'
 import { Box, CircularProgress, Typography, Button } from '@mui/material'
+import { TimelinePageComponent } from '@/components/pages/TimelinePage'
 import { useSelectedFamilyMember } from '@/contexts/SelectedFamilyMemberContext'
 
 interface TimelineEvent {
@@ -23,7 +21,7 @@ interface TimelineEvent {
   metadata?: {
     imageAssetId?: string
     documentType?: string
-    [key: string]: any
+    [key: string]: unknown
   }
   sourceId: string
   sourceType: string
@@ -36,7 +34,7 @@ interface PersonOption {
   displayName?: string
 }
 
-export default function TimelinePage() {
+export function LifeJourneyLens() {
   const { selectedFamilyMember } = useSelectedFamilyMember()
   const [events, setEvents] = useState<TimelineEvent[]>([])
   const [people, setPeople] = useState<PersonOption[]>([])
@@ -109,42 +107,40 @@ export default function TimelinePage() {
     fetchEvents(1, false)
   }, [fetchEvents])
 
+  if (isLoading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '40vh' }}>
+        <CircularProgress />
+      </Box>
+    )
+  }
+
+  if (hasError) {
+    return (
+      <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', minHeight: '40vh', gap: 2 }}>
+        <Typography color="error">{errorMessage}</Typography>
+        <Button
+          variant="contained"
+          onClick={() => {
+            setHasError(false)
+            setIsLoading(true)
+            fetchEvents(1, false).finally(() => setIsLoading(false))
+          }}
+        >
+          Retry
+        </Button>
+      </Box>
+    )
+  }
+
   return (
-    <>
-      <Head>
-        <title>Family Timeline - Heard Again</title>
-        <meta name="description" content="Family timeline with births, deaths, marriages, stories, and documents" />
-      </Head>
-      <Layout>
-        {isLoading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
-            <CircularProgress />
-          </Box>
-        ) : hasError ? (
-          <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', minHeight: '60vh', gap: 2 }}>
-            <Typography color="error">{errorMessage}</Typography>
-            <Button
-              variant="contained"
-              onClick={() => {
-                setHasError(false)
-                setIsLoading(true)
-                fetchEvents(1, false).finally(() => setIsLoading(false))
-              }}
-            >
-              Retry
-            </Button>
-          </Box>
-        ) : (
-          <TimelinePageComponent
-            events={events}
-            isLoading={isLoadingMore}
-            hasMore={hasMore}
-            onLoadMore={handleLoadMore}
-            onEventCreated={handleEventCreated}
-            people={people}
-          />
-        )}
-      </Layout>
-    </>
+    <TimelinePageComponent
+      events={events}
+      isLoading={isLoadingMore}
+      hasMore={hasMore}
+      onLoadMore={handleLoadMore}
+      onEventCreated={handleEventCreated}
+      people={people}
+    />
   )
 }

@@ -19,7 +19,9 @@ import {
   Download as DownloadIcon,
   SmartToy as AiIcon,
   ErrorOutline as ErrorIcon,
+  Delete as DeleteIcon,
 } from '@mui/icons-material'
+import { fetchWithCSRF } from '@/lib/api-client'
 
 interface VoiceProfileOption {
   id: string
@@ -244,6 +246,31 @@ export function StoryNarrationPlayer({
     void startNarration(selectedProfileId)
   }, [selectedProfileId, startNarration])
 
+  const handleDelete = useCallback(async () => {
+    if (!confirm('Are you sure you want to delete this AI narration? This will remove the audio files for all voice versions of this story.')) {
+      return
+    }
+    
+    try {
+      const res = await fetchWithCSRF(`/api/stories/${storyId}/narration`, {
+        method: 'DELETE',
+        credentials: 'include',
+      })
+      if (res.ok) {
+        setReadyNarration(null)
+        setJobId(null)
+        setJobStatus(null)
+        setState('idle')
+      } else {
+        const payload = await res.json()
+        alert(`Failed to delete: ${payload.error || 'Unknown error'}`)
+      }
+    } catch (err) {
+      console.error('Failed to delete narration:', err)
+      alert('Failed to delete narration')
+    }
+  }, [storyId])
+
   const renderProgress = () => {
     if (state !== 'rendering') return null
     const total = jobStatus?.sentencesTotal ?? 0
@@ -368,7 +395,16 @@ export function StoryNarrationPlayer({
             style={{ width: '100%', height: 40 }}
             data-testid="narration-audio"
           />
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1, gap: 1 }}>
+            <Button
+              onClick={handleDelete}
+              startIcon={<DeleteIcon />}
+              size="small"
+              color="error"
+              sx={{ textTransform: 'none', fontWeight: 600 }}
+            >
+              Delete
+            </Button>
             <Button
               component="a"
               href={readyNarration.downloadUrl}

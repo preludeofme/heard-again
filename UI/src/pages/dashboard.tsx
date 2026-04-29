@@ -1,14 +1,14 @@
-import Head from 'next/head'
-import { Layout } from '@/components/layout/Layout'
-import { FamilyspaceDashboard } from '@/components/dashboard/FamilyspaceDashboard'
+import type { GetServerSideProps } from 'next'
+
+export const getServerSideProps: GetServerSideProps = async () => {
+  return {
+    redirect: {
+      destination: '/archive',
+      permanent: false,
+    },
+  }
+}
 
 export default function DashboardPage() {
-  return (
-    <Layout>
-      <Head>
-        <title>Dashboard | Heard Again</title>
-      </Head>
-      <FamilyspaceDashboard />
-    </Layout>
-  )
+  return null
 }

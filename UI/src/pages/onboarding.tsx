@@ -90,7 +90,7 @@ export default function OnboardingPage() {
       await update()
 
       // Redirect to dashboard (middleware will allow access since onboarding is now complete)
-      router.push('/dashboard')
+      router.push('/archive')
     } catch (err: any) {
       setError(err.message || 'An error occurred')
     } finally {

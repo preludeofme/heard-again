@@ -283,30 +283,6 @@ export default function PersonProfilePage() {
               <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mt: 3.5, justifyContent: { xs: 'center', md: 'flex-start' } }}>
                 <Box
                   component={router.components ? 'div' : 'a'}
-                  onClick={() => router.push(`/voice-lab?personId=${personId}`)}
-                  sx={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 1,
-                    px: 3.5,
-                    py: 1.25,
-                    background: `linear-gradient(135deg, ${ProfileColors.primary} 0%, ${ProfileColors.primaryContainer} 100%)`,
-                    color: '#fff',
-                    borderRadius: '9999px',
-                    fontFamily: 'var(--font-manrope), sans-serif',
-                    fontWeight: 600,
-                    fontSize: '0.95rem',
-                    cursor: 'pointer',
-                    boxShadow: '0 4px 18px rgba(22,51,74,0.28)',
-                    transition: 'opacity 0.2s',
-                    '&:hover': { opacity: 0.88 },
-                  }}
-                >
-                  <span style={{ fontFamily: '"Material Symbols Outlined"', fontSize: 20, lineHeight: 1 }}>settings_voice</span>
-                  Listen to {person.firstName}
-                </Box>
-                <Box
-                  component={router.components ? 'div' : 'a'}
                   onClick={() => router.push(`/family-tree?personId=${personId}`)}
                   sx={{
                     display: 'inline-flex',

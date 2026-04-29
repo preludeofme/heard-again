@@ -69,14 +69,11 @@ interface LayoutProps {
 }
 
 const navItems = [
-  { label: 'Dashboard', href: '/dashboard', icon: 'dashboard' },
-  { label: 'Profile', href: '/profile', icon: 'person' },
-  { label: 'Voice Profiles', href: '/voice-lab', icon: 'settings_voice' },
-  { label: 'Documents', href: '/documents', icon: 'description' },
-  { label: 'Stories', href: '/stories', icon: 'auto_stories' },
-  { label: 'Timeline', href: '/timeline', icon: 'timeline' },
-  { label: 'Favorites', href: '/favorites', icon: 'favorite' },
-  { label: 'Family Tree', href: '/family-tree', icon: 'account_tree' },
+  { label: 'Archive', href: '/archive', icon: 'auto_stories' },
+  { label: 'Contribute', href: '/contribute', icon: 'add_circle' },
+  { label: 'Family Members', href: '/family-tree', icon: 'groups' },
+  { label: 'Voice Memories', href: '/archive?lens=voices', icon: 'settings_voice' },
+  { label: 'Keepsakes', href: '/archive?lens=keepsakes', icon: 'inventory_2' },
 ]
 
 const footerNavItems = [
@@ -84,11 +81,11 @@ const footerNavItems = [
   { label: 'Privacy Settings', href: '/privacy', icon: 'shield_lock' },
 ]
 
-// Mobile bottom nav — 5 slots. 4 fixed + 1 "More" overflow.
-const bottomNavRoutes = ['/profile', '/stories', '/family-tree', '/voice-lab', 'more']
+// Mobile bottom nav — 5 slots. 4 archive-centric + 1 "More" overflow.
+const bottomNavRoutes = ['/archive', '/contribute', '/family-tree', '/archive?lens=voices', 'more']
 const moreMenuRoutes = [
-  { label: 'Documents', href: '/documents', icon: <DocumentsIcon /> },
-  { label: 'Timeline', href: '/timeline', icon: <TimelineIcon /> },
+  { label: 'Keepsakes', href: '/archive?lens=keepsakes', icon: <DocumentsIcon /> },
+  { label: 'Stories', href: '/archive?lens=stories', icon: <StoriesIcon /> },
   { label: 'Favorites', href: '/favorites', icon: <FavoriteIcon /> },
   { label: 'Account', href: '/account', icon: <SettingsIcon /> },
 ]
@@ -169,6 +166,7 @@ export function Layout({ children }: LayoutProps) {
   const [speedDialOpen, setSpeedDialOpen] = useState(false)
 
   const currentPath = router.pathname
+  const currentLens = typeof router.query.lens === 'string' ? router.query.lens : null
   const showAdvancedSearchButton = currentPath !== '/family-tree'
 
   const handleMoreOpen = (event: React.MouseEvent<HTMLElement>) => {
@@ -196,14 +194,25 @@ export function Layout({ children }: LayoutProps) {
   }
 
   const getMobileNavValue = () => {
-    const exactIdx = bottomNavRoutes.indexOf(currentPath)
+    const fullPath = currentLens ? `${currentPath}?lens=${currentLens}` : currentPath
+
+    // Match the most specific route first (with lens param)
+    const exactIdx = bottomNavRoutes.indexOf(fullPath)
     if (exactIdx >= 0) return exactIdx
+
+    // Then bare path
+    const baseIdx = bottomNavRoutes.indexOf(currentPath)
+    if (baseIdx >= 0) return baseIdx
+
     const prefixIdx = bottomNavRoutes.findIndex((r) => currentPath.startsWith(r + '/'))
     if (prefixIdx >= 0) return prefixIdx
 
     // Check if current path is in "More" menu
-    const isInMore = moreMenuRoutes.some((r) => currentPath.startsWith(r.href))
-    if (isInMore) return 4 // Index of "More" tab
+    const isInMore = moreMenuRoutes.some((r) => {
+      const [hrefPath] = r.href.split('?')
+      return currentPath === hrefPath || currentPath.startsWith(hrefPath + '/')
+    })
+    if (isInMore) return 4
 
     return false
   }
@@ -221,32 +230,16 @@ export function Layout({ children }: LayoutProps) {
               borderBottom: 'none',
             }}
           >
-            <Toolbar>
-              <Typography variant="h6" component="div" sx={{ fontFamily: "'Newsreader', serif" }}>
+            <Toolbar sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Typography variant="h6" component="div" sx={{ fontFamily: "'Newsreader', serif", flexShrink: 0 }}>
                 Heard Again
               </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 'auto' }}>
-                {/* Single active member indicator — clickable, opens flyout */}
+              
+              <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: 'center', px: 1 }}>
                 <ActiveMemberHeader compact />
-                {showAdvancedSearchButton && (
-                  <Button
-                    component={Link}
-                    href="/family-tree?expandSearch=1"
-                    size="small"
-                    variant="outlined"
-                    sx={{ textTransform: 'none', borderRadius: 2 }}
-                  >
-                    Search
-                  </Button>
-                )}
-                <IconButton size="large" aria-label="Search">
-                  <SearchIcon />
-                </IconButton>
-                <IconButton size="large" aria-label="Notifications">
-                  <Badge color="primary" invisible>
-                    <NotificationsIcon />
-                  </Badge>
-                </IconButton>
+              </Box>
+
+              <Box sx={{ flexShrink: 0 }}>
                 <UserMenu />
               </Box>
             </Toolbar>
@@ -295,11 +288,12 @@ export function Layout({ children }: LayoutProps) {
             showLabels
             value={getMobileNavValue()}
             onChange={(_, newValue: number) => {
-              if (bottomNavRoutes[newValue] === 'more') {
+              const target = bottomNavRoutes[newValue]
+              if (target === 'more') {
                 // Handled by handleMoreOpen via onClick on the action below
                 return
               }
-              router.push(bottomNavRoutes[newValue])
+              router.push(target)
             }}
             sx={{
               position: 'fixed',
@@ -320,10 +314,10 @@ export function Layout({ children }: LayoutProps) {
               }
             }}
           >
-            <BottomNavigationAction label="Home" icon={<HomeIcon />} />
-            <BottomNavigationAction label="Stories" icon={<StoriesIcon />} />
-            <BottomNavigationAction label="Tree" icon={<FamilyTreeIcon />} />
-            <BottomNavigationAction label="Voice" icon={<MicIcon />} />
+            <BottomNavigationAction label="Archive" icon={<HomeIcon />} />
+            <BottomNavigationAction label="Contribute" icon={<AddIcon />} />
+            <BottomNavigationAction label="Family" icon={<FamilyTreeIcon />} />
+            <BottomNavigationAction label="Voices" icon={<MicIcon />} />
             <BottomNavigationAction label="More" icon={<MoreIcon />} onClick={handleMoreOpen} />
           </BottomNavigation>
 
@@ -342,21 +336,25 @@ export function Layout({ children }: LayoutProps) {
               }
             }}
           >
-            {moreMenuRoutes.map((route) => (
-              <MenuItem
-                key={route.href}
-                onClick={() => handleMoreNavigate(route.href)}
-                sx={{
-                  py: 1.5,
-                  gap: 2,
-                  color: currentPath.startsWith(route.href) ? '#16334a' : 'inherit',
-                  fontWeight: currentPath.startsWith(route.href) ? 600 : 400,
-                }}
-              >
-                {route.icon}
-                <Typography variant="body2">{route.label}</Typography>
-              </MenuItem>
-            ))}
+            {moreMenuRoutes.map((route) => {
+              const [hrefPath] = route.href.split('?')
+              const isMoreActive = currentPath === hrefPath || currentPath.startsWith(hrefPath + '/')
+              return (
+                <MenuItem
+                  key={route.href}
+                  onClick={() => handleMoreNavigate(route.href)}
+                  sx={{
+                    py: 1.5,
+                    gap: 2,
+                    color: isMoreActive ? '#16334a' : 'inherit',
+                    fontWeight: isMoreActive ? 600 : 400,
+                  }}
+                >
+                  {route.icon}
+                  <Typography variant="body2">{route.label}</Typography>
+                </MenuItem>
+              )
+            })}
           </Menu>
         </Box>
       ) : (
@@ -397,10 +395,21 @@ export function Layout({ children }: LayoutProps) {
             {/* Navigation Items */}
             <Box sx={{ flexGrow: 1, px: 2, overflowY: 'auto' }}>
               {navItems.map((item) => {
-                const isActive =
-                  currentPath === item.href ||
-                  (item.href === '/profile' && currentPath.startsWith('/profile')) ||
-                  (item.href === '/stories' && currentPath.startsWith('/stories'))
+                const [itemPath, itemQuery] = item.href.split('?')
+                const itemLens = itemQuery?.startsWith('lens=') ? itemQuery.slice(5) : null
+                const pathMatches = currentPath === itemPath
+                let isActive = false
+                if (itemPath === '/archive') {
+                  // Archive entries differentiate by lens param
+                  if (itemLens) {
+                    isActive = pathMatches && currentLens === itemLens
+                  } else {
+                    // Plain /archive matches when no lens or lens is journey (default)
+                    isActive = pathMatches && (currentLens === null || currentLens === 'journey')
+                  }
+                } else {
+                  isActive = pathMatches || currentPath.startsWith(itemPath + '/')
+                }
 
                 return (
                   <Link

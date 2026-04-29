@@ -186,4 +186,50 @@ export default apiHandler({
       queueJobId: renderEnqueue?.queueJobId ?? null,
     })
   },
+
+  // DELETE /api/stories/[id]/narration
+  DELETE: async (req, res) => {
+    const user = await getAuthUserWithFamilyspace(req, res)
+    const storyId = req.query.id as string
+    await requireFamilyspaceRole(user.id, user.familyspaceId, 'EDITOR')
+
+    // Find all assets of type GENERATED_AUDIO for this story
+    const assets = await prisma.asset.findMany({
+      where: {
+        familyspaceId: user.familyspaceId,
+        assetType: 'GENERATED_AUDIO',
+        metadata: { path: ['storyId'], equals: storyId },
+      },
+    })
+
+    const chatServiceUrl = process.env.CHAT_SERVICE_URL
+    const chatServiceSecret = process.env.CHAT_SERVICE_SECRET
+
+    for (const asset of assets) {
+      if (chatServiceUrl && chatServiceSecret) {
+        fetch(`${chatServiceUrl}/api/ingestion/delete`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-chat-service-secret': chatServiceSecret,
+          },
+          body: JSON.stringify({
+            assetId: asset.id,
+            familyspaceId: user.familyspaceId,
+          }),
+        }).catch(err =>
+          logger.warn({ assetId: asset.id, err: err?.message }, 'RAG ingestion delete trigger failed (non-fatal)')
+        )
+      }
+      await prisma.asset.delete({ where: { id: asset.id } })
+    }
+
+    // Clear narrationRenderJobId on the story
+    await prisma.story.update({
+      where: { id: storyId },
+      data: { narrationRenderJobId: null },
+    })
+
+    return successResponse(res, { deleted: true, count: assets.length })
+  },
 })

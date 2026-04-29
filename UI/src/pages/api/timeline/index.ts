@@ -172,6 +172,21 @@ async function getTimelineEvents(req: NextApiRequest, res: NextApiResponse, fami
             avatarAssetId: true,
           },
         },
+        assets: {
+          where: {
+            asset: {
+              assetType: 'IMAGE',
+            },
+          },
+          take: 1,
+          select: {
+            asset: {
+              select: {
+                id: true,
+              },
+            },
+          },
+        },
       },
     }),
 
@@ -196,6 +211,12 @@ async function getTimelineEvents(req: NextApiRequest, res: NextApiResponse, fami
         dateOccurredPrecision: true,
         description: true,
         documentType: true,
+        asset: {
+          select: {
+            id: true,
+            assetType: true,
+          },
+        },
         people: {
           include: {
             person: {
@@ -341,6 +362,9 @@ async function getTimelineEvents(req: NextApiRequest, res: NextApiResponse, fami
         title: story.title,
         description: story.excerpt ?? undefined,
         people,
+        metadata: { 
+          imageAssetId: story.assets[0]?.asset.id 
+        },
         sourceId: story.id,
         sourceType: 'story',
       })
@@ -365,7 +389,10 @@ async function getTimelineEvents(req: NextApiRequest, res: NextApiResponse, fami
           avatarAssetId: dp.person.avatarAssetId ?? undefined,
           role: dp.role ?? undefined,
         })),
-        metadata: { documentType: doc.documentType },
+        metadata: { 
+          documentType: doc.documentType,
+          imageAssetId: doc.asset.assetType === 'IMAGE' ? doc.asset.id : undefined
+        },
         sourceId: doc.id,
         sourceType: 'document',
       })

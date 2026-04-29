@@ -34,8 +34,8 @@ export function LoginPage() {
     password: '',
   })
 
-  // Get callback URL from query params, default to dashboard
-  const callbackUrl = (router.query.callbackUrl as string) || '/dashboard'
+  // Get callback URL from query params, default to the unified archive home
+  const callbackUrl = (router.query.callbackUrl as string) || '/archive'
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

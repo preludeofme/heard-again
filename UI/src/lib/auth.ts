@@ -108,11 +108,11 @@ export const authOptions: NextAuthOptions = {
       return session
     },
     async redirect({ url, baseUrl }) {
-      // Send to dashboard by default; middleware will redirect to /onboarding if needed
-      if (url === baseUrl || url === `${baseUrl}/`) return `${baseUrl}/dashboard`
+      // Send to the unified archive home by default; middleware will redirect to /onboarding if needed
+      if (url === baseUrl || url === `${baseUrl}/`) return `${baseUrl}/archive`
       if (url.startsWith('/')) return `${baseUrl}${url}`
       else if (new URL(url).origin === baseUrl) return url
-      return `${baseUrl}/dashboard`
+      return `${baseUrl}/archive`
     },
   },
   events: {
