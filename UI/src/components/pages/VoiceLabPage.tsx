@@ -2,6 +2,7 @@ import {
   Box, Typography, Card, CardContent, Button, Grid, Chip,
   IconButton, CircularProgress, TextField, Dialog, DialogTitle,
   DialogContent, Select, MenuItem, FormControl, InputLabel,
+  Avatar, Tooltip, DialogActions
 } from '@mui/material'
 import {
   Add as AddIcon,
@@ -11,15 +12,14 @@ import {
   Compare as CompareIcon,
   Close as CloseIcon,
   RecordVoiceOver as VoiceIcon,
-  CheckCircle as ReadyIcon,
   Lock as LockIcon,
-  VerifiedUser as VerifiedIcon,
 } from '@mui/icons-material'
 import { useState, useEffect, useRef } from 'react'
 import { VoiceTrainingModal } from '@/components/audio/VoiceTrainingModal'
 import { VoiceConsentModal } from '@/components/audio/VoiceConsentModal'
 import { useSelectedFamilyMember } from '@/contexts/SelectedFamilyMemberContext'
 import type { VoiceModel } from '@/types'
+import { ProfileColors } from '@/components/profile/ProfileConstants'
 
 interface VoiceLabPageProps {
   voiceModels: VoiceModel[]
@@ -52,7 +52,6 @@ export function VoiceLabPage({ voiceModels, controller }: VoiceLabPageProps) {
     removeTrainingSample,
     startVoiceTraining,
     synthesizeSpeech,
-    loadVoiceModels,
     deleteVoiceProfile,
     refreshData,
   } = controller
@@ -63,7 +62,7 @@ export function VoiceLabPage({ voiceModels, controller }: VoiceLabPageProps) {
 
   // ── Local state ──
   const [selectedVoiceId, setSelectedVoiceId] = useState<string | null>(null)
-  const [testText, setTestText] = useState("Hello, I'm just setting up my digital voice. How do I sound?")
+  const [testText, setTestText] = useState(`Hello, it's so good to be remembered. I'm glad we're keeping these memories alive together.`)
   const [isSynthesizing, setIsSynthesizing] = useState(false)
   const [playingAudioUrl, setPlayingAudioUrl] = useState<string | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
@@ -72,7 +71,7 @@ export function VoiceLabPage({ voiceModels, controller }: VoiceLabPageProps) {
   const [showCompare, setShowCompare] = useState(false)
   const [compareA, setCompareA] = useState<string>('')
   const [compareB, setCompareB] = useState<string>('')
-  const [compareText, setCompareText] = useState("Hello, I'm just setting up my digital voice. How do I sound?")
+  const [compareText, setCompareText] = useState(`This is how I sound in the digital archive.`)
   const [isComparing, setIsComparing] = useState(false)
   const [compareResults, setCompareResults] = useState<{ audioA: string | null; audioB: string | null } | null>(null)
 
@@ -118,7 +117,6 @@ export function VoiceLabPage({ voiceModels, controller }: VoiceLabPageProps) {
       audio.play()
     } catch (err: any) {
       console.error('Synthesis failed:', err)
-      // Check for consent requirement in error message
       const errorMsg = err.message || ''
       if (errorMsg.includes('consent') || errorMsg.includes('blocked')) {
         const person = selectedVoice?.person || selectedFamilyMember
@@ -173,10 +171,10 @@ export function VoiceLabPage({ voiceModels, controller }: VoiceLabPageProps) {
   // ── Create voice with auto-refresh ──
   const handleCreateVoice = async (modelName: string, language: string, styleInstruct?: string) => {
     if (!selectedFamilyMember?.id) {
-      throw new Error('Select a family member before creating a voice — voices must be assigned to a person.')
+      throw new Error('Select a family member before creating a voice.')
     }
     await startVoiceTraining(modelName, language, styleInstruct, selectedFamilyMember.id)
-    await refreshData() // Refresh the voice list after creation
+    await refreshData()
   }
 
   const handleConsentRecorded = () => {
@@ -185,347 +183,300 @@ export function VoiceLabPage({ voiceModels, controller }: VoiceLabPageProps) {
   }
 
   return (
-    <Box sx={{ minHeight: '100vh', backgroundColor: '#fcf9f4', px: { xs: 3, md: 8 }, py: 6 }}>
-      <Grid container spacing={4}>
-
-        {/* ════════ Left Column — Voice Lab ════════ */}
-        <Grid size={{ xs: 12, lg: 5 }}>
-          <Box sx={{ backgroundColor: '#ffffff', borderRadius: 4, p: 4, height: '100%' }}>
-
-            {/* Header */}
-            <Box sx={{ mb: 4 }}>
-              <Typography variant="h4" className="serif-font" sx={{ color: '#16334a', mb: 0.5 }}>
-                Voice Profiles
-              </Typography>
-              <Typography variant="body2" sx={{ color: '#546669' }}>
-                Create, test, and compare voice clones
-              </Typography>
-            </Box>
-
-            {/* Create New Voice Button */}
-            <Button
-              fullWidth
-              variant="contained"
-              size="large"
-              startIcon={<AddIcon />}
-              onClick={toggleRecordingModal}
-              disabled={!hasSelectedPerson}
+    <Box sx={{ minHeight: '100vh', backgroundColor: ProfileColors.surface, px: { xs: 2, md: 8 }, py: { xs: 4, md: 8 } }}>
+      <Box sx={{ maxWidth: 1280, mx: 'auto' }}>
+        {/* Editorial Header */}
+        <Box sx={{ mb: 6, display: 'flex', flexDirection: { xs: 'column', md: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', md: 'flex-end' }, gap: 3 }}>
+          <Box>
+            <Typography
               sx={{
-                background: hasSelectedPerson
-                  ? 'linear-gradient(135deg, #16334a 0%, #2e4a62 100%)'
-                  : undefined,
-                py: 2,
-                fontSize: '1.1rem',
+                fontFamily: 'var(--font-manrope), sans-serif',
+                fontSize: '0.85rem',
                 fontWeight: 600,
-                mb: hasSelectedPerson ? 4 : 1,
+                letterSpacing: '0.12em',
+                textTransform: 'uppercase',
+                color: ProfileColors.onSurfaceVariant,
+                mb: 1
               }}
             >
-              {hasSelectedPerson
-                ? `Add a sample of ${memberName}'s voice`
-                : 'Select a family member to add a voice'}
-            </Button>
-            {!hasSelectedPerson && (
-              <Typography variant="caption" sx={{ display: 'block', color: '#8a6f00', mb: 4 }}>
-                Voices must be tied to a family member so they don't end up orphaned. Use the search above to pick a person first.
-              </Typography>
-            )}
+              The Living Voice
+            </Typography>
+            <Typography 
+              variant="h2" 
+              className="serif-font" 
+              sx={{ 
+                color: ProfileColors.primary, 
+                fontWeight: 700,
+                fontSize: { xs: '2.5rem', md: '3.5rem' },
+                lineHeight: 1,
+                fontStyle: 'italic'
+              }}
+            >
+              Hear them tell it
+            </Typography>
+            <Typography variant="body1" sx={{ color: ProfileColors.onSurfaceVariant, mt: 2, maxWidth: 550, fontFamily: 'var(--font-newsreader), serif', fontSize: '1.15rem' }}>
+              We believe every voice is a fingerprint of the soul. Archive their warmth and wisdom so future generations can truly listen.
+            </Typography>
+          </Box>
+          
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={toggleRecordingModal}
+            disabled={!hasSelectedPerson}
+            sx={{
+              backgroundColor: ProfileColors.primary,
+              borderRadius: '999px',
+              py: 1.5,
+              px: 3,
+              textTransform: 'none',
+              fontWeight: 600,
+              '&:hover': { backgroundColor: ProfileColors.primaryContainer, color: ProfileColors.onPrimaryContainer }
+            }}
+          >
+            {hasSelectedPerson ? `Add ${memberName}'s Voice` : 'Select a person to begin'}
+          </Button>
+        </Box>
 
-            {/* ── Test Selected Voice ── */}
-            <Box sx={{ mb: 4 }}>
-              <Typography variant="h6" sx={{ color: '#16334a', mb: 2, fontWeight: 600 }}>
-                Test a Voice
-              </Typography>
+        <Grid container spacing={5}>
+          {/* Voice Collection */}
+          <Grid size={{ xs: 12, lg: 7 }}>
+            <Box sx={{ backgroundColor: ProfileColors.surfaceContainerLowest, borderRadius: 6, p: 4, boxShadow: '0 4px 40px rgba(0,0,0,0.04)', border: `1px solid ${ProfileColors.outlineVariant}15` }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+                <Typography variant="h5" className="serif-font" sx={{ color: ProfileColors.primary, fontWeight: 700 }}>
+                  Voice Collection
+                </Typography>
+                <Chip
+                  label={`${voiceModels.length} voices archived`}
+                  sx={{ backgroundColor: ProfileColors.secondaryContainer, color: ProfileColors.onSecondaryContainer, fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: 1 }}
+                />
+              </Box>
 
-              {selectedVoice ? (
-                <Box>
-                  <Chip
-                    icon={<VoiceIcon sx={{ fontSize: 16 }} />}
-                    label={selectedVoice.displayName || selectedVoice.name}
-                    sx={{
-                      mb: 2,
-                      backgroundColor: '#d0e3e6',
-                      color: '#16334a',
-                      fontWeight: 600,
-                    }}
-                  />
-                  <TextField
-                    fullWidth
-                    multiline
-                    rows={3}
-                    placeholder="Type something to hear this voice say..."
-                    value={testText}
-                    onChange={(e) => setTestText(e.target.value)}
-                    variant="outlined"
-                    sx={{ mb: 2 }}
-                  />
-                  <Box sx={{ display: 'flex', gap: 1 }}>
-                    <Button
-                      variant="contained"
-                      fullWidth
-                      startIcon={
-                        isSynthesizing ? <CircularProgress size={18} color="inherit" /> :
-                        playingAudioUrl ? <StopIcon /> : <PlayIcon />
-                      }
-                      onClick={playingAudioUrl ? handleStopAudio : handlePlayTest}
-                      disabled={!testText.trim() || isSynthesizing}
-                      sx={{
-                        backgroundColor: '#16334a',
-                        '&:hover': { backgroundColor: '#2e4a62' },
-                        fontWeight: 600,
-                      }}
-                    >
-                      {isSynthesizing ? 'Generating...' : playingAudioUrl ? 'Stop' : 'Play Voice'}
-                    </Button>
-                  </Box>
+              {voiceModels.length === 0 ? (
+                <Box sx={{ py: 10, textAlign: 'center', backgroundColor: ProfileColors.surfaceContainerLow, borderRadius: 4, border: `2px dashed ${ProfileColors.outlineVariant}30` }}>
+                  <VoiceIcon sx={{ fontSize: 56, color: ProfileColors.outlineVariant, mb: 2, opacity: 0.5 }} />
+                  <Typography variant="h6" className="serif-font" sx={{ color: ProfileColors.primary, mb: 1 }}>
+                    Silence is waiting to be filled
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: ProfileColors.onSurfaceVariant, mb: 4 }}>
+                    Start by teaching the archive {memberName}'s unique voice.
+                  </Typography>
                 </Box>
               ) : (
-                <Box
-                  sx={{
-                    p: 4,
-                    textAlign: 'center',
-                    backgroundColor: '#f6f3ee',
-                    borderRadius: 2,
-                    border: '1px dashed #d0e3e6',
-                  }}
-                >
-                  <VoiceIcon sx={{ fontSize: 40, color: '#adcae6', mb: 1 }} />
-                  <Typography variant="body2" sx={{ color: '#546669' }}>
-                    {voiceModels.length === 0
-                      ? 'Create your first voice to get started'
-                      : 'Select a voice from the list to test it'}
-                  </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {voiceModels.map((model: VoiceModel) => {
+                    const isSelected = selectedVoiceId === model.id
+                    const isDeleting = deleteConfirmId === model.id
+
+                    return (
+                      <Card
+                        key={model.id}
+                        onClick={() => setSelectedVoiceId(model.id)}
+                        sx={{
+                          backgroundColor: isSelected ? ProfileColors.surfaceContainerLow : 'transparent',
+                          border: `1px solid ${isSelected ? ProfileColors.primary + '30' : ProfileColors.outlineVariant + '15'}`,
+                          boxShadow: isSelected ? '0 4px 20px rgba(0,0,0,0.06)' : 'none',
+                          cursor: 'pointer',
+                          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                          borderRadius: 4,
+                          '&:hover': {
+                            backgroundColor: isSelected ? ProfileColors.surfaceContainerLow : ProfileColors.surfaceContainerLowest,
+                            transform: 'translateX(4px)',
+                            borderColor: ProfileColors.primary + '20',
+                          },
+                        }}
+                      >
+                        <CardContent sx={{ p: 3, display: 'flex', alignItems: 'center', gap: 3, '&:last-child': { pb: 3 } }}>
+                          <Avatar
+                            src={model.person?.avatarAssetId ? `/api/assets/serve/${model.person.avatarAssetId}` : undefined}
+                            sx={{
+                              width: 56,
+                              height: 56,
+                              backgroundColor: isSelected ? ProfileColors.primary : ProfileColors.surfaceContainerHigh,
+                              color: isSelected ? '#fff' : ProfileColors.primary,
+                              border: `2px solid ${isSelected ? ProfileColors.primary : 'transparent'}`,
+                              boxShadow: isSelected ? 2 : 0
+                            }}
+                          >
+                            <VoiceIcon />
+                          </Avatar>
+
+                          <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                            <Typography variant="h6" className="serif-font" sx={{ fontWeight: 700, color: ProfileColors.primary }}>
+                              {model.displayName || model.name}
+                            </Typography>
+                            <Typography variant="caption" sx={{ color: ProfileColors.onSurfaceVariant, fontWeight: 500 }}>
+                              Created {new Date(model.createdAt).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
+                            </Typography>
+                          </Box>
+
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                            {model.hasConsent !== true && (
+                              <Tooltip title="Needs recorded consent">
+                                <IconButton 
+                                  size="small" 
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setConsentPersonId(model.person?.id || '')
+                                    setConsentPersonName(model.person?.firstName || '')
+                                    setConsentVoiceProfileId(model.id)
+                                    setShowConsentModal(true)
+                                  }}
+                                  sx={{ color: '#b45309', bgcolor: '#fef3c7' }}
+                                >
+                                  <LockIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                            )}
+                            {isDeleting ? (
+                              <Button
+                                size="small"
+                                variant="contained"
+                                color="error"
+                                onClick={(e) => { e.stopPropagation(); handleDelete(model.id); }}
+                                sx={{ minWidth: 0, px: 1 }}
+                              >
+                                Del
+                              </Button>
+                            ) : (
+                              <IconButton
+                                size="small"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setDeleteConfirmId(model.id)
+                                }}
+                                sx={{ color: ProfileColors.onSurfaceVariant, '&:hover': { color: '#dc2626', bgcolor: '#fee2e2' } }}
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            )}
+                          </Box>
+                        </CardContent>
+                      </Card>
+                    )
+                  })}
                 </Box>
               )}
             </Box>
+          </Grid>
 
-            {/* ── Compare Voices Button ── */}
-            {voiceModels.length >= 2 && (
-              <Button
-                fullWidth
-                variant="outlined"
-                startIcon={<CompareIcon />}
-                onClick={() => {
-                  setCompareA(voiceModels[0]?.id || '')
-                  setCompareB(voiceModels[1]?.id || '')
-                  setCompareText('')
-                  setCompareResults(null)
-                  setShowCompare(true)
-                }}
-                sx={{
-                  borderColor: '#d0e3e6',
-                  color: '#16334a',
-                  py: 1.5,
-                  fontWeight: 600,
-                  '&:hover': { borderColor: '#16334a', backgroundColor: '#f6f3ee' },
-                }}
-              >
-                Compare Voices
-              </Button>
-            )}
-          </Box>
-        </Grid>
-
-        {/* ════════ Right Column — Your Voices ════════ */}
-        <Grid size={{ xs: 12, lg: 7 }}>
-          <Box sx={{ backgroundColor: '#ffffff', borderRadius: 4, p: 4, height: '100%' }}>
-
-            {/* Header */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-              <Box>
-                <Typography variant="h4" className="serif-font" sx={{ color: '#16334a', mb: 0.5 }}>
-                  Your Voices
+          {/* Listening Room */}
+          <Grid size={{ xs: 12, lg: 5 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <Box sx={{ backgroundColor: ProfileColors.surfaceContainerLowest, borderRadius: 6, p: 4, boxShadow: '0 4px 40px rgba(0,0,0,0.04)', border: `1px solid ${ProfileColors.outlineVariant}15` }}>
+                <Typography variant="h5" className="serif-font" sx={{ color: ProfileColors.primary, fontWeight: 700, mb: 3 }}>
+                  Listening Room
                 </Typography>
-                <Typography variant="body2" sx={{ color: '#546669' }}>
-                  {voiceModels.length} voice{voiceModels.length !== 1 ? 's' : ''} created
-                </Typography>
-              </Box>
-              <Chip
-                label={`${voiceModels.length} voice${voiceModels.length !== 1 ? 's' : ''}`}
-                sx={{ backgroundColor: '#d0e3e6', color: '#16334a', fontWeight: 600 }}
-              />
-            </Box>
 
-            {/* Voice List */}
-            {voiceModels.length === 0 ? (
-              <Box
-                sx={{
-                  py: 8,
-                  textAlign: 'center',
-                  backgroundColor: '#f6f3ee',
-                  borderRadius: 3,
-                  border: '1px dashed #d0e3e6',
-                }}
-              >
-                <VoiceIcon sx={{ fontSize: 56, color: '#adcae6', mb: 2 }} />
-                <Typography variant="h6" className="serif-font" sx={{ color: '#16334a', mb: 1 }}>
-                  No voices yet
-                </Typography>
-                <Typography variant="body2" sx={{ color: '#546669', mb: 3 }}>
-                  Create your first voice clone to get started
-                </Typography>
-                <Button
-                  variant="contained"
-                  startIcon={<AddIcon />}
-                  onClick={toggleRecordingModal}
-                  disabled={!hasSelectedPerson}
-                  sx={{
-                    background: hasSelectedPerson
-                      ? 'linear-gradient(135deg, #16334a 0%, #2e4a62 100%)'
-                      : undefined,
-                    fontWeight: 600,
-                  }}
-                >
-                  {hasSelectedPerson
-                    ? `Add a sample of ${memberName}'s voice`
-                    : 'Select a family member to add a voice'}
-                </Button>
-              </Box>
-            ) : (
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                {voiceModels.map((model: VoiceModel) => {
-                  const isSelected = selectedVoiceId === model.id
-                  const isDeleting = deleteConfirmId === model.id
+                {selectedVoice ? (
+                  <Box>
+                    <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 2, p: 2, backgroundColor: ProfileColors.surfaceContainerLow, borderRadius: 3 }}>
+                      <VoiceIcon sx={{ color: ProfileColors.primary }} />
+                      <Typography sx={{ fontWeight: 600, color: ProfileColors.primary }}>
+                        Listening to {selectedVoice.displayName || selectedVoice.name}
+                      </Typography>
+                    </Box>
 
-                  return (
-                    <Card
-                      key={model.id}
-                      onClick={() => setSelectedVoiceId(model.id)}
+                    <TextField
+                      fullWidth
+                      multiline
+                      rows={4}
+                      placeholder="Type a greeting or a memory..."
+                      value={testText}
+                      onChange={(e) => setTestText(e.target.value)}
+                      variant="outlined"
+                      sx={{ 
+                        mb: 3,
+                        '& .MuiOutlinedInput-root': {
+                          backgroundColor: '#fff',
+                          borderRadius: 3,
+                          fontFamily: 'var(--font-newsreader), serif',
+                          fontSize: '1.1rem'
+                        }
+                      }}
+                    />
+
+                    {playingAudioUrl && (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, height: 40, mb: 3, px: 2 }}>
+                        {[...Array(20)].map((_, i) => (
+                          <Box 
+                            key={i} 
+                            sx={{ 
+                              width: 3, 
+                              height: 10 + Math.random() * 20, 
+                              bgcolor: ProfileColors.primary, 
+                              borderRadius: 1,
+                              animation: 'pulse 1s infinite ease-in-out',
+                              animationDelay: `${i * 0.05}s`,
+                              '@keyframes pulse': {
+                                '0%, 100%': { transform: 'scaleY(1)' },
+                                '50%': { transform: 'scaleY(1.5)' }
+                              }
+                            }} 
+                          />
+                        ))}
+                      </Box>
+                    )}
+
+                    <Button
+                      variant="contained"
+                      fullWidth
+                      size="large"
+                      startIcon={isSynthesizing ? <CircularProgress size={20} color="inherit" /> : playingAudioUrl ? <StopIcon /> : <PlayIcon />}
+                      onClick={playingAudioUrl ? handleStopAudio : handlePlayTest}
+                      disabled={!testText.trim() || isSynthesizing}
                       sx={{
-                        backgroundColor: isSelected ? '#edf4f7' : '#f6f3ee',
-                        border: isSelected ? '2px solid #16334a' : '2px solid transparent',
-                        boxShadow: 'none',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s',
-                        overflow: 'hidden',
-                        '&:hover': {
-                          backgroundColor: isSelected ? '#edf4f7' : '#ebe8e3',
-                          transform: 'none',
-                        },
+                        backgroundColor: ProfileColors.primary,
+                        borderRadius: '999px',
+                        py: 2,
+                        fontWeight: 600,
+                        '&:hover': { backgroundColor: ProfileColors.primaryContainer }
                       }}
                     >
-                      <CardContent sx={{ p: { xs: 1.5, sm: 2.5 }, display: 'flex', alignItems: 'center', gap: { xs: 1.5, sm: 2 }, '&:last-child': { pb: { xs: 1.5, sm: 2.5 } } }}>
-                        {/* Avatar / icon */}
-                        <Box
-                          sx={{
-                            width: { xs: 36, sm: 44 },
-                            height: { xs: 36, sm: 44 },
-                            borderRadius: '50%',
-                            backgroundColor: isSelected ? '#16334a' : '#d0e3e6',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            flexShrink: 0,
-                          }}
-                        >
-                          <VoiceIcon sx={{ color: isSelected ? '#ffffff' : '#16334a', fontSize: { xs: 18, sm: 22 } }} />
-                        </Box>
-
-                        {/* Info */}
-                        <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-                          <Typography
-                            variant="body1"
-                            sx={{
-                              fontWeight: 600,
-                              color: '#16334a',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                              fontSize: { xs: '0.9rem', sm: '1rem' }
-                            }}
-                          >
-                            {model.displayName || model.name}
-                          </Typography>
-                          <Typography
-                            variant="caption"
-                            sx={{
-                              color: model.person ? '#16334a' : '#b45309',
-                              display: 'block',
-                              fontWeight: 500,
-                              fontStyle: model.person ? 'normal' : 'italic',
-                            }}
-                          >
-                            {model.person
-                              ? `For ${model.person.firstName}${model.person.lastName ? ` ${model.person.lastName}` : ''}`
-                              : 'Unassigned voice'}
-                          </Typography>
-                          <Typography variant="caption" sx={{ color: '#546669', display: 'block' }}>
-                            {new Date(model.createdAt).toLocaleDateString()}
-                          </Typography>
-                        </Box>
-
-                        {/* Status & Consent */}
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
-                          {model.hasConsent === true ? (
-                            <ReadyIcon sx={{ color: '#4caf50', fontSize: { xs: 18, sm: 20 } }} />
-                          ) : (
-                            <Chip
-                              size="small"
-                              icon={<LockIcon sx={{ fontSize: '12px !important' }} />}
-                              label="Consent"
-                              color="warning"
-                              variant="outlined"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                const person = model.person || selectedFamilyMember
-                                if (person) {
-                                  setConsentPersonId(person.id)
-                                  setConsentPersonName(person.firstName + (person.lastName ? ` ${person.lastName}` : ''))
-                                  setConsentVoiceProfileId(model.id)
-                                  setShowConsentModal(true)
-                                }
-                              }}
-                              sx={{ 
-                                height: 22, 
-                                fontSize: '0.65rem', 
-                                fontWeight: 600, 
-                                cursor: 'pointer',
-                                '& .MuiChip-label': { px: 1 }
-                              }}
-                            />
-                          )}
-                        </Box>
-
-                        {/* Delete */}
-                        {!isDeleting ? (
-                          <IconButton
-                            size="small"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setDeleteConfirmId(model.id)
-                            }}
-                            sx={{ 
-                              color: '#8a9a9d', 
-                              '&:hover': { color: '#dc2626' }, 
-                              flexShrink: 0,
-                              p: { xs: 0.5, sm: 1 }
-                            }}
-                          >
-                            <DeleteIcon sx={{ fontSize: { xs: 18, sm: 20 } }} />
-                          </IconButton>
-                        ) : (
-                          <Box sx={{ display: 'flex', gap: 0.5, flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
-                            <Button
-                              size="small"
-                              variant="contained"
-                              color="error"
-                              onClick={() => handleDelete(model.id)}
-                              sx={{ minWidth: 0, px: 1, py: 0.25, fontSize: '0.65rem' }}
-                            >
-                              Del
-                            </Button>
-                          </Box>
-                        )}
-                      </CardContent>
-                    </Card>
-                  )
-                })}
+                      {isSynthesizing ? 'Preparing Voice...' : playingAudioUrl ? 'Silence' : 'Hear the Voice'}
+                    </Button>
+                  </Box>
+                ) : (
+                  <Box sx={{ p: 4, textAlign: 'center', backgroundColor: ProfileColors.surfaceContainerLow, borderRadius: 4, border: `1px dashed ${ProfileColors.outlineVariant}20` }}>
+                    <Typography variant="body2" sx={{ color: ProfileColors.onSurfaceVariant }}>
+                      Select a voice from your collection to step into the listening room.
+                    </Typography>
+                  </Box>
+                )}
               </Box>
-            )}
-          </Box>
-        </Grid>
-      </Grid>
 
-      {/* ════════ Voice Training Modal ════════ */}
+              {voiceModels.length >= 2 && (
+                <Card 
+                  onClick={() => {
+                    setCompareA(voiceModels[0]?.id || '')
+                    setCompareB(voiceModels[1]?.id || '')
+                    setCompareResults(null)
+                    setShowCompare(true)
+                  }}
+                  sx={{ 
+                    borderRadius: 6, 
+                    cursor: 'pointer',
+                    backgroundColor: ProfileColors.surfaceContainerLow,
+                    border: `1px solid ${ProfileColors.outlineVariant}10`,
+                    '&:hover': { borderColor: ProfileColors.primary + '30', bgcolor: ProfileColors.surfaceContainerLowest }
+                  }}
+                >
+                  <CardContent sx={{ p: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Box sx={{ width: 40, height: 40, borderRadius: '50%', bgcolor: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <CompareIcon sx={{ color: ProfileColors.primary }} />
+                    </Box>
+                    <Box>
+                      <Typography sx={{ fontWeight: 700, color: ProfileColors.primary }}>Compare nuances</Typography>
+                      <Typography variant="caption" sx={{ color: ProfileColors.onSurfaceVariant }}>Listen to two versions side-by-side</Typography>
+                    </Box>
+                  </CardContent>
+                </Card>
+              )}
+            </Box>
+          </Grid>
+        </Grid>
+      </Box>
+
       <VoiceTrainingModal
         open={showRecordingModal}
         onClose={toggleRecordingModal}
@@ -538,7 +489,6 @@ export function VoiceLabPage({ voiceModels, controller }: VoiceLabPageProps) {
         trainingJob={trainingJob}
       />
 
-      {/* ════════ Voice Consent Modal ════════ */}
       <VoiceConsentModal
         open={showConsentModal}
         onClose={() => setShowConsentModal(false)}
@@ -548,60 +498,43 @@ export function VoiceLabPage({ voiceModels, controller }: VoiceLabPageProps) {
         onConsentRecorded={handleConsentRecorded}
       />
 
-      {/* ════════ Compare Voices Dialog ════════ */}
       <Dialog
         open={showCompare}
         onClose={() => { setShowCompare(false); setCompareResults(null) }}
-        maxWidth="md"
+        maxWidth="sm"
         fullWidth
-        PaperProps={{ sx: { borderRadius: 3, backgroundColor: '#fcf9f4' } }}
+        PaperProps={{ sx: { borderRadius: 4, p: 2 } }}
       >
-        <DialogTitle sx={{ pb: 1 }}>
-          <Box display="flex" justifyContent="space-between" alignItems="center">
-            <Typography variant="h5" className="serif-font" sx={{ color: '#16334a', fontWeight: 600 }}>
-              Compare Voices
-            </Typography>
-            <IconButton onClick={() => { setShowCompare(false); setCompareResults(null) }}>
-              <CloseIcon />
-            </IconButton>
-          </Box>
+        <DialogTitle sx={{ fontFamily: 'var(--font-newsreader), serif', fontWeight: 700 }}>
+          Nuance Comparison
         </DialogTitle>
         <DialogContent>
-          <Typography variant="body2" sx={{ color: '#546669', mb: 3 }}>
-            Compare two voice profiles by generating the same text with each
+          <Typography variant="body2" sx={{ mb: 3, color: ProfileColors.onSurfaceVariant }}>
+            Sometimes the smallest change in training samples makes a big difference. Hear them side-by-side.
           </Typography>
 
           <TextField
             fullWidth
             multiline
-            rows={3}
-            label="Text to compare"
+            rows={2}
+            label="What should they say?"
             value={compareText}
             onChange={(e) => setCompareText(e.target.value)}
-            placeholder="Enter text both voices will say..."
             sx={{ mb: 3 }}
           />
 
           <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
-            <FormControl fullWidth>
-              <InputLabel>Voice A</InputLabel>
-              <Select
-                value={compareA}
-                label="Voice A"
-                onChange={(e) => setCompareA(e.target.value)}
-              >
+            <FormControl fullWidth size="small">
+              <InputLabel>First Voice</InputLabel>
+              <Select value={compareA} label="First Voice" onChange={(e) => setCompareA(e.target.value)}>
                 {voiceModels.map((m: VoiceModel) => (
                   <MenuItem key={m.id} value={m.id}>{m.displayName || m.name}</MenuItem>
                 ))}
               </Select>
             </FormControl>
-            <FormControl fullWidth>
-              <InputLabel>Voice B</InputLabel>
-              <Select
-                value={compareB}
-                label="Voice B"
-                onChange={(e) => setCompareB(e.target.value)}
-              >
+            <FormControl fullWidth size="small">
+              <InputLabel>Second Voice</InputLabel>
+              <Select value={compareB} label="Second Voice" onChange={(e) => setCompareB(e.target.value)}>
                 {voiceModels.map((m: VoiceModel) => (
                   <MenuItem key={m.id} value={m.id}>{m.displayName || m.name}</MenuItem>
                 ))}
@@ -614,51 +547,35 @@ export function VoiceLabPage({ voiceModels, controller }: VoiceLabPageProps) {
             fullWidth
             onClick={handleCompare}
             disabled={!compareText.trim() || !compareA || !compareB || isComparing}
-            startIcon={isComparing ? <CircularProgress size={18} color="inherit" /> : undefined}
-            sx={{
-              backgroundColor: '#16334a',
-              '&:hover': { backgroundColor: '#2e4a62' },
-              py: 1.5,
-              fontWeight: 600,
-              mb: 2,
-            }}
+            sx={{ borderRadius: '999px', py: 1.5, bgcolor: ProfileColors.primary }}
           >
-            {isComparing ? 'Generating...' : 'Generate Comparison'}
+            {isComparing ? 'Preparing comparison...' : 'Generate side-by-side'}
           </Button>
 
-          {/* Results */}
           {compareResults && (
-            <Box sx={{ p: 2, backgroundColor: '#ffffff', borderRadius: 2, border: '1px solid #d0e3e6' }}>
-              <Typography variant="subtitle2" sx={{ color: '#16334a', mb: 2 }}>
-                Results
-              </Typography>
-
+            <Box sx={{ mt: 3, p: 2, bgcolor: ProfileColors.surfaceContainerLow, borderRadius: 3 }}>
               {compareResults.audioA && (
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="caption" sx={{ color: '#546669', fontWeight: 600, mb: 0.5, display: 'block' }}>
-                    Voice A: {voiceModels.find(m => m.id === compareA)?.displayName || compareA}
+                  <Typography variant="caption" sx={{ fontWeight: 700, mb: 1, display: 'block' }}>
+                    {voiceModels.find(m => m.id === compareA)?.displayName}
                   </Typography>
-                  <audio controls src={compareResults.audioA} style={{ width: '100%' }} />
+                  <audio controls src={compareResults.audioA} style={{ width: '100%', height: 36 }} />
                 </Box>
               )}
-
               {compareResults.audioB && (
-                <Box sx={{ mb: 1 }}>
-                  <Typography variant="caption" sx={{ color: '#546669', fontWeight: 600, mb: 0.5, display: 'block' }}>
-                    Voice B: {voiceModels.find(m => m.id === compareB)?.displayName || compareB}
+                <Box>
+                  <Typography variant="caption" sx={{ fontWeight: 700, mb: 1, display: 'block' }}>
+                    {voiceModels.find(m => m.id === compareB)?.displayName}
                   </Typography>
-                  <audio controls src={compareResults.audioB} style={{ width: '100%' }} />
+                  <audio controls src={compareResults.audioB} style={{ width: '100%', height: 36 }} />
                 </Box>
-              )}
-
-              {!compareResults.audioA && !compareResults.audioB && (
-                <Typography variant="body2" color="error">
-                  Failed to generate comparison audio. Make sure the TTS service is running.
-                </Typography>
               )}
             </Box>
           )}
         </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowCompare(false)} sx={{ color: ProfileColors.onSurfaceVariant }}>Close</Button>
+        </DialogActions>
       </Dialog>
     </Box>
   )

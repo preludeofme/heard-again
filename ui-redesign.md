@@ -339,3 +339,11 @@ Design this as:
 not
 
 “A content management application.”
+
+## Gap Analysis & Implementation Checklist
+
+- [x] **Remove Standalone Legacy Pages:** Deprecate or redirect old standalone URLs (`/stories`, `/timeline`, `/documents`, `/voice-lab`, `/collections`) to ensure all navigation flows entirely through the unified `ArchiveShell` lenses.
+- [x] **Redesign Keepsakes (formerly Documents):** Transform `DocumentsPage.tsx` from a standard file manager grid into a tactile "memory box/heirloom drawer" aesthetic (e.g., introducing gallery, shelf, or drawer visual metaphors).
+- [x] **Revamp Life Journey (formerly Timeline):** Update `TimelinePageComponent.tsx` to remove rigid enterprise form controls and adopt a warm, "mixed-content memory timeline" that focuses on exploring a life.
+- [x] **Overhaul Voice Memories (formerly Voice Lab):** Shift `VoiceLabPage.tsx` away from a technical TTS testing lab toward a "Hear them tell it" experience featuring integrated spoken stories, transcripts, and waveform visuals.
+- [x] **Refine Stories Lens:** Redesign the dense SaaS-style grid of cards in `StoriesPage.tsx` into warmer, editorial-style memory excerpts and featured story layouts.

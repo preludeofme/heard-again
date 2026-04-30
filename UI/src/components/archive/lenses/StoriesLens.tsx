@@ -39,6 +39,7 @@ export function StoriesLens() {
     <StoriesPage
       stories={visibleStories}
       selectedFamilyMember={selectedFamilyMember}
+      isLens
       onSubmitStory={async (title, content, storyDate, location, authorRelationship) => {
         await controller.submitStory({
           title,

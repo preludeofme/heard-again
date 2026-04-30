@@ -185,9 +185,9 @@ export function Layout({ children }: LayoutProps) {
   const handleAction = (action: string) => {
     setSpeedDialOpen(false)
     if (action === 'story') {
-      router.push('/stories#contribution-hub')
+      router.push('/contribute')
     } else if (action === 'document') {
-      router.push('/documents')
+      router.push('/archive?lens=keepsakes')
     } else if (action === 'person') {
       router.push('/family-tree?add=1')
     }

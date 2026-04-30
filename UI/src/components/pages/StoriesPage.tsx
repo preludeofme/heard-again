@@ -1,24 +1,18 @@
-import { Box, Typography, Card, CardContent, Button, Grid, TextField, IconButton, Avatar, Chip, Dialog, Collapse, Slider } from '@mui/material'
+import { Box, Typography, Card, CardContent, Button, Grid, TextField, IconButton, Avatar, Chip, Dialog, Collapse, Paper } from '@mui/material'
 import { 
   MicNoneOutlined as MicIcon, 
   AutoStoriesOutlined as AutoStoriesIcon, 
-  AttachFileOutlined as AttachFileIcon, 
-  AddPhotoAlternateOutlined as AddPhotoIcon, 
-  PlayArrowOutlined as PlayIcon, 
-  PauseOutlined as PauseIcon,
-  ScheduleOutlined as ScheduleIcon, 
+  ShareOutlined as Share,
   ArrowForwardOutlined as ArrowForwardIcon, 
   CloseOutlined as CloseIcon, 
-  KeyboardArrowDownOutlined as ArrowDownIcon,
-  ShareOutlined as Share
 } from '@mui/icons-material'
 import { StoryContribution } from '@/types'
 import { formatDistanceToNow } from 'date-fns'
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/router'
-import { EmptyState } from '@/components/feedback/UIStates'
 import { AudioRecorder } from '@/components/audio/AudioRecorder'
 import { RichTextEditor } from '@/components/editor/RichTextEditor'
+import { ProfileColors } from '@/components/profile/ProfileConstants'
 
 function stripHtml(html: string) {
   if (typeof window === 'undefined') return html
@@ -37,6 +31,7 @@ interface StoriesPageProps {
   } | null
   onSubmitStory?: (title: string, content: string, storyDate?: string, location?: string, authorRelationship?: string) => Promise<void>
   onSubmitAudio?: (audioBlob: Blob, duration: number, title?: string, authorRelationship?: string) => Promise<void>
+  isLens?: boolean
 }
 
 const getDisplayName = (member: StoriesPageProps['selectedFamilyMember']) => {
@@ -44,7 +39,7 @@ const getDisplayName = (member: StoriesPageProps['selectedFamilyMember']) => {
   return member.displayName || `${member.firstName}${member.lastName ? ` ${member.lastName}` : ''}`
 }
 
-export function StoriesPage({ stories, selectedFamilyMember, onSubmitStory, onSubmitAudio }: StoriesPageProps) {
+export function StoriesPage({ stories, selectedFamilyMember, onSubmitStory, onSubmitAudio, isLens = false }: StoriesPageProps) {
   const [storyTitle, setStoryTitle] = useState('')
   const [storyContent, setStoryContent] = useState('')
   const [storyDate, setStoryDate] = useState('')
@@ -54,13 +49,20 @@ export function StoriesPage({ stories, selectedFamilyMember, onSubmitStory, onSu
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showAudioDialog, setShowAudioDialog] = useState(false)
   const [isSubmittingAudio, setIsSubmittingAudio] = useState(false)
+  const [activeFilter, setActiveFilter] = useState<'all' | 'written' | 'audio'>('all')
   
-  // Audio playback state
-  const [currentlyPlaying, setCurrentlyPlaying] = useState<string | null>(null)
-  const [audioProgress, setAudioProgress] = useState(0)
   const audioRef = useRef<HTMLAudioElement | null>(null)
-  
   const router = useRouter()
+
+  const filteredStories = stories.filter(s => {
+    if (activeFilter === 'all') return true
+    if (activeFilter === 'written') return s.type === 'text' || !s.type
+    if (activeFilter === 'audio') return s.type === 'audio'
+    return true
+  })
+
+  const featuredStory = stories.find(s => s.hasNarration) || stories[0]
+  const otherStories = filteredStories.filter(s => s.id !== featuredStory?.id)
 
   useEffect(() => {
     return () => {
@@ -70,34 +72,6 @@ export function StoriesPage({ stories, selectedFamilyMember, onSubmitStory, onSu
       }
     }
   }, [])
-
-  const handleTogglePlay = (story: StoryContribution) => {
-    if (!story.audioUrl) return
-
-    if (currentlyPlaying === story.id) {
-      audioRef.current?.pause()
-      setCurrentlyPlaying(null)
-    } else {
-      if (audioRef.current) {
-        audioRef.current.pause()
-      }
-      
-      const audio = new Audio(story.audioUrl)
-      audioRef.current = audio
-      setCurrentlyPlaying(story.id)
-      
-      audio.play()
-      
-      audio.ontimeupdate = () => {
-        setAudioProgress((audio.currentTime / audio.duration) * 100)
-      }
-      
-      audio.onended = () => {
-        setCurrentlyPlaying(null)
-        setAudioProgress(0)
-      }
-    }
-  }
 
   const handlePostMemory = async () => {
     if (!storyContent.trim() || !onSubmitStory) return
@@ -135,671 +109,107 @@ export function StoriesPage({ stories, selectedFamilyMember, onSubmitStory, onSu
   const initials = selectedFamilyMember?.firstName?.[0] || '?'
 
   return (
-    <Box sx={{ minHeight: '100vh', backgroundColor: '#fcf9f4' }}>
-      {/* Hero Section */}
-      <Box sx={{ px: { xs: 3, md: 8 }, py: { xs: 4, md: 8 }, minHeight: 'calc(100vh - 290px)', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-        <Grid container spacing={4} alignItems="center">
-          <Grid size={{ xs: 12, lg: 7 }}>
-            <Typography 
-              variant="h1" 
-              className="serif-font" 
-              sx={{ 
-                fontSize: { xs: '3rem', md: '4.5rem' },
-                color: '#16334a',
-                fontWeight: 600,
-                lineHeight: 1.1,
-                mb: 4,
-                fontStyle: 'italic'
-              }}
-            >
-              Help us tell {getDisplayName(selectedFamilyMember)}'s story.
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 2, mb: 4 }}>
-              <Typography 
-                variant="h6" 
-                sx={{ 
-                  color: '#546669',
-                  maxWidth: 500,
-                  lineHeight: 1.6
-                }}
-              >
-                We are building a living archive of {getDisplayName(selectedFamilyMember)}'s life. Your memories, voice, and stories are the threads that keep {selectedFamilyMember ? 'their' : 'his'} legacy vibrant for the generations to come.
-              </Typography>
-            </Box>
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              <Button
-                variant="outlined"
-                startIcon={<Share />}
-                onClick={() => {
-                  const shareUrl = `${window.location.origin}/stories/contribute?subjectId=${selectedFamilyMember?.id}`
-                  navigator.clipboard.writeText(shareUrl)
-                  alert('Contribution link copied to clipboard! Share this with family and friends.')
-                }}
-                sx={{ 
-                  borderColor: '#16334a', 
-                  color: '#16334a',
-                  '&:hover': { borderColor: '#2e4a62', backgroundColor: 'rgba(22, 51, 74, 0.05)' }
-                }}
-              >
-                Invite others to tell a story
-              </Button>
-            </Box>
-          </Grid>
-          <Grid size={{ xs: 12, lg: 5 }} sx={{ position: 'relative' }}>
-            <Box
-              sx={{
-                aspectRatio: '4/5',
-                borderRadius: 4,
-                overflow: 'hidden',
-                boxShadow: 4,
-                transform: 'rotate(2deg)',
-                transition: 'transform 0.7s',
-                maxHeight: { xs: '400px', md: '500px' },
-                bgcolor: '#d0e3e6',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                '&:hover': {
-                  transform: 'rotate(0deg)',
-                },
-              }}
-            >
-              {selectedFamilyMember?.avatarUrl ? (
-                <Avatar
-                  src={selectedFamilyMember.avatarUrl}
-                  variant="square"
-                  sx={{ 
-                    width: '100%', 
-                    height: '100%',
-                    '& img': {
-                      objectFit: 'cover'
-                    }
-                  }}
-                />
-              ) : (
-                <Typography sx={{ fontFamily: 'var(--font-newsreader), serif', fontSize: '10rem', color: '#16334a', fontWeight: 700 }}>
-                  {initials}
+    <Box sx={{ minHeight: '100vh', backgroundColor: ProfileColors.surface, pb: 10 }}>
+      
+      {!isLens && (
+        <>
+          <Box sx={{ px: { xs: 3, md: 8 }, py: { xs: 4, md: 8 }, minHeight: 'calc(100vh - 290px)', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <Grid container spacing={4} alignItems="center">
+              <Grid size={{ xs: 12, lg: 7 }}>
+                <Typography variant="h1" className="serif-font" sx={{ fontSize: { xs: '3rem', md: '4.5rem' }, color: ProfileColors.primary, fontWeight: 600, lineHeight: 1.1, mb: 4, fontStyle: 'italic' }}>
+                  Help us tell {getDisplayName(selectedFamilyMember)}'s story.
                 </Typography>
-              )}
-            </Box>
-            {/* Floating Quote Card */}
-            <Box
-              sx={{
-                position: 'absolute',
-                bottom: -32,
-                left: -32,
-                backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                backdropFilter: 'blur(24px)',
-                p: 3,
-                borderRadius: 3,
-                boxShadow: 4,
-                maxWidth: 240,
-                display: { xs: 'none', md: 'block' }
-              }}
-            >
-              <Typography 
-                variant="h6" 
-                className="serif-font" 
-                sx={{ 
-                  color: '#16334a',
-                  mb: 1,
-                  fontStyle: 'italic'
-                }}
-              >
-                "The best way to remember is to share."
-              </Typography>
-              <Typography variant="caption" sx={{ color: '#546669' }}>
-                — The Living Archive
-              </Typography>
-            </Box>
-          </Grid>
-        </Grid>
-
-        {/* Scroll Indicator */}
-        <Box
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            mt: { xs: 2, md: 4 },
-            mb: 2,
-            animation: 'bounce 2s infinite',
-            '@keyframes bounce': {
-              '0%, 20%, 50%, 80%, 100%': { transform: 'translateY(0)' },
-              '40%': { transform: 'translateY(-10px)' },
-              '60%': { transform: 'translateY(-5px)' },
-            },
-          }}
-        >
-          <Typography 
-            variant="body2" 
-            sx={{ 
-              color: '#546669', 
-              mb: 1,
-              fontSize: '0.875rem',
-              textTransform: 'uppercase',
-              letterSpacing: 1,
-              opacity: 0.7
-            }}
-          >
-            Scroll to explore
-          </Typography>
-          <IconButton
-            aria-label="Scroll to contribution hub"
-            sx={{
-              color: '#16334a',
-              backgroundColor: 'rgba(22, 51, 74, 0.1)',
-              '&:hover': {
-                backgroundColor: 'rgba(22, 51, 74, 0.2)',
-              },
-            }}
-            onClick={() => {
-              const element = document.getElementById('contribution-hub')
-              element?.scrollIntoView({ behavior: 'smooth' })
-            }}
-          >
-            <ArrowDownIcon />
-          </IconButton>
-        </Box>
-      </Box>
-
-      {/* Contribution Hub */}
-      <Box id="contribution-hub" sx={{ px: { xs: 3, md: 8 }, mb: 8 }}>
-        <Box sx={{ backgroundColor: '#f6f3ee', borderRadius: 4, p: { xs: 4, md: 6 } }}>
-          <Grid container spacing={4}>
-            {/* Record a Memory */}
-            <Grid size={{ xs: 12, lg: 6 }}>
-              <Box sx={{ backgroundColor: '#ffffff', borderRadius: 3, p: 4, height: '100%' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
-                  <Box sx={{ width: 48, height: 48, borderRadius: '50%', backgroundColor: '#d0e3e6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <MicIcon sx={{ color: '#16334a', fontSize: 28 }} />
-                  </Box>
-                  <Typography variant="h4" className="serif-font" sx={{ color: '#16334a' }}>
-                    Record a Memory
-                  </Typography>
-                </Box>
-                <Typography variant="body1" sx={{ color: '#546669', mb: 4, lineHeight: 1.6 }}>
-                  Speak from the heart. Share a favorite anecdote about {getDisplayName(selectedFamilyMember)}, a piece of advice {selectedFamilyMember ? 'they' : 'he'} gave, or just a simple greeting.
+                <Typography variant="h6" sx={{ color: ProfileColors.onSurfaceVariant, maxWidth: 500, lineHeight: 1.6, fontFamily: 'var(--font-newsreader), serif', fontSize: '1.25rem', mb: 4 }}>
+                  We are building a living archive of {getDisplayName(selectedFamilyMember)}'s life. Your memories, voice, and stories keep this legacy vibrant for generations to come.
                 </Typography>
-                {/* Waveform Placeholder */}
-                <Box sx={{ 
-                  height: 96, 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center', 
-                  gap: 0.5, 
-                  mb: 4, 
-                  backgroundColor: '#ebe8e3', 
-                  borderRadius: 3,
-                  px: 3
-                }}>
-                  {[...Array(8)].map((_, i) => (
-                    <Box
-                      key={i}
-                      sx={{
-                        height: [16, 32, 48, 24, 64, 40, 56, 32][i],
-                        width: 4,
-                        backgroundColor: '#e0c29a',
-                        borderRadius: 1,
-                      }}
-                    />
-                  ))}
-                </Box>
-                <Button
-                  fullWidth
-                  variant="contained"
-                  size="large"
-                  onClick={() => setShowAudioDialog(true)}
-                  sx={{
-                    background: 'linear-gradient(135deg, #16334a 0%, #2e4a62 100%)',
-                    py: 2,
-                    fontSize: '1.1rem',
-                    fontWeight: 600,
-                    boxShadow: 3,
-                    '&:active': {
-                      transform: 'scale(0.98)',
-                    }
-                  }}
-                  startIcon={<MicIcon />}
-                >
-                  Start Recording
+                <Button variant="contained" startIcon={<Share />} onClick={() => { navigator.clipboard.writeText(window.location.href); alert('Link copied!'); }} sx={{ backgroundColor: ProfileColors.primary, borderRadius: '999px', px: 3, py: 1.5 }}>
+                  Invite family to contribute
                 </Button>
-              </Box>
-            </Grid>
-
-            {/* Write a Story */}
-            <Grid size={{ xs: 12, lg: 6 }}>
-              <Box sx={{ backgroundColor: '#ffffff', borderRadius: 3, p: 4, height: '100%' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
-                  <Box sx={{ width: 48, height: 48, borderRadius: '50%', backgroundColor: '#feddb4', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <AutoStoriesIcon sx={{ color: '#402e11', fontSize: 28 }} />
-                  </Box>
-                  <Typography variant="h4" className="serif-font" sx={{ color: '#16334a' }}>
-                    Write a Story
-                  </Typography>
+              </Grid>
+              <Grid size={{ xs: 12, lg: 5 }}>
+                <Box sx={{ aspectRatio: '4/5', borderRadius: 6, overflow: 'hidden', boxShadow: '0 20px 80px rgba(0,0,0,0.12)', transform: 'rotate(2deg)', bgcolor: ProfileColors.surfaceContainerHigh, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `12px solid #fff` }}>
+                  {selectedFamilyMember?.avatarUrl ? <Avatar src={selectedFamilyMember.avatarUrl} variant="square" sx={{ width: '100%', height: '100%' }} /> : <Typography sx={{ fontSize: '10rem', color: ProfileColors.primary, fontWeight: 700 }}>{initials}</Typography>}
                 </Box>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  <TextField
-                    fullWidth
-                    placeholder="Story Title (Optional)"
-                    value={storyTitle}
-                    onChange={(e) => setStoryTitle(e.target.value)}
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        backgroundColor: '#ebe8e3',
-                        borderRadius: 3,
-                        '& fieldset': { border: 'none' },
-                        '&:hover fieldset': { border: 'none' },
-                        '&.Mui-focused fieldset': { border: 'none' },
-                        '&.Mui-focused': { backgroundColor: '#ffffff' }
-                      }
-                    }}
-                  />
-                  <RichTextEditor
-                    content={storyContent}
-                    onChange={setStoryContent}
-                    placeholder={`Share your favorite memory of ${getDisplayName(selectedFamilyMember)}...`}
-                  />
-
-                  {/* Starter Templates */}
-                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                    {[
-                      `My earliest memory of ${getDisplayName(selectedFamilyMember)} is...`,
-                      `${getDisplayName(selectedFamilyMember)} always used to say...`,
-                      `A funny time with ${getDisplayName(selectedFamilyMember)} was when...`
-                    ].map((template) => (
-                      <Chip
-                        key={template}
-                        label={template.substring(0, 30) + '...'}
-                        onClick={() => {
-                          setStoryContent(prev => prev ? prev + '\n\n' + template : template)
-                        }}
-                        size="small"
-                        sx={{ 
-                          backgroundColor: '#f6f3ee', 
-                          color: '#546669',
-                          cursor: 'pointer',
-                          '&:hover': { backgroundColor: '#ebe8e3' }
-                        }}
-                      />
-                    ))}
-                  </Box>
-
-                  {/* Optional date + location toggle */}
-                  <Box>
-                    <Button
-                      size="small"
-                      variant="text"
-                      onClick={() => setShowOptional(p => !p)}
-                      sx={{ color: '#546669', fontSize: '0.78rem', textTransform: 'none', px: 0.5, mb: 0.5 }}
-                    >
-                      {showOptional ? '− Hide details' : '+ Add date, location & relationship'}
-                    </Button>
-                    <Collapse in={showOptional}>
-                      <Box sx={{ display: 'flex', gap: 1.5, flexDirection: { xs: 'column' }, mb: 2 }}>
-                        <Box sx={{ display: 'flex', gap: 1.5, flexDirection: { xs: 'column', sm: 'row' } }}>
-                          <TextField
-                            type="date"
-                            size="small"
-                            label="Date"
-                            InputLabelProps={{ shrink: true }}
-                            value={storyDate}
-                            onChange={(e) => setStoryDate(e.target.value)}
-                            sx={{
-                              flex: 1,
-                              '& .MuiOutlinedInput-root': {
-                                backgroundColor: '#ebe8e3',
-                                borderRadius: 2,
-                                '& fieldset': { border: 'none' },
-                                '&.Mui-focused': { backgroundColor: '#ffffff' },
-                              },
-                            }}
-                          />
-                          <TextField
-                            size="small"
-                            label="Location"
-                            placeholder="e.g. Chicago, IL"
-                            value={storyLocation}
-                            onChange={(e) => setStoryLocation(e.target.value)}
-                            sx={{
-                              flex: 1,
-                              '& .MuiOutlinedInput-root': {
-                                backgroundColor: '#ebe8e3',
-                                borderRadius: 2,
-                                '& fieldset': { border: 'none' },
-                                '&.Mui-focused': { backgroundColor: '#ffffff' },
-                              },
-                            }}
-                          />
-                        </Box>
-                        <TextField
-                          size="small"
-                          label="Your Relationship"
-                          placeholder="e.g. Son, Daughter, Grandchild, Friend"
-                          value={authorRelationship}
-                          onChange={(e) => setAuthorRelationship(e.target.value)}
-                          sx={{
-                            width: '100%',
-                            '& .MuiOutlinedInput-root': {
-                              backgroundColor: '#ebe8e3',
-                              borderRadius: 2,
-                              '& fieldset': { border: 'none' },
-                              '&.Mui-focused': { backgroundColor: '#ffffff' },
-                            },
-                          }}
-                        />
-                      </Box>
-                    </Collapse>
-                  </Box>
-
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pt: 1 }}>
-                    <Box sx={{ display: 'flex', gap: 1 }}>
-                      <IconButton aria-label="Attach file" sx={{ color: '#546669' }}>
-                        <AttachFileIcon />
-                      </IconButton>
-                      <IconButton aria-label="Add photo" sx={{ color: '#546669' }}>
-                        <AddPhotoIcon />
-                      </IconButton>
-                    </Box>
-                    <Button
-                      variant="contained"
-                      onClick={handlePostMemory}
-                      disabled={!storyContent.trim() || isSubmitting}
-                      sx={{
-                        backgroundColor: '#d0e3e6',
-                        color: '#546669',
-                        '&:hover': {
-                          backgroundColor: '#b7cacd',
-                        }
-                      }}
-                    >
-                      {isSubmitting ? 'Posting...' : `Save ${getDisplayName(selectedFamilyMember)}'s Story`}
-                    </Button>
-                  </Box>
-                </Box>
-              </Box>
+              </Grid>
             </Grid>
-          </Grid>
-        </Box>
-      </Box>
+          </Box>
+        </>
+      )}
 
-      {/* Recent Contributions */}
-      <Box sx={{ px: { xs: 3, md: 8 }, pb: 8 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mb: 6 }}>
+      <Box sx={{ px: { xs: 2, md: 8 }, pt: isLens ? 4 : 8 }}>
+        <Box sx={{ mb: 6, display: 'flex', flexDirection: { xs: 'column', md: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', md: 'flex-end' }, gap: 3 }}>
           <Box>
-            <Typography variant="h3" className="serif-font" sx={{ color: '#16334a', mb: 1, fontStyle: 'italic' }}>
-              Recent Contributions
-            </Typography>
-            <Typography variant="body1" sx={{ color: '#546669' }}>
-              Gathering moments from friends and family worldwide.
-            </Typography>
+            <Typography sx={{ fontFamily: 'var(--font-manrope), sans-serif', fontSize: '0.85rem', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: ProfileColors.onSurfaceVariant, mb: 1 }}>The Chronicles</Typography>
+            <Typography variant="h2" className="serif-font" sx={{ color: ProfileColors.primary, fontWeight: 700, fontSize: { xs: '2.5rem', md: '3.5rem' }, lineHeight: 1, fontStyle: 'italic' }}>Collected Stories</Typography>
           </Box>
-          <Button
-            variant="text"
-            endIcon={<ArrowForwardIcon />}
-            sx={{ 
-              color: '#16334a', 
-              fontWeight: 600,
-              '&:hover': {
-                transform: 'translateX(4px)',
-              }
-            }}
-          >
-            View Archive
-          </Button>
+
+          <Paper elevation={0} sx={{ display: 'flex', p: 0.75, borderRadius: '999px', backgroundColor: ProfileColors.surfaceContainerLow, border: `1px solid ${ProfileColors.outlineVariant}20` }}>
+            {([ { label: 'All', value: 'all' }, { label: 'Spoken', value: 'audio' }, { label: 'Written', value: 'written' } ] as const).map((opt) => (
+              <Button key={opt.value} onClick={() => setActiveFilter(opt.value)} sx={{ px: 3, py: 1, borderRadius: '999px', textTransform: 'none', fontWeight: 600, fontSize: '0.9rem', color: activeFilter === opt.value ? ProfileColors.primary : ProfileColors.onSurfaceVariant, backgroundColor: activeFilter === opt.value ? ProfileColors.surfaceContainerLowest : 'transparent', boxShadow: activeFilter === opt.value ? '0 2px 8px rgba(0,0,0,0.05)' : 'none' }}>{opt.label}</Button>
+            ))}
+          </Paper>
         </Box>
 
-        <Grid container spacing={3}>
-          {stories.length === 0 ? (
-            <Grid size={12}>
-              <EmptyState type="stories" onAction={() => {}} />
-            </Grid>
-          ) : (
-            <>
-              {stories.map((story, index) => (
-            <Grid 
-              key={story.id} 
-              size={{ xs: 12, md: index === 1 ? 12 : 6, lg: index === 1 ? 12 : 4 }}
-            >
-              <Card
-                onClick={() => router.push(`/stories/${story.id}`)}
-                role="button"
-                aria-label={`View story by ${story.authorName}`}
-                sx={{
-                  backgroundColor: story.type === 'audio' ? '#2e4a62' : '#ffffff',
-                  color: story.type === 'audio' ? 'white' : 'inherit',
-                  p: 4,
-                  borderRadius: 4,
-                  height: '100%',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  transition: 'transform 0.3s',
-                  cursor: 'pointer',
-                  '&:hover': {
-                    transform: 'translateY(-8px)',
-                    boxShadow: 4,
-                  }
-                }}
-              >
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-                  <Avatar
-                    src={story.authorAvatarUrl}
-                    sx={{ 
-                      width: 48, 
-                      height: 48,
-                      border: story.type === 'audio' ? '2px solid #adcae6' : 'none'
-                    }}
-                  />
-                  <Box>
-                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                      {story.authorName}
-                    </Typography>
-                    <Typography variant="caption" sx={{ textTransform: 'uppercase', letterSpacing: 1, opacity: 0.7 }}>
-                      {story.authorRole}
-                    </Typography>
-                  </Box>
-                </Box>
-                
-                <Typography 
-                  variant="body1" 
-                  sx={{ 
-                    mb: 3, 
-                    flexGrow: 1,
-                    lineHeight: 1.6,
-                    fontStyle: story.type === 'audio' ? 'italic' : 'normal',
-                    fontSize: story.type === 'audio' ? '1.1rem' : '1rem',
-                    display: '-webkit-box',
-                    WebkitLineClamp: 4,
-                    WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden',
-                  }}
-                >
-                  {story.type === 'audio' ? story.content : stripHtml(story.content)}
-                </Typography>
-
-                {story.type === 'audio' && (
-                  <Box sx={{ mt: 'auto' }}>
-                    <Box sx={{ 
-                      backgroundColor: 'rgba(255, 255, 255, 0.3)', 
-                      p: 2, 
-                      borderRadius: 3,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 2
-                    }}>
-                      <IconButton 
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleTogglePlay(story)
-                        }}
-                        sx={{ backgroundColor: 'white', color: '#16334a', '&:hover': { backgroundColor: '#f0f0f0' } }}
-                      >
-                        {currentlyPlaying === story.id ? <PauseIcon /> : <PlayIcon />}
-                      </IconButton>
-                      <Box sx={{ flexGrow: 1, px: 1 }}>
-                        <Slider
-                          size="small"
-                          value={currentlyPlaying === story.id ? audioProgress : 0}
-                          sx={{
-                            color: 'white',
-                            height: 4,
-                            '& .MuiSlider-thumb': {
-                              display: currentlyPlaying === story.id ? 'block' : 'none',
-                              width: 8,
-                              height: 8,
-                            },
-                            '& .MuiSlider-track': { border: 'none' },
-                            '& .MuiSlider-rail': { opacity: 0.5 },
-                          }}
-                        />
-                      </Box>
-                      <Typography variant="caption" sx={{ fontFamily: 'monospace' }}>
-                        {currentlyPlaying === story.id ? 
-                          `${Math.floor((audioProgress / 100) * (story.audioDurationSeconds || 0))}:${String(Math.floor(((audioProgress / 100) * (story.audioDurationSeconds || 0)) % 60)).padStart(2, '0')}` : 
-                          `${Math.floor((story.audioDurationSeconds || 0) / 60)}:${String((story.audioDurationSeconds || 0) % 60).padStart(2, '0')}`
-                        }
-                      </Typography>
+        {filteredStories.length === 0 ? (
+          <Box sx={{ py: 12, textAlign: 'center', backgroundColor: ProfileColors.surfaceContainerLow, borderRadius: 8, border: `2px dashed ${ProfileColors.outlineVariant}30` }}>
+            <AutoStoriesIcon sx={{ fontSize: 64, color: ProfileColors.outlineVariant, mb: 2, opacity: 0.5 }} />
+            <Typography variant="h5" className="serif-font" sx={{ color: ProfileColors.primary, mb: 1 }}>No stories told yet</Typography>
+            <Typography variant="body2" sx={{ color: ProfileColors.onSurfaceVariant, mb: 4 }}>Be the first to share a memory of {getDisplayName(selectedFamilyMember)}.</Typography>
+          </Box>
+        ) : (
+          <Grid container spacing={6}>
+            {featuredStory && activeFilter === 'all' && (
+              <Grid size={12}>
+                <Card onClick={() => router.push(`/stories/${featuredStory.id}`)} sx={{ borderRadius: 6, overflow: 'hidden', display: 'flex', flexDirection: { xs: 'column', md: 'row' }, minHeight: 400, cursor: 'pointer', boxShadow: '0 30px 90px rgba(0,0,0,0.08)', border: `1px solid ${ProfileColors.outlineVariant}15` }}>
+                  <Box sx={{ width: { xs: '100%', md: '45%' }, bgcolor: ProfileColors.primaryContainer, position: 'relative', overflow: 'hidden' }}>
+                    {featuredStory.authorAvatarUrl && <Box component="img" src={featuredStory.authorAvatarUrl} sx={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.8 }} />}
+                    <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, p: 4, background: 'linear-gradient(transparent, rgba(0,0,0,0.6))', color: '#fff' }}>
+                      <Typography variant="caption" sx={{ textTransform: 'uppercase', letterSpacing: 2, fontWeight: 700, mb: 1, display: 'block' }}>Featured Memory</Typography>
+                      <Typography variant="h4" className="serif-font" sx={{ fontWeight: 700 }}>{featuredStory.authorName}</Typography>
                     </Box>
                   </Box>
-                )}
+                  <CardContent sx={{ flex: 1, p: { xs: 4, md: 8 }, display: 'flex', flexDirection: 'column', justifyContent: 'center', backgroundColor: ProfileColors.surfaceContainerLowest }}>
+                    <Typography variant="h3" className="serif-font" sx={{ color: ProfileColors.primary, mb: 3, fontWeight: 700, fontSize: { xs: '2rem', md: '2.5rem' }, lineHeight: 1.2 }}>{featuredStory.title || featuredStory.authorName + "'s Story"}</Typography>
+                    <Typography variant="body1" sx={{ color: ProfileColors.onSurfaceVariant, mb: 4, lineHeight: 1.8, fontSize: '1.2rem', fontFamily: 'var(--font-newsreader), serif', display: '-webkit-box', WebkitLineClamp: 5, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{featuredStory.type === 'audio' ? featuredStory.content : stripHtml(featuredStory.content)}</Typography>
+                    <Box sx={{ mt: 'auto', display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <Button variant="contained" sx={{ borderRadius: '999px', bgcolor: ProfileColors.primary, px: 4, py: 1.5 }}>Read Full Chapter</Button>
+                      {featuredStory.type === 'audio' && <MicIcon sx={{ color: ProfileColors.primary }} />}
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Grid>
+            )}
 
-                <Box sx={{ display: 'flex', gap: 1, mt: 2, flexWrap: 'wrap' }}>
-                  {story.type === 'audio' && (
-                    <Chip size="small" icon={<MicIcon sx={{ fontSize: '14px !important' }} />} label="Raw" sx={{ height: 20, fontSize: '0.65rem', backgroundColor: 'rgba(255, 255, 255, 0.2)', color: 'inherit' }} />
-                  )}
-                  <Chip size="small" icon={<AutoStoriesIcon sx={{ fontSize: '14px !important' }} />} label="Transcript" sx={{ height: 20, fontSize: '0.65rem', backgroundColor: story.type === 'audio' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.05)', color: 'inherit' }} />
-                  {story.hasNarration && (
-                    <Chip size="small" icon={<PlayIcon sx={{ fontSize: '14px !important' }} />} label="AI" sx={{ height: 20, fontSize: '0.65rem', backgroundColor: 'rgba(255, 255, 255, 0.2)', color: 'inherit' }} />
-                  )}
-                </Box>
-
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 2, opacity: 0.6 }}>
-                  <ScheduleIcon sx={{ fontSize: 16 }} />
-                  <Typography variant="caption">
-                    {formatDistanceToNow(story.createdAt, { addSuffix: true })}
-                    {story.authorRelationship && ` • ${story.authorRelationship}`}
-                  </Typography>
-                </Box>
-              </Card>
-            </Grid>
-              ))}
-            </>
-          )}
-        </Grid>
-      </Box>
-
-      {/* Footer */}
-      <Box sx={{ backgroundColor: '#f6f3ee', py: 10, mt: 8 }}>
-        <Box sx={{ maxWidth: 1200, mx: 'auto', px: { xs: 3, md: 6 } }}>
-          <Grid container spacing={4}>
-            <Grid size={{ xs: 12, md: 4 }}>
-              <Typography variant="h4" className="serif-font" sx={{ color: '#16334a', mb: 3, fontStyle: 'italic' }}>
-                Heard Again
-              </Typography>
-              <Typography variant="body1" sx={{ color: '#546669', lineHeight: 1.6 }}>
-                Preserving the human soul through the power of voice and story. A digital sanctuary for legacies.
-              </Typography>
-            </Grid>
-            <Grid size={{ xs: 12, md: 4 }}>
-              <Typography variant="h6" sx={{ color: '#16334a', mb: 2, fontWeight: 600 }}>
-                Archive Sections
-              </Typography>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                {['The Voice Lab', 'Memory Documents', 'Family Stories'].map((item) => (
-                  <Typography 
-                    key={item}
-                    component="a" 
-                    href="#"
-                    sx={{ 
-                      color: '#546669', 
-                      textDecoration: 'none',
-                      '&:hover': { color: '#16334a' }
-                    }}
-                  >
-                    {item}
-                  </Typography>
-                ))}
-              </Box>
-            </Grid>
-            <Grid size={{ xs: 12, md: 4 }}>
-              <Typography variant="h6" sx={{ color: '#16334a', mb: 2, fontWeight: 600 }}>
-                Community
-              </Typography>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                {['Privacy Settings', 'Terms of Remembrance', 'Support Center'].map((item) => (
-                  <Typography 
-                    key={item}
-                    component="a" 
-                    href="#"
-                    sx={{ 
-                      color: '#546669', 
-                      textDecoration: 'none',
-                      '&:hover': { color: '#16334a' }
-                    }}
-                  >
-                    {item}
-                  </Typography>
-                ))}
-              </Box>
-            </Grid>
+            {otherStories.map((story) => (
+              <Grid key={story.id} size={{ xs: 12, md: 6, lg: 4 }}>
+                <Card onClick={() => router.push(`/stories/${story.id}`)} sx={{ borderRadius: 5, p: 4, height: '100%', backgroundColor: story.type === 'audio' ? ProfileColors.surfaceContainerLow : ProfileColors.surfaceContainerLowest, border: `1px solid ${ProfileColors.outlineVariant}15`, transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', cursor: 'pointer', display: 'flex', flexDirection: 'column', '&:hover': { transform: 'translateY(-12px)', boxShadow: '0 20px 60px rgba(0,0,0,0.06)' } }}>
+                  <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                      <Avatar src={story.authorAvatarUrl} sx={{ width: 32, height: 32, border: `1px solid ${ProfileColors.outlineVariant}30` }} />
+                      <Typography sx={{ fontWeight: 700, fontSize: '0.85rem', color: ProfileColors.primary }}>{story.authorName}</Typography>
+                    </Box>
+                    <Chip label={story.type === 'audio' ? 'Spoken' : 'Written'} size="small" sx={{ height: 20, fontSize: '0.65rem', fontWeight: 700, bgcolor: ProfileColors.surfaceContainerHigh, color: ProfileColors.onSurfaceVariant }} />
+                  </Box>
+                  <Typography variant="h5" className="serif-font" sx={{ color: ProfileColors.primary, mb: 2, fontWeight: 700, lineHeight: 1.3 }}>{story.title || "A Memory Shared"}</Typography>
+                  <Typography variant="body2" sx={{ color: ProfileColors.onSurfaceVariant, lineHeight: 1.7, fontSize: '1rem', fontFamily: 'var(--font-newsreader), serif', mb: 3, flexGrow: 1, display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{story.type === 'audio' ? story.content : stripHtml(story.content)}</Typography>
+                  <Box sx={{ pt: 2, borderTop: `1px solid ${ProfileColors.outlineVariant}10`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="caption" sx={{ color: ProfileColors.onSurfaceVariant, opacity: 0.6 }}>{formatDistanceToNow(new Date(story.createdAt), { addSuffix: true })}</Typography>
+                  </Box>
+                </Card>
+              </Grid>
+            ))}
           </Grid>
-          <Box sx={{ mt: 6, pt: 4, borderTop: '1px solid #dcdad5' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexDirection: { xs: 'column', md: 'row' }, gap: 2 }}>
-              <Typography variant="body2" sx={{ color: '#546669', opacity: 0.6 }}>
-                © 2024 Heard Again. The Living Archive. All memories preserved.
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 2 }}>
-                <IconButton sx={{ color: '#546669' }}>
-                  <ScheduleIcon />
-                </IconButton>
-                <IconButton sx={{ color: '#546669' }}>
-                  <ScheduleIcon />
-                </IconButton>
-              </Box>
-            </Box>
-          </Box>
-        </Box>
+        )}
       </Box>
-      {/* Audio Recording Dialog */}
-      <Dialog
-        open={showAudioDialog}
-        onClose={() => !isSubmittingAudio && setShowAudioDialog(false)}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{ sx: { borderRadius: 3 } }}
-      >
+
+      <Dialog open={showAudioDialog} onClose={() => !isSubmittingAudio && setShowAudioDialog(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
         <Box sx={{ p: 0 }}>
-          <IconButton
-            onClick={() => setShowAudioDialog(false)}
-            disabled={isSubmittingAudio}
-            sx={{ position: 'absolute', right: 8, top: 8, zIndex: 1 }}
-          >
-            <CloseIcon />
-          </IconButton>
+          <IconButton onClick={() => setShowAudioDialog(false)} disabled={isSubmittingAudio} sx={{ position: 'absolute', right: 8, top: 8, zIndex: 1 }}><CloseIcon /></IconButton>
           <Box sx={{ p: 4, pb: 0 }}>
-            <Typography variant="h5" className="serif-font" sx={{ mb: 2, color: '#16334a' }}>
-              Record your story
-            </Typography>
-            <TextField
-              fullWidth
-              size="small"
-              label="Your Relationship"
-              placeholder="e.g. Son, Daughter, Grandchild, Friend"
-              value={authorRelationship}
-              onChange={(e) => setAuthorRelationship(e.target.value)}
-              sx={{
-                mb: 3,
-                '& .MuiOutlinedInput-root': {
-                  backgroundColor: '#f6f3ee',
-                  borderRadius: 2,
-                },
-              }}
-            />
+            <Typography variant="h5" className="serif-font" sx={{ mb: 2, color: ProfileColors.primary }}>Record your story</Typography>
+            <TextField fullWidth size="small" label="Your Relationship" placeholder="e.g. Son, Daughter, Grandchild, Friend" value={authorRelationship} onChange={(e) => setAuthorRelationship(e.target.value)} sx={{ mb: 3 }} />
           </Box>
-          <AudioRecorder
-            onRecordingComplete={handleAudioComplete}
-            onCancel={() => setShowAudioDialog(false)}
-          />
+          <AudioRecorder onRecordingComplete={handleAudioComplete} onCancel={() => setShowAudioDialog(false)} />
         </Box>
       </Dialog>
     </Box>

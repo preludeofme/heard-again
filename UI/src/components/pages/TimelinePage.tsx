@@ -22,6 +22,7 @@ import {
   DialogActions,
   IconButton,
   Tooltip,
+  Paper,
 } from '@mui/material'
 import {
   Timeline,
@@ -160,15 +161,18 @@ export function TimelinePageComponent({ events, isLoading, hasMore, onLoadMore, 
     return result
   }, [events, selectedTypes, dateFrom, dateTo])
 
-  const handleTypeChange = (event: React.MouseEvent<HTMLElement>, newTypes: string[]) => {
-    if (newTypes.length === 0) {
+  const handleTypeChange = (type: string) => {
+    if (type === 'all') {
       setSelectedTypes(['all'])
-    } else if (newTypes.includes('all') && !selectedTypes.includes('all')) {
-      setSelectedTypes(['all'])
-    } else if (newTypes.length > 1 && newTypes.includes('all')) {
-      setSelectedTypes(newTypes.filter(t => t !== 'all'))
     } else {
-      setSelectedTypes(newTypes)
+      setSelectedTypes(prev => {
+        const withoutAll = prev.filter(t => t !== 'all')
+        if (withoutAll.includes(type)) {
+          const next = withoutAll.filter(t => t !== type)
+          return next.length === 0 ? ['all'] : next
+        }
+        return [...withoutAll, type]
+      })
     }
   }
 
@@ -295,237 +299,216 @@ export function TimelinePageComponent({ events, isLoading, hasMore, onLoadMore, 
   }
 
   return (
-    <Box sx={{ minHeight: '100vh', backgroundColor: ProfileColors.surface, px: { xs: 2, md: 8 }, py: 6 }}>
-      {/* Header */}
-      <Box sx={{ mb: 4, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 2 }}>
+    <Box sx={{ minHeight: '100vh', backgroundColor: ProfileColors.surface, px: { xs: 2, md: 8 }, py: { xs: 4, md: 8 } }}>
+      {/* Editorial Header */}
+      <Box sx={{ mb: 6, display: 'flex', flexDirection: { xs: 'column', md: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', md: 'flex-end' }, gap: 3 }}>
         <Box>
-          <Typography variant="h3" className="serif-font" sx={{ color: ProfileColors.primary, mb: 1, fontSize: { xs: '2rem', md: '3rem' } }}>
-            Family Timeline
+          <Typography
+            sx={{
+              fontFamily: 'var(--font-manrope), sans-serif',
+              fontSize: '0.85rem',
+              fontWeight: 600,
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase',
+              color: ProfileColors.onSurfaceVariant,
+              mb: 1
+            }}
+          >
+            The Lifespan
           </Typography>
-          <Typography variant="body1" sx={{ color: ProfileColors.onSurfaceVariant }}>
+          <Typography 
+            variant="h2" 
+            className="serif-font" 
+            sx={{ 
+              color: ProfileColors.primary, 
+              fontWeight: 700,
+              fontSize: { xs: '2.5rem', md: '3.5rem' },
+              lineHeight: 1,
+              fontStyle: 'italic'
+            }}
+          >
+            Life Journey
+          </Typography>
+          <Typography variant="body1" sx={{ color: ProfileColors.onSurfaceVariant, mt: 2, maxWidth: 500, fontFamily: 'var(--font-newsreader), serif', fontSize: '1.1rem' }}>
             {selectedFamilyMember
-              ? `Events for ${getPersonDisplayName(selectedFamilyMember)}`
-              : 'Family events across generations'}
+              ? `Exploring the milestones and memories of ${getPersonDisplayName(selectedFamilyMember)}.`
+              : 'Walking through the collective memories of your family history.'}
           </Typography>
         </Box>
+        
         <Box sx={{ display: 'flex', gap: 2 }}>
-          <ToggleButtonGroup
-            value={viewMode}
-            exclusive
-            onChange={(e, next) => next && setViewMode(next)}
-            size="small"
-            aria-label="view mode"
-          >
-            <ToggleButton value="vertical" aria-label="vertical view">
-              <Tooltip title="Vertical View">
-                <VerticalIcon />
-              </Tooltip>
-            </ToggleButton>
-            <ToggleButton value="horizontal" aria-label="horizontal view">
-              <Tooltip title="Horizontal View">
-                <HorizontalIcon />
-              </Tooltip>
-            </ToggleButton>
-          </ToggleButtonGroup>
           <Button
             variant="contained"
             startIcon={<AddIcon />}
             onClick={handleOpenAddDialog}
             sx={{
-              bgcolor: ProfileColors.primary,
-              color: 'white',
-              '&:hover': { bgcolor: ProfileColors.primaryContainer },
-              borderRadius: 2,
+              backgroundColor: ProfileColors.primary,
+              borderRadius: '999px',
+              py: 1.5,
               px: 3,
+              textTransform: 'none',
+              fontWeight: 600,
+              '&:hover': { backgroundColor: ProfileColors.primaryContainer, color: ProfileColors.onPrimaryContainer }
             }}
           >
-            Add Event
+            Add a Milestone
           </Button>
         </Box>
       </Box>
 
-      {/* Filters */}
-      <Card sx={{ mb: 4, borderRadius: 3, bgcolor: '#ffffff', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
-        <CardContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3, alignItems: { xs: 'stretch', md: 'center' } }}>
-              <FormControl size="small" sx={{ minWidth: { xs: '100%', md: 240 } }}>
-                <InputLabel>Family Member</InputLabel>
-                <Select
-                  value={selectedFamilyMember?.id || 'all'}
-                  label="Family Member"
-                  onChange={(e) => {
-                    const val = e.target.value
-                    if (val === 'all') {
-                      setSelectedFamilyMember(null)
-                    } else {
-                      const person = people.find(p => p.id === val)
-                      if (person) setSelectedFamilyMember(person)
-                    }
-                  }}
-                >
-                  <MenuItem value="all">All Family Members</MenuItem>
-                  {people.map((p) => (
-                    <MenuItem key={p.id} value={p.id}>
-                      {getPersonDisplayName(p)}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+      {/* Simplified, Tactile Explore Bar */}
+      <Box 
+        sx={{ 
+          mb: 8, 
+          display: 'flex', 
+          flexDirection: { xs: 'column', lg: 'row' },
+          gap: 3,
+          alignItems: { lg: 'center' }
+        }}
+      >
+        {/* Type Lenses */}
+        <Paper
+          elevation={0}
+          sx={{
+            display: 'flex',
+            p: 0.75,
+            borderRadius: '999px',
+            backgroundColor: ProfileColors.surfaceContainerLow,
+            border: `1px solid ${ProfileColors.outlineVariant}20`,
+            overflowX: 'auto',
+            '&::-webkit-scrollbar': { display: 'none' }
+          }}
+        >
+          {([
+            { label: 'All', value: 'all', icon: <TimelineIcon sx={{ fontSize: 18 }} /> },
+            { label: 'Stories', value: 'story', icon: <StoryIcon sx={{ fontSize: 18 }} /> },
+            { label: 'Milestones', value: 'custom', icon: <CustomIcon sx={{ fontSize: 18 }} /> },
+            { label: 'Keepsakes', value: 'document', icon: <DocumentIcon sx={{ fontSize: 18 }} /> },
+            { label: 'Life Events', value: 'birth', icon: <BirthIcon sx={{ fontSize: 18 }} /> }
+          ] as const).map((opt) => (
+            <Button
+              key={opt.value}
+              onClick={() => handleTypeChange(opt.value)}
+              startIcon={opt.icon}
+              sx={{
+                px: 3,
+                py: 1,
+                borderRadius: '999px',
+                textTransform: 'none',
+                fontWeight: 600,
+                fontSize: '0.9rem',
+                whiteSpace: 'nowrap',
+                color: selectedTypes.includes(opt.value) ? ProfileColors.primary : ProfileColors.onSurfaceVariant,
+                backgroundColor: selectedTypes.includes(opt.value) ? ProfileColors.surfaceContainerLowest : 'transparent',
+                boxShadow: selectedTypes.includes(opt.value) ? '0 2px 8px rgba(0,0,0,0.05)' : 'none',
+                '&:hover': {
+                  backgroundColor: selectedTypes.includes(opt.value) ? ProfileColors.surfaceContainerLowest : 'rgba(0,0,0,0.03)'
+                }
+              }}
+            >
+              {opt.label}
+            </Button>
+          ))}
+        </Paper>
 
-              <ToggleButtonGroup
-                value={selectedTypes}
-                onChange={handleTypeChange}
-                aria-label="event types"
-                size="small"
-                sx={{ flexWrap: 'wrap', '& .MuiToggleButton-root': { py: 1, px: 2 } }}
-              >
-                <ToggleButton value="all" aria-label="all events">
-                  All
-                </ToggleButton>
-                <ToggleButton value="birth" aria-label="births">
-                  <BirthIcon sx={{ fontSize: 18, mr: 0.5 }} />
-                  Births
-                </ToggleButton>
-                <ToggleButton value="death" aria-label="deaths">
-                  <DeathIcon sx={{ fontSize: 18, mr: 0.5 }} />
-                  Deaths
-                </ToggleButton>
-                <ToggleButton value="marriage" aria-label="marriages">
-                  <MarriageIcon sx={{ fontSize: 18, mr: 0.5 }} />
-                  Marriages
-                </ToggleButton>
-                <ToggleButton value="story" aria-label="stories">
-                  <StoryIcon sx={{ fontSize: 18, mr: 0.5 }} />
-                  Stories
-                </ToggleButton>
-                <ToggleButton value="document" aria-label="documents">
-                  <DocumentIcon sx={{ fontSize: 18, mr: 0.5 }} />
-                  Documents
-                </ToggleButton>
-              </ToggleButtonGroup>
-            </Box>
+        <Box sx={{ flex: 1 }} />
 
-            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-              <TextField
-                type="date"
-                label="From"
-                size="small"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                InputLabelProps={{ shrink: true }}
-                sx={{ flex: { xs: 1, md: 'none' }, minWidth: 140 }}
-              />
-              <TextField
-                type="date"
-                label="To"
-                size="small"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                InputLabelProps={{ shrink: true }}
-                sx={{ flex: { xs: 1, md: 'none' }, minWidth: 140 }}
-              />
-              <Button 
-                size="small" 
-                onClick={() => { setDateFrom(''); setDateTo(''); setSelectedTypes(['all']); }}
-                sx={{ ml: 'auto', color: ProfileColors.onSurfaceVariant }}
-              >
-                Clear Filters
-              </Button>
-            </Box>
-          </Box>
-        </CardContent>
-      </Card>
+        {/* View Switcher */}
+        <ToggleButtonGroup
+          value={viewMode}
+          exclusive
+          onChange={(e, next) => next && setViewMode(next)}
+          sx={{
+            backgroundColor: ProfileColors.surfaceContainerLow,
+            borderRadius: '999px',
+            p: 0.5,
+            border: 'none',
+            '& .MuiToggleButton-root': {
+              border: 'none',
+              borderRadius: '999px !important',
+              px: 2,
+              py: 0.75,
+              color: ProfileColors.onSurfaceVariant,
+              '&.Mui-selected': {
+                backgroundColor: ProfileColors.surfaceContainerLowest,
+                color: ProfileColors.primary,
+                boxShadow: '0 2px 6px rgba(0,0,0,0.05)',
+              }
+            }
+          }}
+        >
+          <ToggleButton value="vertical" aria-label="vertical view">
+            <VerticalIcon sx={{ fontSize: 20 }} />
+          </ToggleButton>
+          <ToggleButton value="horizontal" aria-label="horizontal view">
+            <HorizontalIcon sx={{ fontSize: 20 }} />
+          </ToggleButton>
+        </ToggleButtonGroup>
+      </Box>
 
-      {/* Timeline Content */}
+      {/* Journey Content */}
       {filteredEvents.length === 0 ? (
-        <Card sx={{ borderRadius: 3, textAlign: 'center', py: 8, bgcolor: '#ffffff' }}>
-          <CardContent>
-            <TimelineIcon sx={{ fontSize: 60, color: '#adcae6', mb: 2 }} />
-            <Typography variant="h6" sx={{ color: ProfileColors.primary, mb: 1 }}>
-              No events found
-            </Typography>
-            <Typography variant="body2" sx={{ color: ProfileColors.onSurfaceVariant }}>
-              Try adjusting your filters or adding new stories and documents.
-            </Typography>
-          </CardContent>
-        </Card>
+        <Box sx={{ py: 12, textAlign: 'center', backgroundColor: ProfileColors.surfaceContainerLow, borderRadius: 8, border: `2px dashed ${ProfileColors.outlineVariant}30` }}>
+          <TimelineIcon sx={{ fontSize: 64, color: ProfileColors.outlineVariant, mb: 2, opacity: 0.5 }} />
+          <Typography variant="h5" className="serif-font" sx={{ color: ProfileColors.primary, mb: 1 }}>
+            The journey hasn't begun yet
+          </Typography>
+          <Typography variant="body2" sx={{ color: ProfileColors.onSurfaceVariant, mb: 4 }}>
+            Start adding stories, milestones, and keepsakes to map out the life journey.
+          </Typography>
+          <Button variant="outlined" onClick={handleOpenAddDialog} sx={{ borderRadius: '999px', borderColor: ProfileColors.primary, color: ProfileColors.primary }}>
+            Add your first milestone
+          </Button>
+        </Box>
       ) : viewMode === 'vertical' ? (
-        <>
-          <Timeline position="alternate">
+        <Box sx={{ maxWidth: 900, mx: 'auto' }}>
+          <Timeline position="right" sx={{ p: 0 }}>
             {filteredEvents.map((event, index) => {
               const config = eventTypeConfig[event.type] || eventTypeConfig.custom
               const Icon = config.icon
 
               return (
-                <Fade in timeout={300} key={event.id}>
-                  <TimelineItem>
-                    <TimelineSeparator>
-                      <TimelineDot
-                        sx={{
-                          bgcolor: config.color,
-                          color: 'white',
-                          p: 1.5,
-                          boxShadow: '0 4px 10px rgba(0,0,0,0.1)',
-                          cursor: 'pointer',
-                          '&:hover': { transform: 'scale(1.1)' },
-                          transition: 'transform 0.2s',
-                        }}
-                        onClick={() => handleOpenDetail(event)}
-                      >
-                        <Icon sx={{ fontSize: 22 }} />
-                      </TimelineDot>
-                      {index < filteredEvents.length - 1 && <TimelineConnector sx={{ bgcolor: ProfileColors.outlineVariant, opacity: 0.5, width: 2 }} />}
-                    </TimelineSeparator>
-                    <TimelineContent sx={{ py: '12px', px: 2 }}>
+                <TimelineItem key={event.id} sx={{ '&::before': { display: 'none' } }}>
+                  <TimelineSeparator sx={{ mr: 4 }}>
+                    <TimelineDot
+                      sx={{
+                        bgcolor: '#fff',
+                        color: config.color,
+                        border: `2px solid ${config.color}`,
+                        p: 1.25,
+                        boxShadow: 'none',
+                        cursor: 'pointer',
+                        '&:hover': { transform: 'scale(1.1)', bgcolor: ProfileColors.surfaceContainerLow },
+                        transition: 'all 0.2s',
+                      }}
+                      onClick={() => handleOpenDetail(event)}
+                    >
+                      <Icon sx={{ fontSize: 20 }} />
+                    </TimelineDot>
+                    {index < filteredEvents.length - 1 && <TimelineConnector sx={{ bgcolor: ProfileColors.outlineVariant, opacity: 0.3, width: 2 }} />}
+                  </TimelineSeparator>
+                  <TimelineContent sx={{ py: 0, pb: 8, px: 0 }}>
+                    <Fade in timeout={500 + (index % 5) * 100}>
                       <Card
                         onClick={() => handleOpenDetail(event)}
                         sx={{
-                          borderRadius: 3,
-                          bgcolor: event.type === 'story' ? '#ffffff' : 'rgba(255,255,255,0.6)',
-                          boxShadow: event.type === 'story' ? 2 : 'none',
-                          border: event.type === 'story' ? '1px solid #e0e0e0' : '1px transparent',
-                          transition: 'all 0.2s ease',
+                          borderRadius: 5,
+                          bgcolor: ProfileColors.surfaceContainerLowest,
+                          boxShadow: '0 4px 24px rgba(0,0,0,0.03)',
+                          border: `1px solid ${ProfileColors.outlineVariant}15`,
+                          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                           cursor: 'pointer',
+                          overflow: 'hidden',
                           '&:hover': {
-                            transform: 'translateY(-2px)',
-                            boxShadow: 4,
-                            bgcolor: '#ffffff',
-                            border: '1px solid #e0e0e0',
+                            transform: 'translateY(-4px) translateX(4px)',
+                            boxShadow: '0 12px 40px rgba(0,0,0,0.08)',
+                            borderColor: ProfileColors.primary + '30',
                           },
-                          textAlign: index % 2 === 0 ? 'left' : 'right',
                         }}
                       >
-                        <CardContent>
-                          <Typography
-                            variant="caption"
-                            sx={{
-                              color: config.color,
-                              fontWeight: 700,
-                              display: 'block',
-                              mb: 0.5,
-                              textTransform: 'uppercase',
-                              letterSpacing: 1,
-                            }}
-                          >
-                            {formatEventDate(event.date, event.datePrecision)}
-                          </Typography>
-
-                          <Typography 
-                            variant="h6" 
-                            className="serif-font"
-                            sx={{ 
-                              color: ProfileColors.primary, 
-                              mb: 1, 
-                              fontWeight: 700,
-                              lineHeight: 1.2
-                            }}
-                          >
-                            {event.title}
-                          </Typography>
-
+                        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' } }}>
                           {event.metadata?.imageAssetId && (
-                            <Box sx={{ mb: 2, borderRadius: 2, overflow: 'hidden', height: 120 }}>
+                            <Box sx={{ width: { xs: '100%', sm: 180 }, height: { xs: 180, sm: 'auto' }, flexShrink: 0 }}>
                               <Box 
                                 component="img"
                                 src={`/api/assets/serve/${event.metadata.imageAssetId}`}
@@ -534,59 +517,97 @@ export function TimelinePageComponent({ events, isLoading, hasMore, onLoadMore, 
                               />
                             </Box>
                           )}
+                          <CardContent sx={{ p: 4, flexGrow: 1 }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                              <Typography
+                                sx={{
+                                  color: config.color,
+                                  fontWeight: 700,
+                                  fontSize: '0.75rem',
+                                  textTransform: 'uppercase',
+                                  letterSpacing: 2,
+                                }}
+                              >
+                                {formatEventDate(event.date, event.datePrecision)}
+                              </Typography>
+                              <Chip 
+                                label={config.label} 
+                                size="small" 
+                                sx={{ height: 20, fontSize: '0.65rem', fontWeight: 700, bgcolor: config.color + '15', color: config.color, border: 'none' }} 
+                              />
+                            </Box>
 
-                          {event.description && (
                             <Typography 
-                              variant="body2" 
+                              variant="h5" 
+                              className="serif-font"
                               sx={{ 
-                                color: ProfileColors.onSurfaceVariant, 
-                                mb: 2, 
-                                lineHeight: 1.5,
-                                display: '-webkit-box',
-                                WebkitLineClamp: 3,
-                                WebkitBoxOrient: 'vertical',
-                                overflow: 'hidden'
+                                color: ProfileColors.primary, 
+                                mb: 1.5, 
+                                fontWeight: 700,
+                                lineHeight: 1.2
                               }}
                             >
-                              {event.description}
+                              {event.title}
                             </Typography>
-                          )}
 
-                          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: index % 2 === 0 ? 'flex-start' : 'flex-end', mt: 1 }}>
-                            {event.people.slice(0, 3).map((person) => (
-                              <Avatar
-                                key={person.id}
-                                src={person.avatarAssetId ? `/api/assets/serve/${person.avatarAssetId}` : undefined}
-                                sx={{ width: 28, height: 28, border: `2px solid #ffffff` }}
+                            {event.description && (
+                              <Typography 
+                                variant="body2" 
+                                sx={{ 
+                                  color: ProfileColors.onSurfaceVariant, 
+                                  mb: 3, 
+                                  lineHeight: 1.7,
+                                  fontFamily: 'var(--font-newsreader), serif',
+                                  fontSize: '1rem',
+                                  display: '-webkit-box',
+                                  WebkitLineClamp: 3,
+                                  WebkitBoxOrient: 'vertical',
+                                  overflow: 'hidden'
+                                }}
                               >
-                                {person.firstName[0]}
-                              </Avatar>
-                            ))}
-                            {event.people.length > 3 && (
-                              <Avatar sx={{ width: 28, height: 28, fontSize: 12, bgcolor: ProfileColors.surfaceContainer }}>
-                                +{event.people.length - 3}
-                              </Avatar>
+                                {event.description}
+                              </Typography>
                             )}
-                          </Box>
-                        </CardContent>
+
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                              <Box sx={{ display: 'flex', gap: -0.5 }}>
+                                {event.people.slice(0, 3).map((person) => (
+                                  <Avatar
+                                    key={person.id}
+                                    src={person.avatarAssetId ? `/api/assets/serve/${person.avatarAssetId}` : undefined}
+                                    sx={{ width: 28, height: 28, border: `2px solid #fff`, boxShadow: 1 }}
+                                  >
+                                    {person.firstName[0]}
+                                  </Avatar>
+                                ))}
+                                {event.people.length > 3 && (
+                                  <Avatar sx={{ width: 28, height: 28, fontSize: 10, bgcolor: ProfileColors.surfaceContainerHigh, color: ProfileColors.primary, fontWeight: 700, border: '2px solid #fff' }}>
+                                    +{event.people.length - 3}
+                                  </Avatar>
+                                )}
+                              </Box>
+                              <ArrowForwardIcon sx={{ fontSize: 18, color: ProfileColors.outlineVariant, opacity: 0.5 }} />
+                            </Box>
+                          </CardContent>
+                        </Box>
                       </Card>
-                    </TimelineContent>
-                  </TimelineItem>
-                </Fade>
+                    </Fade>
+                  </TimelineContent>
+                </TimelineItem>
               )
             })}
           </Timeline>
-        </>
+        </Box>
       ) : (
-        /* Horizontal View */
-        <Box sx={{ position: 'relative', py: 4 }}>
+        /* Horizontal Journey View */
+        <Box sx={{ position: 'relative', py: 4, overflow: 'hidden' }}>
           <Box sx={{ 
             position: 'absolute', 
             top: '50%', 
             left: 0, 
             right: 0, 
-            height: 2, 
-            background: `linear-gradient(to right, transparent, ${ProfileColors.outlineVariant}, transparent)`, 
+            height: 1, 
+            background: `linear-gradient(to right, transparent, ${ProfileColors.outlineVariant}50, transparent)`, 
             zIndex: 0,
             transform: 'translateY(-50%)'
           }} />
@@ -602,11 +623,11 @@ export function TimelinePageComponent({ events, isLoading, hasMore, onLoadMore, 
             onTouchEnd={onDragEnd}
             sx={{
               display: 'flex',
-              gap: 4,
+              gap: 6,
               overflowX: 'auto',
-              pb: 6,
-              pt: 2,
-              px: 4,
+              pb: 8,
+              pt: 4,
+              px: 10,
               cursor: isDragging ? 'grabbing' : 'grab',
               userSelect: 'none',
               '&::-webkit-scrollbar': { display: 'none' },
@@ -615,9 +636,10 @@ export function TimelinePageComponent({ events, isLoading, hasMore, onLoadMore, 
               scrollBehavior: isDragging ? 'auto' : 'smooth',
             }}
           >
-            {filteredEvents.map((event) => {
+            {filteredEvents.map((event, index) => {
               const config = eventTypeConfig[event.type] || eventTypeConfig.custom
               const Icon = config.icon
+              const isEven = index % 2 === 0
 
               return (
                 <Box
@@ -625,42 +647,54 @@ export function TimelinePageComponent({ events, isLoading, hasMore, onLoadMore, 
                   onClick={() => handleOpenDetail(event)}
                   sx={{ 
                     flexShrink: 0, 
-                    width: 320, 
+                    width: 340, 
                     position: 'relative', 
                     cursor: 'pointer',
-                    '&:hover .event-card': { transform: 'translateY(-10px)' },
+                    '&:hover .event-card': { transform: isEven ? 'translateY(-15px)' : 'translateY(15px)' },
                     display: 'flex',
                     flexDirection: 'column',
-                    alignItems: 'center'
+                    alignItems: 'center',
+                    justifyContent: 'center'
                   }}
                 >
-                  {/* Top content for even, bottom for odd to stagger */}
                   <Card
                     className="event-card"
                     sx={{
                       width: '100%',
-                      borderRadius: 4,
-                      bgcolor: '#ffffff',
-                      boxShadow: '0 8px 30px rgba(0,0,0,0.08)',
-                      transition: 'transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-                      mb: 8,
-                      border: `1px solid ${ProfileColors.outlineVariant}30`
+                      borderRadius: 6,
+                      bgcolor: ProfileColors.surfaceContainerLowest,
+                      boxShadow: '0 8px 40px rgba(0,0,0,0.05)',
+                      transition: 'transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                      mb: isEven ? 24 : 0,
+                      mt: !isEven ? 24 : 0,
+                      border: `1px solid ${ProfileColors.outlineVariant}15`,
+                      overflow: 'hidden'
                     }}
                   >
-                    <CardContent sx={{ p: 3 }}>
+                    {event.metadata?.imageAssetId && (
+                      <Box sx={{ height: 160, width: '100%' }}>
+                        <Box 
+                          component="img"
+                          src={`/api/assets/serve/${event.metadata.imageAssetId}`}
+                          alt={event.title}
+                          sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
+                      </Box>
+                    )}
+                    <CardContent sx={{ p: 4 }}>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
                          <Typography
-                          variant="caption"
                           sx={{
                             color: config.color,
                             fontWeight: 800,
                             textTransform: 'uppercase',
                             letterSpacing: 1.5,
+                            fontSize: '0.7rem'
                           }}
                         >
                           {formatEventDate(event.date, event.datePrecision)}
                         </Typography>
-                        <Icon sx={{ color: config.color, fontSize: 24, opacity: 0.8 }} />
+                        <Icon sx={{ color: config.color, fontSize: 20, opacity: 0.8 }} />
                       </Box>
                      
                       <Typography 
@@ -670,84 +704,66 @@ export function TimelinePageComponent({ events, isLoading, hasMore, onLoadMore, 
                           color: ProfileColors.primary, 
                           mb: 1.5, 
                           fontWeight: 700,
-                          fontSize: '1.25rem'
+                          fontSize: '1.25rem',
+                          lineHeight: 1.2
                         }}
                       >
                         {event.title}
                       </Typography>
-
-                      {event.metadata?.imageAssetId && (
-                        <Box sx={{ mb: 2, borderRadius: 2, overflow: 'hidden', height: 100 }}>
-                          <Box 
-                            component="img"
-                            src={`/api/assets/serve/${event.metadata.imageAssetId}`}
-                            alt={event.title}
-                            sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                          />
-                        </Box>
-                      )}
 
                       {event.description && (
                         <Typography 
                           variant="body2" 
                           sx={{ 
                             color: ProfileColors.onSurfaceVariant, 
-                            lineHeight: 1.6,
+                            lineHeight: 1.7,
+                            fontFamily: 'var(--font-newsreader), serif',
+                            fontSize: '0.95rem',
                             display: '-webkit-box',
                             WebkitLineClamp: 3,
                             WebkitBoxOrient: 'vertical',
                             overflow: 'hidden',
-                            mb: 2
                           }}
                         >
                           {event.description}
                         </Typography>
                       )}
-
-                      <Box sx={{ display: 'flex', gap: 1, mt: 'auto' }}>
-                        {event.people.map((p) => (
-                          <Avatar 
-                            key={p.id} 
-                            src={p.avatarAssetId ? `/api/assets/serve/${p.avatarAssetId}` : undefined}
-                            sx={{ width: 24, height: 24 }}
-                          >
-                            {p.firstName[0]}
-                          </Avatar>
-                        ))}
-                      </Box>
                     </CardContent>
                   </Card>
 
-                  {/* Connector Dot */}
+                  {/* Connector Dot on the center line */}
                   <Box
                     sx={{
                       position: 'absolute',
-                      bottom: 40,
-                      width: 16,
-                      height: 16,
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      width: 12,
+                      height: 12,
                       borderRadius: '50%',
                       bgcolor: config.color,
-                      border: `4px solid ${ProfileColors.surface}`,
-                      boxShadow: `0 0 0 2px ${config.color}40`,
+                      border: `3px solid #fff`,
+                      boxShadow: `0 0 0 1px ${config.color}30`,
                       zIndex: 10,
                     }}
                   />
                   
-                  {/* Vertical line to dot */}
+                  {/* Vertical line to card */}
                   <Box sx={{ 
                     position: 'absolute', 
-                    bottom: 56, 
-                    width: 2, 
-                    height: 16, 
-                    bgcolor: `${config.color}40` 
+                    top: isEven ? '50%' : 'auto',
+                    bottom: !isEven ? '50%' : 'auto',
+                    height: 96,
+                    width: 1, 
+                    bgcolor: `${config.color}30`,
+                    zIndex: 0
                   }} />
                 </Box>
               )
             })}
           </Box>
-          <Box sx={{ textAlign: 'center', mt: -2, opacity: 0.5 }}>
-            <Typography variant="caption" sx={{ color: ProfileColors.onSurfaceVariant }}>
-              drag to explore timeline
+          <Box sx={{ textAlign: 'center', mt: 2, opacity: 0.4 }}>
+            <Typography sx={{ fontFamily: 'var(--font-manrope), sans-serif', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+              drag to explore journey
             </Typography>
           </Box>
         </Box>

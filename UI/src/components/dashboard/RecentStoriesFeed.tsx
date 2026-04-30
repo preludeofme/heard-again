@@ -43,7 +43,7 @@ export function RecentStoriesFeed({ stories }: RecentStoriesFeedProps) {
           Latest stories
         </Typography>
         <Box
-          onClick={() => router.push('/stories')}
+          onClick={() => router.push('/archive?lens=stories')}
           sx={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -62,7 +62,7 @@ export function RecentStoriesFeed({ stories }: RecentStoriesFeedProps) {
 
       {stories.length === 0 ? (
         <Box
-          onClick={() => router.push('/stories#contribution-hub')}
+          onClick={() => router.push('/contribute')}
           sx={{
             textAlign: 'center',
             py: 6,

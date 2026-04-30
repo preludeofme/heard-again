@@ -23,15 +23,15 @@ interface Action {
 }
 
 const ALL_ACTIONS: Action[] = [
-  { key: 'story', label: 'New Story', icon: <AutoStoriesRounded />, href: '/stories#contribution-hub' },
+  { key: 'story', label: 'New Story', icon: <AutoStoriesRounded />, href: '/contribute' },
   { key: 'person', label: 'Add Person', icon: <PersonAddAlt1Rounded />, href: '/family-tree' },
-  { key: 'upload', label: 'Upload', icon: <CloudUploadRounded />, href: '/documents' },
-  { key: 'voice', label: 'Voice Lab', icon: <GraphicEqRounded />, href: '/voice-lab' },
+  { key: 'upload', label: 'Upload', icon: <CloudUploadRounded />, href: '/archive?lens=keepsakes' },
+  { key: 'voice', label: 'Voice Lab', icon: <GraphicEqRounded />, href: '/archive?lens=voices' },
   { key: 'tree', label: 'Family Tree', icon: <AccountTreeRounded />, href: '/family-tree' },
 ]
 
 const VIEWER_ACTIONS: Action[] = [
-  { key: 'story', label: 'Browse Stories', icon: <AutoStoriesRounded />, href: '/stories' },
+  { key: 'story', label: 'Browse Stories', icon: <AutoStoriesRounded />, href: '/archive?lens=stories' },
   { key: 'tree', label: 'Family Tree', icon: <AccountTreeRounded />, href: '/family-tree' },
 ]
 

@@ -1,10 +1,26 @@
-import { Box, Typography, Card, CardContent, Button, Grid, Chip, IconButton, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Tooltip, CircularProgress } from '@mui/material'
-import { CloudUpload as UploadIcon, FilterList as FilterIcon, Delete as DeleteIcon, Link as LinkIcon, CheckCircle as LinkedIcon } from '@mui/icons-material'
+import { 
+  Box, Typography, Card, CardContent, Button, Grid, Chip, 
+  IconButton, Dialog, DialogTitle, DialogContent, DialogContentText, 
+  DialogActions, Tooltip, CircularProgress, useTheme, useMediaQuery,
+  Paper
+} from '@mui/material'
+import { 
+  CloudUpload as UploadIcon, 
+  Delete as DeleteIcon, 
+  Link as LinkIcon, 
+  CheckCircle as LinkedIcon,
+  Inventory2Outlined as BoxIcon,
+  PhotoLibraryOutlined as PhotoIcon,
+  DescriptionOutlined as DocumentIcon,
+  HistoryEduOutlined as LetterIcon,
+  FolderOpenOutlined as FolderIcon
+} from '@mui/icons-material'
 import { DocumentArtifact } from '@/types'
 import { useState } from 'react'
 import { EmptyState } from '@/components/feedback/UIStates'
 import { FileUpload } from '@/components/upload/FileUpload'
 import { DocumentViewer, DocumentThumbnail } from '@/components/viewers/DocumentViewer'
+import { ProfileColors } from '@/components/profile/ProfileConstants'
 
 interface DocumentsPageProps {
   documents: DocumentArtifact[]
@@ -14,17 +30,23 @@ interface DocumentsPageProps {
   personId?: string
 }
 
+type FilterType = 'All' | 'Photo' | 'Letter' | 'Handwritten' | 'Document' | 'Other'
+
 export function DocumentsPage({ documents, onUploadSuccess, onDelete, onLink, personId }: DocumentsPageProps) {
-  const [selectedFilter, setSelectedFilter] = useState('All')
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
+  const [selectedFilter, setSelectedFilter] = useState<FilterType>('All')
   const [selectedDocument, setSelectedDocument] = useState<DocumentArtifact | null>(null)
   const [viewerOpen, setViewerOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<DocumentArtifact | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
   const [linkingId, setLinkingId] = useState<string | null>(null)
 
-  const filteredDocuments = documents.filter(doc => 
-    selectedFilter === 'All' || doc.type === selectedFilter
-  )
+  const filteredDocuments = documents.filter(doc => {
+    if (selectedFilter === 'All') return true
+    if (selectedFilter === 'Document') return doc.type === 'PDF' || doc.type === 'Document'
+    return doc.type === selectedFilter
+  })
 
   const handleUploadSuccess = (result: any) => {
     onUploadSuccess?.()
@@ -75,43 +97,147 @@ export function DocumentsPage({ documents, onUploadSuccess, onDelete, onLink, pe
     }
   }
 
+  const filterOptions: Array<{ label: FilterType; icon: React.ReactNode }> = [
+    { label: 'All', icon: <FolderIcon sx={{ fontSize: 18 }} /> },
+    { label: 'Photo', icon: <PhotoIcon sx={{ fontSize: 18 }} /> },
+    { label: 'Letter', icon: <LetterIcon sx={{ fontSize: 18 }} /> },
+    { label: 'Handwritten', icon: <LetterIcon sx={{ fontSize: 18 }} /> },
+    { label: 'Document', icon: <DocumentIcon sx={{ fontSize: 18 }} /> },
+  ]
+
   return (
-    <Box sx={{ minHeight: '100vh', backgroundColor: '#fcf9f4', px: { xs: 3, md: 8 }, py: 6 }}>
-      <Box sx={{ backgroundColor: '#ffffff', borderRadius: 4, p: 4 }}>
-        {/* Header */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-          <Typography variant="h3" className="serif-font" sx={{ color: '#16334a' }}>
-            Document Archive
-          </Typography>
-          <IconButton aria-label="Filter documents" sx={{ color: '#546669' }}>
-            <FilterIcon />
-          </IconButton>
-        </Box>
-
-        {/* Filter Chips */}
-        <Box sx={{ display: 'flex', gap: 2, mb: 4, flexWrap: 'wrap' }}>
-          {(['All', 'PDF', 'Photo', 'Letter', 'Handwritten'] as const).map((filter) => (
-            <Chip
-              key={filter}
-              label={filter}
-              onClick={() => setSelectedFilter(filter)}
+    <Box sx={{ minHeight: '100vh', backgroundColor: ProfileColors.surface, px: { xs: 2, md: 8 }, py: { xs: 4, md: 8 } }}>
+      <Box sx={{ maxWidth: 1280, mx: 'auto' }}>
+        {/* Header Section */}
+        <Box sx={{ mb: 6, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'flex-end' }, gap: 3 }}>
+          <Box>
+            <Typography
               sx={{
-                backgroundColor: selectedFilter === filter ? '#16334a' : '#f6f3ee',
-                color: selectedFilter === filter ? 'white' : '#546669',
+                fontFamily: 'var(--font-manrope), sans-serif',
+                fontSize: '0.85rem',
                 fontWeight: 600,
-                '&:hover': {
-                  backgroundColor: selectedFilter === filter ? '#2e4a62' : '#ebe8e3',
-                }
+                letterSpacing: '0.12em',
+                textTransform: 'uppercase',
+                color: ProfileColors.onSurfaceVariant,
+                mb: 1
               }}
-            />
-          ))}
+            >
+              The Archive Box
+            </Typography>
+            <Typography 
+              variant="h2" 
+              className="serif-font" 
+              sx={{ 
+                color: ProfileColors.primary, 
+                fontWeight: 700,
+                fontSize: { xs: '2.5rem', md: '3.5rem' },
+                lineHeight: 1,
+                fontStyle: 'italic'
+              }}
+            >
+              Heirlooms & Keepsakes
+            </Typography>
+            <Typography variant="body1" sx={{ color: ProfileColors.onSurfaceVariant, mt: 2, maxWidth: 500, fontFamily: 'var(--font-newsreader), serif', fontSize: '1.1rem' }}>
+              Tuck away the letters, photos, and handwritten notes that tell your family's story.
+            </Typography>
+          </Box>
+          
+          <FileUpload
+            onUploadSuccess={handleUploadSuccess}
+            onUploadError={handleUploadError}
+            accept="image/*,application/pdf,.doc,.docx,.txt,.csv,.rtf"
+            maxSize={50 * 1024 * 1024}
+            personId={personId}
+          >
+            <Button
+              variant="contained"
+              startIcon={<UploadIcon />}
+              sx={{
+                backgroundColor: ProfileColors.primary,
+                borderRadius: '999px',
+                py: 1.5,
+                px: 3,
+                textTransform: 'none',
+                fontWeight: 600,
+                '&:hover': { backgroundColor: ProfileColors.primaryContainer, color: ProfileColors.onPrimaryContainer }
+              }}
+            >
+              Add to the Box
+            </Button>
+          </FileUpload>
         </Box>
 
-        {/* Document Grid */}
-        <Grid container spacing={3}>
+        {/* Tactile Filter Bar - 'Drawer Tabs' */}
+        <Box 
+          sx={{ 
+            mb: 6, 
+            display: 'flex', 
+            justifyContent: 'center',
+            overflowX: 'auto',
+            pb: 1,
+            '&::-webkit-scrollbar': { display: 'none' }
+          }}
+        >
+          <Paper
+            elevation={0}
+            sx={{
+              display: 'flex',
+              p: 0.75,
+              borderRadius: '999px',
+              backgroundColor: ProfileColors.surfaceContainerLow,
+              border: `1px solid ${ProfileColors.outlineVariant}20`
+            }}
+          >
+            {filterOptions.map((opt) => (
+              <Button
+                key={opt.label}
+                onClick={() => setSelectedFilter(opt.label)}
+                startIcon={opt.icon}
+                sx={{
+                  px: 3,
+                  py: 1,
+                  borderRadius: '999px',
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  fontSize: '0.9rem',
+                  color: selectedFilter === opt.label ? ProfileColors.primary : ProfileColors.onSurfaceVariant,
+                  backgroundColor: selectedFilter === opt.label ? ProfileColors.surfaceContainerLowest : 'transparent',
+                  boxShadow: selectedFilter === opt.label ? '0 2px 8px rgba(0,0,0,0.05)' : 'none',
+                  '&:hover': {
+                    backgroundColor: selectedFilter === opt.label ? ProfileColors.surfaceContainerLowest : 'rgba(0,0,0,0.03)'
+                  }
+                }}
+              >
+                {opt.label}
+              </Button>
+            ))}
+          </Paper>
+        </Box>
+
+        {/* Keepsake Grid - The 'Drawer' content */}
+        <Grid container spacing={4}>
           {filteredDocuments.length === 0 && (
             <Grid size={12}>
-              <EmptyState type="documents" onAction={() => {}} />
+              <Box sx={{ py: 12, textAlign: 'center', backgroundColor: ProfileColors.surfaceContainerLow, borderRadius: 8, border: `2px dashed ${ProfileColors.outlineVariant}30` }}>
+                <BoxIcon sx={{ fontSize: 64, color: ProfileColors.outlineVariant, mb: 2, opacity: 0.5 }} />
+                <Typography variant="h5" className="serif-font" sx={{ color: ProfileColors.primary, mb: 1 }}>
+                  This drawer is empty
+                </Typography>
+                <Typography variant="body2" sx={{ color: ProfileColors.onSurfaceVariant, mb: 4 }}>
+                  Start tucking away memories and heirlooms.
+                </Typography>
+                <FileUpload
+                  onUploadSuccess={handleUploadSuccess}
+                  onUploadError={handleUploadError}
+                  accept="image/*,application/pdf,.doc,.docx,.txt,.csv,.rtf"
+                  maxSize={50 * 1024 * 1024}
+                  personId={personId}
+                >
+                  <Button variant="outlined" sx={{ borderRadius: '999px', borderColor: ProfileColors.primary, color: ProfileColors.primary }}>
+                    Tuck away your first keepsake
+                  </Button>
+                </FileUpload>
+              </Box>
             </Grid>
           )}
 
@@ -119,189 +245,191 @@ export function DocumentsPage({ documents, onUploadSuccess, onDelete, onLink, pe
             <Grid key={doc.id} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
               <Card
                 role="button"
-                aria-label={`View document: ${doc.title}`}
+                aria-label={`View keepsake: ${doc.title}`}
                 onClick={() => handleDocumentClick(doc)}
                 sx={{
-                  backgroundColor: '#f6f3ee',
-                  border: 'none',
-                  boxShadow: 'none',
+                  backgroundColor: ProfileColors.surfaceContainerLowest,
+                  borderRadius: 4,
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
                   cursor: 'pointer',
-                  transition: 'transform 0.2s',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                   position: 'relative',
+                  overflow: 'visible',
+                  border: `1px solid ${ProfileColors.outlineVariant}10`,
                   '&:hover': {
-                    transform: 'translateY(-4px)',
-                    boxShadow: 2,
-                    '& .doc-delete-btn': { opacity: 1 },
-                  }
+                    transform: 'translateY(-8px) rotate(1deg)',
+                    boxShadow: '0 12px 40px rgba(0,0,0,0.08)',
+                    '& .doc-actions': { opacity: 1 },
+                  },
+                  // Stack effect for certain types
+                  '&::after': doc.type === 'Letter' ? {
+                    content: '""',
+                    position: 'absolute',
+                    top: 4,
+                    left: 4,
+                    right: -4,
+                    bottom: -4,
+                    backgroundColor: 'rgba(0,0,0,0.02)',
+                    borderRadius: 4,
+                    zIndex: -1,
+                  } : {}
                 }}
               >
-                {/* Link status badge — shown when a person filter is active */}
+                {/* Link status badge */}
                 {personId && doc.linkedToPerson === true && (
                   <Tooltip title="Linked to this person">
                     <Box sx={{
                       position: 'absolute',
-                      top: 6,
-                      left: 6,
-                      zIndex: 1,
+                      top: -10,
+                      left: -10,
+                      zIndex: 2,
+                      width: 32,
+                      height: 32,
+                      borderRadius: '50%',
+                      backgroundColor: '#fff',
+                      boxShadow: 2,
                       display: 'flex',
                       alignItems: 'center',
+                      justifyContent: 'center',
                     }}>
                       <LinkedIcon sx={{ fontSize: 18, color: '#2e7d32' }} />
                     </Box>
                   </Tooltip>
                 )}
-                {personId && doc.linkedToPerson === false && (
-                  <Tooltip title="Link to this person">
+                
+                {/* Actions overlay */}
+                <Box 
+                  className="doc-actions"
+                  sx={{
+                    position: 'absolute',
+                    top: 12,
+                    right: 12,
+                    zIndex: 2,
+                    opacity: 0,
+                    transition: 'opacity 0.2s',
+                    display: 'flex',
+                    gap: 1
+                  }}
+                >
+                  {personId && doc.linkedToPerson === false && (
+                    <Tooltip title="Link to this person">
+                      <IconButton
+                        size="small"
+                        onClick={(e) => handleLinkClick(e, doc)}
+                        disabled={linkingId === doc.id}
+                        sx={{
+                          backgroundColor: 'rgba(255,255,255,0.9)',
+                          '&:hover': { backgroundColor: '#e8f5e9', color: '#2e7d32' },
+                          boxShadow: 1
+                        }}
+                      >
+                        {linkingId === doc.id
+                          ? <CircularProgress size={14} />
+                          : <LinkIcon sx={{ fontSize: 14, color: ProfileColors.onSurfaceVariant }} />}
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                  {onDelete && (
                     <IconButton
                       size="small"
-                      onClick={(e) => handleLinkClick(e, doc)}
-                      disabled={linkingId === doc.id}
+                      aria-label={`Delete keepsake: ${doc.title}`}
+                      onClick={(e) => handleDeleteClick(e, doc)}
                       sx={{
-                        position: 'absolute',
-                        top: 4,
-                        left: 4,
-                        zIndex: 1,
                         backgroundColor: 'rgba(255,255,255,0.9)',
-                        '&:hover': { backgroundColor: '#e8f5e9', color: '#2e7d32' },
+                        '&:hover': { backgroundColor: '#fdecea', color: '#d32f2f' },
+                        boxShadow: 1
                       }}
                     >
-                      {linkingId === doc.id
-                        ? <CircularProgress size={14} />
-                        : <LinkIcon sx={{ fontSize: 14, color: '#546669' }} />}
+                      <DeleteIcon fontSize="small" />
                     </IconButton>
-                  </Tooltip>
-                )}
-                {onDelete && (
-                  <IconButton
-                    className="doc-delete-btn"
-                    size="small"
-                    aria-label={`Delete document: ${doc.title}`}
-                    onClick={(e) => handleDeleteClick(e, doc)}
-                    sx={{
-                      position: 'absolute',
-                      top: 6,
-                      right: 6,
-                      opacity: 0,
-                      transition: 'opacity 0.15s',
-                      backgroundColor: 'rgba(255,255,255,0.85)',
-                      zIndex: 1,
-                      '&:hover': { backgroundColor: '#fdecea', color: '#d32f2f' },
-                    }}
-                  >
-                    <DeleteIcon fontSize="small" />
-                  </IconButton>
-                )}
-                <CardContent sx={{ p: 3 }}>
-                  <DocumentThumbnail
-                    document={{
-                      id: doc.id,
-                      filename: doc.title,
-                      originalName: doc.title,
-                      mimeType: doc.mimeType || 'application/octet-stream',
-                      publicUrl: `/api/assets/serve/${doc.id}`,
-                      storagePath: doc.id
-                    }}
-                    onClick={() => handleDocumentClick(doc)}
-                  />
-                  <Chip
-                    label={doc.type}
-                    size="small"
-                    sx={{
-                      backgroundColor: '#ffffff',
-                      color: '#546669',
-                      fontSize: '0.7rem',
-                      fontWeight: 600,
-                      mb: 1,
-                      mt: 1
-                    }}
-                  />
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      color: '#16334a',
-                      fontWeight: 600,
-                      mb: 1,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {doc.title}
-                  </Typography>
-                  <Typography variant="caption" sx={{ color: '#546669' }}>
-                    {new Date(doc.uploadedAt).toLocaleDateString()}
-                  </Typography>
-                  <Button
-                    size="small"
-                    sx={{
-                      color: '#16334a',
-                      textTransform: 'none',
-                      p: 0,
-                      mt: 1,
-                      '&:hover': { backgroundColor: 'transparent' }
-                    }}
-                  >
-                    {doc.shareAction}
-                  </Button>
+                  )}
+                </Box>
+
+                <CardContent sx={{ p: 2 }}>
+                  <Box sx={{ borderRadius: 3, overflow: 'hidden', mb: 2 }}>
+                    <DocumentThumbnail
+                      document={{
+                        id: doc.id,
+                        filename: doc.title,
+                        originalName: doc.title,
+                        mimeType: doc.mimeType || 'application/octet-stream',
+                        publicUrl: `/api/assets/serve/${doc.id}`,
+                        storagePath: doc.id
+                      }}
+                      onClick={() => handleDocumentClick(doc)}
+                    />
+                  </Box>
+                  
+                  <Box sx={{ px: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                      {doc.type === 'Photo' && <PhotoIcon sx={{ fontSize: 14, color: ProfileColors.onSurfaceVariant }} />}
+                      {doc.type === 'Letter' && <LetterIcon sx={{ fontSize: 14, color: ProfileColors.onSurfaceVariant }} />}
+                      {doc.type === 'PDF' && <DocumentIcon sx={{ fontSize: 14, color: ProfileColors.onSurfaceVariant }} />}
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          color: ProfileColors.onSurfaceVariant,
+                          fontWeight: 700,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.05em'
+                        }}
+                      >
+                        {doc.type}
+                      </Typography>
+                    </Box>
+                    
+                    <Typography
+                      sx={{
+                        color: ProfileColors.primary,
+                        fontWeight: 700,
+                        fontFamily: 'var(--font-newsreader), serif',
+                        fontSize: '1.1rem',
+                        mb: 0.5,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {doc.title}
+                    </Typography>
+                    
+                    <Typography 
+                      variant="caption" 
+                      sx={{ 
+                        color: ProfileColors.onSurfaceVariant, 
+                        display: 'block',
+                        fontFamily: 'var(--font-manrope), sans-serif',
+                        opacity: 0.7
+                      }}
+                    >
+                      Added {new Date(doc.uploadedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </Typography>
+                  </Box>
                 </CardContent>
               </Card>
             </Grid>
           ))}
-
-          {/* Upload Artifact Card — always rendered */}
-          <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
-            <FileUpload
-              onUploadSuccess={handleUploadSuccess}
-              onUploadError={handleUploadError}
-              accept="image/*,application/pdf,.doc,.docx,.txt,.csv,.rtf"
-              maxSize={50 * 1024 * 1024}
-              personId={personId}
-            >
-              <Card
-                sx={{
-                  backgroundColor: '#f6f3ee',
-                  border: '2px dashed #d0e3e6',
-                  boxShadow: 'none',
-                  height: '100%',
-                  minHeight: 200,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'all 0.2s',
-                  '&:hover': {
-                    backgroundColor: '#ebe8e3',
-                    borderColor: '#16334a',
-                  }
-                }}
-              >
-                <CardContent sx={{ p: 3, textAlign: 'center' }}>
-                  <UploadIcon sx={{ fontSize: 40, color: '#adcae6', mb: 2 }} />
-                  <Typography variant="body1" sx={{ color: '#546669', fontWeight: 600 }}>
-                    Upload Artifact
-                  </Typography>
-                  <Typography variant="caption" sx={{ color: '#546669', mt: 1, display: 'block' }}>
-                    Add photos, letters, or documents
-                  </Typography>
-                  <Typography variant="caption" sx={{ color: '#adcae6', mt: 1, display: 'block' }}>
-                    Drag & drop or click to browse
-                  </Typography>
-                </CardContent>
-              </Card>
-            </FileUpload>
-          </Grid>
         </Grid>
       </Box>
       
       {/* Delete Confirmation Dialog */}
-      <Dialog open={!!deleteTarget} onClose={handleDeleteCancel} maxWidth="xs" fullWidth>
-        <DialogTitle>Delete document?</DialogTitle>
+      <Dialog 
+        open={!!deleteTarget} 
+        onClose={handleDeleteCancel} 
+        maxWidth="xs" 
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 4 } }}
+      >
+        <DialogTitle sx={{ fontFamily: 'var(--font-newsreader), serif', fontWeight: 700 }}>
+          Remove from the archive?
+        </DialogTitle>
         <DialogContent>
-          <DialogContentText>
-            <strong>{deleteTarget?.title}</strong> will be permanently removed. This cannot be undone.
+          <DialogContentText sx={{ color: ProfileColors.onSurfaceVariant }}>
+            <strong>{deleteTarget?.title}</strong> will be permanently removed from the box. This cannot be undone.
           </DialogContentText>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={handleDeleteCancel} disabled={isDeleting} sx={{ color: '#546669' }}>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button onClick={handleDeleteCancel} disabled={isDeleting} sx={{ color: ProfileColors.onSurfaceVariant, textTransform: 'none', fontWeight: 600 }}>
             Cancel
           </Button>
           <Button
@@ -309,9 +437,9 @@ export function DocumentsPage({ documents, onUploadSuccess, onDelete, onLink, pe
             disabled={isDeleting}
             variant="contained"
             color="error"
-            sx={{ minWidth: 90 }}
+            sx={{ borderRadius: '999px', px: 3, textTransform: 'none', fontWeight: 600 }}
           >
-            {isDeleting ? 'Deleting…' : 'Delete'}
+            {isDeleting ? 'Removing…' : 'Remove Item'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -325,7 +453,7 @@ export function DocumentsPage({ documents, onUploadSuccess, onDelete, onLink, pe
           filename: selectedDocument.title,
           originalName: selectedDocument.title,
           mimeType: selectedDocument.mimeType || 'application/octet-stream',
-          publicUrl: `/api/assets/serve/${selectedDocument.id}`, // Use the new serve endpoint
+          publicUrl: `/api/assets/serve/${selectedDocument.id}`,
           storagePath: selectedDocument.id
         } : {
           id: '',

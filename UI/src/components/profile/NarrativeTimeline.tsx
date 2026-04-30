@@ -71,7 +71,7 @@ export function NarrativeTimeline({
           </Typography>
           <Box
             component={Link}
-            href={isGlobal ? '/stories' : `/stories?subjectId=${personId}`}
+            href={isGlobal ? '/archive?lens=stories' : '/contribute'}
             sx={{ display: 'inline-block', mt: 2, color: ProfileColors.primary, textDecoration: 'none', fontFamily: 'var(--font-manrope), sans-serif', fontWeight: 600, fontSize: '0.9rem', borderBottom: `2px solid ${ProfileColors.primary}35`, pb: 0.25 }}
           >
             Begin the narrative →
@@ -191,7 +191,7 @@ export function NarrativeTimeline({
             <Box 
               onClick={() => {
                 if (!hasDragged) {
-                  router.push(isGlobal ? '/stories' : `/stories?subjectId=${personId}`)
+                  router.push('/contribute')
                 }
               }}
               sx={{ flexShrink: 0, width: { xs: 240, md: 300 }, textDecoration: 'none', cursor: 'pointer' }}

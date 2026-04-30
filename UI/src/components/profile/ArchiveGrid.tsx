@@ -39,7 +39,7 @@ export function ArchiveGrid({
           {docTotal > 4 && (
             <Box
               component={Link}
-              href={isGlobal ? '/documents' : `/documents?personId=${personId}`}
+              href={isGlobal ? '/archive?lens=keepsakes' : `/archive?lens=keepsakes`}
               sx={{ color: ProfileColors.primary, textDecoration: 'none', fontFamily: 'var(--font-manrope), sans-serif', fontWeight: 700, fontSize: '0.72rem', letterSpacing: '0.12em', textTransform: 'uppercase', borderBottom: `2px solid ${ProfileColors.primary}30`, pb: 0.25, transition: 'border-color 0.2s', '&:hover': { borderColor: ProfileColors.primary } }}
             >
               View All {docTotal} Items
@@ -54,7 +54,7 @@ export function ArchiveGrid({
             </Typography>
             <Box
               component={Link}
-              href={isGlobal ? '/documents' : `/documents?personId=${personId}`}
+              href={isGlobal ? '/archive?lens=keepsakes' : `/archive?lens=keepsakes`}
               sx={{ display: 'inline-block', mt: 2, color: ProfileColors.primary, textDecoration: 'none', fontFamily: 'var(--font-manrope), sans-serif', fontWeight: 600, fontSize: '0.9rem', borderBottom: `2px solid ${ProfileColors.primary}35`, pb: 0.25 }}
             >
               Upload documents →

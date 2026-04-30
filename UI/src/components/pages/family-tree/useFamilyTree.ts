@@ -169,7 +169,7 @@ export function useFamilyTree(
   }
 
   const handleAddStory = (personId: string) => {
-    router.push(`/stories?subjectId=${personId}`)
+    router.push('/contribute')
   }
 
   const handleAddVoiceProfile = (personId: string) => {
