@@ -33,6 +33,7 @@ interface FamilyMemberCardProps {
   isMobile: boolean
   onPersonClick: (person: TreePerson) => void
   onAddPerson: () => void
+  onViewArchive: (person: TreePerson) => void
 }
 
 export function FamilyMemberCard({
@@ -43,6 +44,7 @@ export function FamilyMemberCard({
   isMobile,
   onPersonClick,
   onAddPerson,
+  onViewArchive,
 }: FamilyMemberCardProps) {
   const isParentLevel = level === 'parent'
   const selfCardColor = '#1a6b5a'
@@ -179,10 +181,14 @@ export function FamilyMemberCard({
 
       {isParentLevel && (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-          <Button fullWidth variant="text" startIcon={<AutoStories />}
+          <Button
+            fullWidth
+            variant="text"
+            startIcon={<AutoStories />}
+            onClick={(e) => { e.stopPropagation(); onViewArchive(person) }}
             sx={{ color: 'white', bgcolor: 'rgba(255,255,255,0.1)', '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' }, justifyContent: 'center', py: 1, borderRadius: 2 }}
           >
-            View Archive
+            Open Story
           </Button>
           <Box sx={{ display: 'flex', gap: 1 }}>
             <Button variant="text" startIcon={<Edit />}

@@ -266,7 +266,13 @@ export class PersonService {
       firstName: person.firstName,
       lastName: person.lastName,
       displayName: person.displayName || `${person.firstName}${person.lastName ? ' ' + person.lastName : ''}`,
+      nickname: person.nickname ?? null,
       personType: person.personType as PersonType,
+      birthDate: person.birthDate ?? null,
+      deathDate: person.deathDate ?? null,
+      isDeceased: person.isDeceased ?? false,
+      bio: person.bio ?? null,
+      tags: person.tags ?? [],
       avatarUrl: person.avatarAsset ? `/api/assets/serve/${person.avatarAsset.id}` : null,
       counts: {
         stories: person._count.storiesAsSubject,

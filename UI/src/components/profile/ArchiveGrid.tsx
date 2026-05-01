@@ -30,7 +30,7 @@ export function ArchiveGrid({
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mb: 5, flexWrap: 'wrap', gap: 2 }}>
           <Box>
             <Typography sx={{ fontFamily: 'var(--font-newsreader), serif', fontSize: { xs: '2rem', md: '2.5rem' }, fontWeight: 700, color: ProfileColors.primary }}>
-              {isGlobal ? 'The Family Archive' : 'The Archive Box'}
+              {isGlobal ? 'The Family Story' : 'The Keepsake Drawer'}
             </Typography>
             <Typography sx={{ fontFamily: 'var(--font-manrope), sans-serif', fontSize: '0.875rem', color: ProfileColors.onSurfaceVariant, mt: 0.5 }}>
               Scanned letters, blueprints, and physical memories.
@@ -50,7 +50,7 @@ export function ArchiveGrid({
         {documents.length === 0 ? (
           <Box sx={{ py: 5, textAlign: 'center' }}>
             <Typography sx={{ color: ProfileColors.onSurfaceVariant, fontFamily: 'var(--font-newsreader), serif', fontSize: '1.1rem', fontStyle: 'italic' }}>
-              {isGlobal ? 'No documents archived yet.' : 'No documents archived yet.'}
+              {isGlobal ? 'No keepsakes here yet.' : 'No keepsakes here yet.'}
             </Typography>
             <Box
               component={Link}

@@ -40,20 +40,6 @@ export function StoriesLens() {
       stories={visibleStories}
       selectedFamilyMember={selectedFamilyMember}
       isLens
-      onSubmitStory={async (title, content, storyDate, location, authorRelationship) => {
-        await controller.submitStory({
-          title,
-          content,
-          storyType: 'MEMORY',
-          subjectId: selectedSubjectId,
-          storyDate,
-          location,
-          authorRelationship,
-        })
-      }}
-      onSubmitAudio={async (audioBlob, duration, title, authorRelationship) => {
-        await controller.submitAudioStory(audioBlob, duration, title, authorRelationship)
-      }}
     />
   )
 }

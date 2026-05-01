@@ -1,16 +1,13 @@
 import {
   Box, Typography, Card, CardContent, Button, Grid, Chip,
-  IconButton, CircularProgress, TextField, Dialog, DialogTitle,
-  DialogContent, Select, MenuItem, FormControl, InputLabel,
-  Avatar, Tooltip, DialogActions
+  IconButton, CircularProgress, TextField,
+  Avatar, Tooltip,
 } from '@mui/material'
 import {
   Add as AddIcon,
   PlayArrow as PlayIcon,
   Stop as StopIcon,
   Delete as DeleteIcon,
-  Compare as CompareIcon,
-  Close as CloseIcon,
   RecordVoiceOver as VoiceIcon,
   Lock as LockIcon,
 } from '@mui/icons-material'
@@ -66,14 +63,6 @@ export function VoiceLabPage({ voiceModels, controller }: VoiceLabPageProps) {
   const [isSynthesizing, setIsSynthesizing] = useState(false)
   const [playingAudioUrl, setPlayingAudioUrl] = useState<string | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
-
-  // Compare dialog state
-  const [showCompare, setShowCompare] = useState(false)
-  const [compareA, setCompareA] = useState<string>('')
-  const [compareB, setCompareB] = useState<string>('')
-  const [compareText, setCompareText] = useState(`This is how I sound in the digital archive.`)
-  const [isComparing, setIsComparing] = useState(false)
-  const [compareResults, setCompareResults] = useState<{ audioA: string | null; audioB: string | null } | null>(null)
 
   // Delete confirmation
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
@@ -140,25 +129,6 @@ export function VoiceLabPage({ voiceModels, controller }: VoiceLabPageProps) {
     }
   }
 
-  // ── Compare voices ──
-  const handleCompare = async () => {
-    if (!compareA || !compareB || !compareText.trim()) return
-    setCompareResults(null)
-    setIsComparing(true)
-    try {
-      const [audioA, audioB] = await Promise.all([
-        synthesizeSpeech(compareA, compareText.trim()),
-        synthesizeSpeech(compareB, compareText.trim()),
-      ])
-      setCompareResults({ audioA, audioB })
-    } catch (err) {
-      console.error('Compare failed:', err)
-      setCompareResults({ audioA: null, audioB: null })
-    } finally {
-      setIsComparing(false)
-    }
-  }
-
   // ── Delete voice ──
   const handleDelete = async (profileId: string) => {
     await deleteVoiceProfile(profileId)
@@ -215,7 +185,7 @@ export function VoiceLabPage({ voiceModels, controller }: VoiceLabPageProps) {
               Hear them tell it
             </Typography>
             <Typography variant="body1" sx={{ color: ProfileColors.onSurfaceVariant, mt: 2, maxWidth: 550, fontFamily: 'var(--font-newsreader), serif', fontSize: '1.15rem' }}>
-              We believe every voice is a fingerprint of the soul. Archive their warmth and wisdom so future generations can truly listen.
+              We believe every voice is a fingerprint of the soul. Preserve their warmth and wisdom so future generations can truly listen.
             </Typography>
           </Box>
           
@@ -234,7 +204,7 @@ export function VoiceLabPage({ voiceModels, controller }: VoiceLabPageProps) {
               '&:hover': { backgroundColor: ProfileColors.primaryContainer, color: ProfileColors.onPrimaryContainer }
             }}
           >
-            {hasSelectedPerson ? `Add ${memberName}'s Voice` : 'Select a person to begin'}
+            {hasSelectedPerson ? `Preserve ${memberName}'s Voice` : 'Select a person to begin'}
           </Button>
         </Box>
 
@@ -244,10 +214,10 @@ export function VoiceLabPage({ voiceModels, controller }: VoiceLabPageProps) {
             <Box sx={{ backgroundColor: ProfileColors.surfaceContainerLowest, borderRadius: 6, p: 4, boxShadow: '0 4px 40px rgba(0,0,0,0.04)', border: `1px solid ${ProfileColors.outlineVariant}15` }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
                 <Typography variant="h5" className="serif-font" sx={{ color: ProfileColors.primary, fontWeight: 700 }}>
-                  Voice Collection
+                  Voice Profiles
                 </Typography>
                 <Chip
-                  label={`${voiceModels.length} voices archived`}
+                  label={`${voiceModels.length} voice${voiceModels.length === 1 ? '' : 's'} preserved`}
                   sx={{ backgroundColor: ProfileColors.secondaryContainer, color: ProfileColors.onSecondaryContainer, fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: 1 }}
                 />
               </Box>
@@ -256,10 +226,14 @@ export function VoiceLabPage({ voiceModels, controller }: VoiceLabPageProps) {
                 <Box sx={{ py: 10, textAlign: 'center', backgroundColor: ProfileColors.surfaceContainerLow, borderRadius: 4, border: `2px dashed ${ProfileColors.outlineVariant}30` }}>
                   <VoiceIcon sx={{ fontSize: 56, color: ProfileColors.outlineVariant, mb: 2, opacity: 0.5 }} />
                   <Typography variant="h6" className="serif-font" sx={{ color: ProfileColors.primary, mb: 1 }}>
-                    Silence is waiting to be filled
+                    {hasSelectedPerson
+                      ? `${memberName}'s voice hasn't been preserved yet.`
+                      : 'Select a family member to create a voice memory.'}
                   </Typography>
                   <Typography variant="body2" sx={{ color: ProfileColors.onSurfaceVariant, mb: 4 }}>
-                    Start by teaching the archive {memberName}'s unique voice.
+                    {hasSelectedPerson
+                      ? 'Upload a recording of them speaking — even a few minutes — and we\'ll create a voice that tells their stories for generations.'
+                      : 'Use the "Whose story?" selector above to choose a person first.'}
                   </Typography>
                 </Box>
               ) : (
@@ -279,6 +253,11 @@ export function VoiceLabPage({ voiceModels, controller }: VoiceLabPageProps) {
                           cursor: 'pointer',
                           transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                           borderRadius: 4,
+                          '& .card-actions': {
+                            opacity: isDeleting ? 1 : 0,
+                            transition: 'opacity 0.15s ease',
+                          },
+                          '&:hover .card-actions': { opacity: 1 },
                           '&:hover': {
                             backgroundColor: isSelected ? ProfileColors.surfaceContainerLow : ProfileColors.surfaceContainerLowest,
                             transform: 'translateX(4px)',
@@ -310,11 +289,11 @@ export function VoiceLabPage({ voiceModels, controller }: VoiceLabPageProps) {
                             </Typography>
                           </Box>
 
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                          <Box className="card-actions" sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                             {model.hasConsent !== true && (
                               <Tooltip title="Needs recorded consent">
-                                <IconButton 
-                                  size="small" 
+                                <IconButton
+                                  size="small"
                                   onClick={(e) => {
                                     e.stopPropagation()
                                     setConsentPersonId(model.person?.id || '')
@@ -331,12 +310,12 @@ export function VoiceLabPage({ voiceModels, controller }: VoiceLabPageProps) {
                             {isDeleting ? (
                               <Button
                                 size="small"
-                                variant="contained"
+                                variant="outlined"
                                 color="error"
-                                onClick={(e) => { e.stopPropagation(); handleDelete(model.id); }}
-                                sx={{ minWidth: 0, px: 1 }}
+                                onClick={(e) => { e.stopPropagation(); handleDelete(model.id) }}
+                                sx={{ borderRadius: '999px', fontSize: '0.78rem', px: 1.5 }}
                               >
-                                Del
+                                Remove
                               </Button>
                             ) : (
                               <IconButton
@@ -445,33 +424,6 @@ export function VoiceLabPage({ voiceModels, controller }: VoiceLabPageProps) {
                 )}
               </Box>
 
-              {voiceModels.length >= 2 && (
-                <Card 
-                  onClick={() => {
-                    setCompareA(voiceModels[0]?.id || '')
-                    setCompareB(voiceModels[1]?.id || '')
-                    setCompareResults(null)
-                    setShowCompare(true)
-                  }}
-                  sx={{ 
-                    borderRadius: 6, 
-                    cursor: 'pointer',
-                    backgroundColor: ProfileColors.surfaceContainerLow,
-                    border: `1px solid ${ProfileColors.outlineVariant}10`,
-                    '&:hover': { borderColor: ProfileColors.primary + '30', bgcolor: ProfileColors.surfaceContainerLowest }
-                  }}
-                >
-                  <CardContent sx={{ p: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Box sx={{ width: 40, height: 40, borderRadius: '50%', bgcolor: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <CompareIcon sx={{ color: ProfileColors.primary }} />
-                    </Box>
-                    <Box>
-                      <Typography sx={{ fontWeight: 700, color: ProfileColors.primary }}>Compare nuances</Typography>
-                      <Typography variant="caption" sx={{ color: ProfileColors.onSurfaceVariant }}>Listen to two versions side-by-side</Typography>
-                    </Box>
-                  </CardContent>
-                </Card>
-              )}
             </Box>
           </Grid>
         </Grid>
@@ -498,85 +450,6 @@ export function VoiceLabPage({ voiceModels, controller }: VoiceLabPageProps) {
         onConsentRecorded={handleConsentRecorded}
       />
 
-      <Dialog
-        open={showCompare}
-        onClose={() => { setShowCompare(false); setCompareResults(null) }}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{ sx: { borderRadius: 4, p: 2 } }}
-      >
-        <DialogTitle sx={{ fontFamily: 'var(--font-newsreader), serif', fontWeight: 700 }}>
-          Nuance Comparison
-        </DialogTitle>
-        <DialogContent>
-          <Typography variant="body2" sx={{ mb: 3, color: ProfileColors.onSurfaceVariant }}>
-            Sometimes the smallest change in training samples makes a big difference. Hear them side-by-side.
-          </Typography>
-
-          <TextField
-            fullWidth
-            multiline
-            rows={2}
-            label="What should they say?"
-            value={compareText}
-            onChange={(e) => setCompareText(e.target.value)}
-            sx={{ mb: 3 }}
-          />
-
-          <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
-            <FormControl fullWidth size="small">
-              <InputLabel>First Voice</InputLabel>
-              <Select value={compareA} label="First Voice" onChange={(e) => setCompareA(e.target.value)}>
-                {voiceModels.map((m: VoiceModel) => (
-                  <MenuItem key={m.id} value={m.id}>{m.displayName || m.name}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <FormControl fullWidth size="small">
-              <InputLabel>Second Voice</InputLabel>
-              <Select value={compareB} label="Second Voice" onChange={(e) => setCompareB(e.target.value)}>
-                {voiceModels.map((m: VoiceModel) => (
-                  <MenuItem key={m.id} value={m.id}>{m.displayName || m.name}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Box>
-
-          <Button
-            variant="contained"
-            fullWidth
-            onClick={handleCompare}
-            disabled={!compareText.trim() || !compareA || !compareB || isComparing}
-            sx={{ borderRadius: '999px', py: 1.5, bgcolor: ProfileColors.primary }}
-          >
-            {isComparing ? 'Preparing comparison...' : 'Generate side-by-side'}
-          </Button>
-
-          {compareResults && (
-            <Box sx={{ mt: 3, p: 2, bgcolor: ProfileColors.surfaceContainerLow, borderRadius: 3 }}>
-              {compareResults.audioA && (
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="caption" sx={{ fontWeight: 700, mb: 1, display: 'block' }}>
-                    {voiceModels.find(m => m.id === compareA)?.displayName}
-                  </Typography>
-                  <audio controls src={compareResults.audioA} style={{ width: '100%', height: 36 }} />
-                </Box>
-              )}
-              {compareResults.audioB && (
-                <Box>
-                  <Typography variant="caption" sx={{ fontWeight: 700, mb: 1, display: 'block' }}>
-                    {voiceModels.find(m => m.id === compareB)?.displayName}
-                  </Typography>
-                  <audio controls src={compareResults.audioB} style={{ width: '100%', height: 36 }} />
-                </Box>
-              )}
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowCompare(false)} sx={{ color: ProfileColors.onSurfaceVariant }}>Close</Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   )
 }

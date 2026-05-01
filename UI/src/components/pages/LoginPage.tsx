@@ -107,7 +107,7 @@ export function LoginPage() {
                 href="/signup"
                 variant="contained"
               >
-                Start Archive
+                Start Story
               </Button>
             </Box>
           </Box>

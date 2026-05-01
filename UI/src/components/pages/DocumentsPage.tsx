@@ -97,12 +97,12 @@ export function DocumentsPage({ documents, onUploadSuccess, onDelete, onLink, pe
     }
   }
 
-  const filterOptions: Array<{ label: FilterType; icon: React.ReactNode }> = [
-    { label: 'All', icon: <FolderIcon sx={{ fontSize: 18 }} /> },
-    { label: 'Photo', icon: <PhotoIcon sx={{ fontSize: 18 }} /> },
-    { label: 'Letter', icon: <LetterIcon sx={{ fontSize: 18 }} /> },
-    { label: 'Handwritten', icon: <LetterIcon sx={{ fontSize: 18 }} /> },
-    { label: 'Document', icon: <DocumentIcon sx={{ fontSize: 18 }} /> },
+  const filterOptions: Array<{ label: string; value: FilterType; icon: React.ReactNode }> = [
+    { label: 'All', value: 'All', icon: <FolderIcon sx={{ fontSize: 18 }} /> },
+    { label: 'Photos', value: 'Photo', icon: <PhotoIcon sx={{ fontSize: 18 }} /> },
+    { label: 'Letters', value: 'Letter', icon: <LetterIcon sx={{ fontSize: 18 }} /> },
+    { label: 'Handwritten', value: 'Handwritten', icon: <LetterIcon sx={{ fontSize: 18 }} /> },
+    { label: 'Papers', value: 'Document', icon: <DocumentIcon sx={{ fontSize: 18 }} /> },
   ]
 
   return (
@@ -122,7 +122,7 @@ export function DocumentsPage({ documents, onUploadSuccess, onDelete, onLink, pe
                 mb: 1
               }}
             >
-              The Archive Box
+              The Keepsake Drawer
             </Typography>
             <Typography 
               variant="h2" 
@@ -190,8 +190,8 @@ export function DocumentsPage({ documents, onUploadSuccess, onDelete, onLink, pe
           >
             {filterOptions.map((opt) => (
               <Button
-                key={opt.label}
-                onClick={() => setSelectedFilter(opt.label)}
+                key={opt.value}
+                onClick={() => setSelectedFilter(opt.value)}
                 startIcon={opt.icon}
                 sx={{
                   px: 3,
@@ -200,11 +200,11 @@ export function DocumentsPage({ documents, onUploadSuccess, onDelete, onLink, pe
                   textTransform: 'none',
                   fontWeight: 600,
                   fontSize: '0.9rem',
-                  color: selectedFilter === opt.label ? ProfileColors.primary : ProfileColors.onSurfaceVariant,
-                  backgroundColor: selectedFilter === opt.label ? ProfileColors.surfaceContainerLowest : 'transparent',
-                  boxShadow: selectedFilter === opt.label ? '0 2px 8px rgba(0,0,0,0.05)' : 'none',
+                  color: selectedFilter === opt.value ? ProfileColors.primary : ProfileColors.onSurfaceVariant,
+                  backgroundColor: selectedFilter === opt.value ? ProfileColors.surfaceContainerLowest : 'transparent',
+                  boxShadow: selectedFilter === opt.value ? '0 2px 8px rgba(0,0,0,0.05)' : 'none',
                   '&:hover': {
-                    backgroundColor: selectedFilter === opt.label ? ProfileColors.surfaceContainerLowest : 'rgba(0,0,0,0.03)'
+                    backgroundColor: selectedFilter === opt.value ? ProfileColors.surfaceContainerLowest : 'rgba(0,0,0,0.03)'
                   }
                 }}
               >
@@ -421,7 +421,7 @@ export function DocumentsPage({ documents, onUploadSuccess, onDelete, onLink, pe
         PaperProps={{ sx: { borderRadius: 4 } }}
       >
         <DialogTitle sx={{ fontFamily: 'var(--font-newsreader), serif', fontWeight: 700 }}>
-          Remove from the archive?
+          Remove this keepsake?
         </DialogTitle>
         <DialogContent>
           <DialogContentText sx={{ color: ProfileColors.onSurfaceVariant }}>

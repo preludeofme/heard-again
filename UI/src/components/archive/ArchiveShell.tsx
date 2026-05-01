@@ -25,6 +25,17 @@ interface PersonOption {
   lastName?: string | null
   displayName?: string | null
   avatarUrl?: string | null
+  birthDate?: string | null
+  deathDate?: string | null
+}
+
+function formatLifespan(birthDate: string | null | undefined, deathDate: string | null | undefined): string | null {
+  if (!birthDate && !deathDate) return null
+  const birthYear = birthDate ? new Date(birthDate).getFullYear() : null
+  const deathYear = deathDate ? new Date(deathDate).getFullYear() : null
+  if (birthYear && deathYear) return `${birthYear} – ${deathYear}`
+  if (birthYear) return `Born ${birthYear}`
+  return null
 }
 
 interface ArchiveShellProps {
@@ -94,9 +105,9 @@ export function ArchiveShell({ lens, onLensChange, children }: ArchiveShellProps
     }
   }, [people, setSelectedFamilyMember, clearSelectedFamilyMember])
 
-  const familyspaceName = dashboard.familyspace?.name ?? 'Family Archive'
+  const familyspaceName = dashboard.familyspace?.name ?? 'Family Story'
   const archiveTitle = selectedPerson
-    ? `${personDisplayName(selectedPerson)}'s Archive`
+    ? `${personDisplayName(selectedPerson)}'s Story`
     : `${familyspaceName}`
   const subtitle = selectedPerson
     ? 'Memories, voices, and keepsakes preserved across generations.'
@@ -105,7 +116,6 @@ export function ArchiveShell({ lens, onLensChange, children }: ArchiveShellProps
   const stats = dashboard.stats
   const archiveCounts: Array<{ label: string; value: number }> = [
     { label: 'Stories', value: stats.stories },
-    { label: 'Life Events', value: stats.stories + stats.documents },
     { label: 'Voice Memories', value: stats.voiceProfiles },
     { label: 'Keepsakes', value: stats.documents },
     { label: 'Contributors', value: stats.members },
@@ -169,7 +179,7 @@ export function ArchiveShell({ lens, onLensChange, children }: ArchiveShellProps
                   mb: 1,
                 }}
               >
-                The Living Archive
+                The Living Story
               </Typography>
               <Typography
                 component="h1"
@@ -184,6 +194,22 @@ export function ArchiveShell({ lens, onLensChange, children }: ArchiveShellProps
               >
                 {dashboard.isLoading ? <Skeleton width="60%" /> : archiveTitle}
               </Typography>
+              {selectedPerson && (() => {
+                const lifespan = formatLifespan(selectedPerson.birthDate, selectedPerson.deathDate)
+                return lifespan ? (
+                  <Typography
+                    sx={{
+                      fontFamily: 'var(--font-newsreader), serif',
+                      fontStyle: 'italic',
+                      fontSize: { xs: '1rem', md: '1.1rem' },
+                      color: ProfileColors.onSurfaceVariant,
+                      mt: 0.5,
+                    }}
+                  >
+                    {lifespan}
+                  </Typography>
+                ) : null
+              })()}
               <Typography
                 sx={{
                   fontFamily: 'var(--font-newsreader), serif',
@@ -197,7 +223,7 @@ export function ArchiveShell({ lens, onLensChange, children }: ArchiveShellProps
               </Typography>
             </Box>
 
-            {/* Family member lens selector + Contribute CTA */}
+            {/* Family member lens selector + quiet Add Memory action */}
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: { md: 280 } }}>
               <Autocomplete
                 size="small"
@@ -208,33 +234,33 @@ export function ArchiveShell({ lens, onLensChange, children }: ArchiveShellProps
                 isOptionEqualToValue={(option, value) => option.id === value.id}
                 sx={{ minWidth: 260, bgcolor: ProfileColors.surfaceContainerLowest, borderRadius: 2 }}
                 renderInput={(params) => (
-                  <TextField {...params} label="Viewing" placeholder="Entire family archive" />
+                  <TextField {...params} label="Whose story?" placeholder="Everyone" />
                 )}
                 noOptionsText="No family members yet"
-                clearText="View entire family archive"
+                clearText="View everyone's story"
               />
               <Button
                 component={Link}
                 href="/contribute"
-                variant="contained"
-                size="large"
+                variant="outlined"
+                size="medium"
                 startIcon={<ContributeIcon />}
                 sx={{
-                  background: `linear-gradient(135deg, ${ProfileColors.primary} 0%, ${ProfileColors.primaryContainer} 100%)`,
-                  color: '#fff',
+                  borderColor: ProfileColors.outlineVariant,
+                  color: ProfileColors.primary,
                   fontWeight: 600,
                   borderRadius: '999px',
-                  py: 1.5,
-                  px: 3,
+                  py: 1,
+                  px: 2.5,
                   textTransform: 'none',
-                  fontSize: '1rem',
+                  fontSize: '0.9rem',
                   '&:hover': {
-                    background: `linear-gradient(135deg, ${ProfileColors.primaryContainer} 0%, ${ProfileColors.primary} 100%)`,
-                    boxShadow: '0 10px 40px rgba(28, 28, 25, 0.08)',
+                    borderColor: ProfileColors.primary,
+                    backgroundColor: ProfileColors.surfaceContainerLow,
                   },
                 }}
               >
-                Help tell their story
+                + Add a Memory
               </Button>
             </Box>
           </Box>

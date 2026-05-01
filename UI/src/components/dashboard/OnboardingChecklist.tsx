@@ -22,17 +22,17 @@ export function OnboardingChecklist({ state, role, familyspaceId }: OnboardingCh
   const router = useRouter()
 
   const steps: Step[] = [
-    { key: 'hasFirstPerson', label: 'Add your first family member', hint: 'A name and a few details to start the tree', href: '/family-tree', done: state.hasFirstPerson },
-    { key: 'hasFirstStory', label: 'Capture your first story', hint: 'Write a memory or record one', href: '/contribute', done: state.hasFirstStory },
-    { key: 'hasFirstDocument', label: 'Upload a photo or document', hint: 'Add to the archive — letters, photos, certificates', href: '/archive?lens=keepsakes', done: state.hasFirstDocument },
-    { key: 'hasFirstVoice', label: 'Create a voice profile', hint: 'Clone a voice to read stories aloud', href: '/archive?lens=voices', done: state.hasFirstVoice },
+    { key: 'hasFirstPerson', label: 'Who are you preserving this for?', hint: 'Start the archive with a person\'s name.', href: '/family-tree', done: state.hasFirstPerson },
+    { key: 'hasFirstStory', label: 'Share the first memory', hint: 'One moment — written or spoken.', href: '/contribute', done: state.hasFirstStory },
+    { key: 'hasFirstDocument', label: 'Add a keepsake', hint: 'A photo, a letter, or any artifact worth preserving.', href: '/archive?lens=keepsakes', done: state.hasFirstDocument },
+    { key: 'hasFirstVoice', label: 'Preserve their voice', hint: 'Upload a recording to create a voice that lasts.', href: '/archive?lens=voices', done: state.hasFirstVoice },
   ]
 
   if ((role === 'OWNER' || role === 'ADMIN') && familyspaceId) {
     steps.push({
       key: 'hasInvitedMember',
-      label: 'Invite a family member',
-      hint: 'Share the vault with relatives',
+      label: 'Invite family to contribute',
+      hint: 'More voices make the story richer.',
       href: `/familyspaces/${familyspaceId}/settings`,
       done: state.hasInvitedMember,
     })

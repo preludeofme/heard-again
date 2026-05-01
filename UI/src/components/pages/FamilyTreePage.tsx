@@ -87,8 +87,6 @@ export function FamilyTreePage({
     // Sidebar state
     legendCollapsed,
     setLegendCollapsed,
-    insightCollapsed,
-    setInsightCollapsed,
     
     // Detail data
     personDetail,
@@ -126,7 +124,8 @@ export function FamilyTreePage({
     handleCanvasMouseUp,
     handleCanvasTouchStart,
     handleCanvasTouchMove,
-    handleCanvasTouchEnd
+    handleCanvasTouchEnd,
+    handleViewArchive,
   } = useFamilyTree(familyData, onPersonClick, onAddPerson, onEditRelationships, onPeopleChanged)
 
   const overlayInputRef = useRef<HTMLInputElement>(null)
@@ -272,13 +271,12 @@ export function FamilyTreePage({
         onCanvasTouchEnd={handleCanvasTouchEnd}
         onPersonClick={handlePersonClick}
         onAddPerson={handleAddPerson}
+        onViewArchive={handleViewArchive}
       />
 
       <FamilyTreeSidebar
         legendCollapsed={legendCollapsed}
         setLegendCollapsed={setLegendCollapsed}
-        insightCollapsed={insightCollapsed}
-        setInsightCollapsed={setInsightCollapsed}
       />
 
       <FamilyTreeSearchOverlay

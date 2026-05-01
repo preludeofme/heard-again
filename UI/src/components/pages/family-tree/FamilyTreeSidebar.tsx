@@ -9,21 +9,16 @@ import {
 import {
   ExpandMore,
   ExpandLess,
-  AutoFixHigh,
 } from '@mui/icons-material'
 
 interface FamilyTreeSidebarProps {
   legendCollapsed: boolean
   setLegendCollapsed: (collapsed: boolean) => void
-  insightCollapsed: boolean
-  setInsightCollapsed: (collapsed: boolean) => void
 }
 
 export function FamilyTreeSidebar({
   legendCollapsed,
   setLegendCollapsed,
-  insightCollapsed,
-  setInsightCollapsed,
 }: FamilyTreeSidebarProps) {
   return (
     <Box
@@ -82,54 +77,6 @@ export function FamilyTreeSidebar({
         )}
       </Card>
 
-      {/* AI Insight Card */}
-      <Card
-        sx={{
-          width: 240,
-          p: 2,
-          borderRadius: 4,
-          boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
-          border: '1px solid',
-          borderColor: 'rgba(208, 227, 230, 0.5)',
-          background: 'linear-gradient(135deg, rgba(255,255,255,0.9), rgba(240,247,248,0.9))',
-          backdropFilter: 'blur(8px)',
-        }}
-      >
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: insightCollapsed ? 0 : 2 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <AutoFixHigh sx={{ fontSize: 16, color: 'secondary.main' }} />
-            <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'secondary.main', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Insights
-            </Typography>
-          </Box>
-          <IconButton size="small" onClick={() => setInsightCollapsed(!insightCollapsed)}>
-            {insightCollapsed ? <ExpandMore /> : <ExpandLess />}
-          </IconButton>
-        </Box>
-
-        {!insightCollapsed && (
-          <Box>
-            <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 1, fontStyle: 'italic' }}>
-              "You've preserved 12 memories for your father's lineage. There's a gap in the 1950s—would you like to add a story from that era?"
-            </Typography>
-            <Box
-              sx={{
-                mt: 1.5,
-                p: 1,
-                borderRadius: 2,
-                bgcolor: 'rgba(22, 51, 74, 0.04)',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                '&:hover': { bgcolor: 'rgba(22, 51, 74, 0.08)' }
-              }}
-            >
-              <Typography variant="caption" sx={{ fontWeight: 700, color: 'primary.main', display: 'block' }}>
-                View Story Prompts →
-              </Typography>
-            </Box>
-          </Box>
-        )}
-      </Card>
     </Box>
   )
 }

@@ -127,7 +127,7 @@ export function CreateAccountPage() {
                 href="/signup"
                 variant="contained"
               >
-                Start Archive
+                Start Story
               </Button>
             </Box>
           </Box>
@@ -275,7 +275,7 @@ export function CreateAccountPage() {
                     Create Your Account
                   </Typography>
                   <Typography variant="body2" sx={{ color: 'secondary.main' }}>
-                    Already have an archive?{' '}
+                    Already have a story?{' '}
                     <Link
                       href="/login"
                       style={{
@@ -443,7 +443,7 @@ export function CreateAccountPage() {
                     {isLoading ? (
                       <CircularProgress size={24} sx={{ color: 'white' }} />
                     ) : (
-                      'Start My Living Archive'
+                      'Start My Living Story'
                     )}
                   </Button>
 

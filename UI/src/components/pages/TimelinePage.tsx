@@ -119,9 +119,7 @@ export function TimelinePageComponent({ events, isLoading, hasMore, onLoadMore, 
   const { selectedFamilyMember, setSelectedFamilyMember } = useSelectedFamilyMember()
   const [selectedTypes, setSelectedTypes] = useState<string[]>(['all'])
   const [viewMode, setViewMode] = useState<'vertical' | 'horizontal'>('vertical')
-  const [dateFrom, setDateFrom] = useState('')
-  const [dateTo, setDateTo] = useState('')
-  
+
   // Dragging logic for horizontal view
   const timelineRef = useRef<HTMLDivElement>(null)
   const [isDragging, setIsDragging] = useState(false)
@@ -146,20 +144,9 @@ export function TimelinePageComponent({ events, isLoading, hasMore, onLoadMore, 
   const [submitError, setSubmitError] = useState('')
 
   const filteredEvents = useMemo(() => {
-    let result = events
-    if (!selectedTypes.includes('all')) {
-      result = result.filter(e => selectedTypes.includes(e.type))
-    }
-    if (dateFrom) {
-      const from = new Date(dateFrom).getTime()
-      result = result.filter(e => e.date && new Date(e.date).getTime() >= from)
-    }
-    if (dateTo) {
-      const to = new Date(dateTo).getTime()
-      result = result.filter(e => e.date && new Date(e.date).getTime() <= to)
-    }
-    return result
-  }, [events, selectedTypes, dateFrom, dateTo])
+    if (selectedTypes.includes('all')) return events
+    return events.filter(e => selectedTypes.includes(e.type))
+  }, [events, selectedTypes])
 
   const handleTypeChange = (type: string) => {
     if (type === 'all') {
@@ -316,13 +303,13 @@ export function TimelinePageComponent({ events, isLoading, hasMore, onLoadMore, 
           >
             The Lifespan
           </Typography>
-          <Typography 
-            variant="h2" 
-            className="serif-font" 
-            sx={{ 
-              color: ProfileColors.primary, 
+          <Typography
+            variant="h2"
+            className="serif-font"
+            sx={{
+              color: ProfileColors.primary,
               fontWeight: 700,
-              fontSize: { xs: '2.5rem', md: '3.5rem' },
+              fontSize: { xs: '2rem', md: '2rem' },
               lineHeight: 1,
               fontStyle: 'italic'
             }}
@@ -336,24 +323,6 @@ export function TimelinePageComponent({ events, isLoading, hasMore, onLoadMore, 
           </Typography>
         </Box>
         
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={handleOpenAddDialog}
-            sx={{
-              backgroundColor: ProfileColors.primary,
-              borderRadius: '999px',
-              py: 1.5,
-              px: 3,
-              textTransform: 'none',
-              fontWeight: 600,
-              '&:hover': { backgroundColor: ProfileColors.primaryContainer, color: ProfileColors.onPrimaryContainer }
-            }}
-          >
-            Add a Milestone
-          </Button>
-        </Box>
       </Box>
 
       {/* Simplified, Tactile Explore Bar */}
@@ -451,13 +420,17 @@ export function TimelinePageComponent({ events, isLoading, hasMore, onLoadMore, 
         <Box sx={{ py: 12, textAlign: 'center', backgroundColor: ProfileColors.surfaceContainerLow, borderRadius: 8, border: `2px dashed ${ProfileColors.outlineVariant}30` }}>
           <TimelineIcon sx={{ fontSize: 64, color: ProfileColors.outlineVariant, mb: 2, opacity: 0.5 }} />
           <Typography variant="h5" className="serif-font" sx={{ color: ProfileColors.primary, mb: 1 }}>
-            The journey hasn't begun yet
+            {selectedFamilyMember
+              ? `${selectedFamilyMember.displayName || selectedFamilyMember.firstName}'s story is waiting to be written.`
+              : 'Your family\'s story starts here.'}
           </Typography>
           <Typography variant="body2" sx={{ color: ProfileColors.onSurfaceVariant, mb: 4 }}>
-            Start adding stories, milestones, and keepsakes to map out the life journey.
+            {selectedFamilyMember
+              ? 'Add the first chapter — a birth, a milestone, a memory.'
+              : 'Add a milestone to begin the life journey for any family member.'}
           </Typography>
           <Button variant="outlined" onClick={handleOpenAddDialog} sx={{ borderRadius: '999px', borderColor: ProfileColors.primary, color: ProfileColors.primary }}>
-            Add your first milestone
+            Add a Life Moment
           </Button>
         </Box>
       ) : viewMode === 'vertical' ? (
@@ -485,7 +458,7 @@ export function TimelinePageComponent({ events, isLoading, hasMore, onLoadMore, 
                     >
                       <Icon sx={{ fontSize: 20 }} />
                     </TimelineDot>
-                    {index < filteredEvents.length - 1 && <TimelineConnector sx={{ bgcolor: ProfileColors.outlineVariant, opacity: 0.3, width: 2 }} />}
+                    <TimelineConnector sx={{ bgcolor: ProfileColors.outlineVariant, opacity: 0.3, width: 2 }} />
                   </TimelineSeparator>
                   <TimelineContent sx={{ py: 0, pb: 8, px: 0 }}>
                     <Fade in timeout={500 + (index % 5) * 100}>
@@ -596,6 +569,53 @@ export function TimelinePageComponent({ events, isLoading, hasMore, onLoadMore, 
                 </TimelineItem>
               )
             })}
+            {/* Ghost card: prompt to add the next chapter */}
+            <TimelineItem sx={{ '&::before': { display: 'none' } }}>
+              <TimelineSeparator sx={{ mr: 4 }}>
+                <TimelineDot
+                  sx={{
+                    bgcolor: 'transparent',
+                    border: `2px dashed ${ProfileColors.outlineVariant}`,
+                    p: 1.25,
+                    boxShadow: 'none',
+                  }}
+                >
+                  <AddIcon sx={{ fontSize: 20, color: ProfileColors.outlineVariant, opacity: 0.5 }} />
+                </TimelineDot>
+              </TimelineSeparator>
+              <TimelineContent sx={{ py: 0, pb: 4, px: 0 }}>
+                <Card
+                  onClick={handleOpenAddDialog}
+                  sx={{
+                    borderRadius: 5,
+                    bgcolor: 'transparent',
+                    boxShadow: 'none',
+                    border: `2px dashed ${ProfileColors.outlineVariant}30`,
+                    opacity: 0.6,
+                    cursor: 'pointer',
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    '&:hover': {
+                      opacity: 1,
+                      borderColor: ProfileColors.primary + '40',
+                      bgcolor: ProfileColors.surfaceContainerLow,
+                    },
+                  }}
+                >
+                  <CardContent sx={{ p: 4, '&:last-child': { pb: 4 } }}>
+                    <Typography
+                      sx={{
+                        fontFamily: 'var(--font-newsreader), serif',
+                        fontSize: '1.1rem',
+                        color: ProfileColors.onSurfaceVariant,
+                        fontStyle: 'italic',
+                      }}
+                    >
+                      Add the next chapter →
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </TimelineContent>
+            </TimelineItem>
           </Timeline>
         </Box>
       ) : (
@@ -924,7 +944,7 @@ export function TimelinePageComponent({ events, isLoading, hasMore, onLoadMore, 
       {/* Add Event Dialog */}
       <Dialog open={isAddDialogOpen} onClose={handleCloseAddDialog} maxWidth="sm" fullWidth>
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          Add Timeline Event
+          Add a Life Moment
           <IconButton onClick={handleCloseAddDialog} size="small">
             <CloseIcon />
           </IconButton>

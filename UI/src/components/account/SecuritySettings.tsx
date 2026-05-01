@@ -197,7 +197,7 @@ export function SecuritySettings() {
               {setupStep === 'INITIAL' && (
                 <>
                   <Typography variant="body2" sx={{ mb: 3 }}>
-                    MFA is not currently enabled for your account. We strongly recommend enabling it to protect your family's archive.
+                    MFA is not currently enabled for your account. We strongly recommend enabling it to protect your family's story.
                   </Typography>
                   <Button
                     variant="contained"

@@ -84,7 +84,7 @@ export function RecentStoriesFeed({ stories }: RecentStoriesFeedProps) {
               mb: 0.5,
             }}
           >
-            No stories yet
+            No memories have been shared yet.
           </Typography>
           <Typography
             sx={{
@@ -94,7 +94,7 @@ export function RecentStoriesFeed({ stories }: RecentStoriesFeedProps) {
               fontWeight: 600,
             }}
           >
-            Record one in 2 minutes →
+            Be the first to capture a moment →
           </Typography>
         </Box>
       ) : (

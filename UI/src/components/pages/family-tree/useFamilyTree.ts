@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/router'
 import { fetchWithCSRFAndJSON, fetchWithCSRF } from '@/lib/api-client'
 import { TreePerson, FamilyTreeData, PersonFormData } from './types'
+import { useSelectedFamilyMember } from '@/contexts/SelectedFamilyMemberContext'
 
 export function useFamilyTree(
   familyData: FamilyTreeData,
@@ -11,7 +12,8 @@ export function useFamilyTree(
   onPeopleChanged?: () => void
 ) {
   const router = useRouter()
-  
+  const { setSelectedFamilyMember } = useSelectedFamilyMember()
+
   // Modal states
   const [detailModalOpen, setDetailModalOpen] = useState(false)
   const [addEditModalOpen, setAddEditModalOpen] = useState(false)
@@ -25,9 +27,8 @@ export function useFamilyTree(
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 })
   const [toolMode, setToolMode] = useState<'pointer' | 'hand'>('hand')
   
-  // Sidebar states
-  const [legendCollapsed, setLegendCollapsed] = useState(false)
-  const [insightCollapsed, setInsightCollapsed] = useState(false)
+  // Sidebar state
+  const [legendCollapsed, setLegendCollapsed] = useState(true)
   
   // Detail states
   const [personDetail, setPersonDetail] = useState<any>(null)
@@ -259,6 +260,17 @@ export function useFamilyTree(
     touchStart.current = null
   }, [])
 
+  const handleViewArchive = useCallback((person: TreePerson) => {
+    setSelectedFamilyMember({
+      id: String(person.id),
+      firstName: person.name.split(' ')[0],
+      lastName: person.name.split(' ').slice(1).join(' ') || null,
+      displayName: person.name,
+      avatarUrl: person.avatar || null,
+    })
+    router.push('/archive')
+  }, [router, setSelectedFamilyMember])
+
   return {
     // View state
     zoomLevel,
@@ -281,8 +293,6 @@ export function useFamilyTree(
     // Sidebar state
     legendCollapsed,
     setLegendCollapsed,
-    insightCollapsed,
-    setInsightCollapsed,
     
     // Detail data
     personDetail: personDetail ? { ...personDetail, role: personDetail.role || selectedPersonRole } : null,
@@ -320,6 +330,7 @@ export function useFamilyTree(
     handleCanvasMouseUp,
     handleCanvasTouchStart,
     handleCanvasTouchMove,
-    handleCanvasTouchEnd
+    handleCanvasTouchEnd,
+    handleViewArchive,
   }
 }

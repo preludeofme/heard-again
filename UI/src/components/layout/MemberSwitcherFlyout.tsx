@@ -263,7 +263,7 @@ export function MemberSwitcherFlyout({ anchorEl, onClose }: MemberSwitcherFlyout
                       '&:hover': { color: 'text.primary' },
                     }}
                   >
-                    View full archive (all members)
+                    View everyone's story
                   </ButtonBase>
                 </Box>
                 {recentToShow.length > 0 && <Divider sx={{ my: 1 }} />}

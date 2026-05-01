@@ -32,6 +32,7 @@ interface FamilyTreeCanvasProps {
   onCanvasTouchEnd: () => void
   onPersonClick: (person: TreePerson) => void
   onAddPerson: () => void
+  onViewArchive: (person: TreePerson) => void
 }
 
 export function FamilyTreeCanvas({
@@ -54,6 +55,7 @@ export function FamilyTreeCanvas({
   onCanvasTouchEnd,
   onPersonClick,
   onAddPerson,
+  onViewArchive,
 }: FamilyTreeCanvasProps) {
   const hasData = familyData.grandparents.length > 0 || 
                   familyData.parents.length > 0 || 
@@ -101,7 +103,7 @@ export function FamilyTreeCanvas({
               Begin your family legacy
             </Typography>
             <Typography variant="body1" sx={{ color: '#546669', mb: 4, maxWidth: 400, mx: 'auto' }}>
-              Your tree is currently a blank canvas. Add your first family member to start building a living archive for the generations to come.
+              Your tree is currently a blank canvas. Add your first family member to start building a living story for the generations to come.
             </Typography>
             <Button 
               variant="contained" 
@@ -176,6 +178,7 @@ export function FamilyTreeCanvas({
                   isMobile={isMobile}
                   onPersonClick={onPersonClick}
                   onAddPerson={onAddPerson}
+                  onViewArchive={onViewArchive}
                 />
               </Box>
             ))}

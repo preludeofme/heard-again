@@ -36,7 +36,7 @@ const collaborationSteps = [
   {
     icon: 'groups',
     title: 'Invite Contributors',
-    description: 'Securely invite family members and lifelong friends to join the archive as storytellers.',
+    description: 'Securely invite family members and lifelong friends to join the story as contributors.',
   },
   {
     icon: 'settings_voice',
@@ -126,7 +126,7 @@ export function LandingPage() {
                   borderRadius: 3,
                 }}
               >
-                Start Your Archive
+                Start Your Story
               </Button>
               <Button
                 variant="text"
@@ -323,7 +323,7 @@ export function LandingPage() {
                 fontFamily: 'var(--font-newsreader), serif',
               }}
             >
-              Voices of the Archive
+              Voices of the Story
             </Typography>
             <Typography
               variant="body1"
