@@ -77,7 +77,7 @@ export function VoiceSignature({
     try {
       const response = await fetchWithCSRFAndJSON('/api/voice/synthesize', {
         modelId: currentVoice.id,
-        text: `Hello, this is a sample of my digital voice clone for ${firstName || 'the family archive'}.`,
+        text: `Hello, this is a sample of my digital voice clone for ${firstName || 'the family story'}.`,
       })
 
       if (!response.ok) throw new Error('Failed to synthesize')
@@ -126,7 +126,7 @@ export function VoiceSignature({
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 4 }}>
           <Box>
             <Typography sx={{ fontFamily: 'var(--font-newsreader), serif', fontSize: '1.875rem', fontWeight: 700, color: ProfileColors.primary }}>
-              {isGlobal ? 'Archive Voice' : 'Voice Signature'}
+              {isGlobal ? 'Story Voice' : 'Voice Signature'}
             </Typography>
             {currentVoice && !isGlobal && (
               <Typography sx={{ fontFamily: 'var(--font-manrope), sans-serif', fontSize: '0.85rem', color: ProfileColors.onSurfaceVariant, mt: 0.5 }}>

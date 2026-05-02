@@ -153,7 +153,7 @@ export default function PublicContributePage() {
             Thank you!
           </Typography>
           <Typography variant="h6" sx={{ mb: 4, color: '#546669' }}>
-            Your story about {subject?.firstName} has been saved to the family archive.
+            Your story about {subject?.firstName} has been saved to the family story.
           </Typography>
           <Card sx={{ bgcolor: '#f6f3ee', p: 4, borderRadius: 3, textAlign: 'left', mb: 4 }}>
             <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: '#16334a' }}>

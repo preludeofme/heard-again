@@ -5,25 +5,17 @@ import {
   Card,
   Avatar,
   Button,
+  IconButton,
 } from '@mui/material'
 import {
   AutoStories,
   Edit,
   PersonAddOutlined as PersonAdd,
+  PeopleAltOutlined as PeopleIcon,
+  AccountTreeOutlined as TreeIcon,
 } from '@mui/icons-material'
 
-export type TreeNodeLevel = 'grandparent' | 'parent' | 'child'
-
-export interface TreePerson {
-  id: string | number
-  name: string
-  role: string
-  avatar: string
-  memories?: number
-  selected?: boolean
-  spouseWithNext?: boolean
-  upperGenerationLinkType?: 'biological' | 'nonBiological' | 'none'
-}
+import { TreeNodeLevel, TreePerson } from './types'
 
 interface FamilyMemberCardProps {
   person: TreePerson
@@ -34,6 +26,9 @@ interface FamilyMemberCardProps {
   onPersonClick: (person: TreePerson) => void
   onAddPerson: () => void
   onViewArchive: (person: TreePerson) => void
+  onToggleSiblings?: () => void
+  onSetRoot?: (id: string) => void
+  includeSiblings?: boolean
 }
 
 export function FamilyMemberCard({
@@ -45,6 +40,9 @@ export function FamilyMemberCard({
   onPersonClick,
   onAddPerson,
   onViewArchive,
+  onToggleSiblings,
+  onSetRoot,
+  includeSiblings,
 }: FamilyMemberCardProps) {
   const isParentLevel = level === 'parent'
   const selfCardColor = '#1a6b5a'
@@ -113,6 +111,15 @@ export function FamilyMemberCard({
               </Typography>
             )}
           </Box>
+          {isSelf && isParentLevel && onToggleSiblings && (
+            <IconButton
+              size="small"
+              onClick={(e) => { e.stopPropagation(); onToggleSiblings() }}
+              sx={{ color: 'white', ml: 'auto', p: 0.5 }}
+            >
+              <PeopleIcon sx={{ fontSize: 16, opacity: includeSiblings ? 1 : 0.6 }} />
+            </IconButton>
+          )}
         </Box>
       </Card>
     )
@@ -181,15 +188,37 @@ export function FamilyMemberCard({
 
       {isParentLevel && (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-          <Button
-            fullWidth
-            variant="text"
-            startIcon={<AutoStories />}
-            onClick={(e) => { e.stopPropagation(); onViewArchive(person) }}
-            sx={{ color: 'white', bgcolor: 'rgba(255,255,255,0.1)', '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' }, justifyContent: 'center', py: 1, borderRadius: 2 }}
-          >
-            Open Story
-          </Button>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button
+              fullWidth
+              variant="text"
+              startIcon={<AutoStories />}
+              onClick={(e) => { e.stopPropagation(); onViewArchive(person) }}
+              sx={{ flex: 2, color: 'white', bgcolor: 'rgba(255,255,255,0.1)', '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' }, justifyContent: 'center', py: 1, borderRadius: 2 }}
+            >
+              Open Story
+            </Button>
+            {isSelf && onToggleSiblings && (
+              <Button
+                variant="text"
+                onClick={(e) => { e.stopPropagation(); onToggleSiblings() }}
+                sx={{ 
+                  flex: 1, 
+                  color: 'white', 
+                  bgcolor: includeSiblings ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.1)', 
+                  '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' }, 
+                  justifyContent: 'center', 
+                  py: 1, 
+                  borderRadius: 2,
+                  minWidth: 0,
+                  px: 0
+                }}
+                title={includeSiblings ? "Hide Siblings" : "Show Siblings"}
+              >
+                <PeopleIcon />
+              </Button>
+            )}
+          </Box>
           <Box sx={{ display: 'flex', gap: 1 }}>
             <Button variant="text" startIcon={<Edit />}
               onClick={(e) => { e.stopPropagation(); onPersonClick(person) }}
@@ -197,6 +226,14 @@ export function FamilyMemberCard({
             >
               Edit
             </Button>
+            {onSetRoot && !isSelf && (
+              <Button variant="text" startIcon={<TreeIcon />}
+                onClick={(e) => { e.stopPropagation(); onSetRoot(String(person.id)) }}
+                sx={{ flex: 1, color: 'white', bgcolor: 'rgba(255,255,255,0.1)', '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' }, justifyContent: 'center', py: 1, borderRadius: 2 }}
+              >
+                Focus
+              </Button>
+            )}
             <Button variant="text" startIcon={<PersonAdd />}
               onClick={(e) => { e.stopPropagation(); onAddPerson() }}
               sx={{ flex: 1, color: 'white', bgcolor: 'rgba(255,255,255,0.1)', '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' }, justifyContent: 'center', py: 1, borderRadius: 2 }}

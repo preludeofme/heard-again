@@ -67,20 +67,44 @@ interface FamilyTreeRelationshipEdge {
 }
 
 interface FamilyTreeData {
-  grandparents: FamilyTreePerson[]
-  parents: FamilyTreePerson[]
-  children: FamilyTreePerson[]
-  childrenConnectorParentId?: string
+  generations: Record<number, FamilyTreePerson[]>
   relationshipEdges: FamilyTreeRelationshipEdge[]
+  rootPersonId?: string
+}
+
+function sortBySpouseAdjacency(
+  people: FamilyTreePerson[],
+  spouseIdsByPerson: Map<string, Set<string>>
+): FamilyTreePerson[] {
+  const result: FamilyTreePerson[] = []
+  const placed = new Set<string>()
+
+  for (const person of people) {
+    const personId = String(person.id)
+    if (placed.has(personId)) continue
+    placed.add(personId)
+    result.push(person)
+
+    const spouseIds = spouseIdsByPerson.get(personId) ?? new Set<string>()
+    for (const spouseId of spouseIds) {
+      if (!placed.has(spouseId)) {
+        const spouse = people.find((p) => String(p.id) === spouseId)
+        if (spouse) {
+          placed.add(spouseId)
+          result.push(spouse)
+        }
+      }
+    }
+  }
+
+  return result
 }
 
 function mapPeopleToTree(people: ApiPersonWithEdges[], activePersonId?: string): FamilyTreeData {
-  const grandparents: FamilyTreePerson[] = []
-  const parents: FamilyTreePerson[] = []
-  const children: FamilyTreePerson[] = []
+  const generations: Record<number, FamilyTreePerson[]> = {}
 
   if (people.length === 0) {
-    return { grandparents, parents, children, relationshipEdges: [] }
+    return { generations: {}, relationshipEdges: [] }
   }
 
   const peopleById = new Map(people.map((person) => [person.id, person]))
@@ -100,131 +124,41 @@ function mapPeopleToTree(people: ApiPersonWithEdges[], activePersonId?: string):
     return spouseIdsByPerson.get(leftId)?.has(rightId) ?? false
   }
 
-  const sortByName = (ids: string[]) => {
-    return [...ids].sort((leftId, rightId) => {
-      const leftPerson = peopleById.get(leftId)
-      const rightPerson = peopleById.get(rightId)
-      const leftName = leftPerson?.displayName || `${leftPerson?.firstName || ''} ${leftPerson?.lastName || ''}`.trim()
-      const rightName = rightPerson?.displayName || `${rightPerson?.firstName || ''} ${rightPerson?.lastName || ''}`.trim()
-      return leftName.localeCompare(rightName)
-    })
-  }
-
-  const orderGenerationIds = (ids: string[], anchorId?: string): string[] => {
-    const orderedByName = sortByName(ids)
-    const remaining = new Set(orderedByName)
-    const ordered: string[] = []
-
-    while (remaining.size > 0) {
-      const anchorSeed = orderedByName.find((id) => remaining.has(id) && id === anchorId)
-      const pairedSeed = orderedByName.find((id) => {
-        if (!remaining.has(id)) return false
-        const spouseSet = spouseIdsByPerson.get(id)
-        return !!spouseSet && Array.from(remaining).some((candidateId) => candidateId !== id && spouseSet.has(candidateId))
-      })
-      const seed = anchorSeed || pairedSeed || orderedByName.find((id) => remaining.has(id))
-
-      if (!seed) break
-
-      remaining.delete(seed)
-      ordered.push(seed)
-
-      const partner = orderedByName.find((candidateId) => remaining.has(candidateId) && areSpouses(seed, candidateId))
-      if (partner) {
-        remaining.delete(partner)
-        ordered.push(partner)
-      }
-    }
-
-    if (!anchorId) {
-      return ordered
-    }
-
-    const currentAnchorIndex = ordered.indexOf(anchorId)
-    if (currentAnchorIndex === -1 || ordered.length <= 2) {
-      return ordered
-    }
-
-    const centered = [...ordered]
-    const centerIndex = Math.floor((centered.length - 1) / 2)
-    const [anchorPersonId] = centered.splice(currentAnchorIndex, 1)
-    centered.splice(centerIndex, 0, anchorPersonId)
-
-    const spouseId = centered.find((personId) => personId !== anchorId && areSpouses(anchorId, personId))
-    if (!spouseId) {
-      return centered
-    }
-
-    const spouseIndex = centered.indexOf(spouseId)
-    const anchorIndex = centered.indexOf(anchorId)
-    if (Math.abs(spouseIndex - anchorIndex) <= 1) {
-      return centered
-    }
-
-    const [movedSpouseId] = centered.splice(spouseIndex, 1)
-    const preferredSpouseIndex = Math.min(anchorIndex + 1, centered.length)
-    centered.splice(preferredSpouseIndex, 0, movedSpouseId)
-    return centered
-  }
-
-  const selectedPerson = activePersonId
-    ? people.find((person) => person.id === activePersonId)
-    : undefined
-
-  // Find the subject (explicit selected person first, otherwise person with most relationships)
-  const subject = selectedPerson || people.reduce((prev, current) =>
-    (prev.relationshipEdges.length > current.relationshipEdges.length) ? prev : current
-  )
+  // Find the subject: use activePersonId if provided, otherwise find the most connected person
+  const subject = (activePersonId && peopleById.get(activePersonId)) || people.reduce((prev, current) => {
+    const prevScore = prev.relationshipEdges.length + 
+      (prev.relationshipEdges.some(e => e.type === 'PARENT') ? 10 : 0) +
+      (prev.relationshipEdges.some(e => e.type === 'CHILD') ? 10 : 0)
+    const currentScore = current.relationshipEdges.length + 
+      (current.relationshipEdges.some(e => e.type === 'PARENT') ? 10 : 0) +
+      (current.relationshipEdges.some(e => e.type === 'CHILD') ? 10 : 0)
+    return currentScore > prevScore ? current : prev
+  })
 
   const generationByPersonId = new Map<string, number>([[subject.id, 0]])
   const queue: string[] = [subject.id]
 
   const getGenerationDelta = (edge: RelationshipEdge): number | null => {
-    if (edge.type === 'SPOUSE') {
-      return 0
-    }
-
-    if (edge.type === 'PARENT') {
-      return edge.direction === 'incoming' ? 1 : -1
-    }
-
-    if (edge.type === 'CHILD') {
-      return edge.direction === 'outgoing' ? -1 : 1
-    }
-
+    if (edge.type === 'SPOUSE') return 0
+    if (edge.type === 'PARENT') return 1 // API says this is my parent
+    if (edge.type === 'CHILD') return -1  // API says this is my child
     return null
   }
 
   while (queue.length > 0) {
-    const currentPersonId = queue.shift()
-    if (!currentPersonId) continue
-
-    const currentPerson = peopleById.get(currentPersonId)
-    const currentGeneration = generationByPersonId.get(currentPersonId)
-
-    if (!currentPerson || currentGeneration === undefined) {
-      continue
-    }
+    const currentPersonId = queue.shift()!
+    const currentPerson = peopleById.get(currentPersonId)!
+    const currentGeneration = generationByPersonId.get(currentPersonId)!
 
     for (const edge of currentPerson.relationshipEdges) {
       const relatedPersonId = edge.relatedPerson.id
-      if (!peopleById.has(relatedPersonId)) {
-        continue
-      }
+      if (!peopleById.has(relatedPersonId)) continue
 
       const delta = getGenerationDelta(edge)
-      if (delta === null) {
-        continue
-      }
+      if (delta === null) continue
 
-      const candidateGeneration = currentGeneration + delta
-      const existingGeneration = generationByPersonId.get(relatedPersonId)
-
-      if (
-        existingGeneration === undefined
-        || Math.abs(candidateGeneration) < Math.abs(existingGeneration)
-      ) {
-        generationByPersonId.set(relatedPersonId, candidateGeneration)
+      if (!generationByPersonId.has(relatedPersonId)) {
+        generationByPersonId.set(relatedPersonId, currentGeneration + delta)
         queue.push(relatedPersonId)
       }
     }
@@ -232,300 +166,87 @@ function mapPeopleToTree(people: ApiPersonWithEdges[], activePersonId?: string):
 
   const getRoleLabel = (personId: string, sex?: string): string => {
     if (personId === subject.id) return 'Self'
-    
-    // Check if spouse of subject
-    if (areSpouses(personId, subject.id)) {
-      if (sex === 'M') return 'Husband'
-      if (sex === 'F') return 'Wife'
-      return 'Spouse'
-    }
+    if (areSpouses(personId, subject.id)) return sex === 'M' ? 'Husband' : (sex === 'F' ? 'Wife' : 'Spouse')
 
     const generation = generationByPersonId.get(personId)
     if (generation === undefined) return 'Family Member'
 
-    if (generation === 1) {
-      if (sex === 'M') return 'Father'
-      if (sex === 'F') return 'Mother'
-      return 'Parent'
-    }
+    if (generation === 0) return 'Family Member' // Likely a sibling or cousin
+    if (generation === 1) return sex === 'M' ? 'Father' : (sex === 'F' ? 'Mother' : 'Parent')
+    if (generation === 2) return sex === 'M' ? 'Grandfather' : (sex === 'F' ? 'Grandmother' : 'Grandparent')
+    if (generation === -1) return sex === 'M' ? 'Son' : (sex === 'F' ? 'Daughter' : 'Child')
+    if (generation === -2) return sex === 'M' ? 'Grandson' : (sex === 'F' ? 'Granddaughter' : 'Grandchild')
 
-    if (generation === 2) {
-      if (sex === 'M') return 'Grandfather'
-      if (sex === 'F') return 'Grandmother'
-      return 'Grandparent'
-    }
-
-    if (generation === -1) {
-      if (sex === 'M') return 'Son'
-      if (sex === 'F') return 'Daughter'
-      return 'Child'
-    }
-
-    if (generation === -2) {
-      if (sex === 'M') return 'Grandson'
-      if (sex === 'F') return 'Granddaughter'
-      return 'Grandchild'
-    }
-
-    // Siblings (Generation 0 but not spouse)
-    if (generation === 0) {
-      const currentPerson = peopleById.get(personId)
-      const subjectParents = subject.relationshipEdges
-        .filter(e => e.type === 'PARENT' && e.direction === 'incoming')
-        .map(e => e.relatedPerson.id)
-      
-      const personParents = currentPerson?.relationshipEdges
-        .filter(e => e.type === 'PARENT' && e.direction === 'incoming')
-        .map(e => e.relatedPerson.id) || []
-      
-      const hasSharedParent = personParents.some(id => subjectParents.includes(id))
-      if (hasSharedParent) {
-        if (sex === 'M') return 'Brother'
-        if (sex === 'F') return 'Sister'
-        return 'Sibling'
-      }
-    }
-
-    return 'Family Member'
+    return generation > 0 ? 'Ancestor' : 'Descendant'
   }
-
-  const parentGenerationIds = people
-    .filter((person) => (generationByPersonId.get(person.id) ?? (person.id === subject.id ? 0 : 0)) === 0)
-    .map((person) => person.id)
-  const parentGenerationIdSet = new Set(parentGenerationIds)
-  const grandparentGenerationIdSet = new Set(
-    people
-      .filter((person) => (generationByPersonId.get(person.id) ?? 0) > 0)
-      .map((person) => person.id)
-  )
-
-  const upperGenerationLinkTypeByParentId = new Map<string, 'biological' | 'nonBiological' | 'none'>()
-  for (const parentId of parentGenerationIds) {
-    const parent = peopleById.get(parentId)
-    if (!parent) {
-      upperGenerationLinkTypeByParentId.set(parentId, 'none')
-      continue
-    }
-
-    let hasBiologicalUpperLink = false
-    let hasNonBiologicalUpperLink = false
-
-    for (const edge of parent.relationshipEdges) {
-      if (edge.type !== 'PARENT' || edge.direction !== 'incoming') {
-        continue
-      }
-
-      if (!grandparentGenerationIdSet.has(edge.relatedPerson.id)) {
-        continue
-      }
-
-      if (edge.isBiological) {
-        hasBiologicalUpperLink = true
-      } else {
-        hasNonBiologicalUpperLink = true
-      }
-    }
-
-    if (hasBiologicalUpperLink) {
-      upperGenerationLinkTypeByParentId.set(parentId, 'biological')
-      continue
-    }
-
-    if (hasNonBiologicalUpperLink) {
-      upperGenerationLinkTypeByParentId.set(parentId, 'nonBiological')
-      continue
-    }
-
-    upperGenerationLinkTypeByParentId.set(parentId, 'none')
-  }
-
-  const parentScoreById = new Map<string, number>()
-  for (const person of people) {
-    const generation = generationByPersonId.get(person.id)
-    if (generation === undefined || generation >= 0) {
-      continue
-    }
-
-    for (const edge of person.relationshipEdges) {
-      if (edge.type !== 'PARENT' || edge.direction !== 'incoming') {
-        continue
-      }
-      if (!parentGenerationIdSet.has(edge.relatedPerson.id)) {
-        continue
-      }
-
-      const currentScore = parentScoreById.get(edge.relatedPerson.id) || 0
-      parentScoreById.set(edge.relatedPerson.id, currentScore + (edge.isBiological ? 2 : 1))
-    }
-  }
-
-  let childrenConnectorParentId: string | undefined
-  const scoredParents = Array.from(parentScoreById.entries())
-  if (scoredParents.length > 0) {
-    childrenConnectorParentId = scoredParents
-      .sort((left, right) => right[1] - left[1])[0]?.[0]
-  }
-
-  const orderedParentIds = orderGenerationIds(parentGenerationIds, childrenConnectorParentId)
-  const orderedParentIdSet = new Set(orderedParentIds)
-  const grandparentIds = people
-    .filter((person) => (generationByPersonId.get(person.id) ?? 0) > 0)
-    .map((person) => person.id)
-  const orderedGrandparentIds = orderGenerationIds(grandparentIds)
-  const childrenIds = people
-    .filter((person) => (generationByPersonId.get(person.id) ?? 0) < 0)
-    .map((person) => person.id)
-  const orderedChildrenIds = orderGenerationIds(childrenIds)
-
-  const orderedIds = [
-    ...orderedGrandparentIds,
-    ...orderedParentIds,
-    ...orderedChildrenIds,
-    ...people
-      .map((person) => person.id)
-      .filter((personId) => !orderedParentIdSet.has(personId) && !orderedGrandparentIds.includes(personId) && !orderedChildrenIds.includes(personId)),
-  ]
 
   const entryById = new Map<string, FamilyTreePerson>()
   
   for (const p of people) {
-    const entry = {
+    const gen = generationByPersonId.get(p.id) ?? 0
+    const entry: FamilyTreePerson = {
       id: p.id,
       name: p.displayName || `${p.firstName}${p.lastName ? ' ' + p.lastName : ''}`,
       role: getRoleLabel(p.id, p.sex),
       avatar: p.avatarUrl || '',
       memories: p.counts?.stories || 0,
       sex: p.sex,
+      generation: gen,
+      selected: p.id === subject.id
     }
     entryById.set(p.id, entry)
 
+    if (!generations[gen]) generations[gen] = []
+    generations[gen].push(entry)
   }
 
-  for (let index = 0; index < orderedIds.length; index += 1) {
-    const personId = orderedIds[index]
-    const p = peopleById.get(personId)
-    const entryBase = entryById.get(personId)
-    if (!p || !entryBase) {
-      continue
+  // Sort each generation row so spouses are adjacent; spouse connectors are drawn
+  // as horizontal lines between card positions and will cross other cards if spouses
+  // are not next to each other in the row.
+  for (const gen of Object.keys(generations)) {
+    const genNum = Number(gen)
+    if (generations[genNum].length > 1) {
+      generations[genNum] = sortBySpouseAdjacency(generations[genNum], spouseIdsByPerson)
     }
-
-    const nextPersonId = orderedIds[index + 1]
-    const spouseWithNext = !!nextPersonId && areSpouses(personId, nextPersonId)
-    const generation = generationByPersonId.get(p.id)
-    const isSelected = p.id === subject.id
-    const entry: FamilyTreePerson = {
-      ...entryBase,
-      selected: isSelected,
-      spouseWithNext,
-      upperGenerationLinkType: generation === 0
-        ? (upperGenerationLinkTypeByParentId.get(personId) || 'none')
-        : undefined,
-    }
-
-    // SUBJECT always goes in parents generation (center level)
-    if (p.id === subject?.id) {
-      parents.push(entry)
-      continue
-    }
-
-    if (generation !== undefined) {
-      if (generation > 0) {
-        grandparents.push(entry)
-        continue
-      }
-
-      if (generation < 0) {
-        children.push(entry)
-        continue
-      }
-
-      parents.push(entry)
-      continue
-    }
-
-    // Default fallback - put in parents generation
-    parents.push(entry)
   }
 
-  if (parents.length === 0 && grandparents.length > 0) {
-    parents.push(grandparents.shift()!)
-  }
-
-  if (parents.length === 0 && children.length > 0) {
-    parents.push(children.shift()!)
-  }
-
-  const displayedPersonIdSet = new Set([...grandparents, ...parents, ...children].map((person) => person.id))
   const relationshipEdges: FamilyTreeRelationshipEdge[] = []
   const seenRelationshipEdgeKeys = new Set<string>()
 
   for (const person of people) {
     for (const edge of person.relationshipEdges) {
-      const sourceCandidateId = person.id
-      const relatedPersonId = edge.relatedPerson.id
-
-      if (!displayedPersonIdSet.has(sourceCandidateId) || !displayedPersonIdSet.has(relatedPersonId)) {
-        continue
-      }
+      const sourceId = person.id
+      const targetId = edge.relatedPerson.id
 
       if (edge.type === 'SPOUSE') {
-        const [leftId, rightId] = [sourceCandidateId, relatedPersonId].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
-        const edgeKey = `SPOUSE:${leftId}:${rightId}`
-        if (seenRelationshipEdgeKeys.has(edgeKey)) {
-          continue
-        }
-
-        seenRelationshipEdgeKeys.add(edgeKey)
+        const [leftId, rightId] = [sourceId, targetId].sort()
+        const key = `SPOUSE:${leftId}:${rightId}`
+        if (seenRelationshipEdgeKeys.has(key)) continue
+        seenRelationshipEdgeKeys.add(key)
         relationshipEdges.push({
-          id: edgeKey,
-          sourceId: leftId,
-          targetId: rightId,
-          type: 'SPOUSE',
-          relationshipKind: edge.isBiological ? 'biological' : 'nonBiological',
+          id: key, sourceId: leftId, targetId: rightId, type: 'SPOUSE', relationshipKind: 'biological'
         })
-        continue
+      } else if (edge.type === 'CHILD') {
+        // Person is parent, related is child
+        const key = `PARENT_CHILD:${sourceId}:${targetId}`
+        if (seenRelationshipEdgeKeys.has(key)) continue
+        seenRelationshipEdgeKeys.add(key)
+        relationshipEdges.push({
+          id: key, sourceId, targetId, type: 'PARENT_CHILD', relationshipKind: edge.isBiological ? 'biological' : 'nonBiological'
+        })
+      } else if (edge.type === 'PARENT') {
+        // Person is child, related is parent
+        const key = `PARENT_CHILD:${targetId}:${sourceId}`
+        if (seenRelationshipEdgeKeys.has(key)) continue
+        seenRelationshipEdgeKeys.add(key)
+        relationshipEdges.push({
+          id: key, sourceId: targetId, targetId: sourceId, type: 'PARENT_CHILD', relationshipKind: edge.isBiological ? 'biological' : 'nonBiological'
+        })
       }
-
-      let parentId: string | undefined
-      let childId: string | undefined
-
-      if (edge.type === 'PARENT' && edge.direction === 'incoming') {
-        parentId = relatedPersonId
-        childId = sourceCandidateId
-      }
-
-      if (edge.type === 'CHILD' && edge.direction === 'outgoing') {
-        parentId = sourceCandidateId
-        childId = relatedPersonId
-      }
-
-      if (!parentId || !childId) {
-        continue
-      }
-
-      const edgeKey = `PARENT_CHILD:${parentId}:${childId}`
-      if (seenRelationshipEdgeKeys.has(edgeKey)) {
-        continue
-      }
-
-      seenRelationshipEdgeKeys.add(edgeKey)
-      relationshipEdges.push({
-        id: edgeKey,
-        sourceId: parentId,
-        targetId: childId,
-        type: 'PARENT_CHILD',
-        relationshipKind: edge.isBiological ? 'biological' : 'nonBiological',
-      })
     }
   }
 
-  return {
-    grandparents,
-    parents,
-    children,
-    childrenConnectorParentId,
-    relationshipEdges,
-  }
+  return { generations, relationshipEdges, rootPersonId: subject.id }
 }
 
 export default function FamilyTree() {
@@ -538,6 +259,7 @@ export default function FamilyTree() {
   const initialSearchQuery = typeof router.query.search === 'string' ? router.query.search : ''
   const [treeData, setTreeData] = useState<FamilyTreeData | null>(null)
   const [people, setPeople] = useState<ApiPerson[]>([])
+  const [rawPeople, setRawPeople] = useState<ApiPersonWithEdges[]>([])
   const [isLoading, setIsLoading] = useState(true)
   
   // Modal states
@@ -548,31 +270,65 @@ export default function FamilyTree() {
   const [personModalInitialTab, setPersonModalInitialTab] = useState<'overview' | 'relationships'>('overview')
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false)
 
-  const fetchPeople = useCallback(async () => {
+  const [loadedDepths, setLoadedDepths] = useState({ up: 2, down: 2 })
+  const [includeSiblings, setIncludeSiblings] = useState(false)
+  const [isIncrementalLoading, setIsIncrementalLoading] = useState(false)
+
+  const fetchPeople = useCallback(async (depths = { up: 2, down: 2 }, rootId?: string, siblings = false) => {
     try {
-      // Use the optimized endpoint that returns all people with relationships in one call
-      const res = await fetch('/api/people/family-tree', { credentials: 'include' })
+      const rootParam = rootId ? `&rootPersonId=${rootId}` : ''
+      const res = await fetch(`/api/people/family-tree?depthUp=${depths.up}&depthDown=${depths.down}&includeSiblings=${siblings}${rootParam}`, { credentials: 'include' })
       const data = await res.json()
       
       if (data.success && data.data) {
         const peopleWithEdges = data.data as ApiPersonWithEdges[]
-        
-        // Extract base people without relationships for other uses
         const basePeople = peopleWithEdges.map(({ relationshipEdges, ...person }) => person)
         
         setPeople(basePeople)
-        setTreeData(mapPeopleToTree(peopleWithEdges, selectedPersonIdFromQuery))
+        setRawPeople(peopleWithEdges)
+        // Use the rootPersonId returned by API to ensure consistency
+        const effectiveRootId = data.rootPersonId || rootId || selectedPersonIdFromQuery
+        const mapped = mapPeopleToTree(peopleWithEdges, effectiveRootId)
+        setTreeData(mapped)
+        setLoadedDepths(depths)
+        setIncludeSiblings(siblings)
       }
-    } catch {
-      // Fall through to render with empty data
+    } catch (err) {
+      console.error('Fetch failed:', err)
     } finally {
       setIsLoading(false)
+      setIsIncrementalLoading(false)
     }
   }, [selectedPersonIdFromQuery])
 
   useEffect(() => {
-    fetchPeople()
+    fetchPeople({ up: 2, down: 2 }, undefined, false)
   }, [fetchPeople])
+
+  // Logic to load more when needed
+  const handleLoadMore = useCallback(async (direction: 'up' | 'down') => {
+    if (isIncrementalLoading) return
+    setIsIncrementalLoading(true)
+    
+    const newDepths = {
+      up: direction === 'up' ? loadedDepths.up + 2 : loadedDepths.up,
+      down: direction === 'down' ? loadedDepths.down + 2 : loadedDepths.down,
+    }
+    
+    await fetchPeople(newDepths, treeData?.rootPersonId, includeSiblings)
+  }, [loadedDepths, isIncrementalLoading, fetchPeople, treeData?.rootPersonId, includeSiblings])
+
+  const handleToggleSiblings = useCallback(() => {
+    if (isIncrementalLoading) return
+    setIsIncrementalLoading(true)
+    fetchPeople(loadedDepths, treeData?.rootPersonId, !includeSiblings)
+  }, [loadedDepths, treeData?.rootPersonId, includeSiblings, fetchPeople, isIncrementalLoading])
+
+  const handleSetRoot = useCallback((id: string) => {
+    if (isIncrementalLoading) return
+    setIsIncrementalLoading(true)
+    fetchPeople({ up: 2, down: 2 }, id, false)
+  }, [fetchPeople, isIncrementalLoading])
 
   const handlePersonClick = (person: { id: string | number; name: string; avatar: string }) => {
     // Parse name into first and last name
@@ -717,19 +473,26 @@ export default function FamilyTree() {
   }
 
   const treeContent = (
-    <FamilyTreePage
-      people={treeData ?? undefined}
-      onPersonClick={handlePersonClick}
-      onAddPerson={() => setIsAddPersonModalOpen(true)}
-      onEditRelationships={handleEditRelationships}
-      onPeopleChanged={fetchPeople}
-      isFullscreen={isFullscreen}
-      onToggleFullscreen={() => setIsFullscreen((prev) => !prev)}
-      onImportGedcom={() => setIsGedcomImportModalOpen(true)}
-      onExportGedcom={handleExportGedcom}
-      initialSearchExpanded={initialSearchExpanded}
-      initialSearchQuery={initialSearchQuery}
-    />
+      <FamilyTreePage
+        people={treeData ?? undefined}
+        rawPeople={rawPeople}
+        onPersonClick={handlePersonClick}
+        onAddPerson={() => setIsAddPersonModalOpen(true)}
+        onEditRelationships={handleEditRelationships}
+        onPeopleChanged={fetchPeople}
+        isFullscreen={isFullscreen}
+        onToggleFullscreen={() => setIsFullscreen((prev) => !prev)}
+        onImportGedcom={() => setIsGedcomImportModalOpen(true)}
+        onExportGedcom={handleExportGedcom}
+        initialSearchExpanded={initialSearchExpanded}
+        initialSearchQuery={initialSearchQuery}
+        onLoadMore={handleLoadMore}
+        onToggleSiblings={handleToggleSiblings}
+        onSetRoot={handleSetRoot}
+        includeSiblings={includeSiblings}
+        loadedDepths={loadedDepths}
+        isLoadingMore={isIncrementalLoading}
+      />
   )
 
   return (

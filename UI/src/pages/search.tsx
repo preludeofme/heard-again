@@ -160,7 +160,7 @@ export default function SearchPage() {
               className="serif-font"
               sx={{ color: '#16334a', mb: 4, fontStyle: 'italic', textAlign: 'center' }}
             >
-              Search the Archive
+              Search the Story
             </Typography>
             <TextField
               fullWidth
@@ -401,7 +401,7 @@ export default function SearchPage() {
                     No results found
                   </Typography>
                   <Typography variant="body2" sx={{ color: '#999' }}>
-                    Try a different search term or browse the archive sections.
+                    Try a different search term or browse the story sections.
                   </Typography>
                 </Box>
               )}
@@ -412,7 +412,7 @@ export default function SearchPage() {
           {!results && !query.trim() && (
             <Box sx={{ maxWidth: 900, mx: 'auto', py: 4 }}>
               <Typography variant="body1" sx={{ color: '#546669', textAlign: 'center', mb: 4 }}>
-                Start typing to search across all stories, people, and documents in your archive.
+                Start typing to search across all stories, people, and documents in your family story.
               </Typography>
 
               <Grid container spacing={3}>

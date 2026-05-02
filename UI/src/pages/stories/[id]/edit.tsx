@@ -347,7 +347,7 @@ export default function StoryEditPage() {
                   </ToggleButton>
                 </ToggleButtonGroup>
                 <Typography variant="caption" sx={{ color: C.onSecondaryContainer, display: 'block', mt: 1 }}>
-                  {status === 'PUBLISHED' ? 'Visible on the profile and archive.' : 'Only visible to familyspace editors.'}
+                  {status === 'PUBLISHED' ? 'Visible on the profile and story.' : 'Only visible to familyspace editors.'}
                 </Typography>
               </Box>
 

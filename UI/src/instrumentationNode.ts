@@ -2,6 +2,7 @@
 // instrumentation.ts when NEXT_RUNTIME === 'nodejs', so the Edge-runtime
 // bundle never follows the worker → BullMQ → fs/promises chain.
 import { startNarrationWorker } from './workers/narrationWorker'
+import { startImportWorker } from './lib/queues/importQueue'
 
 try {
   const instance = startNarrationWorker()
@@ -12,4 +13,11 @@ try {
   }
 } catch (error) {
   console.error('[instrumentation] Failed to start narration worker:', error)
+}
+
+try {
+  startImportWorker()
+  console.log('[instrumentation] import worker started')
+} catch (error) {
+  console.error('[instrumentation] Failed to start import worker:', error)
 }

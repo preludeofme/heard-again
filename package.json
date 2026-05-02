@@ -23,6 +23,7 @@
     "db:push": "cd UI && npm run db:push",
     "db:studio": "cd UI && npm run db:studio",
     "db:seed": "cd UI && npm run db:seed",
+    "db:reset-family": "node scripts/reset-family.js",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "docker:build": "docker compose build",

@@ -52,6 +52,9 @@ export const ALLOWED_EXTENSIONS = [
   
   // Archives
   '.zip',
+
+  // Genealogy
+  '.ged',
 ] as const
 
 // Magic byte signatures for additional validation
@@ -112,6 +115,7 @@ export async function validateFileContent(
       '.md': 'text/markdown',
       '.markdown': 'text/markdown',
       '.json': 'application/json',
+      '.ged': 'text/plain',
     }
 
     const textMime = TEXT_MIME_BY_EXT[originalExtension]

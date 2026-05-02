@@ -107,7 +107,7 @@ export default function PricingPage() {
     <>
       <Head>
         <title>Pricing - Heard Again</title>
-        <meta name="description" content="Choose the right plan for your family archive" />
+        <meta name="description" content="Choose the right plan for your family story" />
       </Head>
       <Layout>
         <Box sx={{ minHeight: '100vh', backgroundColor: '#fcf9f4', px: { xs: 3, md: 8 }, py: 8 }}>

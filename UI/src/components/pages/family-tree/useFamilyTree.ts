@@ -200,9 +200,8 @@ export function useFamilyTree(
 
   const handleOpenRelationshipEditor = () => {
     const fallbackPersonId = selectedPersonId
-      || (familyData.parents[0] ? String(familyData.parents[0].id) : null)
-      || (familyData.children[0] ? String(familyData.children[0].id) : null)
-      || (familyData.grandparents[0] ? String(familyData.grandparents[0].id) : null)
+      || (familyData.generations?.[0]?.[0] ? String(familyData.generations[0][0].id) : null)
+      || (Object.values(familyData.generations || {}).flat()[0] ? String(Object.values(familyData.generations || {}).flat()[0].id) : null)
 
     if (fallbackPersonId) {
       handleAddRelationship(fallbackPersonId)

@@ -57,7 +57,7 @@ const collaborationSteps = [
 
 const testimonials = [
   {
-    quote: "It's incredible to see the archive grow. My father's old army buddies added stories I'd never heard before. It's like seeing him through new eyes.",
+    quote: "It's incredible to see the story grow. My father's old army buddies added stories I'd never heard before. It's like seeing him through new eyes.",
     name: 'Eleanor Vance',
     role: 'Heritage Member',
     avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&h=200&fit=crop&crop=face',

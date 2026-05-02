@@ -37,8 +37,8 @@ export default function ContributePage() {
     : 'Help tell their story.'
 
   const heroSub = subjectName
-    ? `Add a memory, upload a keepsake, or record your voice — every contribution becomes part of ${subjectName}'s living archive.`
-    : 'Add a memory, upload a keepsake, or record your voice. Every contribution becomes part of your family\'s living archive.'
+    ? `Add a memory, upload a keepsake, or record your voice — every contribution becomes part of ${subjectName}'s living story.`
+    : "Add a memory, upload a keepsake, or record your voice. Every contribution becomes part of your family's living story."
 
   const options: ContributionOption[] = [
     {
@@ -60,7 +60,7 @@ export default function ContributePage() {
     {
       key: 'keepsake',
       title: 'Upload a Keepsake',
-      description: 'Add letters, recipes, photos, certificates, or handwritten notes to the archive.',
+      description: 'Add letters, recipes, photos, certificates, or handwritten notes to the story.',
       icon: <UploadIcon sx={{ fontSize: 32 }} />,
       accent: ProfileColors.surfaceContainerHigh,
       href: '/archive?lens=keepsakes',
@@ -68,7 +68,7 @@ export default function ContributePage() {
     {
       key: 'invite',
       title: 'Invite Family',
-      description: 'Bring loved ones into the archive so they can share their own memories and stories.',
+      description: 'Bring loved ones into the story so they can share their own memories.',
       icon: <PersonAddIcon sx={{ fontSize: 32 }} />,
       accent: ProfileColors.tertiaryFixedDim,
       href: '/account#invite',
@@ -277,7 +277,7 @@ export default function ContributePage() {
                     mb: 3,
                   }}
                 >
-                  Every memory you contribute becomes part of an archive that lasts beyond a lifetime.
+                  Every memory you contribute becomes part of a story that lasts beyond a lifetime.
                 </Typography>
                 <Button
                   component={Link}
@@ -292,7 +292,7 @@ export default function ContributePage() {
                     '&:hover': { backgroundColor: 'transparent', transform: 'translateX(4px)' },
                   }}
                 >
-                  Return to the Archive
+                  Return to the Story
                 </Button>
               </Box>
             </Box>

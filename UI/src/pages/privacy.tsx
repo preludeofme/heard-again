@@ -186,7 +186,7 @@ export default function PrivacyPage() {
             </Box>
 
             <Typography variant="body2" sx={{ color: '#546669', mb: 4 }}>
-              Manage retention, disclosure, and account-level privacy controls for your archive.
+              Manage retention, disclosure, and account-level privacy controls for your story.
             </Typography>
 
             {error && (

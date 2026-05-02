@@ -22,7 +22,7 @@ export function OnboardingChecklist({ state, role, familyspaceId }: OnboardingCh
   const router = useRouter()
 
   const steps: Step[] = [
-    { key: 'hasFirstPerson', label: 'Who are you preserving this for?', hint: 'Start the archive with a person\'s name.', href: '/family-tree', done: state.hasFirstPerson },
+    { key: 'hasFirstPerson', label: 'Who are you preserving this for?', hint: 'Start the story with a person\'s name.', href: '/family-tree', done: state.hasFirstPerson },
     { key: 'hasFirstStory', label: 'Share the first memory', hint: 'One moment — written or spoken.', href: '/contribute', done: state.hasFirstStory },
     { key: 'hasFirstDocument', label: 'Add a keepsake', hint: 'A photo, a letter, or any artifact worth preserving.', href: '/archive?lens=keepsakes', done: state.hasFirstDocument },
     { key: 'hasFirstVoice', label: 'Preserve their voice', hint: 'Upload a recording to create a voice that lasts.', href: '/archive?lens=voices', done: state.hasFirstVoice },

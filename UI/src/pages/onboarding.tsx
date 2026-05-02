@@ -40,7 +40,7 @@ export default function OnboardingPage() {
     if (activeStep === 0) {
       // Validate family name
       if (!formData.familyName.trim()) {
-        setError('Every archive needs a name. What should we call yours?')
+        setError('Every story needs a name. What should we call yours?')
         return
       }
       setError(null)
@@ -128,7 +128,7 @@ export default function OnboardingPage() {
                     fontFamily: 'var(--font-newsreader), serif',
                   }}
                 >
-                  What should we call your family archive?
+                  What should we call your family story?
                 </Typography>
                 <Typography variant="body1" sx={{ color: 'secondary.main' }}>
                   This will be the name of your family familyspace. You can always change it later.
@@ -147,7 +147,7 @@ export default function OnboardingPage() {
                 required
               />
               <Typography variant="caption" sx={{ color: 'secondary.main' }}>
-                This name will appear on your family tree and archive.
+                This name will appear on your family tree and story.
               </Typography>
             </Box>
           </Fade>
@@ -396,7 +396,7 @@ export default function OnboardingPage() {
                 {isLoading ? (
                   <CircularProgress size={24} sx={{ color: 'white' }} />
                 ) : activeStep === steps.length - 1 ? (
-                  'Start Your Archive'
+                  'Start Your Story'
                 ) : (
                   'Continue'
                 )}

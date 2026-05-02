@@ -1,4 +1,4 @@
-export type TreeNodeLevel = 'grandparent' | 'parent' | 'child'
+export type TreeNodeLevel = 'grandparent' | 'parent' | 'child' | string | number
 
 export interface TreePerson {
   id: string | number
@@ -9,6 +9,7 @@ export interface TreePerson {
   selected?: boolean
   spouseWithNext?: boolean
   upperGenerationLinkType?: 'biological' | 'nonBiological' | 'none'
+  generation?: number // Added for multi-generation support
 }
 
 export interface FamilyTreeRelationshipEdge {
@@ -20,11 +21,9 @@ export interface FamilyTreeRelationshipEdge {
 }
 
 export interface FamilyTreeData {
-  grandparents: TreePerson[]
-  parents: TreePerson[]
-  children: TreePerson[]
-  childrenConnectorParentId?: string
+  generations: Record<number, TreePerson[]>
   relationshipEdges: FamilyTreeRelationshipEdge[]
+  rootPersonId?: string
 }
 
 export interface PersonFormData {

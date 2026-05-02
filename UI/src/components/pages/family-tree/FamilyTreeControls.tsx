@@ -17,6 +17,7 @@ import {
   FullscreenExit,
   UploadFile,
   FileDownload,
+  PeopleAltOutlined as PeopleIcon,
 } from '@mui/icons-material'
 
 interface FamilyTreeControlsProps {
@@ -32,6 +33,8 @@ interface FamilyTreeControlsProps {
   onToggleFullscreen?: () => void
   onImportGedcom?: () => void
   onExportGedcom?: () => void
+  onToggleSiblings?: () => void
+  includeSiblings?: boolean
 }
 
 export function FamilyTreeControls({
@@ -47,6 +50,8 @@ export function FamilyTreeControls({
   onToggleFullscreen,
   onImportGedcom,
   onExportGedcom,
+  onToggleSiblings,
+  includeSiblings = false,
 }: FamilyTreeControlsProps) {
   return (
     <Box
@@ -86,6 +91,22 @@ export function FamilyTreeControls({
           >
             <SearchIcon sx={{ fontSize: 18 }} />
           </IconButton>
+
+          {onToggleSiblings && (
+            <IconButton
+              size="small"
+              onClick={onToggleSiblings}
+              sx={{
+                color: includeSiblings ? 'white' : 'primary.main',
+                bgcolor: includeSiblings ? 'primary.main' : 'transparent',
+                '&:hover': { bgcolor: includeSiblings ? 'primary.dark' : 'rgba(22, 51, 74, 0.08)' },
+              }}
+              title={includeSiblings ? "Hide Siblings" : "Show Siblings"}
+            >
+              <PeopleIcon sx={{ fontSize: 18 }} />
+            </IconButton>
+          )}
+
           <Divider orientation="vertical" flexItem sx={{ mx: 0.5, borderColor: 'rgba(208, 227, 230, 0.6)' }} />
 
           {!isMobile && (

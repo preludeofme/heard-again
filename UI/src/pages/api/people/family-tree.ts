@@ -28,139 +28,195 @@ interface PersonWithRelationships {
   deathDate: string | null
   personType: string
   bio: string | null
+  sex: any
   relationshipEdges: RelationshipEdge[]
 }
 
 export default apiHandler({
-  // GET /api/people/family-tree - Get all people with relationships for family tree
+  // GET /api/people/family-tree - Get people with relationships for family tree
   GET: async (req, res) => {
     const user = await getAuthUserWithFamilyspace(req, res)
+    const { rootPersonId, depthUp, depthDown, includeSiblings } = req.query
+    
+    // Fix: Properly handle "0" as a valid depth
+    const dUp = (depthUp !== undefined && depthUp !== '') ? parseInt(depthUp as string, 10) : 2
+    const dDown = (depthDown !== undefined && depthDown !== '') ? parseInt(depthDown as string, 10) : 2
+    const shouldIncludeSiblings = includeSiblings === 'true'
 
-    // Get all people in familyspace with minimal fields
-    const people = await prisma.person.findMany({
-      where: { familyspaceId: user.familyspaceId },
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        displayName: true,
-        nickname: true,
-        avatarAssetId: true,
-        birthDate: true,
-        deathDate: true,
-        personType: true,
-        bio: true,
-        sex: true,
-      },
-      orderBy: [
-        { birthDate: 'asc' },
-        { firstName: 'asc' },
-        { lastName: 'asc' },
-      ],
-    })
-
-    // Get all family units for these people in one query
-    const familyUnits = await prisma.familyUnit.findMany({
-      where: {
-        familyspaceId: user.familyspaceId,
-        OR: [
-          { parents: { some: { parentId: { in: people.map((p: any) => p.id) } } } },
-          { children: { some: { childId: { in: people.map((p: any) => p.id) } } } },
-        ],
-      },
-      include: {
-        parents: {
-          include: {
-            parent: {
-              select: { id: true, firstName: true, lastName: true, nickname: true, avatarAssetId: true },
-            },
+    // 1. Fetch all people and family units for this familyspace
+    const [allPeople, allFamilyUnits] = await Promise.all([
+      prisma.person.findMany({
+        where: { familyspaceId: user.familyspaceId },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          displayName: true,
+          nickname: true,
+          avatarAssetId: true,
+          birthDate: true,
+          deathDate: true,
+          personType: true,
+          bio: true,
+          sex: true,
+        }
+      }),
+      prisma.familyUnit.findMany({
+        where: { familyspaceId: user.familyspaceId },
+        include: {
+          parents: { 
+            include: { 
+              parent: { select: { id: true, firstName: true, lastName: true, nickname: true, avatarAssetId: true } } 
+            } 
           },
-          orderBy: { sortOrder: 'asc' },
-        },
-        children: {
-          include: {
-            child: {
-              select: { id: true, firstName: true, lastName: true, nickname: true, avatarAssetId: true },
-            },
-          },
-          orderBy: { sortOrder: 'asc' },
-        },
-      },
-    })
-
-    // Build relationships map for quick lookup
-    const relationshipsMap = new Map<string, RelationshipEdge[]>()
-
-    // Initialize empty relationships for all people
-    people.forEach((person: any) => {
-      relationshipsMap.set(person.id, [])
-    })
-
-    // Process family units to build relationships
-    for (const family of familyUnits) {
-      // Build parent and child lookup maps for this family
-      const parentMap = new Map(family.parents.map((p: any) => [p.parentId, p.parent]))
-      const childMap = new Map(family.children.map((c: any) => [c.childId, c.child]))
-
-      // Process each parent to find their relationships
-      for (const parentLink of family.parents) {
-        const relationships: RelationshipEdge[] = relationshipsMap.get(parentLink.parentId) || []
-        
-        // Spouse relationships (other parents in same family)
-        for (const otherParent of family.parents) {
-          if (otherParent.parentId !== parentLink.parentId) {
-            relationships.push({
-              id: `spouse-${parentLink.parentId}-${otherParent.parentId}`,
-              type: 'SPOUSE',
-              direction: 'outgoing',
-              isBiological: true,
-              notes: null,
-              relatedPerson: otherParent.parent,
-            })
+          children: { 
+            include: { 
+              child: { select: { id: true, firstName: true, lastName: true, nickname: true, avatarAssetId: true } } 
+            } 
           }
         }
+      })
+    ])
 
-        // Parent-child relationships (to children)
-        for (const childLink of family.children) {
-          relationships.push({
-            id: `parent-${parentLink.parentId}-${childLink.childId}`,
-            type: 'PARENT',
-            direction: 'outgoing',
-            isBiological: parentLink.relationshipType === 'BIOLOGICAL',
-            notes: null,
-            relatedPerson: childLink.child,
-          })
-        }
+    if (allPeople.length === 0) return successResponse(res, [])
 
-        relationshipsMap.set(parentLink.parentId, relationships)
-      }
+    // 2. Build graph and lookup maps in memory
+    const peopleMap = new Map(allPeople.map(p => [p.id, p]))
+    const familiesByPersonId = new Map<string, { isParent: boolean, isChild: boolean, unit: typeof allFamilyUnits[0] }[]>()
 
-      // Process each child to find their parent relationships
-      for (const childLink of family.children) {
-        const relationships: RelationshipEdge[] = relationshipsMap.get(childLink.childId) || []
-        
-        // Child-parent relationships (to parents)
-        for (const parentLink of family.parents) {
-          relationships.push({
-            id: `child-${childLink.childId}-${parentLink.parentId}`,
-            type: 'CHILD',
-            direction: 'incoming',
-            isBiological: parentLink.relationshipType === 'BIOLOGICAL',
-            notes: null,
-            relatedPerson: parentLink.parent,
-          })
-        }
+    allFamilyUnits.forEach(unit => {
+      unit.parents.forEach(p => {
+        if (!familiesByPersonId.has(p.parentId)) familiesByPersonId.set(p.parentId, [])
+        familiesByPersonId.get(p.parentId)!.push({ isParent: true, isChild: false, unit })
+      })
+      unit.children.forEach(c => {
+        if (!familiesByPersonId.has(c.childId)) familiesByPersonId.set(c.childId, [])
+        familiesByPersonId.get(c.childId)!.push({ isParent: false, isChild: true, unit })
+      })
+    })
 
-        relationshipsMap.set(childLink.childId, relationships)
-      }
+    // 3. Determine root person
+    let rootId = rootPersonId as string
+    if (!rootId) {
+      // Find person with most connections if none provided
+      rootId = allPeople.reduce((prev, curr) => {
+        const prevCount = familiesByPersonId.get(prev.id)?.length || 0
+        const currCount = familiesByPersonId.get(curr.id)?.length || 0
+        return currCount > prevCount ? curr : prev
+      }).id
     }
 
-    // Combine people with their relationships
-    const peopleWithRelationships: PersonWithRelationships[] = people.map((person: any) => ({
-      ...person,
-      relationshipEdges: relationshipsMap.get(person.id) || [],
-    }))
+    // 4. Strict Lineage Traversal
+    const results = new Set<string>()
+    results.add(rootId)
 
-    return successResponse(res, peopleWithRelationships)
+    // A. Ancestry Pass (UP)
+    const traverseUp = (id: string, currentDepth: number) => {
+      if (currentDepth >= dUp) return
+      const families = familiesByPersonId.get(id) || []
+      families.filter(f => f.isChild).forEach(f => {
+        f.unit.parents.forEach(p => {
+          results.add(p.parentId)
+          traverseUp(p.parentId, currentDepth + 1)
+        })
+      })
+    }
+    traverseUp(rootId, 0)
+
+    // B. Descendancy Pass (DOWN)
+    const traverseDown = (id: string, currentDepth: number) => {
+      if (currentDepth >= dDown) return
+      const families = familiesByPersonId.get(id) || []
+      families.filter(f => f.isParent).forEach(f => {
+        f.unit.children.forEach(c => {
+          results.add(c.childId)
+          traverseDown(c.childId, currentDepth + 1)
+        })
+      })
+    }
+    traverseDown(rootId, 0)
+
+    // C. Siblings Pass (Optional)
+    if (shouldIncludeSiblings) {
+      const rootFamilies = familiesByPersonId.get(rootId) || []
+      rootFamilies.filter(f => f.isChild).forEach(f => {
+        f.unit.children.forEach(c => results.add(c.childId))
+      })
+    }
+
+    // D. Spousal Pass (Include spouses of everyone collected so far)
+    const baseCollected = Array.from(results)
+    baseCollected.forEach(id => {
+      const families = familiesByPersonId.get(id) || []
+      families.forEach(f => {
+        if (f.unit.parents.some(p => p.parentId === id)) {
+          f.unit.parents.forEach(p => results.add(p.parentId))
+        }
+      })
+    })
+
+    // 5. Construct response
+    const peopleToReturn = allPeople.filter(p => results.has(p.id))
+    const peopleIdsInResult = new Set(peopleToReturn.map(p => p.id))
+    
+    const responseData = peopleToReturn.map(person => {
+      const edges: RelationshipEdge[] = []
+      const families = familiesByPersonId.get(person.id) || []
+      
+      families.forEach(({ isParent, isChild, unit }) => {
+        if (isParent) {
+          // Spouses
+          unit.parents.forEach(p => {
+            if (p.parentId !== person.id && peopleIdsInResult.has(p.parentId)) {
+              edges.push({
+                id: `spouse-${person.id}-${p.parentId}`,
+                type: 'SPOUSE',
+                direction: 'outgoing',
+                isBiological: true,
+                notes: null,
+                relatedPerson: p.parent as any
+              })
+            }
+          })
+          // Children
+          unit.children.forEach(c => {
+            if (peopleIdsInResult.has(c.childId)) {
+              edges.push({
+                id: `parent-${person.id}-${c.childId}`,
+                type: 'CHILD',
+                direction: 'outgoing',
+                isBiological: c.relationshipType === 'BIOLOGICAL',
+                notes: null,
+                relatedPerson: c.child as any
+              })
+            }
+          })
+        }
+        
+        if (isChild) {
+          // Parents
+          unit.parents.forEach(p => {
+            if (peopleIdsInResult.has(p.parentId)) {
+              edges.push({
+                id: `child-${person.id}-${p.parentId}`,
+                type: 'PARENT',
+                direction: 'incoming',
+                isBiological: p.relationshipType === 'BIOLOGICAL',
+                notes: null,
+                relatedPerson: p.parent as any
+              })
+            }
+          })
+        }
+      })
+      
+      return { ...person, relationshipEdges: edges }
+    })
+
+    return res.status(200).json({
+      success: true,
+      data: responseData,
+      rootPersonId: rootId
+    })
   },
 })

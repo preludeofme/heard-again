@@ -18,7 +18,7 @@ export function EmptyState({ type, onAction }: EmptyStateProps) {
         return {
           icon: <UploadIcon sx={{ fontSize: 64, color: '#adcae6', mb: 2 }} />,
           title: 'No documents yet',
-          description: 'Start building the archive by uploading photos, letters, and other precious memories.',
+          description: 'Start building the story by uploading photos, letters, and other precious memories.',
           actionText: 'Upload First Document',
         }
       case 'samples':
@@ -196,7 +196,7 @@ export function LoadingState({ type, progress }: LoadingStateProps) {
       case 'uploading':
         return {
           title: 'Uploading file',
-          description: 'Your file is being securely uploaded to the archive.',
+          description: 'Your file is being securely saved to the story.',
         }
       case 'processing':
         return {

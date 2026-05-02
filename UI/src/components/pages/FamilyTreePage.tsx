@@ -7,28 +7,18 @@ import {
 import { SearchableFamilyMember } from '@/components/search'
 import { useFamilyTree } from './family-tree/useFamilyTree'
 import { FamilyTreeControls } from './family-tree/FamilyTreeControls'
-import { FamilyTreeCanvas } from './family-tree/FamilyTreeCanvas'
+import { TopolaTreeCanvas } from './family-tree/topola/TopolaTreeCanvas'
 import { FamilyTreeModals } from './family-tree/FamilyTreeModals'
 import { FamilyTreeSidebar } from './family-tree/FamilyTreeSidebar'
 import { FamilyTreeSearchOverlay } from './family-tree/FamilyTreeSearchOverlay'
+
 import { TreePerson, FamilyTreeData } from './family-tree/types'
-import {
-  calculateCardPositions,
-  calculateConnectorPaths,
-  getGenerationWidth,
-  GRANDPARENT_CARD_WIDTH,
-  GRANDPARENT_GAP,
-  PARENT_CARD_WIDTH,
-  PARENT_GAP,
-  CHILD_CARD_WIDTH,
-  CHILD_GAP,
-  GRANDPARENT_CARD_HEIGHT,
-  PARENT_CARD_HEIGHT,
-  CHILD_CARD_HEIGHT,
-} from './family-tree/layout-utils'
+
+import { ApiPersonWithEdges } from './family-tree/topola/adapters/HeardAgainDataAdapter'
 
 interface FamilyTreePageProps {
   people?: FamilyTreeData
+  rawPeople?: ApiPersonWithEdges[]
   onPersonClick?: (person: TreePerson) => void
   onAddPerson?: () => void
   onEditRelationships?: (personId: string) => void
@@ -39,17 +29,22 @@ interface FamilyTreePageProps {
   initialSearchQuery?: string
   onImportGedcom?: () => void
   onExportGedcom?: () => void
+  onLoadMore?: (direction: 'up' | 'down') => void
+  onToggleSiblings?: () => void
+  onSetRoot?: (id: string) => void
+  includeSiblings?: boolean
+  loadedDepths?: { up: number; down: number }
+  isLoadingMore?: boolean
 }
 
 const defaultFamilyData: FamilyTreeData = {
-  grandparents: [],
-  parents: [],
-  children: [],
+  generations: {},
   relationshipEdges: [],
 }
 
 export function FamilyTreePage({
   people,
+  rawPeople,
   onPersonClick,
   onAddPerson,
   onEditRelationships,
@@ -58,10 +53,16 @@ export function FamilyTreePage({
   onToggleFullscreen,
   onImportGedcom,
   onExportGedcom,
+  onLoadMore,
+  onToggleSiblings,
+  onSetRoot,
+  includeSiblings = false,
+  loadedDepths = { up: 2, down: 2 },
+  isLoadingMore = false,
 }: FamilyTreePageProps) {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
-  const familyData = people && (people.grandparents.length > 0 || people.parents.length > 0 || people.children.length > 0)
+  const familyData = people && people.generations
     ? people
     : defaultFamilyData
 
@@ -130,43 +131,6 @@ export function FamilyTreePage({
 
   const overlayInputRef = useRef<HTMLInputElement>(null)
 
-  // Layout calculations
-  const cardW = {
-    grandparent: isMobile ? 140 : GRANDPARENT_CARD_WIDTH,
-    parent: isMobile ? 160 : PARENT_CARD_WIDTH,
-    child: isMobile ? 130 : CHILD_CARD_WIDTH,
-  }
-  const cardGap = {
-    grandparent: isMobile ? 16 : GRANDPARENT_GAP,
-    parent: isMobile ? 16 : PARENT_GAP,
-    child: isMobile ? 16 : CHILD_GAP,
-  }
-
-  const parentRowWidth = getGenerationWidth(familyData.parents.length, cardW.parent, cardGap.parent)
-  const grandparentRowWidth = getGenerationWidth(familyData.grandparents.length, cardW.grandparent, cardGap.grandparent)
-  const childrenRowWidth = getGenerationWidth(familyData.children.length, cardW.child, cardGap.child)
-
-  const treeCanvasWidth = Math.max(
-    grandparentRowWidth,
-    parentRowWidth,
-    childrenRowWidth,
-    cardW.parent,
-  )
-
-  const treeFlowHeight = familyData.children.length > 0
-    ? (isMobile ? 480 : 900)
-    : (isMobile ? 280 : 520)
-
-  const cardPositions = useMemo(() => 
-    calculateCardPositions(familyData, isMobile, treeCanvasWidth),
-    [familyData, isMobile, treeCanvasWidth]
-  )
-
-  const connectorPaths = useMemo(() => 
-    calculateConnectorPaths(familyData, cardPositions),
-    [familyData, cardPositions]
-  )
-
   const searchableMembers = useMemo<SearchableFamilyMember[]>(() => {
     const normalize = (person: TreePerson): SearchableFamilyMember => ({
       id: String(person.id),
@@ -175,46 +139,30 @@ export function FamilyTreePage({
       avatar: person.avatar,
     })
 
-    return [
-      ...familyData.grandparents.map(normalize),
-      ...familyData.parents.map(normalize),
-      ...familyData.children.map(normalize),
-    ]
-  }, [familyData])
+    return Object.values(familyData.generations || {}).flat().map(normalize)
+  }, [familyData.generations])
 
   const [selectedSearchMemberId, setSelectedSearchMemberId] = React.useState<string | null>(null)
 
-  // Side effects
-  useEffect(() => {
-    if (!selectedSearchMemberId) return
+// Side effects
+useEffect(() => {
+  if (!selectedSearchMemberId) return
 
-    const card = cardPositions.find((c) => c.id === selectedSearchMemberId)
-    if (!card) return
+  // In Topola, we change the root person (focal-point transition)
+  if (onSetRoot) {
+    onSetRoot(selectedSearchMemberId)
+  }
+}, [selectedSearchMemberId, onSetRoot])
 
-    const containerPadding = 160
-    const targetX = treeCanvasWidth / 2 - (card.x + card.width / 2)
-    const targetY = containerPadding - (card.y + card.estimatedHeight / 2)
+useEffect(() => {
+  if (isMobile) setZoomLevel(0.75)
+}, [isMobile, setZoomLevel])
 
-    setPanOffset({ x: targetX, y: targetY })
-  }, [selectedSearchMemberId, cardPositions, treeCanvasWidth, setPanOffset])
+useEffect(() => {
+  if (!isFullscreen) return
+  setPanOffset({ x: 0, y: 0 })
+}, [isFullscreen, zoomLevel, setPanOffset])
 
-  useEffect(() => {
-    if (isMobile) setZoomLevel(0.75)
-  }, [isMobile, setZoomLevel])
-
-  useEffect(() => {
-    if (!isFullscreen) return
-    const selfCard = cardPositions.find((c) => c.person.selected)
-    if (!selfCard) return
-    const vw = window.innerWidth
-    const vh = window.innerHeight
-    const cardCenterX = selfCard.x + selfCard.width / 2
-    const cardCenterY = selfCard.y + selfCard.estimatedHeight / 2
-    setPanOffset({
-      x: (vw / 2) - cardCenterX - 40,
-      y: (vh / 2) - cardCenterY - 40,
-    })
-  }, [isFullscreen, cardPositions, treeCanvasWidth, setPanOffset])
 
   return (
     <Box
@@ -249,20 +197,19 @@ export function FamilyTreePage({
         onToggleFullscreen={onToggleFullscreen}
         onImportGedcom={onImportGedcom}
         onExportGedcom={onExportGedcom}
+        onToggleSiblings={onToggleSiblings}
+        includeSiblings={includeSiblings}
       />
 
-      <FamilyTreeCanvas
-        familyData={familyData}
+      <TopolaTreeCanvas
+        people={rawPeople || []}
+        rootPersonId={familyData.rootPersonId}
         isFullscreen={isFullscreen}
         isMobile={isMobile}
-        treeCanvasWidth={treeCanvasWidth}
-        treeFlowHeight={treeFlowHeight}
         zoomLevel={zoomLevel}
         panOffset={panOffset}
         toolMode={toolMode}
         isDragging={isDragging}
-        connectorPaths={connectorPaths}
-        cardPositions={cardPositions}
         onCanvasMouseDown={handleCanvasMouseDown}
         onCanvasMouseMove={handleCanvasMouseMove}
         onCanvasMouseUp={handleCanvasMouseUp}
@@ -272,6 +219,11 @@ export function FamilyTreePage({
         onPersonClick={handlePersonClick}
         onAddPerson={handleAddPerson}
         onViewArchive={handleViewArchive}
+        onLoadMore={onLoadMore}
+        onToggleSiblings={onToggleSiblings}
+        loadedDepths={loadedDepths}
+        isLoadingMore={isLoadingMore}
+        includeSiblings={includeSiblings}
       />
 
       <FamilyTreeSidebar
