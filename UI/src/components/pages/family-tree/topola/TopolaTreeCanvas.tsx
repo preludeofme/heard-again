@@ -5,8 +5,8 @@ import { EmptyState } from '@/components/feedback/UIStates';
 import { FamilyMemberCard } from '../FamilyMemberCard';
 import { TreePerson } from '../types';
 import * as d3 from 'd3';
-import { SimpleRenderer, Chart } from 'topola';
-import { HeardAgainDataAdapter, ApiPersonWithEdges } from './adapters/HeardAgainDataAdapter';
+import { SimpleRenderer, HourglassChart } from 'topola';
+import { HeardAgainDataProvider, ApiPersonWithEdges } from './adapters/HeardAgainDataAdapter';
 import { CustomNodeRenderer, NodeData } from './renderers/CustomNodeRenderer';
 
 interface TopolaTreeCanvasProps {
@@ -61,7 +61,7 @@ export function TopolaTreeCanvas({
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const [nodes, setNodes] = useState<NodeData[]>([]);
-  const chartRef = useRef<Chart | null>(null);
+  const chartRef = useRef<any>(null);
 
   const hasData = people && people.length > 0;
 
@@ -74,7 +74,7 @@ export function TopolaTreeCanvas({
 
     const chartGroup = svg.append('g').attr('class', 'topola-chart');
 
-    const dataAdapter = new HeardAgainDataAdapter(people);
+    const dataAdapter = new HeardAgainDataProvider(people);
     
     // Choose start individual
     let startIndi = rootPersonId;
@@ -89,7 +89,7 @@ export function TopolaTreeCanvas({
     });
 
     try {
-      const chart = new Chart({
+      const chart = new HourglassChart({
         data: dataAdapter,
         renderer,
         svgSelector: svgRef.current,

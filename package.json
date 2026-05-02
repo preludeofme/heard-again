@@ -5,6 +5,7 @@
   "description": "Heard Again - Family Story Preservation Platform",
   "scripts": {
     "dev": "./Scripts/start-dev.sh --live",
+    "dev_worktree": "./Scripts/start-dev-worktree.sh --live",
     "build": "cd UI && npm run build",
     "start": "cd UI && npm run start",
     "test": "cd UI && npm test",

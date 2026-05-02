@@ -27,7 +27,7 @@ fi
 
 # Directories
 MAIN_APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-UI_DIR="$MAIN_APP_DIR/UI"
+UI_DIR="${UI_DIR_OVERRIDE:-$MAIN_APP_DIR/UI}"
 CHAT_SYSTEM_DIR="$MAIN_APP_DIR/Chat"
 TTS_SERVICE_DIR="$MAIN_APP_DIR/TTS/tts-service"
 
