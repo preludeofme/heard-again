@@ -7,7 +7,7 @@ import type { ApiPersonWithEdges, TreeLayoutPerson, PersonNodeData, TreeNodeLeve
 const PARENT_WIDTH = 288
 const STUB_WIDTH = 144
 const STUB_HEIGHT = 32
-const STUB_GAP = 20
+const STUB_GAP = 40
 const STUB_EDGE_COLOR = 'rgba(22, 51, 74, 0.28)'
 const STUB_EDGE_WIDTH = 2
 const PARENT_HEIGHT = 290
@@ -38,7 +38,7 @@ interface LayoutCallbacks {
   onAddPerson: () => void
   onViewArchive: (person: TreePerson) => void
   onSetRoot?: (id: string) => void
-  onLoadMore?: (direction: 'up' | 'down') => void
+  onLoadMore?: (direction: 'up' | 'down', personId: string) => void
   isMobile: boolean
 }
 

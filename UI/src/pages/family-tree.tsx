@@ -274,11 +274,14 @@ export default function FamilyTree() {
   const [loadedDepths, setLoadedDepths] = useState({ up: 2, down: 2 })
   const [includeSiblings, setIncludeSiblings] = useState(false)
   const [isIncrementalLoading, setIsIncrementalLoading] = useState(false)
+  const [expandedPersonIds, setExpandedPersonIds] = useState<{ up: Set<string>; down: Set<string> }>({ up: new Set(), down: new Set() })
 
-  const fetchPeople = useCallback(async (depths = { up: 2, down: 2 }, rootId?: string, siblings = false) => {
+  const fetchPeople = useCallback(async (depths = { up: 2, down: 2 }, rootId?: string, siblings = false, expandIds?: { up: Set<string>; down: Set<string> }) => {
     try {
       const rootParam = rootId ? `&rootPersonId=${rootId}` : ''
-      const res = await fetch(`/api/people/family-tree?depthUp=${depths.up}&depthDown=${depths.down}&includeSiblings=${siblings}${rootParam}`, { credentials: 'include' })
+      const expandUpParam = expandIds?.up.size ? `&expandUp=${Array.from(expandIds.up).join(',')}` : ''
+      const expandDownParam = expandIds?.down.size ? `&expandDown=${Array.from(expandIds.down).join(',')}` : ''
+      const res = await fetch(`/api/people/family-tree?depthUp=${depths.up}&depthDown=${depths.down}&includeSiblings=${siblings}${rootParam}${expandUpParam}${expandDownParam}`, { credentials: 'include' })
       const data = await res.json()
       
       if (data.success && data.data) {
@@ -306,29 +309,33 @@ export default function FamilyTree() {
     fetchPeople({ up: 2, down: 2 }, undefined, false)
   }, [fetchPeople])
 
-  // Logic to load more when needed
-  const handleLoadMore = useCallback(async (direction: 'up' | 'down') => {
+  // Logic to load more when needed — expands only the specific person's branch
+  const handleLoadMore = useCallback(async (direction: 'up' | 'down', personId: string) => {
     if (isIncrementalLoading) return
     setIsIncrementalLoading(true)
-    
-    const newDepths = {
-      up: direction === 'up' ? loadedDepths.up + 2 : loadedDepths.up,
-      down: direction === 'down' ? loadedDepths.down + 2 : loadedDepths.down,
+
+    const newExpanded = {
+      up: new Set(expandedPersonIds.up),
+      down: new Set(expandedPersonIds.down),
     }
-    
-    await fetchPeople(newDepths, treeData?.rootPersonId, includeSiblings)
-  }, [loadedDepths, isIncrementalLoading, fetchPeople, treeData?.rootPersonId, includeSiblings])
+    newExpanded[direction].add(personId)
+    setExpandedPersonIds(newExpanded)
+
+    await fetchPeople(loadedDepths, treeData?.rootPersonId, includeSiblings, newExpanded)
+  }, [expandedPersonIds, loadedDepths, isIncrementalLoading, fetchPeople, treeData?.rootPersonId, includeSiblings])
 
   const handleToggleSiblings = useCallback(() => {
     if (isIncrementalLoading) return
     setIsIncrementalLoading(true)
-    fetchPeople(loadedDepths, treeData?.rootPersonId, !includeSiblings)
-  }, [loadedDepths, treeData?.rootPersonId, includeSiblings, fetchPeople, isIncrementalLoading])
+    fetchPeople(loadedDepths, treeData?.rootPersonId, !includeSiblings, expandedPersonIds)
+  }, [loadedDepths, treeData?.rootPersonId, includeSiblings, fetchPeople, isIncrementalLoading, expandedPersonIds])
 
   const handleSetRoot = useCallback((id: string) => {
     if (isIncrementalLoading) return
     setIsIncrementalLoading(true)
-    fetchPeople({ up: 2, down: 2 }, id, false)
+    const cleared = { up: new Set<string>(), down: new Set<string>() }
+    setExpandedPersonIds(cleared)
+    fetchPeople({ up: 2, down: 2 }, id, false, cleared)
   }, [fetchPeople, isIncrementalLoading])
 
   const handlePersonClick = (person: { id: string | number; name: string; avatar: string }) => {

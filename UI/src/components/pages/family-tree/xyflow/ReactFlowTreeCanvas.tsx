@@ -37,7 +37,7 @@ interface ReactFlowTreeCanvasProps {
   onAddPerson: () => void
   onViewArchive: (person: TreeLayoutPerson) => void
   onSetRoot?: (id: string) => void
-  onLoadMore?: (direction: 'up' | 'down') => void
+  onLoadMore?: (direction: 'up' | 'down', personId: string) => void
   isPanMode?: boolean
 }
 

@@ -6,7 +6,7 @@ interface StubNodeData {
   targetId: string
   direction: 'up' | 'down'
   onSetRoot?: (id: string) => void
-  onLoadMore?: (direction: 'up' | 'down') => void
+  onLoadMore?: (direction: 'up' | 'down', personId: string) => void
 }
 
 export function StubNode({ data }: NodeProps): React.JSX.Element {
@@ -14,7 +14,7 @@ export function StubNode({ data }: NodeProps): React.JSX.Element {
 
   const handleClick = () => {
     if (d.onLoadMore) {
-      d.onLoadMore(d.direction)
+      d.onLoadMore(d.direction, d.targetId)
     } else {
       d.onSetRoot?.(d.targetId)
     }

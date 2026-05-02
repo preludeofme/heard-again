@@ -53,7 +53,7 @@ interface FamilyTreePageProps {
   onToggleFullscreen?: () => void
   onImportGedcom?: () => void
   onExportGedcom?: () => void
-  onLoadMore?: (direction: 'up' | 'down') => void
+  onLoadMore?: (direction: 'up' | 'down', personId: string) => void
   onToggleSiblings?: () => void
   onSetRoot?: (id: string) => void
   includeSiblings?: boolean

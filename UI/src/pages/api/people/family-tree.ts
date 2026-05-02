@@ -36,12 +36,14 @@ export default apiHandler({
   // GET /api/people/family-tree - Get people with relationships for family tree
   GET: async (req, res) => {
     const user = await getAuthUserWithFamilyspace(req, res)
-    const { rootPersonId, depthUp, depthDown, includeSiblings } = req.query
-    
+    const { rootPersonId, depthUp, depthDown, includeSiblings, expandUp, expandDown } = req.query
+
     // Fix: Properly handle "0" as a valid depth
     const dUp = (depthUp !== undefined && depthUp !== '') ? parseInt(depthUp as string, 10) : 2
     const dDown = (depthDown !== undefined && depthDown !== '') ? parseInt(depthDown as string, 10) : 2
     const shouldIncludeSiblings = includeSiblings === 'true'
+    const expandUpIds = expandUp ? (expandUp as string).split(',').filter(Boolean) : []
+    const expandDownIds = expandDown ? (expandDown as string).split(',').filter(Boolean) : []
 
     // 1. Fetch all people and family units for this familyspace
     const [allPeople, allFamilyUnits] = await Promise.all([
@@ -150,7 +152,11 @@ export default apiHandler({
     }
     traverseDown(rootId, 0)
 
-    // C. Siblings Pass (Optional)
+    // C. Targeted branch expansions — load 1 level from each explicitly expanded person
+    expandUpIds.forEach(id => { if (familiesByPersonId.has(id)) traverseUp(id, dUp - 1) })
+    expandDownIds.forEach(id => { if (familiesByPersonId.has(id)) traverseDown(id, dDown - 1) })
+
+    // D. Siblings Pass (Optional)
     if (shouldIncludeSiblings) {
       const rootFamilies = familiesByPersonId.get(rootId) || []
       rootFamilies.filter(f => f.isChild).forEach(f => {
@@ -158,7 +164,7 @@ export default apiHandler({
       })
     }
 
-    // D. Spousal Pass (Include spouses of everyone collected so far)
+    // E. Spousal Pass (Include spouses of everyone collected so far)
     const baseCollected = Array.from(results)
     baseCollected.forEach(id => {
       const families = familiesByPersonId.get(id) || []
