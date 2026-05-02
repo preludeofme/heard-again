@@ -48,6 +48,22 @@ export function FamilyMemberCard({
   const selfCardColor = '#1a6b5a'
   const selfCardOutline = 'rgba(26, 107, 90, 0.08)'
 
+  const getLifeSpan = () => {
+    const getYear = (dateStr?: string | null) => {
+      if (!dateStr) return null;
+      const match = dateStr.match(/\d{4}/);
+      return match ? match[0] : null;
+    };
+    const bYear = getYear(person.birthDate);
+    const dYear = getYear(person.deathDate);
+    
+    if (bYear && dYear) return `${bYear} - ${dYear}`;
+    if (bYear) return `b. ${bYear}`;
+    if (dYear) return `d. ${dYear}`;
+    return null;
+  }
+  const lifeSpan = getLifeSpan();
+
   // Mobile: compact card — tap opens detail modal; no inline action buttons
   if (isMobile) {
     const avatarSize = isParentLevel ? 36 : level === 'grandparent' ? 30 : 28
@@ -97,6 +113,11 @@ export function FamilyMemberCard({
             >
               {person.name}
             </Typography>
+            {lifeSpan && (
+              <Typography sx={{ fontSize: '0.65rem', color: isParentLevel ? 'rgba(255,255,255,0.75)' : 'secondary.main', lineHeight: 1, mb: 0.25 }}>
+                {lifeSpan}
+              </Typography>
+            )}
             {isParentLevel && (
               <Typography
                 sx={{
@@ -180,6 +201,11 @@ export function FamilyMemberCard({
           >
             {person.name}
           </Typography>
+          {lifeSpan && (
+            <Typography variant="caption" sx={{ color: isParentLevel ? 'rgba(255,255,255,0.85)' : 'secondary.main', display: 'block', mb: 0.25 }}>
+              {lifeSpan}
+            </Typography>
+          )}
           <Typography variant={isParentLevel ? 'body2' : 'caption'} sx={{ color: isParentLevel ? 'rgba(255,255,255,0.7)' : 'secondary.main', fontWeight: 500 }}>
             {isParentLevel ? `${person.role} • ${person.memories || 0} Memories` : person.role}
           </Typography>
@@ -191,6 +217,7 @@ export function FamilyMemberCard({
           <Box sx={{ display: 'flex', gap: 1 }}>
             <Button
               fullWidth
+              className="nodrag"
               variant="text"
               startIcon={<AutoStories />}
               onClick={(e) => { e.stopPropagation(); onViewArchive(person) }}
@@ -201,6 +228,7 @@ export function FamilyMemberCard({
             {isSelf && onToggleSiblings && (
               <Button
                 variant="text"
+                className="nodrag"
                 onClick={(e) => { e.stopPropagation(); onToggleSiblings() }}
                 sx={{ 
                   flex: 1, 
@@ -220,21 +248,21 @@ export function FamilyMemberCard({
             )}
           </Box>
           <Box sx={{ display: 'flex', gap: 1 }}>
-            <Button variant="text" startIcon={<Edit />}
+            <Button variant="text" startIcon={<Edit />} className="nodrag"
               onClick={(e) => { e.stopPropagation(); onPersonClick(person) }}
               sx={{ flex: 1, color: 'white', bgcolor: 'rgba(255,255,255,0.1)', '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' }, justifyContent: 'center', py: 1, borderRadius: 2 }}
             >
               Edit
             </Button>
             {onSetRoot && !isSelf && (
-              <Button variant="text" startIcon={<TreeIcon />}
+              <Button variant="text" startIcon={<TreeIcon />} className="nodrag"
                 onClick={(e) => { e.stopPropagation(); onSetRoot(String(person.id)) }}
                 sx={{ flex: 1, color: 'white', bgcolor: 'rgba(255,255,255,0.1)', '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' }, justifyContent: 'center', py: 1, borderRadius: 2 }}
               >
                 Focus
               </Button>
             )}
-            <Button variant="text" startIcon={<PersonAdd />}
+            <Button variant="text" startIcon={<PersonAdd />} className="nodrag"
               onClick={(e) => { e.stopPropagation(); onAddPerson() }}
               sx={{ flex: 1, color: 'white', bgcolor: 'rgba(255,255,255,0.1)', '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' }, justifyContent: 'center', py: 1, borderRadius: 2 }}
             >

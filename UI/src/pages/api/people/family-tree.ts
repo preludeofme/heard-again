@@ -98,11 +98,25 @@ export default apiHandler({
     // 3. Determine root person
     let rootId = rootPersonId as string
     if (!rootId) {
-      // Find person with most connections if none provided
-      rootId = allPeople.reduce((prev, curr) => {
-        const prevCount = familiesByPersonId.get(prev.id)?.length || 0
-        const currCount = familiesByPersonId.get(curr.id)?.length || 0
-        return currCount > prevCount ? curr : prev
+      // Find the youngest person (newest member) who is connected to the tree
+      const connectedPeople = allPeople.filter(p => (familiesByPersonId.get(p.id)?.length || 0) > 0)
+      const searchPool = connectedPeople.length > 0 ? connectedPeople : allPeople
+      
+      rootId = searchPool.reduce((newest, current) => {
+        if (newest.birthDate && current.birthDate) {
+          const newDate = new Date(newest.birthDate).getTime()
+          const currDate = new Date(current.birthDate).getTime()
+          if (!isNaN(newDate) && !isNaN(currDate)) {
+            return currDate > newDate ? current : newest
+          }
+        }
+        if (current.birthDate && !isNaN(new Date(current.birthDate).getTime())) return current
+        if (newest.birthDate && !isNaN(new Date(newest.birthDate).getTime())) return newest
+        
+        // Fallback to most connections if no valid birth dates
+        const prevCount = familiesByPersonId.get(newest.id)?.length || 0
+        const currCount = familiesByPersonId.get(current.id)?.length || 0
+        return currCount > prevCount ? current : newest
       }).id
     }
 
@@ -180,38 +194,40 @@ export default apiHandler({
           })
           // Children
           unit.children.forEach(c => {
-            if (peopleIdsInResult.has(c.childId)) {
-              edges.push({
-                id: `parent-${person.id}-${c.childId}`,
-                type: 'CHILD',
-                direction: 'outgoing',
-                isBiological: c.relationshipType === 'BIOLOGICAL',
-                notes: null,
-                relatedPerson: c.child as any
-              })
-            }
+            edges.push({
+              id: `parent-${person.id}-${c.childId}`,
+              type: 'CHILD',
+              direction: 'outgoing',
+              isBiological: c.relationshipType === 'BIOLOGICAL',
+              notes: null,
+              relatedPerson: c.child as any
+            })
           })
         }
         
         if (isChild) {
           // Parents
           unit.parents.forEach(p => {
-            if (peopleIdsInResult.has(p.parentId)) {
-              edges.push({
-                id: `child-${person.id}-${p.parentId}`,
-                type: 'PARENT',
-                direction: 'incoming',
-                isBiological: p.relationshipType === 'BIOLOGICAL',
-                notes: null,
-                relatedPerson: p.parent as any
-              })
-            }
+            edges.push({
+              id: `child-${person.id}-${p.parentId}`,
+              type: 'PARENT',
+              direction: 'incoming',
+              isBiological: p.relationshipType === 'BIOLOGICAL',
+              notes: null,
+              relatedPerson: p.parent as any
+            })
           })
         }
       })
       
       return { ...person, relationshipEdges: edges }
     })
+
+    console.log(`[Family Tree API] Returning ${responseData.length} people. Root ID: ${rootId}`);
+    if (responseData.length > 1) {
+      console.log(`[Family Tree API] Sample edges for root:`, responseData.find(p => p.id === rootId)?.relationshipEdges);
+      console.log(`[Family Tree API] Sample edges for second person:`, responseData.find(p => p.id !== rootId)?.relationshipEdges);
+    }
 
     return res.status(200).json({
       success: true,

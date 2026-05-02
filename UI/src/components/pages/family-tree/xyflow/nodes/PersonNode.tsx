@@ -12,7 +12,9 @@ export function PersonNode({ data }: NodeProps): React.JSX.Element {
   return (
     <>
       <Handle type="target" id="top" position={Position.Top} style={{ opacity: 0 }} />
+      <Handle type="source" id="top" position={Position.Top} style={{ opacity: 0 }} />
       <Handle type="target" id="left" position={Position.Left} style={{ opacity: 0 }} />
+      <Handle type="source" id="left" position={Position.Left} style={{ opacity: 0 }} />
       <FamilyMemberCard
         person={d.person}
         level={d.level}
@@ -25,7 +27,9 @@ export function PersonNode({ data }: NodeProps): React.JSX.Element {
         onSetRoot={d.onSetRoot}
       />
       <Handle type="source" id="bottom" position={Position.Bottom} style={{ opacity: 0 }} />
+      <Handle type="target" id="bottom" position={Position.Bottom} style={{ opacity: 0 }} />
       <Handle type="source" id="right" position={Position.Right} style={{ opacity: 0 }} />
+      <Handle type="target" id="right" position={Position.Right} style={{ opacity: 0 }} />
     </>
   )
 }

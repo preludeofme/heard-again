@@ -29,6 +29,7 @@ The current API returns a custom JSON format. We need to map this to Topola's in
   - Map `RelationshipEdges` to Topola's `Family`.
   - Handle metadata (avatars, role labels, story counts).
 
+
 ## 5. Phase 3: Core Component Implementation
 - [x] **`TopolaTreeCanvas.tsx`**:
   - Initialize the Topola layout engine.

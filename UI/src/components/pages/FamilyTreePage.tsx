@@ -92,11 +92,13 @@ export function FamilyTreePage({
   // Derive rootPersonId from rawPeople if not supplied by the page
   const effectiveRootId: string = useMemo(() => {
     if (rootPersonId) return rootPersonId
-    const self = rawPeople.find((p) =>
-      p.relationshipEdges.some((e) => e.type === 'PARENT') &&
-      p.relationshipEdges.some((e) => e.type === 'CHILD')
-    ) ?? rawPeople[0]
-    return self ? self.id : ''
+    const newest = [...rawPeople].sort((a, b) => {
+      const aTime = a.birthDate ? new Date(a.birthDate).getTime() : 0
+      const bTime = b.birthDate ? new Date(b.birthDate).getTime() : 0
+      if (!isNaN(aTime) && !isNaN(bTime)) return bTime - aTime // descending
+      return 0
+    })[0]
+    return newest ? newest.id : ''
   }, [rootPersonId, rawPeople])
 
   // Canvas ref for zoom/pan controls
@@ -111,6 +113,7 @@ export function FamilyTreePage({
   const [legendCollapsed, setLegendCollapsed] = useState(false)
   const [insightCollapsed, setInsightCollapsed] = useState(false)
   const [selectedSearchMemberId, setSelectedSearchMemberId] = useState<string | null>(null)
+  const [isPanMode, setIsPanMode] = useState(true)
 
   // Data states
   const [personDetail, setPersonDetail] = useState<Record<string, unknown> | null>(null)
@@ -350,14 +353,24 @@ export function FamilyTreePage({
           >
             <IconButton
               size="small"
-              sx={{ color: 'primary.main' }}
+              sx={{ 
+                color: !isPanMode ? 'primary.main' : 'text.secondary',
+                bgcolor: !isPanMode ? 'rgba(22, 51, 74, 0.08)' : 'transparent',
+                '&:hover': { bgcolor: !isPanMode ? 'rgba(22, 51, 74, 0.12)' : 'rgba(0,0,0,0.04)' }
+              }}
+              onClick={() => setIsPanMode(false)}
               title="Pointer tool"
             >
               <NearMe sx={{ fontSize: 18 }} />
             </IconButton>
             <IconButton
               size="small"
-              sx={{ color: 'primary.main' }}
+              sx={{ 
+                color: isPanMode ? 'primary.main' : 'text.secondary',
+                bgcolor: isPanMode ? 'rgba(22, 51, 74, 0.08)' : 'transparent',
+                '&:hover': { bgcolor: isPanMode ? 'rgba(22, 51, 74, 0.12)' : 'rgba(0,0,0,0.04)' }
+              }}
+              onClick={() => setIsPanMode(true)}
               title="Pan (drag canvas)"
             >
               <PanTool sx={{ fontSize: 18 }} />
@@ -427,6 +440,8 @@ export function FamilyTreePage({
             onAddPerson={handleAddPerson}
             onViewArchive={handleViewArchive}
             onSetRoot={onSetRoot}
+            onLoadMore={_onLoadMore}
+            isPanMode={isPanMode}
           />
         ) : (
           /* Empty state */

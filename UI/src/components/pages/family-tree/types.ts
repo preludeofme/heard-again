@@ -5,6 +5,8 @@ export interface TreePerson {
   name: string
   role: string
   avatar: string
+  birthDate?: string | null
+  deathDate?: string | null
   memories?: number
   selected?: boolean
   spouseWithNext?: boolean

@@ -12,12 +12,14 @@ import {
 import '@xyflow/react/dist/style.css'
 import { PersonNode } from './nodes/PersonNode'
 import { FamilyNode } from './nodes/FamilyNode'
+import { StubNode } from './nodes/StubNode'
 import { buildFamilyTreeLayout } from './layout'
 import type { ApiPersonWithEdges, TreeLayoutPerson } from './types'
 
 const nodeTypes: NodeTypes = {
   personNode: PersonNode as NodeTypes[string],
   familyNode: FamilyNode as NodeTypes[string],
+  stubNode: StubNode as NodeTypes[string],
 }
 
 export interface ReactFlowTreeCanvasHandle {
@@ -35,6 +37,8 @@ interface ReactFlowTreeCanvasProps {
   onAddPerson: () => void
   onViewArchive: (person: TreeLayoutPerson) => void
   onSetRoot?: (id: string) => void
+  onLoadMore?: (direction: 'up' | 'down') => void
+  isPanMode?: boolean
 }
 
 // Inner component — must be inside ReactFlowProvider to use useReactFlow
@@ -47,14 +51,16 @@ function ReactFlowTreeCanvasInner({
   onAddPerson,
   onViewArchive,
   onSetRoot,
+  onLoadMore,
+  isPanMode = true,
 }: ReactFlowTreeCanvasProps): React.JSX.Element {
   const { zoomIn, zoomOut, fitView } = useReactFlow()
   const [nodes, setNodes, onNodesChange] = useNodesState([])
   const [edges, setEdges, onEdgesChange] = useEdgesState([])
 
   // Keep a stable ref to callbacks to avoid re-running layout when parent re-renders
-  const callbacksRef = useRef({ onPersonClick, onAddPerson, onViewArchive, onSetRoot, isMobile })
-  callbacksRef.current = { onPersonClick, onAddPerson, onViewArchive, onSetRoot, isMobile }
+  const callbacksRef = useRef({ onPersonClick, onAddPerson, onViewArchive, onSetRoot, onLoadMore, isMobile })
+  callbacksRef.current = { onPersonClick, onAddPerson, onViewArchive, onSetRoot, onLoadMore, isMobile }
 
   useEffect(() => {
     if (people.length === 0) {
@@ -97,10 +103,11 @@ function ReactFlowTreeCanvasInner({
       maxZoom={2}
       nodesDraggable={false}
       nodesConnectable={false}
-      elementsSelectable={false}
+      elementsSelectable={true}
+      nodesFocusable={false}
       panOnScroll={false}
       zoomOnScroll={true}
-      panOnDrag={true}
+      panOnDrag={isPanMode}
       onlyRenderVisibleElements={true}
       style={{ width: '100%', height: '100%', background: 'transparent' }}
     >

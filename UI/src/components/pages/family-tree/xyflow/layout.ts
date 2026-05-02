@@ -1,9 +1,15 @@
 import type { Node, Edge } from '@xyflow/react'
+import type { TreePerson } from '../types'
 import type { ApiPersonWithEdges, TreeLayoutPerson, PersonNodeData, TreeNodeLevel } from './types'
 
 // ─── Layout constants ────────────────────────────────────────────────────────
 
 const PARENT_WIDTH = 288
+const STUB_WIDTH = 144
+const STUB_HEIGHT = 32
+const STUB_GAP = 20
+const STUB_EDGE_COLOR = 'rgba(22, 51, 74, 0.28)'
+const STUB_EDGE_WIDTH = 2
 const PARENT_HEIGHT = 290
 const GRANDPARENT_WIDTH = 256
 const GRANDPARENT_HEIGHT = 100
@@ -28,10 +34,11 @@ interface FamilyUnit {
 }
 
 interface LayoutCallbacks {
-  onPersonClick: (person: TreeLayoutPerson) => void
+  onPersonClick: (person: TreePerson) => void
   onAddPerson: () => void
-  onViewArchive: (person: TreeLayoutPerson) => void
+  onViewArchive: (person: TreePerson) => void
   onSetRoot?: (id: string) => void
+  onLoadMore?: (direction: 'up' | 'down') => void
   isMobile: boolean
 }
 
@@ -221,8 +228,8 @@ export function buildFamilyTreeLayout(
     sortedByGeneration.set(gen, sortGenerationRow(ids, spousesByPerson))
   })
 
-  // Assign Y positions: oldest generation at top
-  const sortedGens = Array.from(byGeneration.keys()).sort((a, b) => b - a)
+  // Assign Y positions: newest generation at top
+  const sortedGens = Array.from(byGeneration.keys()).sort((a, b) => a - b)
   const rowY = new Map<number, number>()
   sortedGens.forEach((gen, index) => {
     rowY.set(gen, index * V_ROW_GAP)
@@ -264,6 +271,8 @@ export function buildFamilyTreeLayout(
         name: buildDisplayName(person),
         role: isSelf ? 'Self' : 'Family Member',
         avatar: person.avatarUrl ?? '',
+        birthDate: person.birthDate,
+        deathDate: person.deathDate,
         memories: person.counts?.stories ?? 0,
         selected: isSelf,
         width,
@@ -287,7 +296,7 @@ export function buildFamilyTreeLayout(
         position: { x, y },
         data: nodeData as unknown as Record<string, unknown>,
         draggable: false,
-        style: { width, height },
+        style: { width, height, pointerEvents: 'all' },
       })
     })
   })
@@ -321,9 +330,9 @@ export function buildFamilyTreeLayout(
     // Family junction position
     const junctionX =
       parentPositions.reduce((s, p) => s + p.x + p.width / 2, 0) / parentPositions.length
-    const parentBottomY = Math.max(...parentPositions.map((p) => p.y + p.height))
-    const childTopY = Math.min(...childPositionsArr.map((p) => p.y))
-    const junctionY = (parentBottomY + childTopY) / 2
+    const parentTopY = Math.min(...parentPositions.map((p) => p.y))
+    const childBottomY = Math.max(...childPositionsArr.map((p) => p.y + p.height))
+    const junctionY = (parentTopY + childBottomY) / 2
 
     const junctionId = `family::${unit.key}`
     nodes.push({
@@ -341,8 +350,8 @@ export function buildFamilyTreeLayout(
         id: `edge-parent-${parentId}-${junctionId}`,
         source: parentId,
         target: junctionId,
-        sourceHandle: 'bottom',
-        targetHandle: 'top',
+        sourceHandle: 'top',
+        targetHandle: 'bottom',
         type: 'smoothstep',
         style: { stroke: BIO_COLOR, strokeWidth: CONNECTOR_WIDTH },
         animated: false,
@@ -385,14 +394,98 @@ export function buildFamilyTreeLayout(
         id: `edge-family-${junctionId}-${childId}`,
         source: junctionId,
         target: childId,
-        sourceHandle: 'bottom',
-        targetHandle: 'top',
+        sourceHandle: 'top',
+        targetHandle: 'bottom',
         type: 'smoothstep',
         style: {
           stroke: edgeColor,
           strokeWidth: CONNECTOR_WIDTH,
           strokeDasharray: isBiological ? undefined : '6 4',
         },
+        animated: false,
+      })
+    }
+  }
+
+  // ─── Step 5: Pagination Stubs ───────────────────────────────────────────────
+  
+  for (const person of people) {
+    const pos = personPositions.get(person.id)
+    if (!pos) continue
+
+    let hasMissingParent = false
+    let hasMissingChild = false
+
+    const gen = generationById.get(person.id) ?? 0
+
+    for (const edge of person.relationshipEdges) {
+      if (peopleById.has(edge.relatedPerson.id)) continue
+
+      const isParentEdge = (edge.type === 'PARENT' && edge.direction === 'incoming') || (edge.type === 'CHILD' && edge.direction === 'incoming')
+      const isChildEdge = (edge.type === 'CHILD' && edge.direction === 'outgoing') || (edge.type === 'PARENT' && edge.direction === 'outgoing')
+
+      if (isParentEdge && gen >= 0) hasMissingParent = true
+      if (isChildEdge && gen <= 0) hasMissingChild = true
+    }
+
+    if (hasMissingParent) {
+      const stubId = `stub-up-${person.id}`
+      const stubX = pos.x + pos.width / 2 - STUB_WIDTH / 2
+      const stubY = pos.y + pos.height + STUB_GAP
+
+      nodes.push({
+        id: stubId,
+        type: 'stubNode',
+        position: { x: stubX, y: stubY },
+        data: {
+          targetId: person.id,
+          direction: 'up',
+          onSetRoot: callbacks.onSetRoot,
+          onLoadMore: callbacks.onLoadMore,
+        } as unknown as Record<string, unknown>,
+        draggable: false,
+        style: { width: STUB_WIDTH, height: STUB_HEIGHT, pointerEvents: 'all' },
+      })
+
+      edges.push({
+        id: `edge-${stubId}`,
+        source: person.id,
+        target: stubId,
+        sourceHandle: 'bottom',
+        targetHandle: 'top',
+        type: 'straight',
+        style: { stroke: STUB_EDGE_COLOR, strokeWidth: STUB_EDGE_WIDTH, strokeDasharray: '4 4' },
+        animated: false,
+      })
+    }
+
+    if (hasMissingChild) {
+      const stubId = `stub-down-${person.id}`
+      const stubX = pos.x + pos.width / 2 - STUB_WIDTH / 2
+      const stubY = pos.y - STUB_GAP - STUB_HEIGHT
+
+      nodes.push({
+        id: stubId,
+        type: 'stubNode',
+        position: { x: stubX, y: stubY },
+        data: {
+          targetId: person.id,
+          direction: 'down',
+          onSetRoot: callbacks.onSetRoot,
+          onLoadMore: callbacks.onLoadMore,
+        } as unknown as Record<string, unknown>,
+        draggable: false,
+        style: { width: STUB_WIDTH, height: STUB_HEIGHT, pointerEvents: 'all' },
+      })
+
+      edges.push({
+        id: `edge-${stubId}`,
+        source: stubId,
+        target: person.id,
+        sourceHandle: 'bottom',
+        targetHandle: 'top',
+        type: 'straight',
+        style: { stroke: STUB_EDGE_COLOR, strokeWidth: STUB_EDGE_WIDTH, strokeDasharray: '4 4' },
         animated: false,
       })
     }

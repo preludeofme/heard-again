@@ -1,4 +1,5 @@
 // Shared types for the @xyflow/react family tree layer
+import { TreePerson } from '../types'
 
 export interface ApiPerson {
   id: string
@@ -8,6 +9,8 @@ export interface ApiPerson {
   avatarUrl?: string | null
   personType?: string
   sex?: 'M' | 'F' | 'U' | 'X'
+  birthDate?: string | null
+  deathDate?: string | null
   counts?: { stories?: number; voiceProfiles?: number; relationships?: number }
 }
 
@@ -32,13 +35,8 @@ export interface ApiPersonWithEdges extends ApiPerson {
 }
 
 /** Generation-aware person for layout and card rendering */
-export interface TreeLayoutPerson {
+export interface TreeLayoutPerson extends TreePerson {
   id: string
-  name: string
-  role: string
-  avatar: string
-  memories?: number
-  selected?: boolean
   /** Card width assigned during layout — varies by generation */
   width: number
   /** Card height assigned during layout — varies by generation */
@@ -53,9 +51,9 @@ export interface PersonNodeData {
   level: TreeNodeLevel
   isSelf: boolean
   isMobile: boolean
-  onPersonClick: (person: TreeLayoutPerson) => void
+  onPersonClick: (person: TreePerson) => void
   onAddPerson: () => void
-  onViewArchive: (person: TreeLayoutPerson) => void
+  onViewArchive: (person: TreePerson) => void
   onSetRoot?: (id: string) => void
 }
 
@@ -74,4 +72,11 @@ export type FamilyFlowNode = {
   position: { x: number; y: number }
   data: Record<string, never>
   draggable?: boolean
+}
+
+/** Data attached to a stubNode in React Flow */
+export interface StubNodeData {
+  targetId: string
+  direction: 'up' | 'down'
+  onSetRoot?: (id: string) => void
 }
