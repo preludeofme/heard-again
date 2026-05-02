@@ -101,7 +101,7 @@ function ReactFlowTreeCanvasInner({
       panOnScroll={false}
       zoomOnScroll={true}
       panOnDrag={true}
-      style={{ background: 'transparent' }}
+      style={{ width: '100%', height: '100%', background: 'transparent' }}
     >
       <Background
         variant={BackgroundVariant.Dots}
@@ -116,7 +116,9 @@ function ReactFlowTreeCanvasInner({
 export function ReactFlowTreeCanvas(props: ReactFlowTreeCanvasProps): React.JSX.Element {
   return (
     <ReactFlowProvider>
-      <ReactFlowTreeCanvasInner {...props} />
+      <div style={{ width: '100%', height: '100%' }}>
+        <ReactFlowTreeCanvasInner {...props} />
+      </div>
     </ReactFlowProvider>
   )
 }

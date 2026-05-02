@@ -407,11 +407,11 @@ export function FamilyTreePage({
         </Box>
       </Box>
 
-      {/* Family Tree Canvas */}
+      {/* Family Tree Canvas — React Flow requires explicit pixel height on its parent */}
       <Box
         sx={{
           position: 'relative',
-          minHeight: isFullscreen ? 'calc(100vh - 140px)' : 700,
+          height: isFullscreen ? 'calc(100vh - 140px)' : 700,
           width: '100%',
           bgcolor: 'rgba(208, 227, 230, 0.3)',
           borderRadius: 6,
