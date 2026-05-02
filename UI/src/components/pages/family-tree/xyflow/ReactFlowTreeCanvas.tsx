@@ -101,6 +101,7 @@ function ReactFlowTreeCanvasInner({
       panOnScroll={false}
       zoomOnScroll={true}
       panOnDrag={true}
+      onlyRenderVisibleElements={true}
       style={{ width: '100%', height: '100%', background: 'transparent' }}
     >
       <Background
