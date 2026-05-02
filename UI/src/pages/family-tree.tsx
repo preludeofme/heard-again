@@ -472,6 +472,7 @@ export default function FamilyTree() {
     || router.query.expandSearch === 'true'
   const initialSearchQuery = typeof router.query.search === 'string' ? router.query.search : ''
   const [treeData, setTreeData] = useState<FamilyTreeData | null>(null)
+  const [rawPeopleData, setRawPeopleData] = useState<ApiPersonWithEdges[]>([])
   const [people, setPeople] = useState<ApiPerson[]>([])
   const [isLoading, setIsLoading] = useState(true)
   
@@ -493,8 +494,9 @@ export default function FamilyTree() {
         
         // Extract base people without relationships for other uses
         const basePeople = peopleWithEdges.map(({ relationshipEdges, ...person }) => person)
-        
+
         setPeople(basePeople)
+        setRawPeopleData(peopleWithEdges)
         setTreeData(mapPeopleToTree(peopleWithEdges, selectedPersonIdFromQuery))
       }
     } catch {
@@ -623,8 +625,10 @@ export default function FamilyTree() {
   }
 
   const treeContent = (
-    <FamilyTreePage 
-      people={treeData ?? undefined} 
+    <FamilyTreePage
+      people={treeData ?? undefined}
+      rawPeople={rawPeopleData}
+      rootPersonId={selectedPersonIdFromQuery}
       onPersonClick={handlePersonClick}
       onAddPerson={() => setIsAddPersonModalOpen(true)}
       onEditRelationships={handleEditRelationships}
