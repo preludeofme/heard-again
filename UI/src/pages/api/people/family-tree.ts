@@ -122,17 +122,24 @@ export default apiHandler({
       }).id
     }
 
-    // 4. Strict Lineage Traversal
+    // 4. Balanced Traversal (Include full family units at each step)
     const results = new Set<string>()
     results.add(rootId)
+
+    // Helper to add a full family unit to results
+    const addFamilyUnit = (unit: typeof allFamilyUnits[0]) => {
+      unit.parents.forEach(p => results.add(p.parentId))
+      unit.children.forEach(c => results.add(c.childId))
+    }
 
     // A. Ancestry Pass (UP)
     const traverseUp = (id: string, currentDepth: number) => {
       if (currentDepth >= dUp) return
       const families = familiesByPersonId.get(id) || []
+      // For anyone in the tree, find families where they are a child (their parents' unit)
       families.filter(f => f.isChild).forEach(f => {
+        addFamilyUnit(f.unit)
         f.unit.parents.forEach(p => {
-          results.add(p.parentId)
           traverseUp(p.parentId, currentDepth + 1)
         })
       })
@@ -143,28 +150,30 @@ export default apiHandler({
     const traverseDown = (id: string, currentDepth: number) => {
       if (currentDepth >= dDown) return
       const families = familiesByPersonId.get(id) || []
+      // For anyone in the tree, find families where they are a parent (their children's unit)
       families.filter(f => f.isParent).forEach(f => {
+        addFamilyUnit(f.unit)
         f.unit.children.forEach(c => {
-          results.add(c.childId)
           traverseDown(c.childId, currentDepth + 1)
         })
       })
     }
     traverseDown(rootId, 0)
 
-    // C. Targeted branch expansions — load 1 level from each explicitly expanded person
+    // C. Targeted branch expansions
     expandUpIds.forEach(id => { if (familiesByPersonId.has(id)) traverseUp(id, dUp - 1) })
     expandDownIds.forEach(id => { if (familiesByPersonId.has(id)) traverseDown(id, dDown - 1) })
 
-    // D. Siblings Pass (Optional)
+    // D. Siblings Pass (Keep for backward compatibility with query param)
     if (shouldIncludeSiblings) {
       const rootFamilies = familiesByPersonId.get(rootId) || []
       rootFamilies.filter(f => f.isChild).forEach(f => {
-        f.unit.children.forEach(c => results.add(c.childId))
+        addFamilyUnit(f.unit)
       })
     }
 
     // E. Spousal Pass (Include spouses of everyone collected so far)
+    // This is now largely covered by addFamilyUnit, but we check again for anyone missed
     const baseCollected = Array.from(results)
     baseCollected.forEach(id => {
       const families = familiesByPersonId.get(id) || []

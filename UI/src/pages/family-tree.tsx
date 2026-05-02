@@ -272,11 +272,11 @@ export default function FamilyTree() {
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false)
 
   const [loadedDepths, setLoadedDepths] = useState({ up: 2, down: 2 })
-  const [includeSiblings, setIncludeSiblings] = useState(false)
+  const [includeSiblings, setIncludeSiblings] = useState(true)
   const [isIncrementalLoading, setIsIncrementalLoading] = useState(false)
   const [expandedPersonIds, setExpandedPersonIds] = useState<{ up: Set<string>; down: Set<string> }>({ up: new Set(), down: new Set() })
 
-  const fetchPeople = useCallback(async (depths = { up: 2, down: 2 }, rootId?: string, siblings = false, expandIds?: { up: Set<string>; down: Set<string> }) => {
+  const fetchPeople = useCallback(async (depths = { up: 2, down: 2 }, rootId?: string, siblings = true, expandIds?: { up: Set<string>; down: Set<string> }) => {
     try {
       const rootParam = rootId ? `&rootPersonId=${rootId}` : ''
       const expandUpParam = expandIds?.up.size ? `&expandUp=${Array.from(expandIds.up).join(',')}` : ''
@@ -306,7 +306,7 @@ export default function FamilyTree() {
   }, [selectedPersonIdFromQuery])
 
   useEffect(() => {
-    fetchPeople({ up: 2, down: 2 }, undefined, false)
+    fetchPeople({ up: 2, down: 2 }, undefined, true)
   }, [fetchPeople])
 
   // Logic to load more when needed — expands only the specific person's branch
@@ -335,7 +335,7 @@ export default function FamilyTree() {
     setIsIncrementalLoading(true)
     const cleared = { up: new Set<string>(), down: new Set<string>() }
     setExpandedPersonIds(cleared)
-    fetchPeople({ up: 2, down: 2 }, id, false, cleared)
+    fetchPeople({ up: 2, down: 2 }, id, true, cleared)
   }, [fetchPeople, isIncrementalLoading])
 
   const handlePersonClick = (person: { id: string | number; name: string; avatar: string }) => {
@@ -444,8 +444,8 @@ export default function FamilyTree() {
       // Show success modal
       setIsSuccessModalOpen(true)
       
-      // Refresh the tree
-      fetchPeople()
+      // Refresh the tree, centering on the new person
+      fetchPeople({ up: 2, down: 2 }, createdPersonId, true)
     } catch (error) {
       console.error('Failed to create person:', error)
       // Show error to user but don't re-throw to allow modal to handle properly
