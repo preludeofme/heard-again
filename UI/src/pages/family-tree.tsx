@@ -258,6 +258,7 @@ export default function FamilyTree() {
     || router.query.expandSearch === 'true'
   const initialSearchQuery = typeof router.query.search === 'string' ? router.query.search : ''
   const [treeData, setTreeData] = useState<FamilyTreeData | null>(null)
+  const [rawPeopleData, setRawPeopleData] = useState<ApiPersonWithEdges[]>([])
   const [people, setPeople] = useState<ApiPerson[]>([])
   const [rawPeople, setRawPeople] = useState<ApiPersonWithEdges[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -283,7 +284,7 @@ export default function FamilyTree() {
       if (data.success && data.data) {
         const peopleWithEdges = data.data as ApiPersonWithEdges[]
         const basePeople = peopleWithEdges.map(({ relationshipEdges, ...person }) => person)
-        
+
         setPeople(basePeople)
         setRawPeople(peopleWithEdges)
         // Use the rootPersonId returned by API to ensure consistency
@@ -476,6 +477,7 @@ export default function FamilyTree() {
       <FamilyTreePage
         people={treeData ?? undefined}
         rawPeople={rawPeople}
+        rootPersonId={treeData?.rootPersonId}
         onPersonClick={handlePersonClick}
         onAddPerson={() => setIsAddPersonModalOpen(true)}
         onEditRelationships={handleEditRelationships}

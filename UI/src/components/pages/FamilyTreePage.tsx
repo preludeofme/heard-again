@@ -1,32 +1,56 @@
-import React, { useMemo, useRef, useEffect } from 'react'
+import React, { useMemo, useState, useRef, useCallback } from 'react'
+import { useRouter } from 'next/router'
 import {
   Box,
+  Typography,
+  Button,
+  Card,
+  Divider,
+  IconButton,
   useTheme,
-  useMediaQuery,
 } from '@mui/material'
-import { SearchableFamilyMember } from '@/components/search'
-import { useFamilyTree } from './family-tree/useFamilyTree'
-import { FamilyTreeControls } from './family-tree/FamilyTreeControls'
-import { TopolaTreeCanvas } from './family-tree/topola/TopolaTreeCanvas'
-import { FamilyTreeModals } from './family-tree/FamilyTreeModals'
-import { FamilyTreeSidebar } from './family-tree/FamilyTreeSidebar'
-import { FamilyTreeSearchOverlay } from './family-tree/FamilyTreeSearchOverlay'
+import {
+  ZoomIn,
+  ZoomOut,
+  RestartAlt,
+  Add,
+  AutoFixHigh,
+  AutoStories,
+  PersonAdd,
+  NearMe,
+  PanTool,
+  Fullscreen,
+  FullscreenExit,
+  ExpandMore,
+  ExpandLess,
+} from '@mui/icons-material'
+import { PersonDetailModal } from '@/components/modals/PersonDetailModal'
+import { AddEditPersonModal, PersonFormData } from '@/components/modals/AddEditPersonModal'
+import { FamilyMemberSearch, SearchableFamilyMember } from '@/components/search'
+import { fetchWithCSRFAndJSON, fetchWithCSRF } from '@/lib/api-client'
+import { ReactFlowTreeCanvas, ReactFlowTreeCanvasHandle } from '@/components/pages/family-tree/xyflow/ReactFlowTreeCanvas'
+import type { ApiPersonWithEdges, TreeLayoutPerson } from '@/components/pages/family-tree/xyflow/types'
+import type { PersonType } from '@/contracts'
 
-import { TreePerson, FamilyTreeData } from './family-tree/types'
+const CONNECTOR_BIOLOGICAL_COLOR = 'rgba(22, 51, 74, 0.52)'
+const CONNECTOR_NON_BIO_COLOR = 'rgba(22, 51, 74, 0.35)'
+const CONNECTOR_SPOUSE_COLOR = 'rgba(22, 51, 74, 0.34)'
+const CONNECTOR_THICKNESS = 3
 
-import { ApiPersonWithEdges } from './family-tree/topola/adapters/HeardAgainDataAdapter'
+// ─── Props ────────────────────────────────────────────────────────────────────
 
 interface FamilyTreePageProps {
-  people?: FamilyTreeData
+  /** Legacy mapped data — unused by canvas, kept for prop compatibility */
+  people?: unknown
+  /** Raw API data — drives the @xyflow/react canvas and search overlay */
   rawPeople?: ApiPersonWithEdges[]
-  onPersonClick?: (person: TreePerson) => void
+  rootPersonId?: string
+  onPersonClick?: (person: { id: string | number; name: string; avatar: string }) => void
   onAddPerson?: () => void
   onEditRelationships?: (personId: string) => void
   onPeopleChanged?: () => void
   isFullscreen?: boolean
   onToggleFullscreen?: () => void
-  initialSearchExpanded?: boolean
-  initialSearchQuery?: string
   onImportGedcom?: () => void
   onExportGedcom?: () => void
   onLoadMore?: (direction: 'up' | 'down') => void
@@ -35,134 +59,234 @@ interface FamilyTreePageProps {
   includeSiblings?: boolean
   loadedDepths?: { up: number; down: number }
   isLoadingMore?: boolean
+  initialSearchExpanded?: boolean
+  initialSearchQuery?: string
 }
 
-const defaultFamilyData: FamilyTreeData = {
-  generations: {},
-  relationshipEdges: [],
-}
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export function FamilyTreePage({
-  people,
-  rawPeople,
+  people: _people,
+  rawPeople = [],
+  rootPersonId,
+  onPeopleChanged: _onPeopleChanged,
+  onImportGedcom: _onImportGedcom,
+  onExportGedcom: _onExportGedcom,
+  onLoadMore: _onLoadMore,
+  onToggleSiblings: _onToggleSiblings,
+  onSetRoot,
+  includeSiblings: _includeSiblings,
+  loadedDepths: _loadedDepths,
+  isLoadingMore: _isLoadingMore,
   onPersonClick,
   onAddPerson,
   onEditRelationships,
-  onPeopleChanged,
   isFullscreen = false,
   onToggleFullscreen,
-  onImportGedcom,
-  onExportGedcom,
-  onLoadMore,
-  onToggleSiblings,
-  onSetRoot,
-  includeSiblings = false,
-  loadedDepths = { up: 2, down: 2 },
-  isLoadingMore = false,
-}: FamilyTreePageProps) {
-  const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
-  const familyData = people && people.generations
-    ? people
-    : defaultFamilyData
+  initialSearchExpanded = false,
+}: FamilyTreePageProps): React.JSX.Element {
+  const router = useRouter()
+  useTheme()
 
-  const {
-    // View state
-    zoomLevel,
-    setZoomLevel,
-    panOffset,
-    setPanOffset,
-    toolMode,
-    setToolMode,
-    isDragging,
-    
-    // Modal state
-    detailModalOpen,
-    setDetailModalOpen,
-    addEditModalOpen,
-    setAddEditModalOpen,
-    addEditMode,
-    selectedPersonId,
-    isSubmitting,
-    
-    // Sidebar state
-    legendCollapsed,
-    setLegendCollapsed,
-    
-    // Detail data
-    personDetail,
-    personStories,
-    personVoiceProfiles,
-    personRelationships,
-    isLoadingDetail,
-    detailError,
-    
-    // Voice training
-    voiceTrainingPersonId,
-    setVoiceTrainingPersonId,
-    
-    // Search
-    searchOverlayOpen,
-    setSearchOverlayOpen,
-    overlayQuery,
-    setOverlayQuery,
-    
-    // Handlers
-    handlePersonClick,
-    handleAddPerson,
-    handleEditPerson,
-    handleSubmitPerson,
-    handleDeletePerson,
-    handleAddStory,
-    handleAddVoiceProfile,
-    handleAddRelationship,
-    handleZoomIn,
-    handleZoomOut,
-    handleResetView,
-    handleOpenRelationshipEditor,
-    handleCanvasMouseDown,
-    handleCanvasMouseMove,
-    handleCanvasMouseUp,
-    handleCanvasTouchStart,
-    handleCanvasTouchMove,
-    handleCanvasTouchEnd,
-    handleViewArchive,
-  } = useFamilyTree(familyData, onPersonClick, onAddPerson, onEditRelationships, onPeopleChanged)
+  // Derive rootPersonId from rawPeople if not supplied by the page
+  const effectiveRootId: string = useMemo(() => {
+    if (rootPersonId) return rootPersonId
+    const self = rawPeople.find((p) =>
+      p.relationshipEdges.some((e) => e.type === 'PARENT') &&
+      p.relationshipEdges.some((e) => e.type === 'CHILD')
+    ) ?? rawPeople[0]
+    return self ? self.id : ''
+  }, [rootPersonId, rawPeople])
 
-  const overlayInputRef = useRef<HTMLInputElement>(null)
+  // Canvas ref for zoom/pan controls
+  const canvasRef = useRef<ReactFlowTreeCanvasHandle>(null)
 
+  // Modal states
+  const [detailModalOpen, setDetailModalOpen] = useState(false)
+  const [addEditModalOpen, setAddEditModalOpen] = useState(false)
+  const [addEditMode, setAddEditMode] = useState<'create' | 'edit'>('create')
+  const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [legendCollapsed, setLegendCollapsed] = useState(false)
+  const [insightCollapsed, setInsightCollapsed] = useState(false)
+  const [selectedSearchMemberId, setSelectedSearchMemberId] = useState<string | null>(null)
+
+  // Data states
+  const [personDetail, setPersonDetail] = useState<Record<string, unknown> | null>(null)
+  const [personStories, setPersonStories] = useState<unknown[]>([])
+  const [personVoiceProfiles, setPersonVoiceProfiles] = useState<unknown[]>([])
+  const [personRelationships, setPersonRelationships] = useState<unknown[]>([])
+  const [isLoadingDetail, setIsLoadingDetail] = useState(false)
+  const [detailError, setDetailError] = useState<string | null>(null)
+
+  // Search overlay members — derived directly from rawPeople
   const searchableMembers = useMemo<SearchableFamilyMember[]>(() => {
-    const normalize = (person: TreePerson): SearchableFamilyMember => ({
-      id: String(person.id),
-      name: person.name,
-      relationship: person.role,
-      avatar: person.avatar,
-    })
+    return rawPeople.map((p) => ({
+      id: p.id,
+      name: p.displayName || `${p.firstName}${p.lastName ? ' ' + p.lastName : ''}`,
+      relationship: 'Family Member',
+      avatar: p.avatarUrl || '',
+    }))
+  }, [rawPeople])
 
-    return Object.values(familyData.generations || {}).flat().map(normalize)
-  }, [familyData.generations])
+  // ─── Handlers ───────────────────────────────────────────────────────────────
 
-  const [selectedSearchMemberId, setSelectedSearchMemberId] = React.useState<string | null>(null)
+  const handlePersonClick = useCallback(
+    async (person: TreeLayoutPerson) => {
+      setSelectedPersonId(String(person.id))
+      setDetailModalOpen(true)
+      onPersonClick?.({ id: person.id, name: person.name, avatar: person.avatar })
 
-// Side effects
-useEffect(() => {
-  if (!selectedSearchMemberId) return
+      setIsLoadingDetail(true)
+      setDetailError(null)
+      try {
+        const [personRes, storiesRes, relationshipsRes] = await Promise.all([
+          fetch(`/api/people/${person.id}`, { credentials: 'include' }),
+          fetch(`/api/stories?personId=${person.id}&limit=20`, { credentials: 'include' }),
+          fetch(`/api/people/${person.id}/relationships`, { credentials: 'include' }),
+        ])
 
-  // In Topola, we change the root person (focal-point transition)
-  if (onSetRoot) {
-    onSetRoot(selectedSearchMemberId)
-  }
-}, [selectedSearchMemberId, onSetRoot])
+        const personData = (await personRes.json()) as {
+          success: boolean
+          data: Record<string, unknown>
+          error?: string
+        }
+        const storiesData = (await storiesRes.json()) as {
+          data?: { stories?: unknown[] }
+        }
+        const relationshipsData = (await relationshipsRes.json()) as { data?: unknown[] }
 
-useEffect(() => {
-  if (isMobile) setZoomLevel(0.75)
-}, [isMobile, setZoomLevel])
+        if (personData.success) {
+          setPersonDetail(personData.data)
+          setPersonStories(storiesData.data?.stories ?? [])
+          setPersonVoiceProfiles(
+            (personData.data.voiceProfiles as unknown[]) ?? [],
+          )
+          setPersonRelationships(relationshipsData.data ?? [])
+        } else {
+          setDetailError(personData.error ?? 'Failed to load person details')
+        }
+      } catch {
+        setDetailError('Failed to load person details')
+      } finally {
+        setIsLoadingDetail(false)
+      }
+    },
+    [onPersonClick],
+  )
 
-useEffect(() => {
-  if (!isFullscreen) return
-  setPanOffset({ x: 0, y: 0 })
-}, [isFullscreen, zoomLevel, setPanOffset])
+  const handleViewArchive = useCallback(
+    (person: TreeLayoutPerson) => {
+      router.push(`/profile/${person.id}`)
+    },
+    [router],
+  )
 
+  const handleAddPerson = useCallback(() => {
+    onAddPerson?.()
+  }, [onAddPerson])
+
+  const handleEditPerson = useCallback(() => {
+    setDetailModalOpen(false)
+    setAddEditMode('edit')
+    setAddEditModalOpen(true)
+  }, [])
+
+  const handleSubmitPerson = useCallback(
+    async (data: PersonFormData) => {
+      setIsSubmitting(true)
+      try {
+        if (addEditMode === 'create') {
+          const res = await fetchWithCSRFAndJSON('/api/people', {
+            firstName: data.firstName,
+            lastName: data.lastName,
+            displayName: data.displayName,
+            birthDate: data.birthDate,
+            deathDate: data.deathDate,
+            bio: data.bio,
+            personType: data.personType,
+          })
+          if (!res.ok) throw new Error('Failed to create person')
+        } else {
+          if (!selectedPersonId) throw new Error('No person selected')
+          const res = await fetchWithCSRFAndJSON(`/api/people/${selectedPersonId}`, {
+            firstName: data.firstName,
+            lastName: data.lastName,
+            displayName: data.displayName,
+            birthDate: data.birthDate,
+            deathDate: data.deathDate,
+            bio: data.bio,
+            personType: data.personType,
+          })
+          if (!res.ok) throw new Error('Failed to update person')
+        }
+        setAddEditModalOpen(false)
+        window.location.reload()
+      } catch {
+        // error is surfaced by modal state
+      } finally {
+        setIsSubmitting(false)
+      }
+    },
+    [addEditMode, selectedPersonId],
+  )
+
+  const handleDeletePerson = useCallback(async (personId: string) => {
+    try {
+      const res = await fetchWithCSRF(`/api/people/${personId}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('Failed to delete person')
+      setDetailModalOpen(false)
+      window.location.reload()
+    } catch {
+      // error is surfaced by modal state
+    }
+  }, [])
+
+  const handleAddStory = useCallback((_personId: string) => {
+    // Navigate to story creation with person pre-selected
+  }, [])
+
+  const handleAddVoiceProfile = useCallback((_personId: string) => {
+    // Open voice training modal with person pre-selected
+  }, [])
+
+  const handleAddRelationship = useCallback(
+    (personId: string) => {
+      onEditRelationships?.(personId)
+    },
+    [onEditRelationships],
+  )
+
+  const handleOpenRelationshipEditor = useCallback(() => {
+    const fallbackPersonId = selectedPersonId ?? (rawPeople[0] ? rawPeople[0].id : null)
+    if (fallbackPersonId) {
+      handleAddRelationship(fallbackPersonId)
+    } else {
+      handleAddPerson()
+    }
+  }, [selectedPersonId, rawPeople, handleAddRelationship, handleAddPerson])
+
+  const handleStoryClick = useCallback((_storyId: string) => {
+    // Navigate to story detail page
+  }, [])
+
+  const handleViewFullProfile = useCallback(
+    (personId: string) => {
+      router.push(`/profile/${personId}`)
+    },
+    [router],
+  )
+
+  // ─── Zoom / pan controls ─────────────────────────────────────────────────────
+
+  const handleZoomIn = useCallback(() => canvasRef.current?.zoomIn(), [])
+  const handleZoomOut = useCallback(() => canvasRef.current?.zoomOut(), [])
+  const handleResetView = useCallback(() => canvasRef.current?.resetView(), [])
+
+  // ─── Render ──────────────────────────────────────────────────────────────────
+
+  const hasData = rawPeople.length > 0
 
   return (
     <Box
@@ -180,96 +304,437 @@ useEffect(() => {
         }),
       }}
     >
-      <FamilyTreeControls
-        isFullscreen={isFullscreen}
-        isMobile={isMobile}
-        toolMode={toolMode}
-        setToolMode={setToolMode}
-        onZoomIn={handleZoomIn}
-        onZoomOut={handleZoomOut}
-        onResetView={handleResetView}
-        onOpenSearch={() => {
-          setSearchOverlayOpen(true)
-          setOverlayQuery('')
-          setTimeout(() => overlayInputRef.current?.focus(), 60)
+      {/* Sticky toolbar */}
+      <Box
+        sx={{
+          position: 'sticky',
+          top: isFullscreen ? 8 : { xs: 72, md: 84 },
+          zIndex: 25,
+          pt: 0.5,
+          pb: 1.5,
+          mb: 1,
+          background:
+            'linear-gradient(to bottom, rgba(246,243,238,0.95), rgba(246,243,238,0.65), rgba(246,243,238,0))',
+          backdropFilter: 'blur(6px)',
         }}
-        onOpenRelationshipEditor={handleOpenRelationshipEditor}
-        onToggleFullscreen={onToggleFullscreen}
-        onImportGedcom={onImportGedcom}
-        onExportGedcom={onExportGedcom}
-        onToggleSiblings={onToggleSiblings}
-        includeSiblings={includeSiblings}
-      />
+      >
+        {/* Search Panel */}
+        <Box sx={{ maxWidth: 1200, mx: 'auto', mb: 2 }}>
+          <FamilyMemberSearch
+            members={searchableMembers}
+            selectedId={selectedSearchMemberId}
+            onSelect={(member) => setSelectedSearchMemberId(member?.id ?? null)}
+            defaultExpanded={initialSearchExpanded}
+            placeholder="Search by name or relationship"
+            title="Family Member Search"
+            showSelectedChip={true}
+            allowClear={true}
+          />
+        </Box>
 
-      <TopolaTreeCanvas
-        people={rawPeople || []}
-        rootPersonId={familyData.rootPersonId}
-        isFullscreen={isFullscreen}
-        isMobile={isMobile}
-        zoomLevel={zoomLevel}
-        panOffset={panOffset}
-        toolMode={toolMode}
-        isDragging={isDragging}
-        onCanvasMouseDown={handleCanvasMouseDown}
-        onCanvasMouseMove={handleCanvasMouseMove}
-        onCanvasMouseUp={handleCanvasMouseUp}
-        onCanvasTouchStart={handleCanvasTouchStart}
-        onCanvasTouchMove={handleCanvasTouchMove}
-        onCanvasTouchEnd={handleCanvasTouchEnd}
-        onPersonClick={handlePersonClick}
-        onAddPerson={handleAddPerson}
-        onViewArchive={handleViewArchive}
-        onLoadMore={onLoadMore}
-        onToggleSiblings={onToggleSiblings}
-        loadedDepths={loadedDepths}
-        isLoadingMore={isLoadingMore}
-        includeSiblings={includeSiblings}
-      />
+        {/* Control Bar */}
+        <Box sx={{ maxWidth: 1200, mx: 'auto', display: 'flex', justifyContent: 'center' }}>
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 0.5,
+              bgcolor: 'background.paper',
+              px: 1,
+              py: 0.5,
+              borderRadius: 8,
+              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+              border: '1px solid',
+              borderColor: 'rgba(208, 227, 230, 0.5)',
+            }}
+          >
+            <IconButton
+              size="small"
+              sx={{ color: 'primary.main' }}
+              title="Pointer tool"
+            >
+              <NearMe sx={{ fontSize: 18 }} />
+            </IconButton>
+            <IconButton
+              size="small"
+              sx={{ color: 'primary.main' }}
+              title="Pan (drag canvas)"
+            >
+              <PanTool sx={{ fontSize: 18 }} />
+            </IconButton>
+            <Divider orientation="vertical" flexItem sx={{ mx: 0.5, borderColor: 'rgba(208, 227, 230, 0.6)' }} />
+            <IconButton size="small" sx={{ color: 'primary.main' }} onClick={handleZoomIn}>
+              <ZoomIn />
+            </IconButton>
+            <IconButton size="small" sx={{ color: 'primary.main' }} onClick={handleZoomOut}>
+              <ZoomOut />
+            </IconButton>
+            <Divider orientation="vertical" flexItem sx={{ mx: 0.5, borderColor: 'rgba(208, 227, 230, 0.6)' }} />
+            <Button
+              startIcon={<PersonAdd />}
+              size="small"
+              onClick={handleOpenRelationshipEditor}
+              sx={{ color: 'primary.main', textTransform: 'none' }}
+            >
+              Edit Relationships
+            </Button>
+            <Button
+              startIcon={<RestartAlt />}
+              size="small"
+              onClick={handleResetView}
+              sx={{ color: 'primary.main', textTransform: 'none' }}
+            >
+              Reset View
+            </Button>
+            {onToggleFullscreen && (
+              <>
+                <Divider
+                  orientation="vertical"
+                  flexItem
+                  sx={{ mx: 0.5, borderColor: 'rgba(208, 227, 230, 0.6)' }}
+                />
+                <IconButton
+                  size="small"
+                  onClick={onToggleFullscreen}
+                  sx={{ color: 'primary.main' }}
+                  title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+                >
+                  {isFullscreen ? <FullscreenExit /> : <Fullscreen />}
+                </IconButton>
+              </>
+            )}
+          </Box>
+        </Box>
+      </Box>
 
-      <FamilyTreeSidebar
-        legendCollapsed={legendCollapsed}
-        setLegendCollapsed={setLegendCollapsed}
-      />
+      {/* Family Tree Canvas */}
+      <Box
+        sx={{
+          position: 'relative',
+          minHeight: isFullscreen ? 'calc(100vh - 140px)' : 700,
+          width: '100%',
+          bgcolor: 'rgba(208, 227, 230, 0.3)',
+          borderRadius: 6,
+          overflow: 'hidden',
+        }}
+      >
+        {hasData && effectiveRootId ? (
+          <ReactFlowTreeCanvas
+            people={rawPeople}
+            rootPersonId={effectiveRootId}
+            canvasRef={canvasRef}
+            onPersonClick={handlePersonClick}
+            onAddPerson={handleAddPerson}
+            onViewArchive={handleViewArchive}
+            onSetRoot={onSetRoot}
+          />
+        ) : (
+          /* Empty state */
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: '100%',
+              minHeight: 400,
+              gap: 3,
+            }}
+          >
+            <Typography
+              variant="h4"
+              sx={{ fontFamily: 'var(--font-newsreader), serif', color: 'primary.main' }}
+            >
+              Begin your family legacy
+            </Typography>
+            <Typography variant="body1" sx={{ color: 'secondary.main', textAlign: 'center', maxWidth: 400 }}>
+              Add your first family member to start building your tree.
+            </Typography>
+            <Box
+              sx={{
+                width: 56,
+                height: 56,
+                borderRadius: '50%',
+                bgcolor: 'rgba(208, 227, 230, 0.5)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'secondary.main',
+                cursor: 'pointer',
+                transition: 'all 0.3s',
+                '&:hover': { bgcolor: 'primary.main', color: 'white' },
+              }}
+              onClick={handleAddPerson}
+            >
+              <Add fontSize="large" />
+            </Box>
+          </Box>
+        )}
+      </Box>
 
-      <FamilyTreeSearchOverlay
-        open={searchOverlayOpen}
-        onClose={() => setSearchOverlayOpen(false)}
-        query={overlayQuery}
-        setQuery={setOverlayQuery}
-        searchableMembers={searchableMembers}
-        onMemberSelect={setSelectedSearchMemberId}
-        inputRef={overlayInputRef}
-      />
+      {/* Add Relative Button (below canvas) */}
+      {hasData && (
+        <Box
+          sx={{ mt: 4, cursor: 'pointer', display: 'flex', justifyContent: 'center' }}
+          onClick={handleAddPerson}
+        >
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <Box
+              sx={{
+                width: 48,
+                height: 48,
+                borderRadius: '50%',
+                bgcolor: 'rgba(208, 227, 230, 0.5)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'secondary.main',
+                transition: 'all 0.3s',
+                '&:hover': { bgcolor: 'primary.main', color: 'white' },
+              }}
+            >
+              <Add />
+            </Box>
+            <Typography
+              variant="caption"
+              sx={{
+                mt: 1,
+                fontWeight: 700,
+                color: 'secondary.main',
+                opacity: 0.6,
+                textTransform: 'uppercase',
+                letterSpacing: '0.1em',
+              }}
+            >
+              Add Relative
+            </Typography>
+          </Box>
+        </Box>
+      )}
 
-      <FamilyTreeModals
-        detailModalOpen={detailModalOpen}
-        setDetailModalOpen={setDetailModalOpen}
-        addEditModalOpen={addEditModalOpen}
-        setAddEditModalOpen={setAddEditModalOpen}
-        addEditMode={addEditMode}
-        selectedPersonId={selectedPersonId}
-        personDetail={personDetail}
-        personStories={personStories}
-        personVoiceProfiles={personVoiceProfiles}
-        personRelationships={personRelationships}
-        isLoadingDetail={isLoadingDetail}
-        detailError={detailError}
-        isSubmitting={isSubmitting}
-        voiceTrainingPersonId={voiceTrainingPersonId}
-        setVoiceTrainingPersonId={setVoiceTrainingPersonId}
-        onEditPerson={handleEditPerson}
-        onDeletePerson={handleDeletePerson}
+      {/* Legend + Insights Sidebar */}
+      <Box
+        sx={{
+          position: 'absolute',
+          right: 48,
+          top: 80,
+          display: { xs: 'none', xl: 'flex' },
+          flexDirection: 'column',
+          gap: 2,
+          zIndex: 10,
+        }}
+      >
+        {/* Connection Legend */}
+        <Card
+          sx={{
+            width: 320,
+            px: 2,
+            py: 1.5,
+            borderRadius: 2,
+            bgcolor: 'rgba(255,255,255,0.88)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(22, 51, 74, 0.10)',
+            boxShadow: '0 4px 16px rgba(22, 51, 74, 0.08)',
+            transition: 'all 0.2s ease',
+          }}
+        >
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              cursor: 'pointer',
+            }}
+            onClick={() => setLegendCollapsed((prev: boolean) => !prev)}
+          >
+            <Typography variant="caption" sx={{ fontWeight: 700, color: 'primary.main' }}>
+              Legend
+            </Typography>
+            <IconButton size="small" sx={{ p: 0, ml: 1, color: 'secondary.main' }}>
+              {legendCollapsed ? (
+                <ExpandMore sx={{ fontSize: 16 }} />
+              ) : (
+                <ExpandLess sx={{ fontSize: 16 }} />
+              )}
+            </IconButton>
+          </Box>
+          {!legendCollapsed && (
+            <Box sx={{ mt: 0.75 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mb: 0.75 }}>
+                <Box sx={{ width: 26, height: CONNECTOR_THICKNESS, bgcolor: CONNECTOR_BIOLOGICAL_COLOR }} />
+                <Typography variant="caption" sx={{ color: 'secondary.main' }}>
+                  Biological parent-child
+                </Typography>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mb: 0.75 }}>
+                <Box
+                  sx={{
+                    width: 26,
+                    borderTop: `${CONNECTOR_THICKNESS}px dashed ${CONNECTOR_NON_BIO_COLOR}`,
+                  }}
+                />
+                <Typography variant="caption" sx={{ color: 'secondary.main' }}>
+                  Adopted/step/in-law parent-child
+                </Typography>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
+                <Box sx={{ width: 26, height: CONNECTOR_THICKNESS, bgcolor: CONNECTOR_SPOUSE_COLOR }} />
+                <Typography variant="caption" sx={{ color: 'secondary.main' }}>
+                  Spouse
+                </Typography>
+              </Box>
+            </Box>
+          )}
+        </Card>
+
+        {/* Insights Sidebar */}
+        <Card
+          sx={{
+            width: insightCollapsed ? 'auto' : 320,
+            bgcolor: 'rgba(255, 255, 255, 0.8)',
+            backdropFilter: 'blur(20px)',
+            p: insightCollapsed ? 2 : 4,
+            borderRadius: 8,
+            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.15)',
+            border: '1px solid',
+            borderColor: 'rgba(255,255,255,0.5)',
+            transition: 'all 0.2s ease',
+          }}
+        >
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              cursor: 'pointer',
+              mb: insightCollapsed ? 0 : 3,
+            }}
+            onClick={() => setInsightCollapsed((prev: boolean) => !prev)}
+          >
+            <Box>
+              <Typography
+                variant="overline"
+                sx={{
+                  color: 'secondary.main',
+                  fontWeight: 700,
+                  letterSpacing: '0.2em',
+                  fontSize: '0.65rem',
+                }}
+              >
+                INSIGHT
+              </Typography>
+              {!insightCollapsed && (
+                <Typography
+                  variant="h5"
+                  sx={{
+                    fontFamily: 'var(--font-newsreader), serif',
+                    color: 'primary.main',
+                    mt: 0.5,
+                  }}
+                >
+                  Common Threads
+                </Typography>
+              )}
+            </Box>
+            <IconButton size="small" sx={{ color: 'secondary.main' }}>
+              {insightCollapsed ? <ExpandMore /> : <ExpandLess />}
+            </IconButton>
+          </Box>
+
+          {!insightCollapsed && (
+            <>
+              <Card
+                sx={{
+                  bgcolor: 'rgba(208, 227, 230, 0.3)',
+                  p: 3,
+                  borderRadius: 4,
+                  mb: 3,
+                }}
+              >
+                <Typography variant="body2" sx={{ color: 'secondary.main', fontStyle: 'italic' }}>
+                  &quot;Most family stories reference &apos;The Summer of &apos;84&apos; at the lake
+                  house.&quot;
+                </Typography>
+              </Card>
+
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, px: 1, mb: 2 }}>
+                <Box
+                  sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'tertiary.main' }}
+                />
+                <Typography variant="body2" sx={{ color: 'secondary.main' }}>
+                  3 Shared voice patterns found
+                </Typography>
+              </Box>
+
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, px: 1 }}>
+                <Box
+                  sx={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    bgcolor: 'rgba(22, 51, 74, 0.5)',
+                  }}
+                />
+                <Typography variant="body2" sx={{ color: 'secondary.main' }}>
+                  Genealogy sync active
+                </Typography>
+              </Box>
+
+              <Button
+                fullWidth
+                variant="contained"
+                endIcon={<AutoFixHigh />}
+                sx={{ mt: 4, py: 1.5, borderRadius: 3 }}
+              >
+                Generate Family Bio
+              </Button>
+            </>
+          )}
+        </Card>
+      </Box>
+
+      {/* Person Detail Modal */}
+      <PersonDetailModal
+        open={detailModalOpen}
+        onClose={() => setDetailModalOpen(false)}
+        person={personDetail}
+        stories={personStories}
+        voiceProfiles={personVoiceProfiles}
+        relationships={personRelationships}
+        isLoading={isLoadingDetail}
+        error={detailError}
+        onEdit={handleEditPerson}
+        onDelete={handleDeletePerson}
         onAddStory={handleAddStory}
         onAddVoiceProfile={handleAddVoiceProfile}
         onAddRelationship={handleAddRelationship}
-        onStoryClick={(id) => {
-          if (id) window.location.href = `/stories/${id}`
-        }}
-        onViewFullProfile={(id) => {
-          window.location.href = `/profile/${id}`
-        }}
-        onSubmitPerson={handleSubmitPerson}
+        onStoryClick={handleStoryClick}
+        onViewFullProfile={handleViewFullProfile}
       />
+
+      {/* Add/Edit Person Modal — edit path only */}
+      {addEditMode === 'edit' && (
+        <AddEditPersonModal
+          open={addEditModalOpen}
+          onClose={() => setAddEditModalOpen(false)}
+          mode={addEditMode}
+          person={
+            addEditMode === 'edit' && personDetail
+              ? {
+                  firstName: personDetail.firstName as string,
+                  lastName: personDetail.lastName as string,
+                  displayName: personDetail.displayName as string,
+                  birthDate: (personDetail.birthDate as string | undefined)?.split('T')[0],
+                  deathDate: (personDetail.deathDate as string | undefined)?.split('T')[0],
+                  bio: personDetail.bio as string,
+                  personType: personDetail.personType as PersonType,
+                }
+              : undefined
+          }
+          onSubmit={handleSubmitPerson}
+          isSubmitting={isSubmitting}
+        />
+      )}
     </Box>
   )
 }
