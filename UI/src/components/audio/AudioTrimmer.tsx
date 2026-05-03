@@ -1,12 +1,12 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react'
 import {
-  Alert,
   Box,
   Typography,
   IconButton,
   Button,
   Chip,
   CircularProgress,
+  Slider,
 } from '@mui/material'
 import {
   PlayArrow as PlayIcon,
@@ -16,9 +16,7 @@ import {
 } from '@mui/icons-material'
 import Peaks, { PeaksInstance } from 'peaks.js'
 
-const MIN_SELECTION_SEC = 10
-const MAX_SELECTION_SEC = 30
-const RECOMMENDED_SEC = 15
+const CLIP_DURATION_SEC = 15
 
 interface AudioTrimmerProps {
   /** The raw File the user picked — can be any size */
@@ -38,11 +36,12 @@ export function AudioTrimmer({ file, onTrimComplete, disabled }: AudioTrimmerPro
 
   const [duration, setDuration] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
-  const [region, setRegion] = useState<[number, number]>([0, RECOMMENDED_SEC])
+  const [region, setRegion] = useState<[number, number]>([0, CLIP_DURATION_SEC])
   const [isReady, setIsReady] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const regionLen = region[1] - region[0]
+  const maxStart = Math.max(0, duration - CLIP_DURATION_SEC)
 
   // ── Initialize Peaks.js ──
   useEffect(() => {
@@ -127,28 +126,18 @@ export function AudioTrimmer({ file, onTrimComplete, disabled }: AudioTrimmerPro
         setDuration(dur)
 
         // Add the initial selection segment
-        const end = Math.min(dur, RECOMMENDED_SEC)
+        const end = Math.min(dur, CLIP_DURATION_SEC)
         peaks.segments.add({
           startTime: 0,
           endTime: end,
           labelText: 'Selection',
-          editable: true,
+          editable: false,
           color: '#16334a',
           id: 'selection-clip',
         })
 
         setRegion([0, end])
         setIsReady(true)
-
-        // Listen for segment changes
-        const updateRegion = (segment: any) => {
-          if (segment.id === 'selection-clip') {
-            setRegion([segment.startTime, segment.endTime])
-          }
-        }
-
-        peaks.on('segments.dragged', updateRegion)
-        peaks.on('segments.update', updateRegion)
 
         peaks.on('player.play', () => setIsPlaying(true))
         peaks.on('player.pause', () => setIsPlaying(false))
@@ -184,7 +173,7 @@ export function AudioTrimmer({ file, onTrimComplete, disabled }: AudioTrimmerPro
     if (!peaksRef.current) return
     const segment = peaksRef.current.segments.getSegment('selection-clip')
     if (segment) {
-      const end = Math.min(duration, RECOMMENDED_SEC)
+      const end = Math.min(duration, CLIP_DURATION_SEC)
       segment.update({ startTime: 0, endTime: end })
       setRegion([0, end])
     }
@@ -227,13 +216,25 @@ export function AudioTrimmer({ file, onTrimComplete, disabled }: AudioTrimmerPro
     onTrimComplete(trimmedFile)
   }, [region, file, onTrimComplete])
 
+
+
+  const handleStartChange = (_event: Event, value: number | number[]) => {
+    const start = Array.isArray(value) ? value[0] : value
+    const end = Math.min(duration, start + CLIP_DURATION_SEC)
+    const nextRegion: [number, number] = [start, end]
+    setRegion(nextRegion)
+
+    const segment = peaksRef.current?.segments.getSegment('selection-clip')
+    segment?.update({ startTime: nextRegion[0], endTime: nextRegion[1] })
+  }
+
   const formatTime = (sec: number) => {
     const m = Math.floor(sec / 60)
     const s = Math.floor(sec % 60)
     return `${m}:${s.toString().padStart(2, '0')}`
   }
 
-  const needsTrim = duration > MAX_SELECTION_SEC
+  const needsTrim = duration > CLIP_DURATION_SEC
 
   return (
     <Box sx={{ mt: 2 }}>
@@ -250,8 +251,8 @@ export function AudioTrimmer({ file, onTrimComplete, disabled }: AudioTrimmerPro
             label={`${formatTime(regionLen)} selected`}
             size="small"
             sx={{
-              backgroundColor: regionLen >= MIN_SELECTION_SEC && regionLen <= MAX_SELECTION_SEC ? '#d0e3e6' : '#fef6f6',
-              color: regionLen >= MIN_SELECTION_SEC && regionLen <= MAX_SELECTION_SEC ? '#16334a' : '#dc2626',
+              backgroundColor: '#d0e3e6',
+              color: '#16334a',
               fontWeight: 600,
               fontSize: '0.7rem',
             }}
@@ -297,6 +298,29 @@ export function AudioTrimmer({ file, onTrimComplete, disabled }: AudioTrimmerPro
           {!isReady && !error && <CircularProgress size={24} sx={{ color: '#16334a' }} />}
           {error && <Typography variant="caption" color="error">{error}</Typography>}
           <div ref={zoomviewRef} style={{ height: '100%', width: '100%' }} />
+          {isReady && duration > 0 && (
+            <Box
+              sx={{
+                position: 'absolute',
+                inset: 0,
+                pointerEvents: 'none',
+                borderRadius: 2,
+              }}
+            >
+              <Box
+                sx={{
+                  position: 'absolute',
+                  top: 0,
+                  bottom: 0,
+                  left: `${(region[0] / duration) * 100}%`,
+                  width: `${(regionLen / duration) * 100}%`,
+                  bgcolor: 'rgba(22, 51, 74, 0.18)',
+                  border: '2px solid #16334a',
+                  borderRadius: 1,
+                }}
+              />
+            </Box>
+          )}
         </Box>
 
         {/* Overview */}
@@ -317,9 +341,26 @@ export function AudioTrimmer({ file, onTrimComplete, disabled }: AudioTrimmerPro
       {/* Helper text */}
       <Typography variant="caption" sx={{ color: '#546669', display: 'block', mt: 1.5, textAlign: 'center', px: 2 }}>
         {needsTrim
-          ? 'Drag the blue handles in the top view to select 10–30s of clear audio. The bottom bar shows the full recording.'
-          : `Audio is ${formatTime(duration)} — you can use it as-is or drag the handles to select a specific part.`}
+          ? 'Move the slider to pick the exact 15-second clip. Start and end times update live.'
+          : `Audio is ${formatTime(duration)} — using the full clip.`}
       </Typography>
+
+      {needsTrim && (
+        <Box sx={{ mt: 2, px: 1 }}>
+          <Typography variant="caption" sx={{ color: '#546669' }}>
+            Start: {formatTime(region[0])} · End: {formatTime(region[1])}
+          </Typography>
+          <Slider
+            value={region[0]}
+            min={0}
+            max={maxStart}
+            step={0.1}
+            onChange={handleStartChange}
+            disabled={!isReady || disabled}
+            sx={{ mt: 0.5, color: '#16334a' }}
+          />
+        </Box>
+      )}
 
       {/* Confirm button */}
       <Button
@@ -327,7 +368,7 @@ export function AudioTrimmer({ file, onTrimComplete, disabled }: AudioTrimmerPro
         fullWidth
         startIcon={<TrimIcon />}
         onClick={handleConfirmTrim}
-        disabled={!isReady || disabled || (regionLen < MIN_SELECTION_SEC) || (regionLen > MAX_SELECTION_SEC)}
+        disabled={!isReady || disabled}
         sx={{
           mt: 2.5,
           background: 'linear-gradient(135deg, #16334a 0%, #2e4a62 100%)',
