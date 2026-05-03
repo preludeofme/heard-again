@@ -178,7 +178,30 @@ export function VoiceTrainingModal({
         </Box>
       </DialogTitle>
 
-      <DialogContent sx={{ pt: 2 }}>
+      <DialogContent sx={{ pt: 2, position: 'relative' }}>
+        {isUploading && (
+          <Box
+            sx={{
+              position: 'absolute',
+              inset: 0,
+              zIndex: 2,
+              bgcolor: 'rgba(252, 249, 244, 0.75)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 1.5,
+            }}
+          >
+            <CircularProgress size={36} sx={{ color: '#16334a' }} />
+            <Typography variant='body2' sx={{ color: '#16334a', fontWeight: 600 }}>
+              Uploading your clip…
+            </Typography>
+            <Typography variant='caption' sx={{ color: '#546669' }}>
+              Please wait while we upload and transcribe the selected audio.
+            </Typography>
+          </Box>
+        )}
         {/* ── Success State ── */}
         {isComplete ? (
           <Box sx={{ textAlign: 'center', py: 4 }}>
