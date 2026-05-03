@@ -38,6 +38,7 @@ interface ReactFlowTreeCanvasProps {
   onViewArchive: (person: TreeLayoutPerson) => void
   onSetRoot?: (id: string) => void
   onLoadMore?: (direction: 'up' | 'down', personId: string) => void
+  onEditRelationships?: (personId: string) => void
   isPanMode?: boolean
 }
 
@@ -52,6 +53,7 @@ function ReactFlowTreeCanvasInner({
   onViewArchive,
   onSetRoot,
   onLoadMore,
+  onEditRelationships,
   isPanMode = true,
 }: ReactFlowTreeCanvasProps): React.JSX.Element {
   const { zoomIn, zoomOut, fitView } = useReactFlow()
@@ -59,8 +61,8 @@ function ReactFlowTreeCanvasInner({
   const [edges, setEdges, onEdgesChange] = useEdgesState([])
 
   // Keep a stable ref to callbacks to avoid re-running layout when parent re-renders
-  const callbacksRef = useRef({ onPersonClick, onAddPerson, onViewArchive, onSetRoot, onLoadMore, isMobile })
-  callbacksRef.current = { onPersonClick, onAddPerson, onViewArchive, onSetRoot, onLoadMore, isMobile }
+  const callbacksRef = useRef({ onPersonClick, onAddPerson, onViewArchive, onSetRoot, onLoadMore, onEditRelationships, isMobile })
+  callbacksRef.current = { onPersonClick, onAddPerson, onViewArchive, onSetRoot, onLoadMore, onEditRelationships, isMobile }
 
   useEffect(() => {
     if (people.length === 0) {

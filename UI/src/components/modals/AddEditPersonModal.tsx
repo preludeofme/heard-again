@@ -11,19 +11,17 @@ import {
   IconButton,
   MenuItem,
   Avatar,
-  Chip,
-  Divider,
   Grid,
   FormControl,
   InputLabel,
   Select,
-  FormHelperText,
   Paper,
   Switch,
   FormControlLabel,
   Accordion,
   AccordionSummary,
   AccordionDetails,
+  CircularProgress,
 } from '@mui/material'
 import {
   Close as CloseIcon,
@@ -35,6 +33,7 @@ import {
   PhotoCamera as PhotoCameraIcon,
 } from '@mui/icons-material'
 import { PersonType } from '@/contracts'
+import { useCSRF } from '@/hooks/useCSRF'
 
 export interface PersonFormData {
   firstName: string
@@ -103,11 +102,14 @@ export function AddEditPersonModal({
   isSubmitting = false,
   existingPeople,
 }: AddEditPersonModalProps) {
+  const { fetchToken } = useCSRF()
   const [isInterviewMode, setIsInterviewMode] = useState(false)
   const [interviewText, setInterviewText] = useState('')
-  const [interviewMessages, setInterviewMessages] = useState<{role: 'system'|'user', content: string}[]>([
-    { role: 'system', content: "Hi! Let's add a new person to your family tree. Tell me their name and how they are related to you." }
+  const [isInterviewLoading, setIsInterviewLoading] = useState(false)
+  const [interviewMessages, setInterviewMessages] = useState<{ role: 'assistant' | 'user'; content: string }[]>([
+    { role: 'assistant', content: "Hi! Let's add someone to your family tree. Tell me their name and how they're related to you." },
   ])
+  const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const [formData, setFormData] = useState<PersonFormData>({
     firstName: '',
@@ -165,7 +167,7 @@ export function AddEditPersonModal({
         personType: PersonType.FAMILY,
         tags: [],
       })
-      setInterviewMessages([{ role: 'system', content: "Hi! Let's add a new person to your family tree. Tell me their name and how they are related to you." }])
+        setInterviewMessages([{ role: 'assistant', content: "Hi! Let's add someone to your family tree. Tell me their name and how they're related to you." }])
       setAvatarPreviewUrl(null)
     }
     setPendingAvatarFile(null)
@@ -251,27 +253,84 @@ export function AddEditPersonModal({
     }
   }
 
-  const handleInterviewSubmit = () => {
-    if (!interviewText.trim()) return
-    setInterviewMessages(prev => [...prev, { role: 'user', content: interviewText }])
-    const input = interviewText
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [interviewMessages])
+
+  const handleInterviewSubmit = async () => {
+    const text = interviewText.trim()
+    if (!text || isInterviewLoading) return
+
+    const userMessage = { role: 'user' as const, content: text }
+    const updatedMessages = [...interviewMessages, userMessage]
+    setInterviewMessages(updatedMessages)
     setInterviewText('')
-    
-    // Mock extraction logic
-    setTimeout(() => {
-      setInterviewMessages(prev => [...prev, { role: 'system', content: "Great, I've filled out what I could. Please review the details below before saving!" }])
-      // Try a very naive parse
-      const words = input.split(' ')
-      if (words.length > 0) {
-        setFormData(prev => ({
+    setIsInterviewLoading(true)
+
+    try {
+      const csrfToken = await fetchToken()
+      const res = await fetch('/api/interview/person', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken },
+        body: JSON.stringify({
+          messages: updatedMessages.map((m) => ({
+            role: m.role === 'assistant' ? 'assistant' : 'user',
+            content: m.content,
+          })),
+        }),
+      })
+
+      const payload = await res.json()
+
+      if (!res.ok || !payload?.success) {
+        setInterviewMessages((prev) => [
           ...prev,
-          firstName: prev.firstName || words[0],
-          lastName: prev.lastName || (words.length > 1 ? words[1] : ''),
-          bio: prev.bio || input
+          { role: 'assistant', content: "Sorry, I ran into an issue. You can fill in the details manually below." },
+        ])
+        setIsInterviewMode(false)
+        return
+      }
+
+      const { message, extractedData, isComplete } = payload.data as {
+        message: string
+        extractedData: Record<string, unknown> | null
+        isComplete: boolean
+      }
+
+      if (extractedData) {
+        setFormData((prev) => ({
+          ...prev,
+          firstName: (extractedData.firstName as string) || prev.firstName,
+          lastName: (extractedData.lastName as string) || prev.lastName,
+          middleName: (extractedData.middleName as string) || prev.middleName,
+          nickname: (extractedData.nickname as string) || prev.nickname,
+          maidenName: (extractedData.maidenName as string) || prev.maidenName,
+          birthDate: (extractedData.birthDate as string) || prev.birthDate,
+          deathDate: (extractedData.deathDate as string) || prev.deathDate,
+          isDeceased: (extractedData.isDeceased as boolean) ?? prev.isDeceased,
+          bio: (extractedData.bio as string) || prev.bio,
+          personType: (extractedData.personType as PersonType) || prev.personType,
         }))
       }
+
+      if (isComplete) {
+        setInterviewMessages((prev) => [
+          ...prev,
+          { role: 'assistant', content: message || "Great — I've filled in what I learned. Review the details below and save when ready!" },
+        ])
+        setTimeout(() => setIsInterviewMode(false), 1800)
+      } else {
+        setInterviewMessages((prev) => [...prev, { role: 'assistant', content: message }])
+      }
+    } catch {
+      setInterviewMessages((prev) => [
+        ...prev,
+        { role: 'assistant', content: "Sorry, I couldn't connect. You can fill in the details manually below." },
+      ])
       setIsInterviewMode(false)
-    }, 1000)
+    } finally {
+      setIsInterviewLoading(false)
+    }
   }
 
   const getInitials = () => {
@@ -330,37 +389,47 @@ export function AddEditPersonModal({
         )}
 
         {isInterviewMode ? (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, height: 400 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, height: 420 }}>
             <Paper sx={{ flex: 1, p: 2, overflowY: 'auto', borderRadius: 3, backgroundColor: '#f6f3ee', display: 'flex', flexDirection: 'column', gap: 2 }}>
               {interviewMessages.map((msg, idx) => (
                 <Box key={idx} sx={{ alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start', maxWidth: '80%' }}>
-                  <Paper elevation={0} sx={{ 
-                    p: 2, 
-                    borderRadius: 3, 
+                  <Paper elevation={0} sx={{
+                    p: 2,
+                    borderRadius: 3,
                     backgroundColor: msg.role === 'user' ? '#16334a' : '#ffffff',
                     color: msg.role === 'user' ? '#ffffff' : '#16334a',
                     borderBottomRightRadius: msg.role === 'user' ? 4 : 12,
-                    borderBottomLeftRadius: msg.role === 'system' ? 4 : 12,
+                    borderBottomLeftRadius: msg.role === 'assistant' ? 4 : 12,
                   }}>
                     <Typography variant="body2">{msg.content}</Typography>
                   </Paper>
                 </Box>
               ))}
+              {isInterviewLoading && (
+                <Box sx={{ alignSelf: 'flex-start' }}>
+                  <Paper elevation={0} sx={{ p: 2, borderRadius: 3, backgroundColor: '#ffffff', display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <CircularProgress size={14} sx={{ color: '#16334a' }} />
+                    <Typography variant="body2" sx={{ color: '#546669' }}>Thinking…</Typography>
+                  </Paper>
+                </Box>
+              )}
+              <div ref={messagesEndRef} />
             </Paper>
             <Box sx={{ display: 'flex', gap: 1 }}>
               <TextField
                 fullWidth
                 size="small"
-                placeholder="E.g., My grandfather, John Doe. He was a baker..."
+                placeholder="Type your answer…"
                 value={interviewText}
                 onChange={(e) => setInterviewText(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleInterviewSubmit()}
+                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void handleInterviewSubmit() } }}
+                disabled={isInterviewLoading}
                 sx={{ '& .MuiOutlinedInput-root': { borderRadius: 3 } }}
               />
-              <IconButton 
-                onClick={handleInterviewSubmit}
-                color="primary" 
-                sx={{ backgroundColor: '#16334a', color: 'white', '&:hover': { backgroundColor: '#2e4a62' } }}
+              <IconButton
+                onClick={() => void handleInterviewSubmit()}
+                disabled={isInterviewLoading || !interviewText.trim()}
+                sx={{ backgroundColor: '#16334a', color: 'white', '&:hover': { backgroundColor: '#2e4a62' }, '&:disabled': { backgroundColor: '#ccc' } }}
               >
                 <SendIcon />
               </IconButton>
@@ -536,7 +605,7 @@ export function AddEditPersonModal({
         <Button
           variant="contained"
           onClick={handleSubmit}
-          disabled={isSubmitting || isInterviewMode}
+          disabled={isSubmitting || (isInterviewMode && !formData.firstName)}
           startIcon={isSubmitting ? undefined : <CheckIcon />}
           sx={{ backgroundColor: '#16334a', textTransform: 'none', borderRadius: 2, px: 4, '&:hover': { backgroundColor: '#2e4a62' } }}
         >

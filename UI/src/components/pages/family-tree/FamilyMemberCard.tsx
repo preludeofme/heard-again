@@ -28,6 +28,7 @@ interface FamilyMemberCardProps {
   onViewArchive: (person: TreePerson) => void
   onToggleSiblings?: () => void
   onSetRoot?: (id: string) => void
+  onEditRelationships?: (personId: string) => void
   includeSiblings?: boolean
 }
 
@@ -42,6 +43,7 @@ export function FamilyMemberCard({
   onViewArchive,
   onToggleSiblings,
   onSetRoot,
+  onEditRelationships,
   includeSiblings,
 }: FamilyMemberCardProps) {
   const isParentLevel = level === 'parent'
@@ -212,7 +214,7 @@ export function FamilyMemberCard({
         </Box>
       </Box>
 
-      {isParentLevel && (
+      {isParentLevel ? (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
           <Box sx={{ display: 'flex', gap: 1 }}>
             <Button
@@ -230,18 +232,18 @@ export function FamilyMemberCard({
                 variant="text"
                 className="nodrag"
                 onClick={(e) => { e.stopPropagation(); onToggleSiblings() }}
-                sx={{ 
-                  flex: 1, 
-                  color: 'white', 
-                  bgcolor: includeSiblings ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.1)', 
-                  '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' }, 
-                  justifyContent: 'center', 
-                  py: 1, 
+                sx={{
+                  flex: 1,
+                  color: 'white',
+                  bgcolor: includeSiblings ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.1)',
+                  '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' },
+                  justifyContent: 'center',
+                  py: 1,
                   borderRadius: 2,
                   minWidth: 0,
-                  px: 0
+                  px: 0,
                 }}
-                title={includeSiblings ? "Hide Siblings" : "Show Siblings"}
+                title={includeSiblings ? 'Hide Siblings' : 'Show Siblings'}
               >
                 <PeopleIcon />
               </Button>
@@ -262,6 +264,12 @@ export function FamilyMemberCard({
                 Focus
               </Button>
             )}
+            <Button variant="text" startIcon={<PeopleIcon />} className="nodrag"
+              onClick={(e) => { e.stopPropagation(); onEditRelationships ? onEditRelationships(String(person.id)) : onAddPerson() }}
+              sx={{ flex: 1, color: 'white', bgcolor: 'rgba(255,255,255,0.1)', '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' }, justifyContent: 'center', py: 1, borderRadius: 2 }}
+            >
+              Relatives
+            </Button>
             <Button variant="text" startIcon={<PersonAdd />} className="nodrag"
               onClick={(e) => { e.stopPropagation(); onAddPerson() }}
               sx={{ flex: 1, color: 'white', bgcolor: 'rgba(255,255,255,0.1)', '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' }, justifyContent: 'center', py: 1, borderRadius: 2 }}
@@ -269,6 +277,65 @@ export function FamilyMemberCard({
               Add
             </Button>
           </Box>
+        </Box>
+      ) : (
+        /* Compact action row for grandparent / child level cards */
+        <Box
+          sx={{
+            mt: 1.5,
+            pt: 1.5,
+            borderTop: '1px solid rgba(22,51,74,0.07)',
+            display: 'flex',
+            gap: 0.5,
+          }}
+        >
+          <IconButton
+            size="small"
+            className="nodrag"
+            title="Stories"
+            onClick={(e) => { e.stopPropagation(); onViewArchive(person) }}
+            sx={{ flex: 1, borderRadius: 1.5, color: 'secondary.main', '&:hover': { bgcolor: 'rgba(22,51,74,0.06)', color: 'primary.main' } }}
+          >
+            <AutoStories sx={{ fontSize: 15 }} />
+          </IconButton>
+          <IconButton
+            size="small"
+            className="nodrag"
+            title="Edit"
+            onClick={(e) => { e.stopPropagation(); onPersonClick(person) }}
+            sx={{ flex: 1, borderRadius: 1.5, color: 'secondary.main', '&:hover': { bgcolor: 'rgba(22,51,74,0.06)', color: 'primary.main' } }}
+          >
+            <Edit sx={{ fontSize: 15 }} />
+          </IconButton>
+          {onSetRoot && !isSelf && (
+            <IconButton
+              size="small"
+              className="nodrag"
+              title="Focus"
+              onClick={(e) => { e.stopPropagation(); onSetRoot(String(person.id)) }}
+              sx={{ flex: 1, borderRadius: 1.5, color: 'secondary.main', '&:hover': { bgcolor: 'rgba(22,51,74,0.06)', color: 'primary.main' } }}
+            >
+              <TreeIcon sx={{ fontSize: 15 }} />
+            </IconButton>
+          )}
+          <IconButton
+            size="small"
+            className="nodrag"
+            title="Relatives"
+            onClick={(e) => { e.stopPropagation(); onEditRelationships ? onEditRelationships(String(person.id)) : onAddPerson() }}
+            sx={{ flex: 1, borderRadius: 1.5, color: 'secondary.main', '&:hover': { bgcolor: 'rgba(22,51,74,0.06)', color: 'primary.main' } }}
+          >
+            <PeopleIcon sx={{ fontSize: 15 }} />
+          </IconButton>
+          <IconButton
+            size="small"
+            className="nodrag"
+            title="Add Person"
+            onClick={(e) => { e.stopPropagation(); onAddPerson() }}
+            sx={{ flex: 1, borderRadius: 1.5, color: 'secondary.main', '&:hover': { bgcolor: 'rgba(22,51,74,0.06)', color: 'primary.main' } }}
+          >
+            <PersonAdd sx={{ fontSize: 15 }} />
+          </IconButton>
         </Box>
       )}
     </Card>

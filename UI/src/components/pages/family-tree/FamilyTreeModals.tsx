@@ -1,7 +1,8 @@
-import React from 'react'
+import React, { useCallback } from 'react'
 import { PersonDetailModal } from '@/components/modals/PersonDetailModal'
 import { AddEditPersonModal, PersonFormData } from '@/components/modals/AddEditPersonModal'
 import { VoiceTrainingModal } from '@/components/audio/VoiceTrainingModal'
+import { useVoiceTraining } from '@/controllers/useVoiceTraining'
 
 interface FamilyTreeModalsProps {
   detailModalOpen: boolean
@@ -54,6 +55,24 @@ export function FamilyTreeModals({
   onViewFullProfile,
   onSubmitPerson,
 }: FamilyTreeModalsProps) {
+  const {
+    trainingSamples,
+    isUploading,
+    isTraining,
+    trainingJob,
+    uploadTrainingSample,
+    removeTrainingSample,
+    startVoiceTraining,
+  } = useVoiceTraining()
+
+  const handleCreateVoice = useCallback(async (
+    modelName: string,
+    language: string,
+    styleInstruct?: string,
+  ): Promise<void> => {
+    await startVoiceTraining(modelName, language, styleInstruct, voiceTrainingPersonId ?? undefined)
+  }, [startVoiceTraining, voiceTrainingPersonId])
+
   return (
     <>
       <PersonDetailModal
@@ -71,7 +90,7 @@ export function FamilyTreeModals({
         onAddVoiceProfile={onAddVoiceProfile}
         onAddRelationship={onAddRelationship}
         onStoryClick={onStoryClick}
-        onViewFull={onViewFullProfile}
+        onViewFullProfile={onViewFullProfile}
       />
 
       <AddEditPersonModal
@@ -88,8 +107,13 @@ export function FamilyTreeModals({
         <VoiceTrainingModal
           open={!!voiceTrainingPersonId}
           onClose={() => setVoiceTrainingPersonId(null)}
-          personId={voiceTrainingPersonId}
-          personName={personDetail?.displayName || personDetail?.firstName || 'Family Member'}
+          trainingSamples={trainingSamples.map(s => s.file)}
+          onUploadSample={uploadTrainingSample}
+          onRemoveSample={removeTrainingSample}
+          onCreateVoice={handleCreateVoice}
+          isUploading={isUploading}
+          isTraining={isTraining}
+          trainingJob={trainingJob}
         />
       )}
     </>

@@ -1,5 +1,6 @@
 import Head from 'next/head'
 import { useEffect, useState } from 'react'
+import { fetchWithCSRF } from '@/lib/api-client'
 import { useRouter } from 'next/router'
 import {
   Alert,
@@ -186,7 +187,7 @@ export default function AccountPage() {
 
   const handleCancelSubscription = async () => {
     try {
-      const res = await fetch('/api/billing/cancel', { method: 'POST', credentials: 'include' })
+      const res = await fetchWithCSRF('/api/billing/cancel', { method: 'POST', credentials: 'include' })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to cancel')
       setSuccess('Subscription cancelled successfully')
@@ -200,7 +201,7 @@ export default function AccountPage() {
   const handleChangePlan = async () => {
     if (!selectedPlanId) return
     try {
-      const res = await fetch('/api/billing/subscribe', {
+      const res = await fetchWithCSRF('/api/billing/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -218,7 +219,7 @@ export default function AccountPage() {
 
   const handleTunnelAction = async (action: 'enable' | 'disable' | 'regenerate' | 'rotate-token') => {
     try {
-      const res = await fetch('/api/instance/tunnel', {
+      const res = await fetchWithCSRF('/api/instance/tunnel', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

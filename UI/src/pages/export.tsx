@@ -1,5 +1,6 @@
 import Head from 'next/head'
 import { useCallback, useEffect, useState } from 'react'
+import { fetchWithCSRF } from '@/lib/api-client'
 import {
   Alert,
   Box,
@@ -78,7 +79,7 @@ export default function ExportPage() {
     setSuccess(null)
 
     try {
-      const response = await fetch('/api/export/json', { method: 'POST', credentials: 'include' })
+      const response = await fetchWithCSRF('/api/export/json', { method: 'POST', credentials: 'include' })
       const data = await response.json()
 
       if (!response.ok || !data.success) {
@@ -100,7 +101,7 @@ export default function ExportPage() {
     setSuccess(null)
 
     try {
-      const response = await fetch('/api/export/pdf', { method: 'POST', credentials: 'include' })
+      const response = await fetchWithCSRF('/api/export/pdf', { method: 'POST', credentials: 'include' })
       const data = await response.json()
 
       if (!response.ok || !data.success) {
@@ -122,7 +123,7 @@ export default function ExportPage() {
     setSuccess(null)
 
     try {
-      const response = await fetch('/api/export/gedcom', { method: 'POST', credentials: 'include' })
+      const response = await fetchWithCSRF('/api/export/gedcom', { method: 'POST', credentials: 'include' })
       const data = await response.json()
 
       if (!response.ok || !data.success) {

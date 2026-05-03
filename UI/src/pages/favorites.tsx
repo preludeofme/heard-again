@@ -1,6 +1,7 @@
 import Head from 'next/head'
 import { Layout } from '@/components/layout/Layout'
 import { useState, useEffect, useCallback } from 'react'
+import { fetchWithCSRF } from '@/lib/api-client'
 import { useRouter } from 'next/router'
 import {
   Box, Typography, Card, Grid, Button, IconButton, Chip,
@@ -61,7 +62,7 @@ export default function FavoritesPage() {
   const handleUnfavorite = async (storyId: string) => {
     setUnfavoritingId(storyId)
     try {
-      await fetch(`/api/stories/${storyId}/favorite`, { method: 'DELETE', credentials: 'include' })
+      await fetchWithCSRF(`/api/stories/${storyId}/favorite`, { method: 'DELETE', credentials: 'include' })
       setStories(prev => prev.filter(s => s.id !== storyId))
     } catch {
       // Silently fail

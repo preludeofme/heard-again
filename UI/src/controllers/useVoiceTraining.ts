@@ -201,8 +201,10 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
 
   const cancelTrainingJob = useCallback(async (jobId: string) => {
     try {
+      const csrfToken = await fetchToken()
       const response = await fetch(`/api/voice/queue?jobId=${jobId}`, {
         method: 'DELETE',
+        headers: { 'x-csrf-token': csrfToken },
         credentials: 'include',
       })
 

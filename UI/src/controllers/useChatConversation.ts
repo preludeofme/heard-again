@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, useRef } from 'react'
 import { ConversationMessage } from '@/types'
+import { fetchWithCSRF } from '@/lib/api-client'
 
 type TalkState = 'idle' | 'listening' | 'typing' | 'processing'
 
@@ -174,7 +175,7 @@ export function useChatConversation({
       }
 
       // No existing session found, create a new one
-      const response = await fetch('/api/chat/sessions', {
+      const response = await fetchWithCSRF('/api/chat/sessions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -255,7 +256,7 @@ export function useChatConversation({
 
     try {
       // Use streaming for better UX
-      const response = await fetch('/api/chat/stream', {
+      const response = await fetchWithCSRF('/api/chat/stream', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -502,7 +503,7 @@ export function useChatConversation({
 
   const deleteSession = useCallback(async (sessionId: string) => {
     try {
-      const response = await fetch(`/api/chat/sessions/${sessionId}`, {
+      const response = await fetchWithCSRF(`/api/chat/sessions/${sessionId}`, {
         method: 'DELETE',
         credentials: 'include',
       })
@@ -568,7 +569,7 @@ export function useChatConversation({
     setState(prev => ({ ...prev, isLoading: true }))
 
     try {
-      const response = await fetch(`/api/persona/${subjectId}/generate`, {
+      const response = await fetchWithCSRF(`/api/persona/${subjectId}/generate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

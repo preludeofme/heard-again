@@ -1,5 +1,6 @@
 import Head from 'next/head'
 import { useEffect, useMemo, useState, type ChangeEvent } from 'react'
+import { fetchWithCSRF } from '@/lib/api-client'
 import {
   Alert,
   Box,
@@ -90,7 +91,7 @@ export default function PrivacyPage() {
     setSuccess(null)
 
     try {
-      const response = await fetch('/api/privacy/retention', {
+      const response = await fetchWithCSRF('/api/privacy/retention', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -125,7 +126,7 @@ export default function PrivacyPage() {
     setSuccess(null)
 
     try {
-      const response = await fetch('/api/export/json', { method: 'POST', credentials: 'include' })
+      const response = await fetchWithCSRF('/api/export/json', { method: 'POST', credentials: 'include' })
       const data = await response.json()
 
       if (!response.ok || !data.success) {
@@ -148,7 +149,7 @@ export default function PrivacyPage() {
     setSuccess(null)
 
     try {
-      const response = await fetch('/api/privacy/permanent-deletion', {
+      const response = await fetchWithCSRF('/api/privacy/permanent-deletion', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

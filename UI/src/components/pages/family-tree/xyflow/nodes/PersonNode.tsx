@@ -25,6 +25,7 @@ export function PersonNode({ data }: NodeProps): React.JSX.Element {
         onAddPerson={d.onAddPerson}
         onViewArchive={d.onViewArchive}
         onSetRoot={d.onSetRoot}
+        onEditRelationships={d.onEditRelationships}
       />
       <Handle type="source" id="bottom" position={Position.Bottom} style={{ opacity: 0 }} />
       <Handle type="target" id="bottom" position={Position.Bottom} style={{ opacity: 0 }} />

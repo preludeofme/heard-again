@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
+import { fetchWithCSRF } from '@/lib/api-client'
 import Head from 'next/head'
 import { 
   Box, Typography, Card, CardContent, Button, Grid, TextField, 
@@ -57,7 +58,7 @@ export default function PublicContributePage() {
 
     setIsSubmitting(true)
     try {
-      const res = await fetch('/api/stories', {
+      const res = await fetchWithCSRF('/api/stories', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -89,7 +90,7 @@ export default function PublicContributePage() {
       // 1. Upload asset
       const formData = new FormData()
       formData.append('file', audioBlob, 'recording.webm')
-      const uploadRes = await fetch('/api/assets/upload', {
+      const uploadRes = await fetchWithCSRF('/api/assets/upload', {
         method: 'POST',
         body: formData
       })
@@ -98,7 +99,7 @@ export default function PublicContributePage() {
       const assetId = uploadData.data.id
 
       // 2. Create story
-      const res = await fetch('/api/stories', {
+      const res = await fetchWithCSRF('/api/stories', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -137,8 +138,15 @@ export default function PublicContributePage() {
     return (
       <Layout>
         <Container sx={{ py: 8, textAlign: 'center' }}>
-          <Typography variant="h5" sx={{ mb: 3 }}>Invalid contribution link</Typography>
-          <Button variant="contained" onClick={() => router.push('/')}>Go Home</Button>
+          <Typography variant="h5" sx={{ mb: 2, color: '#16334a' }}>
+            Who is this story about?
+          </Typography>
+          <Typography variant="body1" sx={{ mb: 4, color: '#546669', maxWidth: 400, mx: 'auto' }}>
+            Select a family member from the archive first, then use &ldquo;Add a Story&rdquo; to contribute.
+          </Typography>
+          <Button variant="contained" onClick={() => router.push('/archive?lens=stories')} sx={{ bgcolor: '#16334a', borderRadius: 2 }}>
+            Go to Archive
+          </Button>
         </Container>
       </Layout>
     )

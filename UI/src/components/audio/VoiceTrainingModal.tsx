@@ -1,3 +1,4 @@
+import dynamic from 'next/dynamic'
 import React, { useState, useRef } from 'react'
 import {
   Dialog,
@@ -23,8 +24,17 @@ import {
   RecordVoiceOver as VoiceIcon,
   Mic as MicIcon,
 } from '@mui/icons-material'
-import { AudioTrimmer } from './AudioTrimmer'
-import { AudioRecorder } from './AudioRecorder'
+
+// Dynamically import client-side components to avoid SSR errors
+const AudioTrimmer = dynamic(() => import('./AudioTrimmer').then(mod => mod.AudioTrimmer), {
+  ssr: false,
+  loading: () => <Box sx={{ py: 4, textAlign: 'center' }}><CircularProgress size={24} /></Box>
+})
+
+const AudioRecorder = dynamic(() => import('./AudioRecorder').then(mod => mod.AudioRecorder), {
+  ssr: false,
+  loading: () => <Box sx={{ py: 4, textAlign: 'center' }}><CircularProgress size={24} /></Box>
+})
 
 interface VoiceTrainingModalProps {
   open: boolean

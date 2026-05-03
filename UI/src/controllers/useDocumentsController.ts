@@ -132,9 +132,11 @@ export function useDocumentsController(personId?: string): DocumentsControllerSt
         formData.append('personId', personId)
       }
 
+      const csrfToken = await getCSRFToken()
       const response = await fetch('/api/assets/upload', {
         method: 'POST',
         credentials: 'include',
+        headers: { 'x-csrf-token': csrfToken },
         body: formData,
       })
 

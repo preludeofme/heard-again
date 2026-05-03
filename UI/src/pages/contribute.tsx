@@ -40,6 +40,10 @@ export default function ContributePage() {
     ? `Add a memory, upload a keepsake, or record your voice — every contribution becomes part of ${subjectName}'s living story.`
     : "Add a memory, upload a keepsake, or record your voice. Every contribution becomes part of your family's living story."
 
+  const memoryHref = selectedFamilyMember?.id
+    ? `/stories/contribute?subjectId=${selectedFamilyMember.id}`
+    : '/stories/contribute'
+
   const options: ContributionOption[] = [
     {
       key: 'memory',
@@ -47,7 +51,7 @@ export default function ContributePage() {
       description: 'Write a story, anecdote, or favorite moment from your life together.',
       icon: <EditNoteIcon sx={{ fontSize: 32 }} />,
       accent: ProfileColors.tertiaryFixed,
-      href: '/archive?lens=stories',
+      href: memoryHref,
     },
     {
       key: 'voice',

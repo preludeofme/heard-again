@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
 import { ApiError } from '@/lib/errors'
+import { fetchWithCSRF } from '@/lib/api-client'
 
 export interface FamilyspaceMember {
   id: string
@@ -121,7 +122,7 @@ export function useMembershipController(): MembershipControllerState & Membershi
     setState(prev => ({ ...prev, isInviting: true, hasError: false, errorMessage: null }))
 
     try {
-      const response = await fetch(`/api/familyspaces/${familyspaceId}/invite`, {
+      const response = await fetchWithCSRF(`/api/familyspaces/${familyspaceId}/invite`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -156,7 +157,7 @@ export function useMembershipController(): MembershipControllerState & Membershi
     setState(prev => ({ ...prev, isUpdatingMember: true, hasError: false, errorMessage: null }))
 
     try {
-      const response = await fetch(`/api/familyspaces/${familyspaceId}/members/${userId}`, {
+      const response = await fetchWithCSRF(`/api/familyspaces/${familyspaceId}/members/${userId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -193,7 +194,7 @@ export function useMembershipController(): MembershipControllerState & Membershi
     setState(prev => ({ ...prev, isRemovingMember: true, hasError: false, errorMessage: null }))
 
     try {
-      const response = await fetch(`/api/familyspaces/${familyspaceId}/members/${userId}`, {
+      const response = await fetchWithCSRF(`/api/familyspaces/${familyspaceId}/members/${userId}`, {
         method: 'DELETE',
         credentials: 'include',
       })
@@ -224,7 +225,7 @@ export function useMembershipController(): MembershipControllerState & Membershi
 
   const cancelInvite = useCallback(async (familyspaceId: string, inviteId: string): Promise<boolean> => {
     try {
-      const response = await fetch(`/api/familyspaces/${familyspaceId}/invite`, {
+      const response = await fetchWithCSRF(`/api/familyspaces/${familyspaceId}/invite`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -255,7 +256,7 @@ export function useMembershipController(): MembershipControllerState & Membershi
 
   const acceptInvite = useCallback(async (token: string): Promise<boolean> => {
     try {
-      const response = await fetch(`/api/invites/${token}/accept`, {
+      const response = await fetchWithCSRF(`/api/invites/${token}/accept`, {
         method: 'POST',
         credentials: 'include',
       })
@@ -279,7 +280,7 @@ export function useMembershipController(): MembershipControllerState & Membershi
 
   const declineInvite = useCallback(async (token: string): Promise<boolean> => {
     try {
-      const response = await fetch(`/api/invites/${token}/decline`, {
+      const response = await fetchWithCSRF(`/api/invites/${token}/decline`, {
         method: 'POST',
         credentials: 'include',
       })

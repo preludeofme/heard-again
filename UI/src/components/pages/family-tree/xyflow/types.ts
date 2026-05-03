@@ -55,6 +55,7 @@ export interface PersonNodeData {
   onAddPerson: () => void
   onViewArchive: (person: TreePerson) => void
   onSetRoot?: (id: string) => void
+  onEditRelationships?: (personId: string) => void
 }
 
 /** Marker so TypeScript knows the node type */

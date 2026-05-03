@@ -441,6 +441,7 @@ export function FamilyTreePage({
             onViewArchive={handleViewArchive}
             onSetRoot={onSetRoot}
             onLoadMore={_onLoadMore}
+            onEditRelationships={handleAddRelationship}
             isPanMode={isPanMode}
           />
         ) : (

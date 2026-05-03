@@ -1,14 +1,22 @@
 import { useMemo } from 'react'
 import { Box, CircularProgress, Typography, Button } from '@mui/material'
+import { EditNote as EditNoteIcon } from '@mui/icons-material'
+import { useRouter } from 'next/router'
 import { StoriesPage } from '@/components/pages/StoriesPage'
 import { useStoriesController } from '@/controllers/useStoriesController'
 import { useSelectedFamilyMember } from '@/contexts/SelectedFamilyMemberContext'
+import { ProfileColors } from '@/components/profile/ProfileConstants'
 import type { StoryContribution } from '@/types'
 
 export function StoriesLens() {
   const { selectedFamilyMember } = useSelectedFamilyMember()
   const selectedSubjectId = selectedFamilyMember?.id
   const controller = useStoriesController(selectedSubjectId)
+  const router = useRouter()
+
+  const addStoryHref = selectedSubjectId
+    ? `/stories/contribute?subjectId=${selectedSubjectId}`
+    : '/stories/contribute'
 
   const visibleStories = useMemo<StoryContribution[]>(() => {
     if (selectedSubjectId) {
@@ -36,10 +44,39 @@ export function StoriesLens() {
   }
 
   return (
-    <StoriesPage
-      stories={visibleStories}
-      selectedFamilyMember={selectedFamilyMember}
-      isLens
-    />
+    <Box>
+      <Box
+        sx={{
+          px: { xs: 3, md: 8 },
+          pt: { xs: 3, md: 4 },
+          pb: 2,
+          display: 'flex',
+          justifyContent: 'flex-end',
+        }}
+      >
+        <Button
+          variant="contained"
+          startIcon={<EditNoteIcon />}
+          onClick={() => router.push(addStoryHref)}
+          sx={{
+            borderRadius: '999px',
+            backgroundColor: ProfileColors.primary,
+            px: 3,
+            py: 1.25,
+            fontFamily: 'var(--font-manrope), sans-serif',
+            fontWeight: 600,
+            textTransform: 'none',
+            fontSize: '0.95rem',
+          }}
+        >
+          Add a Story
+        </Button>
+      </Box>
+      <StoriesPage
+        stories={visibleStories}
+        selectedFamilyMember={selectedFamilyMember}
+        isLens
+      />
+    </Box>
   )
 }

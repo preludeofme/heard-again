@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react'
 import { ApiError } from '@/lib/errors'
+import { fetchWithCSRF } from '@/lib/api-client'
 
 export interface Familyspace {
   id: string
@@ -125,7 +126,7 @@ export function useFamilyspaceController(): FamilyspaceControllerState & Familys
     setState(prev => ({ ...prev, isCreating: true, hasError: false, errorMessage: null }))
 
     try {
-      const response = await fetch('/api/familyspaces', {
+      const response = await fetchWithCSRF('/api/familyspaces', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -162,7 +163,7 @@ export function useFamilyspaceController(): FamilyspaceControllerState & Familys
     setState(prev => ({ ...prev, isUpdating: true, hasError: false, errorMessage: null }))
 
     try {
-      const response = await fetch(`/api/familyspaces/${id}`, {
+      const response = await fetchWithCSRF(`/api/familyspaces/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -202,7 +203,7 @@ export function useFamilyspaceController(): FamilyspaceControllerState & Familys
     setState(prev => ({ ...prev, isDeleting: true, hasError: false, errorMessage: null }))
 
     try {
-      const response = await fetch(`/api/familyspaces/${id}`, {
+      const response = await fetchWithCSRF(`/api/familyspaces/${id}`, {
         method: 'DELETE',
         credentials: 'include',
       })
@@ -234,7 +235,7 @@ export function useFamilyspaceController(): FamilyspaceControllerState & Familys
 
   const switchFamilyspace = useCallback(async (id: string): Promise<boolean> => {
     try {
-      const response = await fetch(`/api/familyspaces/${id}/switch`, {
+      const response = await fetchWithCSRF(`/api/familyspaces/${id}/switch`, {
         method: 'POST',
         credentials: 'include',
       })

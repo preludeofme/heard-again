@@ -363,35 +363,6 @@ export function PersonDetailModal({
             </Box>
           </Box>
 
-          {/* Stats */}
-          <Box
-            sx={{
-              display: 'flex',
-              gap: 4,
-              mt: 3,
-              pt: 3,
-              borderTop: '1px solid rgba(255,255,255,0.2)',
-            }}
-          >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <StoriesIcon sx={{ fontSize: 20, opacity: 0.8 }} />
-              <Typography variant="body2">
-                <strong>{person?.storyCount}</strong> Stories
-              </Typography>
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <VoiceIcon sx={{ fontSize: 20, opacity: 0.8 }} />
-              <Typography variant="body2">
-                <strong>{person?.voiceProfileCount}</strong> Voices
-              </Typography>
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <PeopleIcon sx={{ fontSize: 20, opacity: 0.8 }} />
-              <Typography variant="body2">
-                <strong>{person?.relationshipCount}</strong> Relatives
-              </Typography>
-            </Box>
-          </Box>
         </Box>
       </DialogTitle>
 

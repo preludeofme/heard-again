@@ -1,21 +1,20 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react'
 import {
+  Alert,
   Box,
   Typography,
   IconButton,
   Button,
-  Slider,
   Chip,
+  CircularProgress,
 } from '@mui/material'
 import {
   PlayArrow as PlayIcon,
   Pause as PauseIcon,
   ContentCut as TrimIcon,
   Replay as ResetIcon,
-  ZoomIn as ZoomInIcon,
-  ZoomOut as ZoomOutIcon,
 } from '@mui/icons-material'
-import WaveSurfer from 'wavesurfer.js'
+import Peaks, { PeaksInstance } from 'peaks.js'
 
 const MIN_SELECTION_SEC = 10
 const MAX_SELECTION_SEC = 30
@@ -30,188 +29,173 @@ interface AudioTrimmerProps {
   disabled?: boolean
 }
 
-/**
- * Renders a waveform of the uploaded audio and lets the user drag a region
- * to select 10-30 s of audio.  On confirm the selected segment is extracted
- * client-side via Web Audio API and handed back as a WAV File.
- */
 export function AudioTrimmer({ file, onTrimComplete, disabled }: AudioTrimmerProps) {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const wsRef = useRef<WaveSurfer | null>(null)
+  const overviewRef = useRef<HTMLDivElement>(null)
+  const zoomviewRef = useRef<HTMLDivElement>(null)
+  const audioRef = useRef<HTMLAudioElement>(null)
+  const peaksRef = useRef<PeaksInstance | null>(null)
   const audioBufferRef = useRef<AudioBuffer | null>(null)
 
   const [duration, setDuration] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
   const [region, setRegion] = useState<[number, number]>([0, RECOMMENDED_SEC])
   const [isReady, setIsReady] = useState(false)
-  const [zoomLevel, setZoomLevel] = useState(0) // 0 = fit-to-width, >0 = px per second
+  const [error, setError] = useState<string | null>(null)
 
   const regionLen = region[1] - region[0]
 
-  // ── Load the file into WaveSurfer + Web Audio API ──
+  // ── Initialize Peaks.js ──
   useEffect(() => {
-    if (!containerRef.current) return
+    if (!overviewRef.current || !zoomviewRef.current || !audioRef.current) return
 
-    const ws = WaveSurfer.create({
-      container: containerRef.current,
-      waveColor: '#adcae6',
-      progressColor: '#16334a',
-      cursorColor: '#e74c3c',
-      cursorWidth: 2,
-      height: 96,
-      barWidth: 2,
-      barGap: 1,
-      barRadius: 2,
-      normalize: true,
-      interact: true,
-      minPxPerSec: 1,
-    })
+    let peaksInstance: PeaksInstance | null = null
+    let isDestroyed = false
+    const audioUrl = URL.createObjectURL(file)
+    audioRef.current.src = audioUrl
 
-    wsRef.current = ws
+    const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)()
 
-    // Click on waveform → place 15s selection starting there
-    ws.on('click', (relativeX: number) => {
-      const dur = ws.getDuration()
-      const clickTime = relativeX * dur
-      const selEnd = Math.min(clickTime + RECOMMENDED_SEC, dur)
-      const selStart = Math.max(selEnd - RECOMMENDED_SEC, 0)
-      setRegion([selStart, selEnd])
-    })
-
-    // Decode via Web Audio API for trimming
+    // 1. Decode via Web Audio API for high-precision trimming
     const reader = new FileReader()
     reader.onload = async () => {
-      const arrayBuffer = reader.result as ArrayBuffer
-
-      // Decode for trimming
-      const audioCtx = new AudioContext()
-      const decoded = await audioCtx.decodeAudioData(arrayBuffer.slice(0))
-      audioBufferRef.current = decoded
-      audioCtx.close()
-
-      // Load into wavesurfer for visualization
-      const blob = new Blob([arrayBuffer], { type: file.type })
-      ws.loadBlob(blob)
+      if (isDestroyed) return
+      try {
+        const arrayBuffer = reader.result as ArrayBuffer
+        const decoded = await audioCtx.decodeAudioData(arrayBuffer.slice(0))
+        audioBufferRef.current = decoded
+      } catch (err) {
+        console.error('AudioContext decode error:', err)
+      }
     }
     reader.readAsArrayBuffer(file)
 
-    ws.on('ready', () => {
-      const dur = ws.getDuration()
-      setDuration(dur)
-      // Default region: first RECOMMENDED_SEC or full duration if shorter
-      const end = Math.min(dur, RECOMMENDED_SEC)
-      setRegion([0, end])
-      setIsReady(true)
-      setZoomLevel(0)
-    })
+    // 2. Init Peaks with visibility polling and metadata check
+    const initPeaks = () => {
+      if (isDestroyed || !overviewRef.current || !zoomviewRef.current || !audioRef.current) return
 
-    ws.on('play', () => setIsPlaying(true))
-    ws.on('pause', () => setIsPlaying(false))
-    ws.on('finish', () => setIsPlaying(false))
+      // Peaks.js requires non-zero dimensions
+      if (zoomviewRef.current.clientWidth === 0 || zoomviewRef.current.clientHeight === 0) {
+        requestAnimationFrame(initPeaks)
+        return
+      }
+
+      // Ensure metadata is loaded so duration is known
+      if (audioRef.current.readyState < 1) { // HAVE_METADATA = 1
+        audioRef.current.onloadedmetadata = initPeaks
+        return
+      }
+
+      const options = {
+        overview: {
+          container: overviewRef.current,
+          waveformColor: '#adcae6',
+          playedWaveformColor: '#16334a',
+          highlightColor: '#16334a',
+        },
+        zoomview: {
+          container: zoomviewRef.current,
+          waveformColor: '#adcae6',
+          playedWaveformColor: '#16334a',
+        },
+        mediaElement: audioRef.current,
+        webAudio: {
+          audioContext: audioCtx,
+        },
+      }
+
+      Peaks.init(options, (err, peaks) => {
+        if (isDestroyed) {
+          peaks?.destroy()
+          return
+        }
+        if (err) {
+          const mediaError = audioRef.current?.error
+          const errorMsg = mediaError 
+            ? `Media Error ${mediaError.code}: ${mediaError.message || 'Unknown source error'}`
+            : (err instanceof Error ? err.message : String(err))
+          
+          console.error('Peaks init error:', errorMsg)
+          setError(`Audio Error: ${errorMsg}`)
+          return
+        }
+        if (!peaks) return
+
+        peaksInstance = peaks
+        peaksRef.current = peaks
+
+        const dur = peaks.player.getDuration()
+        setDuration(dur)
+
+        // Add the initial selection segment
+        const end = Math.min(dur, RECOMMENDED_SEC)
+        peaks.segments.add({
+          startTime: 0,
+          endTime: end,
+          labelText: 'Selection',
+          editable: true,
+          color: '#16334a',
+          id: 'selection-clip',
+        })
+
+        setRegion([0, end])
+        setIsReady(true)
+
+        // Listen for segment changes
+        const updateRegion = (segment: any) => {
+          if (segment.id === 'selection-clip') {
+            setRegion([segment.startTime, segment.endTime])
+          }
+        }
+
+        peaks.on('segments.dragged', updateRegion)
+        peaks.on('segments.update', updateRegion)
+
+        peaks.on('player.play', () => setIsPlaying(true))
+        peaks.on('player.pause', () => setIsPlaying(false))
+      })
+    }
+
+    // Small timeout to allow MUI Dialog transitions/layout to settle
+    const timer = setTimeout(initPeaks, 50)
 
     return () => {
-      ws.destroy()
-      wsRef.current = null
+      isDestroyed = true
+      clearTimeout(timer)
+      if (peaksInstance) {
+        peaksInstance.destroy()
+      }
+      if (audioCtx.state !== 'closed') {
+        audioCtx.close()
+      }
+      URL.revokeObjectURL(audioUrl)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [file])
 
-  // ── Playback: only play the selected region ──
   const handlePlayPause = useCallback(() => {
-    const ws = wsRef.current
-    if (!ws) return
-
+    if (!peaksRef.current) return
     if (isPlaying) {
-      ws.pause()
+      peaksRef.current.player.pause()
     } else {
-      // Seek to region start and play
-      ws.setTime(region[0])
-      ws.play()
-
-      // Stop when we reach region end
-      const checkEnd = () => {
-        if (ws.getCurrentTime() >= region[1]) {
-          ws.pause()
-          ws.un('audioprocess', checkEnd)
-          ws.un('timeupdate', checkEnd)
-        }
-      }
-      ws.on('timeupdate', checkEnd)
+      peaksRef.current.player.play()
     }
-  }, [isPlaying, region])
+  }, [isPlaying])
 
-  // ── Region slider change ──
-  const handleRegionChange = (_event: Event, newValue: number | number[]) => {
-    if (!Array.isArray(newValue)) return
-    let [start, end] = newValue
-
-    // Enforce min/max selection length
-    const len = end - start
-    if (len < MIN_SELECTION_SEC) {
-      // Expand to minimum
-      if (end + (MIN_SELECTION_SEC - len) <= duration) {
-        end = start + MIN_SELECTION_SEC
-      } else {
-        start = end - MIN_SELECTION_SEC
-      }
-    }
-    if (len > MAX_SELECTION_SEC) {
-      end = start + MAX_SELECTION_SEC
-    }
-
-    setRegion([Math.max(0, start), Math.min(duration, end)])
-  }
-
-  // ── Reset to full recommended selection ──
   const handleReset = () => {
-    setRegion([0, Math.min(duration, RECOMMENDED_SEC)])
-    // Also reset zoom
-    if (wsRef.current) {
-      wsRef.current.zoom(0)
-      setZoomLevel(0)
+    if (!peaksRef.current) return
+    const segment = peaksRef.current.segments.getSegment('selection-clip')
+    if (segment) {
+      const end = Math.min(duration, RECOMMENDED_SEC)
+      segment.update({ startTime: 0, endTime: end })
+      setRegion([0, end])
     }
   }
 
-  // ── Zoom controls ──
-  const handleZoomIn = useCallback(() => {
-    const ws = wsRef.current
-    if (!ws || !containerRef.current) return
-    const containerWidth = containerRef.current.clientWidth
-    // Calculate current px/sec; zoom in by showing fewer seconds
-    const currentPxPerSec = zoomLevel || (containerWidth / duration)
-    const newPxPerSec = Math.min(currentPxPerSec * 2, 200) // cap at 200px/sec
-    ws.zoom(newPxPerSec)
-    setZoomLevel(newPxPerSec)
-    // Scroll to center the selection
-    const scrollContainer = containerRef.current.querySelector('div[data-testid]')?.parentElement
-      || containerRef.current.firstElementChild as HTMLElement | null
-    if (scrollContainer) {
-      const regionCenter = (region[0] + region[1]) / 2
-      const scrollPos = (regionCenter / duration) * (newPxPerSec * duration) - containerWidth / 2
-      scrollContainer.scrollLeft = Math.max(0, scrollPos)
-    }
-  }, [zoomLevel, duration, region])
-
-  const handleZoomOut = useCallback(() => {
-    const ws = wsRef.current
-    if (!ws || !containerRef.current) return
-    const containerWidth = containerRef.current.clientWidth
-    const minPxPerSec = containerWidth / duration
-    const currentPxPerSec = zoomLevel || minPxPerSec
-    const newPxPerSec = Math.max(currentPxPerSec / 2, minPxPerSec)
-    if (newPxPerSec <= minPxPerSec) {
-      ws.zoom(0)
-      setZoomLevel(0)
-    } else {
-      ws.zoom(newPxPerSec)
-      setZoomLevel(newPxPerSec)
-    }
-  }, [zoomLevel, duration])
-
-  // ── Extract selected region as WAV and hand back ──
   const handleConfirmTrim = useCallback(async () => {
     const buf = audioBufferRef.current
-    if (!buf) return
+    if (!buf) {
+      onTrimComplete(file)
+      return
+    }
 
     const sampleRate = buf.sampleRate
     const startSample = Math.floor(region[0] * sampleRate)
@@ -219,12 +203,10 @@ export function AudioTrimmer({ file, onTrimComplete, disabled }: AudioTrimmerPro
     const numSamples = endSample - startSample
     const numChannels = buf.numberOfChannels
 
-    // Create an offline context to extract the segment
     const offlineCtx = new OfflineAudioContext(numChannels, numSamples, sampleRate)
     const source = offlineCtx.createBufferSource()
-
-    // Create a new buffer with just the selected region
     const trimmedBuffer = offlineCtx.createBuffer(numChannels, numSamples, sampleRate)
+
     for (let ch = 0; ch < numChannels; ch++) {
       const channelData = buf.getChannelData(ch)
       const trimmedData = trimmedBuffer.getChannelData(ch)
@@ -238,15 +220,9 @@ export function AudioTrimmer({ file, onTrimComplete, disabled }: AudioTrimmerPro
     source.start()
 
     const rendered = await offlineCtx.startRendering()
-
-    // Encode to WAV
     const wavBlob = audioBufferToWav(rendered)
     const baseName = file.name.replace(/\.[^.]+$/, '')
-    const trimmedFile = new File(
-      [wavBlob],
-      `${baseName}_trimmed.wav`,
-      { type: 'audio/wav' },
-    )
+    const trimmedFile = new File([wavBlob], `${baseName}_trimmed.wav`, { type: 'audio/wav' })
 
     onTrimComplete(trimmedFile)
   }, [region, file, onTrimComplete])
@@ -261,8 +237,11 @@ export function AudioTrimmer({ file, onTrimComplete, disabled }: AudioTrimmerPro
 
   return (
     <Box sx={{ mt: 2 }}>
+      {/* Hidden Audio Element */}
+      <audio ref={audioRef} style={{ display: 'none' }} />
+
       {/* Header */}
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Typography variant="subtitle2" sx={{ color: '#16334a', fontWeight: 600 }}>
             Select a clip
@@ -271,44 +250,14 @@ export function AudioTrimmer({ file, onTrimComplete, disabled }: AudioTrimmerPro
             label={`${formatTime(regionLen)} selected`}
             size="small"
             sx={{
-              backgroundColor: regionLen >= MIN_SELECTION_SEC ? '#d0e3e6' : '#fef6f6',
-              color: regionLen >= MIN_SELECTION_SEC ? '#16334a' : '#dc2626',
+              backgroundColor: regionLen >= MIN_SELECTION_SEC && regionLen <= MAX_SELECTION_SEC ? '#d0e3e6' : '#fef6f6',
+              color: regionLen >= MIN_SELECTION_SEC && regionLen <= MAX_SELECTION_SEC ? '#16334a' : '#dc2626',
               fontWeight: 600,
               fontSize: '0.7rem',
             }}
           />
-          {isReady && (
-            <Chip
-              label={`${formatTime(region[0])} – ${formatTime(region[1])}`}
-              size="small"
-              variant="outlined"
-              sx={{
-                borderColor: '#d0e3e6',
-                color: '#546669',
-                fontSize: '0.7rem',
-              }}
-            />
-          )}
         </Box>
         <Box sx={{ display: 'flex', gap: 0.5 }}>
-          <IconButton
-            size="small"
-            onClick={handleZoomOut}
-            disabled={!isReady || disabled || zoomLevel === 0}
-            sx={{ color: '#546669' }}
-            title="Zoom out"
-          >
-            <ZoomOutIcon fontSize="small" />
-          </IconButton>
-          <IconButton
-            size="small"
-            onClick={handleZoomIn}
-            disabled={!isReady || disabled}
-            sx={{ color: '#546669' }}
-            title="Zoom in"
-          >
-            <ZoomInIcon fontSize="small" />
-          </IconButton>
           <IconButton
             size="small"
             onClick={handlePlayPause}
@@ -329,121 +278,47 @@ export function AudioTrimmer({ file, onTrimComplete, disabled }: AudioTrimmerPro
         </Box>
       </Box>
 
-      {/* Waveform */}
-      <Box
-        sx={{
-          position: 'relative',
-          backgroundColor: '#ffffff',
-          borderRadius: 2,
-          border: '1px solid #d0e3e6',
-          overflow: 'hidden',
-          p: 1,
-          cursor: isReady ? 'crosshair' : 'default',
-        }}
-      >
-        <div ref={containerRef} style={{ overflowX: 'auto' }} />
+      {/* Waveform Containers */}
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+        {/* Zoom View */}
+        <Box
+          sx={{
+            height: 120,
+            backgroundColor: '#ffffff',
+            borderRadius: 2,
+            border: '1px solid #d0e3e6',
+            overflow: 'hidden',
+            position: 'relative',
+            display: isReady ? 'block' : 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          {!isReady && !error && <CircularProgress size={24} sx={{ color: '#16334a' }} />}
+          {error && <Typography variant="caption" color="error">{error}</Typography>}
+          <div ref={zoomviewRef} style={{ height: '100%', width: '100%' }} />
+        </Box>
 
-        {/* Region overlay */}
-        {isReady && duration > 0 && (
-          <>
-            {/* Left mask */}
-            <Box
-              sx={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: `${(region[0] / duration) * 100}%`,
-                height: '100%',
-                backgroundColor: 'rgba(0,0,0,0.15)',
-                pointerEvents: 'none',
-                borderRadius: '8px 0 0 8px',
-              }}
-            />
-            {/* Right mask */}
-            <Box
-              sx={{
-                position: 'absolute',
-                top: 0,
-                right: 0,
-                width: `${((duration - region[1]) / duration) * 100}%`,
-                height: '100%',
-                backgroundColor: 'rgba(0,0,0,0.15)',
-                pointerEvents: 'none',
-                borderRadius: '0 8px 8px 0',
-              }}
-            />
-            {/* Left handle */}
-            <Box
-              sx={{
-                position: 'absolute',
-                top: 0,
-                left: `${(region[0] / duration) * 100}%`,
-                width: 3,
-                height: '100%',
-                backgroundColor: '#16334a',
-                pointerEvents: 'none',
-              }}
-            />
-            {/* Right handle */}
-            <Box
-              sx={{
-                position: 'absolute',
-                top: 0,
-                left: `${(region[1] / duration) * 100}%`,
-                width: 3,
-                height: '100%',
-                backgroundColor: '#16334a',
-                pointerEvents: 'none',
-              }}
-            />
-          </>
-        )}
+        {/* Overview */}
+        <Box
+          sx={{
+            height: 48,
+            backgroundColor: '#ffffff',
+            borderRadius: 1.5,
+            border: '1px solid #d0e3e6',
+            overflow: 'hidden',
+            opacity: isReady ? 1 : 0.5,
+          }}
+        >
+          <div ref={overviewRef} style={{ height: '100%', width: '100%' }} />
+        </Box>
       </Box>
 
-      {/* Range slider */}
-      {isReady && (
-        <Box sx={{ px: 1, mt: 1 }}>
-          <Slider
-            value={region}
-            onChange={handleRegionChange}
-            min={0}
-            max={duration}
-            step={0.1}
-            valueLabelDisplay="auto"
-            valueLabelFormat={formatTime}
-            disabled={disabled}
-            sx={{
-              color: '#16334a',
-              '& .MuiSlider-thumb': {
-                width: 14,
-                height: 14,
-                '&:hover, &.Mui-focusVisible': {
-                  boxShadow: '0 0 0 6px rgba(22, 51, 74, 0.16)',
-                },
-              },
-              '& .MuiSlider-valueLabel': {
-                backgroundColor: '#16334a',
-                borderRadius: 1,
-                fontSize: '0.7rem',
-              },
-            }}
-          />
-          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-            <Typography variant="caption" sx={{ color: '#8a9a9d' }}>
-              {formatTime(0)}
-            </Typography>
-            <Typography variant="caption" sx={{ color: '#8a9a9d' }}>
-              Total: {formatTime(duration)}
-            </Typography>
-          </Box>
-        </Box>
-      )}
-
       {/* Helper text */}
-      <Typography variant="caption" sx={{ color: '#546669', display: 'block', mt: 1, textAlign: 'center' }}>
+      <Typography variant="caption" sx={{ color: '#546669', display: 'block', mt: 1.5, textAlign: 'center', px: 2 }}>
         {needsTrim
-          ? 'Click on the waveform to place a 15s selection, or drag the slider handles. Use zoom for precision.'
-          : `Audio is ${formatTime(duration)} — ready to use as-is or adjust the selection`}
+          ? 'Drag the blue handles in the top view to select 10–30s of clear audio. The bottom bar shows the full recording.'
+          : `Audio is ${formatTime(duration)} — you can use it as-is or drag the handles to select a specific part.`}
       </Typography>
 
       {/* Confirm button */}
@@ -452,12 +327,14 @@ export function AudioTrimmer({ file, onTrimComplete, disabled }: AudioTrimmerPro
         fullWidth
         startIcon={<TrimIcon />}
         onClick={handleConfirmTrim}
-        disabled={!isReady || disabled || regionLen < MIN_SELECTION_SEC}
+        disabled={!isReady || disabled || (regionLen < MIN_SELECTION_SEC) || (regionLen > MAX_SELECTION_SEC)}
         sx={{
-          mt: 2,
+          mt: 2.5,
           background: 'linear-gradient(135deg, #16334a 0%, #2e4a62 100%)',
-          py: 1.25,
+          py: 1.5,
           fontWeight: 600,
+          textTransform: 'none',
+          borderRadius: 2,
         }}
       >
         {needsTrim ? 'Use Selected Clip' : 'Use This Audio'}
@@ -465,7 +342,6 @@ export function AudioTrimmer({ file, onTrimComplete, disabled }: AudioTrimmerPro
     </Box>
   )
 }
-
 
 // ── WAV encoder (PCM 16-bit) ──
 
@@ -480,26 +356,20 @@ function audioBufferToWav(buffer: AudioBuffer): Blob {
   const arrayBuffer = new ArrayBuffer(headerSize + dataSize)
   const view = new DataView(arrayBuffer)
 
-  // RIFF header
   writeString(view, 0, 'RIFF')
   view.setUint32(4, 36 + dataSize, true)
   writeString(view, 8, 'WAVE')
-
-  // fmt chunk
   writeString(view, 12, 'fmt ')
-  view.setUint32(16, 16, true) // chunk size
-  view.setUint16(20, 1, true) // PCM
+  view.setUint32(16, 16, true)
+  view.setUint16(20, 1, true)
   view.setUint16(22, numChannels, true)
   view.setUint32(24, sampleRate, true)
   view.setUint32(28, sampleRate * blockAlign, true)
   view.setUint16(32, blockAlign, true)
-  view.setUint16(34, 16, true) // bits per sample
-
-  // data chunk
+  view.setUint16(34, 16, true)
   writeString(view, 36, 'data')
   view.setUint32(40, dataSize, true)
 
-  // Interleave channels and write PCM samples
   let offset = 44
   for (let i = 0; i < numSamples; i++) {
     for (let ch = 0; ch < numChannels; ch++) {

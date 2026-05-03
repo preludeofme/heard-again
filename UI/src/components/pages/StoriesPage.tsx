@@ -35,7 +35,7 @@ const getDisplayName = (member: StoriesPageProps['selectedFamilyMember']) => {
 }
 
 const contributeHref = (memberId?: string | null) =>
-  memberId ? `/contribute?subjectId=${memberId}` : '/contribute'
+  memberId ? `/stories/contribute?subjectId=${memberId}` : '/stories/contribute'
 
 export function StoriesPage({ stories, selectedFamilyMember, isLens = false }: StoriesPageProps) {
   const [activeFilter, setActiveFilter] = useState<'all' | 'written' | 'audio'>('all')

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { fetchWithCSRF } from '@/lib/api-client'
 
 interface UseApiOptions<T> {
   url: string
@@ -46,7 +47,7 @@ export function useApi<T = unknown>({
         options.body = JSON.stringify(overrideBody ?? body)
       }
 
-      const response = await fetch(url, options)
+      const response = await fetchWithCSRF(url, options)
       const result = await response.json()
 
       if (!response.ok || !result.success) {

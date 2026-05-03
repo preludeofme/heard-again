@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react'
 import { AudioCache, VoiceSynthesisResponse } from '@/types'
 import { logger } from '@/lib/client-logger'
+import { fetchWithCSRF } from '@/lib/api-client'
 
 interface TalkSynthesisState {
   audioCache: AudioCache
@@ -86,7 +87,7 @@ export function useTalkSynthesis({
         synthesisStatus: 'processing',
       }))
 
-      const response = await fetch('/api/voice/synthesize', {
+      const response = await fetchWithCSRF('/api/voice/synthesize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

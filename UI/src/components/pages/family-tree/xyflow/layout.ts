@@ -12,9 +12,9 @@ const STUB_EDGE_COLOR = 'rgba(22, 51, 74, 0.28)'
 const STUB_EDGE_WIDTH = 2
 const PARENT_HEIGHT = 290
 const GRANDPARENT_WIDTH = 256
-const GRANDPARENT_HEIGHT = 100
+const GRANDPARENT_HEIGHT = 152
 const CHILD_WIDTH = 240
-const CHILD_HEIGHT = 85
+const CHILD_HEIGHT = 140
 const H_GAP = 48
 const V_ROW_GAP = 350
 const FAMILY_NODE_SIZE = 1
@@ -39,6 +39,7 @@ interface LayoutCallbacks {
   onViewArchive: (person: TreePerson) => void
   onSetRoot?: (id: string) => void
   onLoadMore?: (direction: 'up' | 'down', personId: string) => void
+  onEditRelationships?: (personId: string) => void
   isMobile: boolean
 }
 
@@ -197,6 +198,27 @@ function buildDisplayName(person: ApiPersonWithEdges): string {
   return parts.join(' ')
 }
 
+// ─── Helper: resolve overlaps in a row (left-to-right sweep) ─────────────────
+
+function resolveOverlaps(
+  sortedIds: string[],
+  desiredX: Map<string, number>,
+  nodeWidth: number,
+  gap: number,
+): Map<string, number> {
+  const result = new Map<string, number>()
+  for (let i = 0; i < sortedIds.length; i++) {
+    const id = sortedIds[i]
+    let x = desiredX.get(id) ?? 0
+    if (i > 0) {
+      const prevX = result.get(sortedIds[i - 1])!
+      x = Math.max(x, prevX + nodeWidth + gap)
+    }
+    result.set(id, x)
+  }
+  return result
+}
+
 // ─── Main layout function ─────────────────────────────────────────────────────
 
 export interface LayoutResult {
@@ -235,74 +257,169 @@ export function buildFamilyTreeLayout(
     rowY.set(gen, index * V_ROW_GAP)
   })
 
-  // Compute canvas width per row and total
-  const rowWidths = new Map<number, number>()
-  Array.from(sortedByGeneration.entries()).forEach(([gen, ids]) => {
-    const { width } = cardDimensions(gen)
-    rowWidths.set(gen, ids.length * width + Math.max(0, ids.length - 1) * H_GAP)
-  })
-  const canvasWidth = Math.max(...Array.from(rowWidths.values()), PARENT_WIDTH)
-
   // Build person lookup
   const peopleById = new Map(people.map((p) => [p.id, p]))
 
-  // Build nodes
-  const nodes: Node[] = []
+  // Build family units early — needed for tree-aware position assignment
+  const familyUnits = buildFamilyUnits(parentsByChild)
+
+  // ─── Assign positions: parents centered over their children ──────────────────
   const personPositions = new Map<string, { x: number; y: number; width: number; height: number }>()
 
-  Array.from(sortedByGeneration.entries()).forEach(([gen, ids]) => {
-    const { width, height } = cardDimensions(gen)
-    const rowWidth = ids.length * width + Math.max(0, ids.length - 1) * H_GAP
-    const rowStartX = (canvasWidth - rowWidth) / 2
-    const y = rowY.get(gen) ?? 0
-
-    ids.forEach((personId: string, index: number) => {
-      const person = peopleById.get(personId)
-      if (!person) return
-
-      const x = rowStartX + index * (width + H_GAP)
-      personPositions.set(personId, { x, y, width, height })
-
-      const level = levelFromGen(gen)
-      const isSelf = personId === rootPersonId
-
-      const layoutPerson: TreeLayoutPerson = {
-        id: person.id,
-        name: buildDisplayName(person),
-        role: isSelf ? 'Self' : 'Family Member',
-        avatar: person.avatarUrl ?? '',
-        birthDate: person.birthDate,
-        deathDate: person.deathDate,
-        memories: person.counts?.stories ?? 0,
-        selected: isSelf,
-        width,
-        height,
-      }
-
-      const nodeData: PersonNodeData = {
-        person: layoutPerson,
-        level,
-        isSelf,
-        isMobile: callbacks.isMobile,
-        onPersonClick: callbacks.onPersonClick,
-        onAddPerson: callbacks.onAddPerson,
-        onViewArchive: callbacks.onViewArchive,
-        onSetRoot: callbacks.onSetRoot,
-      }
-
-      nodes.push({
-        id: personId,
-        type: 'personNode',
-        position: { x, y },
-        data: nodeData as unknown as Record<string, unknown>,
-        draggable: false,
-        style: { width, height, pointerEvents: 'all' },
-      })
+  // Gen 0 — center at origin
+  {
+    const ids = sortedByGeneration.get(0) ?? []
+    const { width, height } = cardDimensions(0)
+    const y = rowY.get(0) ?? 0
+    const totalW = ids.length * width + Math.max(0, ids.length - 1) * H_GAP
+    ids.forEach((id, i) => {
+      personPositions.set(id, { x: -totalW / 2 + i * (width + H_GAP), y, width, height })
     })
-  })
+  }
 
-  // Build family units and junction nodes
-  const familyUnits = buildFamilyUnits(parentsByChild)
+  // Ancestor gens (1, 2, 3 ...) — center each couple over their children
+  for (const gen of sortedGens.filter(g => g > 0)) {
+    const ids = sortedByGeneration.get(gen) ?? []
+    const { width, height } = cardDimensions(gen)
+    const y = rowY.get(gen)!
+    const genOrder = new Map(ids.map((id, i) => [id, i]))
+    const desiredX = new Map<string, number>()
+
+    for (const unit of familyUnits) {
+      const parentsInGen = unit.parentIds
+        .filter(pid => generationById.get(pid) === gen)
+        .sort((a, b) => (genOrder.get(a) ?? 0) - (genOrder.get(b) ?? 0))
+      const childrenBelow = unit.childIds.filter(cid => generationById.get(cid) === gen - 1)
+      if (parentsInGen.length === 0 || childrenBelow.length === 0) continue
+
+      const childPos = childrenBelow
+        .map(id => personPositions.get(id))
+        .filter((p): p is NonNullable<typeof p> => !!p)
+      if (childPos.length === 0) continue
+
+      const midX = (
+        Math.min(...childPos.map(p => p.x)) +
+        Math.max(...childPos.map(p => p.x + p.width))
+      ) / 2
+      const totalW = parentsInGen.length * width + Math.max(0, parentsInGen.length - 1) * H_GAP
+      parentsInGen.forEach((pid, i) => desiredX.set(pid, midX - totalW / 2 + i * (width + H_GAP)))
+    }
+
+    // Fallback: center above any visible children
+    for (const id of ids) {
+      if (desiredX.has(id)) continue
+      const childPos = Array.from(childrenByParent.get(id) ?? [])
+        .map(cid => personPositions.get(cid))
+        .filter((p): p is NonNullable<typeof p> => !!p)
+      desiredX.set(id, childPos.length > 0
+        ? childPos.reduce((s, p) => s + p.x + p.width / 2, 0) / childPos.length - width / 2
+        : 0)
+    }
+
+    const sorted = [...ids].sort((a, b) => (desiredX.get(a) ?? 0) - (desiredX.get(b) ?? 0))
+    const resolved = resolveOverlaps(sorted, desiredX, width, H_GAP)
+    for (const id of ids) personPositions.set(id, { x: resolved.get(id) ?? 0, y, width, height })
+  }
+
+  // Descendant gens (-1, -2, ...) — center children under their parents
+  for (const gen of sortedGens.filter(g => g < 0).sort((a, b) => b - a)) {
+    const ids = sortedByGeneration.get(gen) ?? []
+    const { width, height } = cardDimensions(gen)
+    const y = rowY.get(gen)!
+    const genOrder = new Map(ids.map((id, i) => [id, i]))
+    const desiredX = new Map<string, number>()
+
+    for (const unit of familyUnits) {
+      const childrenInGen = unit.childIds
+        .filter(cid => generationById.get(cid) === gen)
+        .sort((a, b) => (genOrder.get(a) ?? 0) - (genOrder.get(b) ?? 0))
+      const parentsAbove = unit.parentIds.filter(pid => generationById.get(pid) === gen + 1)
+      if (childrenInGen.length === 0 || parentsAbove.length === 0) continue
+
+      const parentPos = parentsAbove
+        .map(id => personPositions.get(id))
+        .filter((p): p is NonNullable<typeof p> => !!p)
+      if (parentPos.length === 0) continue
+
+      const midX = (
+        Math.min(...parentPos.map(p => p.x)) +
+        Math.max(...parentPos.map(p => p.x + p.width))
+      ) / 2
+      const totalW = childrenInGen.length * width + Math.max(0, childrenInGen.length - 1) * H_GAP
+      childrenInGen.forEach((cid, i) => desiredX.set(cid, midX - totalW / 2 + i * (width + H_GAP)))
+    }
+
+    // Fallback: center below any visible parents
+    for (const id of ids) {
+      if (desiredX.has(id)) continue
+      const parentPos = Array.from(parentsByChild.get(id) ?? [])
+        .map(pid => personPositions.get(pid))
+        .filter((p): p is NonNullable<typeof p> => !!p)
+      desiredX.set(id, parentPos.length > 0
+        ? parentPos.reduce((s, p) => s + p.x + p.width / 2, 0) / parentPos.length - width / 2
+        : 0)
+    }
+
+    const sorted = [...ids].sort((a, b) => (desiredX.get(a) ?? 0) - (desiredX.get(b) ?? 0))
+    const resolved = resolveOverlaps(sorted, desiredX, width, H_GAP)
+    for (const id of ids) personPositions.set(id, { x: resolved.get(id) ?? 0, y, width, height })
+  }
+
+  // Shift all positions so minX = 0
+  const allMinX = Math.min(...Array.from(personPositions.values()).map(p => p.x))
+  if (isFinite(allMinX) && allMinX !== 0) {
+    for (const [id, pos] of personPositions) {
+      personPositions.set(id, { ...pos, x: pos.x - allMinX })
+    }
+  }
+
+  // Build nodes
+  const nodes: Node[] = []
+  for (const [personId, pos] of personPositions) {
+    const person = peopleById.get(personId)
+    if (!person) continue
+
+    const gen = generationById.get(personId) ?? 0
+    const { width, height } = pos
+    const level = levelFromGen(gen)
+    const isSelf = personId === rootPersonId
+
+    const layoutPerson: TreeLayoutPerson = {
+      id: person.id,
+      name: buildDisplayName(person),
+      role: isSelf ? 'Self' : 'Family Member',
+      avatar: person.avatarUrl ?? '',
+      birthDate: person.birthDate,
+      deathDate: person.deathDate,
+      memories: person.counts?.stories ?? 0,
+      selected: isSelf,
+      width,
+      height,
+    }
+
+    const nodeData: PersonNodeData = {
+      person: layoutPerson,
+      level,
+      isSelf,
+      isMobile: callbacks.isMobile,
+      onPersonClick: callbacks.onPersonClick,
+      onAddPerson: callbacks.onAddPerson,
+      onViewArchive: callbacks.onViewArchive,
+      onSetRoot: callbacks.onSetRoot,
+      onEditRelationships: callbacks.onEditRelationships,
+    }
+
+    nodes.push({
+      id: personId,
+      type: 'personNode',
+      position: { x: pos.x, y: pos.y },
+      data: nodeData as unknown as Record<string, unknown>,
+      draggable: false,
+      style: { width, height, pointerEvents: 'all' },
+    })
+  }
+
+  // Build junction nodes and edges
   const edges: Edge[] = []
 
   // Collect spouse pairs that participate in a family unit (to avoid duplicate spouse edges)

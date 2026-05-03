@@ -1,6 +1,7 @@
 import Head from 'next/head'
 import { Layout } from '@/components/layout/Layout'
 import { useState, useEffect, useCallback } from 'react'
+import { fetchWithCSRF } from '@/lib/api-client'
 import { useRouter } from 'next/router'
 import {
   Box, Typography, Card, Button, CircularProgress, Chip, Divider,
@@ -131,7 +132,7 @@ export default function SubscriptionPage() {
   const handleCancel = async () => {
     setIsCancelling(true)
     try {
-      const res = await fetch('/api/billing/cancel', { method: 'POST', credentials: 'include' })
+      const res = await fetchWithCSRF('/api/billing/cancel', { method: 'POST', credentials: 'include' })
       if (res.ok) {
         setShowCancelDialog(false)
         fetchData()

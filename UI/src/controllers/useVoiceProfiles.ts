@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react'
 import { useSnackbar } from 'notistack'
 import type { VoiceModel } from '@/types'
 import { toVoiceModelArray } from '@/mappers'
+import { fetchWithCSRF } from '@/lib/api-client'
 
 interface VoiceProfilesState {
   voiceModels: VoiceModel[]
@@ -60,7 +61,7 @@ export function useVoiceProfiles(subjectId?: string): VoiceProfilesState & Voice
 
   const deleteVoiceProfile = useCallback(async (profileId: string) => {
     try {
-      const response = await fetch(`/api/voice/profiles/${profileId}`, {
+      const response = await fetchWithCSRF(`/api/voice/profiles/${profileId}`, {
         method: 'DELETE',
         credentials: 'include',
       })
