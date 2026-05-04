@@ -56,11 +56,11 @@ export class CustomNodeRenderer extends CompositeRenderer implements Renderer {
   updateNodes(nodes: Array<HierarchyNode<TreeNode>>): void {
     super.updateNodes(nodes);
     // Extract node positions for React
-    const nodeData: NodeData[] = nodes.map(node => {
+    const nodeData: NodeData[] = nodes.map((node, index) => {
       // Topola stores coords on the node object directly after layout
       const anyNode = node as any;
       return {
-        id: node.data.id,
+        id: `${node.data.id}-${index}`, // Ensure unique key for React even if person is duplicated in layout
         x: anyNode.x,
         y: anyNode.y,
         width: node.data.width || 260,

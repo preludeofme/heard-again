@@ -34,6 +34,7 @@ interface VoiceLabPageProps {
     loadVoiceModels: () => Promise<void>
     deleteVoiceProfile: (profileId: string) => Promise<void>
     refreshData: () => Promise<void>
+    resetTraining: () => void
   }
 }
 
@@ -51,6 +52,7 @@ export function VoiceLabPage({ voiceModels, controller }: VoiceLabPageProps) {
     synthesizeSpeech,
     deleteVoiceProfile,
     refreshData,
+    resetTraining,
   } = controller
 
   const { selectedFamilyMember } = useSelectedFamilyMember()
@@ -436,6 +438,7 @@ export function VoiceLabPage({ voiceModels, controller }: VoiceLabPageProps) {
         onUploadSample={uploadTrainingSample}
         onRemoveSample={removeTrainingSample}
         onCreateVoice={handleCreateVoice}
+        onResetTraining={resetTraining}
         isUploading={isUploading}
         isTraining={isTraining}
         trainingJob={trainingJob}

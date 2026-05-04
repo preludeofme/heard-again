@@ -109,15 +109,15 @@ function assignGenerations(
       if (edge.type === 'SPOUSE') {
         delta = 0
       } else if (edge.type === 'PARENT') {
-        delta = edge.direction === 'incoming' ? 1 : -1
+        delta = 1
       } else if (edge.type === 'CHILD') {
-        delta = edge.direction === 'outgoing' ? -1 : 1
+        delta = -1
       }
 
       const candidate = currentGen + delta
       const existing = generationById.get(relId)
 
-      if (existing === undefined || Math.abs(candidate) < Math.abs(existing)) {
+      if (existing === undefined) {
         generationById.set(relId, candidate)
         queue.push(relId)
       }
@@ -137,12 +137,23 @@ function assignGenerations(
 function sortGenerationRow(
   ids: string[],
   spousesByPerson: Map<string, Set<string>>,
+  ranks?: Map<string, number>,
 ): string[] {
-  const remaining = new Set(ids)
+  // Sort initial IDs by rank then by ID for determinism
+  const sortedIds = [...ids].sort((a, b) => {
+    if (ranks) {
+      const rA = ranks.get(a) ?? Infinity
+      const rB = ranks.get(b) ?? Infinity
+      if (rA !== rB) return rA - rB
+    }
+    return a.localeCompare(b)
+  })
+
+  const remaining = new Set(sortedIds)
   const ordered: string[] = []
 
   while (remaining.size > 0) {
-    // Pick first remaining
+    // Pick first remaining in sorted order
     const seed = Array.from(remaining)[0]!
     remaining.delete(seed)
     ordered.push(seed)
@@ -150,12 +161,15 @@ function sortGenerationRow(
     // Immediately place all same-generation spouses
     const spouses = spousesByPerson.get(seed)
     if (spouses) {
-      Array.from(spouses).forEach((spouseId) => {
-        if (remaining.has(spouseId)) {
-          remaining.delete(spouseId)
-          ordered.push(spouseId)
-        }
-      })
+      // Sort spouses for determinism
+      Array.from(spouses)
+        .sort((a, b) => a.localeCompare(b))
+        .forEach((spouseId) => {
+          if (remaining.has(spouseId)) {
+            remaining.delete(spouseId)
+            ordered.push(spouseId)
+          }
+        })
     }
   }
 
@@ -244,12 +258,6 @@ export function buildFamilyTreeLayout(
     byGeneration.get(gen)!.push(person.id)
   }
 
-  // Sort each generation row
-  const sortedByGeneration = new Map<number, string[]>()
-  Array.from(byGeneration.entries()).forEach(([gen, ids]) => {
-    sortedByGeneration.set(gen, sortGenerationRow(ids, spousesByPerson))
-  })
-
   // Assign Y positions: newest generation at top
   const sortedGens = Array.from(byGeneration.keys()).sort((a, b) => a - b)
   const rowY = new Map<number, number>()
@@ -257,38 +265,50 @@ export function buildFamilyTreeLayout(
     rowY.set(gen, index * V_ROW_GAP)
   })
 
-  // Build person lookup
-  const peopleById = new Map(people.map((p) => [p.id, p]))
-
-  // Build family units early — needed for tree-aware position assignment
-  const familyUnits = buildFamilyUnits(parentsByChild)
-
-  // ─── Assign positions: parents centered over their children ──────────────────
   const personPositions = new Map<string, { x: number; y: number; width: number; height: number }>()
+  const personRanks = new Map<string, number>()
 
-  // Gen 0 — center at origin
+  // ─── Step 1: Layout Gen 0 (Reference) ───────────────────────────────────────
   {
-    const ids = sortedByGeneration.get(0) ?? []
+    const ids = sortGenerationRow(byGeneration.get(0) ?? [], spousesByPerson)
     const { width, height } = cardDimensions(0)
     const y = rowY.get(0) ?? 0
     const totalW = ids.length * width + Math.max(0, ids.length - 1) * H_GAP
     ids.forEach((id, i) => {
       personPositions.set(id, { x: -totalW / 2 + i * (width + H_GAP), y, width, height })
+      personRanks.set(id, i)
     })
   }
 
-  // Ancestor gens (1, 2, 3 ...) — center each couple over their children
+  // Build family units early — needed for tree-aware position assignment
+  const familyUnits = buildFamilyUnits(parentsByChild)
+
+  // ─── Step 2: Layout Ancestors (1, 2, 3...) ──────────────────────────────────
   for (const gen of sortedGens.filter(g => g > 0)) {
-    const ids = sortedByGeneration.get(gen) ?? []
+    const rawIds = byGeneration.get(gen) ?? []
+    // Inherit rank from children in previous gen (gen-1)
+    const inheritedRanks = new Map<string, number>()
+    rawIds.forEach(id => {
+      const children = Array.from(childrenByParent.get(id) ?? [])
+      const r = children.length > 0 
+        ? children.reduce((s, cid) => s + (personRanks.get(cid) ?? 0), 0) / children.length
+        : Infinity
+      inheritedRanks.set(id, r)
+    })
+    
+    const ids = sortGenerationRow(rawIds, spousesByPerson, inheritedRanks)
     const { width, height } = cardDimensions(gen)
     const y = rowY.get(gen)!
-    const genOrder = new Map(ids.map((id, i) => [id, i]))
     const desiredX = new Map<string, number>()
+    const xVotes = new Map<string, number[]>()
+
+    const addVote = (id: string, x: number) => {
+      if (!xVotes.has(id)) xVotes.set(id, [])
+      xVotes.get(id)!.push(x)
+    }
 
     for (const unit of familyUnits) {
-      const parentsInGen = unit.parentIds
-        .filter(pid => generationById.get(pid) === gen)
-        .sort((a, b) => (genOrder.get(a) ?? 0) - (genOrder.get(b) ?? 0))
+      const parentsInGen = unit.parentIds.filter(pid => generationById.get(pid) === gen)
       const childrenBelow = unit.childIds.filter(cid => generationById.get(cid) === gen - 1)
       if (parentsInGen.length === 0 || childrenBelow.length === 0) continue
 
@@ -297,42 +317,61 @@ export function buildFamilyTreeLayout(
         .filter((p): p is NonNullable<typeof p> => !!p)
       if (childPos.length === 0) continue
 
-      const midX = (
-        Math.min(...childPos.map(p => p.x)) +
-        Math.max(...childPos.map(p => p.x + p.width))
-      ) / 2
+      const midX = (Math.min(...childPos.map(p => p.x)) + Math.max(...childPos.map(p => p.x + p.width))) / 2
       const totalW = parentsInGen.length * width + Math.max(0, parentsInGen.length - 1) * H_GAP
-      parentsInGen.forEach((pid, i) => desiredX.set(pid, midX - totalW / 2 + i * (width + H_GAP)))
+      parentsInGen.forEach((pid, i) => addVote(pid, midX - totalW / 2 + i * (width + H_GAP)))
     }
 
-    // Fallback: center above any visible children
+    // Average votes and fallback
     for (const id of ids) {
-      if (desiredX.has(id)) continue
-      const childPos = Array.from(childrenByParent.get(id) ?? [])
-        .map(cid => personPositions.get(cid))
-        .filter((p): p is NonNullable<typeof p> => !!p)
-      desiredX.set(id, childPos.length > 0
-        ? childPos.reduce((s, p) => s + p.x + p.width / 2, 0) / childPos.length - width / 2
-        : 0)
+      const votes = xVotes.get(id)
+      if (votes && votes.length > 0) {
+        desiredX.set(id, votes.reduce((s, v) => s + v, 0) / votes.length)
+      } else {
+        // Fallback: center above any visible children
+        const childPos = Array.from(childrenByParent.get(id) ?? [])
+          .map(cid => personPositions.get(cid))
+          .filter((p): p is NonNullable<typeof p> => !!p)
+        desiredX.set(id, childPos.length > 0
+          ? childPos.reduce((s, p) => s + p.x + p.width / 2, 0) / childPos.length - width / 2
+          : 0)
+      }
     }
 
     const sorted = [...ids].sort((a, b) => (desiredX.get(a) ?? 0) - (desiredX.get(b) ?? 0))
     const resolved = resolveOverlaps(sorted, desiredX, width, H_GAP)
-    for (const id of ids) personPositions.set(id, { x: resolved.get(id) ?? 0, y, width, height })
+    sorted.forEach((id, i) => {
+      personPositions.set(id, { x: resolved.get(id) ?? 0, y, width, height })
+      personRanks.set(id, i)
+    })
   }
 
-  // Descendant gens (-1, -2, ...) — center children under their parents
+  // ─── Step 3: Layout Descendants (-1, -2...) ─────────────────────────────────
   for (const gen of sortedGens.filter(g => g < 0).sort((a, b) => b - a)) {
-    const ids = sortedByGeneration.get(gen) ?? []
+    const rawIds = byGeneration.get(gen) ?? []
+    // Inherit rank from parents in previous gen (gen+1)
+    const inheritedRanks = new Map<string, number>()
+    rawIds.forEach(id => {
+      const parents = Array.from(parentsByChild.get(id) ?? [])
+      const r = parents.length > 0
+        ? parents.reduce((s, pid) => s + (personRanks.get(pid) ?? 0), 0) / parents.length
+        : Infinity
+      inheritedRanks.set(id, r)
+    })
+
+    const ids = sortGenerationRow(rawIds, spousesByPerson, inheritedRanks)
     const { width, height } = cardDimensions(gen)
     const y = rowY.get(gen)!
-    const genOrder = new Map(ids.map((id, i) => [id, i]))
     const desiredX = new Map<string, number>()
+    const xVotes = new Map<string, number[]>()
+
+    const addVote = (id: string, x: number) => {
+      if (!xVotes.has(id)) xVotes.set(id, [])
+      xVotes.get(id)!.push(x)
+    }
 
     for (const unit of familyUnits) {
-      const childrenInGen = unit.childIds
-        .filter(cid => generationById.get(cid) === gen)
-        .sort((a, b) => (genOrder.get(a) ?? 0) - (genOrder.get(b) ?? 0))
+      const childrenInGen = unit.childIds.filter(cid => generationById.get(cid) === gen)
       const parentsAbove = unit.parentIds.filter(pid => generationById.get(pid) === gen + 1)
       if (childrenInGen.length === 0 || parentsAbove.length === 0) continue
 
@@ -341,28 +380,33 @@ export function buildFamilyTreeLayout(
         .filter((p): p is NonNullable<typeof p> => !!p)
       if (parentPos.length === 0) continue
 
-      const midX = (
-        Math.min(...parentPos.map(p => p.x)) +
-        Math.max(...parentPos.map(p => p.x + p.width))
-      ) / 2
+      const midX = (Math.min(...parentPos.map(p => p.x)) + Math.max(...parentPos.map(p => p.x + p.width))) / 2
       const totalW = childrenInGen.length * width + Math.max(0, childrenInGen.length - 1) * H_GAP
-      childrenInGen.forEach((cid, i) => desiredX.set(cid, midX - totalW / 2 + i * (width + H_GAP)))
+      childrenInGen.forEach((cid, i) => addVote(cid, midX - totalW / 2 + i * (width + H_GAP)))
     }
 
-    // Fallback: center below any visible parents
+    // Average votes and fallback
     for (const id of ids) {
-      if (desiredX.has(id)) continue
-      const parentPos = Array.from(parentsByChild.get(id) ?? [])
-        .map(pid => personPositions.get(pid))
-        .filter((p): p is NonNullable<typeof p> => !!p)
-      desiredX.set(id, parentPos.length > 0
-        ? parentPos.reduce((s, p) => s + p.x + p.width / 2, 0) / parentPos.length - width / 2
-        : 0)
+      const votes = xVotes.get(id)
+      if (votes && votes.length > 0) {
+        desiredX.set(id, votes.reduce((s, v) => s + v, 0) / votes.length)
+      } else {
+        // Fallback: center below any visible parents
+        const parentPos = Array.from(parentsByChild.get(id) ?? [])
+          .map(pid => personPositions.get(pid))
+          .filter((p): p is NonNullable<typeof p> => !!p)
+        desiredX.set(id, parentPos.length > 0
+          ? parentPos.reduce((s, p) => s + p.x + p.width / 2, 0) / parentPos.length - width / 2
+          : 0)
+      }
     }
 
     const sorted = [...ids].sort((a, b) => (desiredX.get(a) ?? 0) - (desiredX.get(b) ?? 0))
     const resolved = resolveOverlaps(sorted, desiredX, width, H_GAP)
-    for (const id of ids) personPositions.set(id, { x: resolved.get(id) ?? 0, y, width, height })
+    sorted.forEach((id, i) => {
+      personPositions.set(id, { x: resolved.get(id) ?? 0, y, width, height })
+      personRanks.set(id, i)
+    })
   }
 
   // Shift all positions so minX = 0

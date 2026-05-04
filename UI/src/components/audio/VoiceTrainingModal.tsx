@@ -43,6 +43,7 @@ interface VoiceTrainingModalProps {
   onUploadSample: (file: File) => Promise<void>
   onRemoveSample: (index: number) => void
   onCreateVoice: (modelName: string, language: string, styleInstruct?: string) => Promise<void>
+  onResetTraining: () => void
   isUploading: boolean
   isTraining: boolean
   trainingJob: { status?: string; modelId?: string } | null

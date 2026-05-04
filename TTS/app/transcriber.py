@@ -19,7 +19,7 @@ def _load_whisper(model_size: str = "base"):
     import whisper
 
     start = time.time()
-    _whisper_model = whisper.load_model(model_size)
+    _whisper_model = whisper.load_model(model_size, device="cpu")
     elapsed = time.time() - start
     logger.info(f"Whisper model loaded in {elapsed:.1f}s")
     return _whisper_model

@@ -40,6 +40,7 @@ interface VoiceTrainingActions {
   preprocessSamples: (options: { noiseReduction: boolean; voiceSeparation: boolean }) => Promise<void>
   runASR: (language: string) => Promise<void>
   designAndCloneVoice: (profileName: string, instruct: string, refText: string, language?: string) => Promise<void>
+  resetTraining: () => void
 }
 
 export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
@@ -57,6 +58,20 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
 
   const { enqueueSnackbar } = useSnackbar()
   const { fetchToken } = useCSRF()
+
+  const resetTraining = useCallback(() => {
+    setState({
+      trainingSamples: [],
+      isTraining: false,
+      trainingJob: null,
+      isUploading: false,
+      preprocessingStatus: 'idle',
+      preprocessingProgress: 0,
+      asrStatus: 'idle',
+      queuePosition: null,
+      estimatedStartTime: null,
+    })
+  }, [])
 
   const uploadTrainingSample = useCallback(async (file: File) => {
     setState(prev => ({ ...prev, isUploading: true }))
@@ -365,5 +380,6 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
     preprocessSamples,
     runASR,
     designAndCloneVoice,
+    resetTraining,
   }
 }

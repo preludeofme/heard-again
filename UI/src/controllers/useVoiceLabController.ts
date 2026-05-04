@@ -78,6 +78,7 @@ export function useVoiceLabController(subjectId?: string) {
     preprocessSamples: training.preprocessSamples,
     runASR: training.runASR,
     designAndCloneVoice: training.designAndCloneVoice,
+    resetTraining: training.resetTraining,
 
     // From useVoiceSynthesis
     synthesizeSpeech: synthesis.synthesizeSpeech,

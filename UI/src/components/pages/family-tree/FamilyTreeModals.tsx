@@ -63,6 +63,7 @@ export function FamilyTreeModals({
     uploadTrainingSample,
     removeTrainingSample,
     startVoiceTraining,
+    resetTraining,
   } = useVoiceTraining()
 
   const handleCreateVoice = useCallback(async (
@@ -111,6 +112,7 @@ export function FamilyTreeModals({
           onUploadSample={uploadTrainingSample}
           onRemoveSample={removeTrainingSample}
           onCreateVoice={handleCreateVoice}
+          onResetTraining={resetTraining}
           isUploading={isUploading}
           isTraining={isTraining}
           trainingJob={trainingJob}

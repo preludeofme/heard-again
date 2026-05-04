@@ -50,8 +50,8 @@ async function trainVoiceHandler(req: NextApiRequest, res: NextApiResponse) {
     body: {
       fileId: ttsFileId,
       refText: null,
-      profileName: modelName || `voice_${Date.now()}`,
-      styleInstruct: styleInstruct || null,
+          profileName: modelName || `voice_${Date.now()}`,
+        styleInstruct: styleInstruct || null,
     },
   })
 
