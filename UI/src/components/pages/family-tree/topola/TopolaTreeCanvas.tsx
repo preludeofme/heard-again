@@ -89,26 +89,24 @@ export function TopolaTreeCanvas({
     });
 
     try {
+      svg.selectAll('*').remove();
+      // Apply transform to flip the chart vertically for "oldest at bottom"
+      const chartGroup = svg.append('g')
+        .attr('class', 'topola-chart-container')
+        .attr('transform', 'scale(1, -1)'); // Flip SVG links
+
       const chart = new HourglassChart({
         data: dataAdapter,
         renderer,
-        svgSelector: svgRef.current,
+        svgSelector: chartGroup.node() as any, // Pass the group node
         startIndi,
         horizontal: false,
         animate: true,
+        ancestorGenerations: loadedDepths.up,
+        descendantGenerations: loadedDepths.down,
       });
 
-      // Override the group where Topola renders to ensure it doesn't replace everything
-      // Actually Topola's Chart class expects an SVG or G selector and appends to it.
-      // But we pass svgSelector as the SVG element itself. We should pass the G element.
-      // Topola Chart uses d3.select(svgSelector). We'll pass the actual SVG and let Topola do its thing.
       chartRef.current = chart;
-      
-      // Topola automatically appends a <g> to the selector, but it needs to clear old stuff.
-      // To ensure clean renders, we removed .topola-chart, but Topola appends standard d3 nodes.
-      // Let's just recreate the SVG content cleanly.
-      svg.selectAll('*').remove();
-
       chart.render();
     } catch (err) {
       console.error('Failed to render Topola chart:', err);

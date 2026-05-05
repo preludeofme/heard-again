@@ -1,6 +1,7 @@
 import Head from 'next/head'
 import { Layout } from '@/components/layout/Layout'
 import { useState, useEffect, useCallback, type ReactNode } from 'react'
+import { fetchWithCSRFAndJSON } from '@/lib/api-client'
 import {
   Box, Typography, Card, Button, Stepper, Step, StepLabel,
   CircularProgress, Alert, Chip, TextField, ToggleButton,
@@ -85,20 +86,12 @@ export default function SelfHostingPage() {
     setError(null)
     
     try {
-      const res = await fetch('/api/instance/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          type: instanceType,
-          version,
-          computeMode,
-          dataMode,
-          metadata: {
-            registeredVia: 'web-ui',
-            tunnelRequested: enableTunnel,
-          },
-        }),
+      const res = await fetchWithCSRFAndJSON('/api/instance/register', {
+        type: instanceType,
+        version,
+        computeMode,
+        dataMode,
+        metadata: { registeredVia: 'web-ui', tunnelRequested: enableTunnel },
       })
 
       const data = await res.json()
@@ -123,12 +116,7 @@ export default function SelfHostingPage() {
 
   const handleEnableTunnel = async () => {
     try {
-      const res = await fetch('/api/instance/tunnel', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ action: 'enable' }),
-      })
+      const res = await fetchWithCSRFAndJSON('/api/instance/tunnel', { action: 'enable' })
 
       const data = await res.json()
       
@@ -144,12 +132,7 @@ export default function SelfHostingPage() {
 
   const handleDisableTunnel = async () => {
     try {
-      const res = await fetch('/api/instance/tunnel', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ action: 'disable' }),
-      })
+      const res = await fetchWithCSRFAndJSON('/api/instance/tunnel', { action: 'disable' })
 
       if (res.ok) {
         setTunnelConfig(null)

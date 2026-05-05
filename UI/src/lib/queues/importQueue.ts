@@ -24,18 +24,24 @@ export interface ImportJobData {
   assetId: string
   jobId: string
   importType: 'GEDCOM'
+  options?: {
+    linkToPersonId?: string
+    gedcomXrefForLink?: string
+    motherXref?: string
+    fatherXref?: string
+  }
 }
 
 export function startImportWorker() {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job<ImportJobData>) => {
-      const { familyspaceId, userId, filePath, assetId, jobId, importType } = job.data
+      const { familyspaceId, userId, filePath, assetId, jobId, importType, options } = job.data
       logger.info(`Starting background import job ${job.id} type=${importType}`)
 
       try {
         if (importType === 'GEDCOM') {
-          await gedcomImportService.importGedcom(familyspaceId, userId, filePath, assetId, jobId)
+          await gedcomImportService.importGedcom(familyspaceId, userId, filePath, assetId, jobId, options)
         } else {
           throw new Error(`Unsupported import type: ${importType}`)
         }

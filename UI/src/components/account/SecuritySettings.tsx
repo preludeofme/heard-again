@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { fetchWithCSRF } from '@/lib/api-client'
 import {
   Box,
   Typography,
@@ -68,7 +69,7 @@ export function SecuritySettings() {
     setError(null)
     setIsVerifying(true)
     try {
-      const res = await fetch('/api/user/mfa', {
+      const res = await fetchWithCSRF('/api/user/mfa', {
         method: 'POST',
         credentials: 'include',
       })
@@ -91,7 +92,7 @@ export function SecuritySettings() {
     setError(null)
     setIsVerifying(true)
     try {
-      const res = await fetch('/api/user/mfa', {
+      const res = await fetchWithCSRF('/api/user/mfa', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -118,7 +119,7 @@ export function SecuritySettings() {
     setError(null)
     setIsDisabling(true)
     try {
-      const res = await fetch('/api/user/mfa', {
+      const res = await fetchWithCSRF('/api/user/mfa', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

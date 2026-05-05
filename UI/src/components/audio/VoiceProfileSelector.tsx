@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { fetchWithCSRFAndJSON } from '@/lib/api-client'
 import {
   Box,
   Typography,
@@ -64,14 +65,9 @@ export function VoiceProfileSelector({
     setPreviewingId(profileId)
     try {
       // Call synthesis API with sample text
-      const response = await fetch('/api/voice/synthesize', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          profileId,
-          text: 'Hello, this is a preview of my voice.',
-        }),
+      const response = await fetchWithCSRFAndJSON('/api/voice/synthesize', {
+        profileId,
+        text: 'Hello, this is a preview of my voice.',
       })
 
       const result = await response.json()

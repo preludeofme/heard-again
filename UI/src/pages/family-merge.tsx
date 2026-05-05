@@ -1,5 +1,6 @@
 import Head from 'next/head'
 import { useCallback, useEffect, useState } from 'react'
+import { fetchWithCSRF, fetchWithCSRFAndJSON } from '@/lib/api-client'
 import {
   Alert,
   Box,
@@ -192,12 +193,7 @@ export default function FamilyMergePage() {
     setAnalysisResult(null)
     
     try {
-      const response = await fetch('/api/family-merge/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ sourceFamilyspaceId: selectedSourceFamilyspace, minScore: 0.6 })
-      })
+      const response = await fetchWithCSRFAndJSON('/api/family-merge/analyze', { sourceFamilyspaceId: selectedSourceFamilyspace, minScore: 0.6 })
       
       const data = await response.json()
       
@@ -220,12 +216,7 @@ export default function FamilyMergePage() {
     setError(null)
     
     try {
-      const response = await fetch('/api/family-merge/proposals', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ sourceFamilyspaceId: selectedSourceFamilyspace, minScore: 0.6 })
-      })
+      const response = await fetchWithCSRFAndJSON('/api/family-merge/proposals', { sourceFamilyspaceId: selectedSourceFamilyspace, minScore: 0.6 })
       
       const data = await response.json()
       
@@ -272,11 +263,11 @@ export default function FamilyMergePage() {
     
     setError(null)
     try {
-      const response = await fetch(`/api/family-merge/proposals/${selectedProposal.id}`, {
+      const response = await fetchWithCSRF(`/api/family-merge/proposals/${selectedProposal.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ status: 'APPROVED' })
+        body: JSON.stringify({ status: 'APPROVED' }),
       })
       
       const data = await response.json()
@@ -298,11 +289,11 @@ export default function FamilyMergePage() {
     
     setError(null)
     try {
-      const response = await fetch(`/api/family-merge/proposals/${selectedProposal.id}`, {
+      const response = await fetchWithCSRF(`/api/family-merge/proposals/${selectedProposal.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ status: 'REJECTED' })
+        body: JSON.stringify({ status: 'REJECTED' }),
       })
       
       const data = await response.json()
@@ -326,12 +317,7 @@ export default function FamilyMergePage() {
     setError(null)
     
     try {
-      const response = await fetch('/api/family-merge/execute', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ proposalId: selectedProposal.id })
-      })
+      const response = await fetchWithCSRFAndJSON('/api/family-merge/execute', { proposalId: selectedProposal.id })
       
       const data = await response.json()
       
@@ -355,7 +341,7 @@ export default function FamilyMergePage() {
     
     setError(null)
     try {
-      const response = await fetch(`/api/family-merge/proposals/${proposalId}`, {
+      const response = await fetchWithCSRF(`/api/family-merge/proposals/${proposalId}`, {
         method: 'DELETE',
         credentials: 'include',
       })

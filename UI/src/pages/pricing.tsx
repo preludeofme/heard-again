@@ -1,6 +1,7 @@
 import Head from 'next/head'
 import { Layout } from '@/components/layout/Layout'
 import { useState, useEffect, useCallback } from 'react'
+import { fetchWithCSRFAndJSON } from '@/lib/api-client'
 import {
   Box, Typography, Card, Grid, Button, Chip, CircularProgress,
   ToggleButton, ToggleButtonGroup, Divider,
@@ -76,12 +77,7 @@ export default function PricingPage() {
   const handleSubscribe = async (planId: string) => {
     setSubscribingPlanId(planId)
     try {
-      const res = await fetch('/api/billing/subscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ planId, billingCycle }),
-      })
+      const res = await fetchWithCSRFAndJSON('/api/billing/subscribe', { planId, billingCycle })
 
       if (res.ok) {
         fetchData()

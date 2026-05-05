@@ -24,9 +24,51 @@ const ALLOWED_GEDCOM_MIME_TYPES = [
   'application/octet-stream',
 ] as const
 
-async function uploadGedcom(req: NextApiRequest, res: NextApiResponse) {
+async function importGedcom(req: NextApiRequest, res: NextApiResponse) {
   const user = await getAuthUserWithFamilyspace(req, res)
   await requireFamilyspaceRole(user.id, user.familyspaceId, 'EDITOR')
+
+  // Check if this is a JSON request with assetId (committed after preview)
+  const contentType = req.headers['content-type']
+  if (contentType?.includes('application/json')) {
+    // Re-enable bodyParser for this branch manually
+    const chunks = []
+    for await (const chunk of req) {
+      chunks.push(chunk)
+    }
+    const body = JSON.parse(Buffer.concat(chunks).toString())
+    const { assetId, options } = body
+
+    if (!assetId) return errorResponse(res, 'Asset ID required', 400)
+
+    const asset = await prisma.asset.findUnique({
+      where: { id: assetId, familyspaceId: user.familyspaceId }
+    })
+
+    if (!asset) return errorResponse(res, 'Asset not found', 404)
+
+    const importJob = await prisma.importJob.create({
+      data: {
+        familyspaceId: user.familyspaceId,
+        sourceType: 'GEDCOM',
+        sourceAssetId: asset.id,
+        status: 'PENDING',
+        importedById: user.id,
+      },
+    })
+
+    await importQueue.add(`gedcom-import-${importJob.id}`, {
+      familyspaceId: user.familyspaceId,
+      userId: user.id,
+      filePath: path.join(process.cwd(), asset.storagePath),
+      assetId: asset.id,
+      jobId: importJob.id,
+      importType: 'GEDCOM',
+      options
+    })
+
+    return successResponse(res, { jobId: importJob.id, status: 'PENDING' })
+  }
 
   const familyspaceDir = path.join(IMPORT_DIR, user.familyspaceId, 'gedcom')
   await fs.mkdir(familyspaceDir, { recursive: true })
@@ -128,5 +170,5 @@ async function uploadGedcom(req: NextApiRequest, res: NextApiResponse) {
 }
 
 export default apiHandler({
-  POST: uploadGedcom
+  POST: importGedcom
 })

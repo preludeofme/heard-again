@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
 import { getAuthUserWithFamilyspace } from '@/lib/auth-helpers'
+import { logger } from '@/lib/logger'
 
 interface RelationshipEdge {
   id: string
@@ -45,6 +46,8 @@ export default apiHandler({
     const expandUpIds = expandUp ? (expandUp as string).split(',').filter(Boolean) : []
     const expandDownIds = expandDown ? (expandDown as string).split(',').filter(Boolean) : []
 
+    logger.info({ familyspaceId: user.familyspaceId, rootPersonId: rootPersonId || 'none' }, 'Family Tree API started')
+
     // 1. Fetch all people and family units for this familyspace
     const [allPeople, allFamilyUnits] = await Promise.all([
       prisma.person.findMany({
@@ -61,6 +64,7 @@ export default apiHandler({
           personType: true,
           bio: true,
           sex: true,
+          createdById: true,
         }
       }),
       prisma.familyUnit.findMany({
@@ -80,11 +84,12 @@ export default apiHandler({
       })
     ])
 
+    logger.info({ familyspaceId: user.familyspaceId, allPeople: allPeople.length, allFamilyUnits: allFamilyUnits.length }, 'Family Tree API data fetched')
     if (allPeople.length === 0) return successResponse(res, [])
 
     // 2. Build graph and lookup maps in memory
     const peopleMap = new Map(allPeople.map(p => [p.id, p]))
-    const familiesByPersonId = new Map<string, { isParent: boolean, isChild: boolean, unit: typeof allFamilyUnits[0] }[]>()
+    const familiesByPersonId = new Map<string, { isParent: boolean, isChild: boolean, unit: any }[]>()
 
     allFamilyUnits.forEach(unit => {
       unit.parents.forEach(p => {
@@ -100,26 +105,38 @@ export default apiHandler({
     // 3. Determine root person
     let rootId = rootPersonId as string
     if (!rootId) {
-      // Find the youngest person (newest member) who is connected to the tree
-      const connectedPeople = allPeople.filter(p => (familiesByPersonId.get(p.id)?.length || 0) > 0)
-      const searchPool = connectedPeople.length > 0 ? connectedPeople : allPeople
+      // Prioritize the person record created by the current user during onboarding
+      const userPerson = allPeople.find(p => p.createdById === user.id)
       
-      rootId = searchPool.reduce((newest, current) => {
-        if (newest.birthDate && current.birthDate) {
-          const newDate = new Date(newest.birthDate).getTime()
-          const currDate = new Date(current.birthDate).getTime()
-          if (!isNaN(newDate) && !isNaN(currDate)) {
-            return currDate > newDate ? current : newest
-          }
-        }
-        if (current.birthDate && !isNaN(new Date(current.birthDate).getTime())) return current
-        if (newest.birthDate && !isNaN(new Date(newest.birthDate).getTime())) return newest
+      if (userPerson) {
+        rootId = userPerson.id
+      } else {
+        // Fallback: Find the youngest person (newest member) who is connected to the tree
+        const connectedPeople = allPeople.filter(p => (familiesByPersonId.get(p.id)?.length || 0) > 0)
+        const searchPool = connectedPeople.length > 0 ? connectedPeople : allPeople
         
-        // Fallback to most connections if no valid birth dates
-        const prevCount = familiesByPersonId.get(newest.id)?.length || 0
-        const currCount = familiesByPersonId.get(current.id)?.length || 0
-        return currCount > prevCount ? current : newest
-      }).id
+        rootId = searchPool.reduce((newest, current) => {
+          if (newest.birthDate && current.birthDate) {
+            const newDate = new Date(newest.birthDate).getTime()
+            const currDate = new Date(current.birthDate).getTime()
+            if (!isNaN(newDate) && !isNaN(currDate)) {
+              return currDate > newDate ? current : newest
+            }
+          }
+          if (current.birthDate && !isNaN(new Date(current.birthDate).getTime())) return current
+          if (newest.birthDate && !isNaN(new Date(newest.birthDate).getTime())) return newest
+          
+          // Fallback to most connections if no valid birth dates
+          const prevCount = familiesByPersonId.get(newest.id)?.length || 0
+          const currCount = familiesByPersonId.get(current.id)?.length || 0
+          return currCount > prevCount ? current : newest
+        }).id
+      }
+    }
+
+    console.log(`[Family Tree API] Root selection: ${rootId}. Connections: ${familiesByPersonId.get(rootId)?.length || 0}`)
+    if (familiesByPersonId.has(rootId)) {
+      console.log(`[Family Tree API] Root connections detail:`, familiesByPersonId.get(rootId)?.map(f => ({ isChild: f.isChild, isParent: f.isParent, unitId: f.unit.id })))
     }
 
     // 4. Balanced Traversal (Include full family units at each step)
@@ -127,24 +144,33 @@ export default apiHandler({
     results.add(rootId)
 
     // Helper to add a full family unit to results
-    const addFamilyUnit = (unit: typeof allFamilyUnits[0]) => {
-      unit.parents.forEach(p => results.add(p.parentId))
-      unit.children.forEach(c => results.add(c.childId))
+    const addFamilyUnit = (unit: any) => {
+      unit.parents.forEach((p: any) => results.add(p.parentId))
+      unit.children.forEach((c: any) => results.add(c.childId))
     }
 
     // A. Ancestry Pass (UP)
     const traverseUp = (id: string, currentDepth: number) => {
       if (currentDepth >= dUp) return
       const families = familiesByPersonId.get(id) || []
-      // For anyone in the tree, find families where they are a child (their parents' unit)
+      console.log(`[Family Tree API] traverseUp(id=${id}, depth=${currentDepth}) found ${families.length} families`)
+      
+      // Find families where this person is a child (i.e. their parents' unit)
       families.filter(f => f.isChild).forEach(f => {
-        addFamilyUnit(f.unit)
-        f.unit.parents.forEach(p => {
+        console.log(`[Family Tree API] traverseUp - processing unit ${f.unit.id} where person is child. Unit has ${f.unit.parents.length} parents.`)
+        // Always include direct parents
+        f.unit.parents.forEach((p: any) => {
+          results.add(p.parentId)
           traverseUp(p.parentId, currentDepth + 1)
         })
+        // Only include siblings (other children of this unit) when explicitly requested
+        if (shouldIncludeSiblings) {
+          f.unit.children.forEach((c: any) => results.add(c.childId))
+        }
       })
     }
     traverseUp(rootId, 0)
+
 
     // B. Descendancy Pass (DOWN)
     const traverseDown = (id: string, currentDepth: number) => {

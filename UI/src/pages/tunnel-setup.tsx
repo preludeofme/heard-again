@@ -1,5 +1,6 @@
 import Head from 'next/head'
 import { useEffect, useState } from 'react'
+import { fetchWithCSRFAndJSON } from '@/lib/api-client'
 import {
   Alert,
   Box,
@@ -92,12 +93,7 @@ export default function TunnelSetup() {
   const createNamedTunnel = async () => {
     setIsCreatingTunnel(true)
     try {
-      const response = await fetch('/api/instance/tunnel-v2', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ action: 'create-named' }),
-      })
+      const response = await fetchWithCSRFAndJSON('/api/instance/tunnel-v2', { action: 'create-named' })
 
       const data = await response.json()
 
@@ -117,12 +113,7 @@ export default function TunnelSetup() {
   const createQuickTunnel = async () => {
     setIsCreatingTunnel(true)
     try {
-      const response = await fetch('/api/instance/tunnel-v2', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ action: 'enable' }),
-      })
+      const response = await fetchWithCSRFAndJSON('/api/instance/tunnel-v2', { action: 'enable' })
 
       const data = await response.json()
 
@@ -141,12 +132,7 @@ export default function TunnelSetup() {
 
   const downloadCredentials = async () => {
     try {
-      const response = await fetch('/api/instance/tunnel-v2', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ action: 'get-credentials' }),
-      })
+      const response = await fetchWithCSRFAndJSON('/api/instance/tunnel-v2', { action: 'get-credentials' })
 
       const data = await response.json()
 
@@ -167,12 +153,8 @@ export default function TunnelSetup() {
     }
 
     try {
-      const response = await fetch('/api/instance/tunnel-v2', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          action: tunnelStatus?.type === 'named' ? 'delete-named' : 'disable' 
-        }),
+      const response = await fetchWithCSRFAndJSON('/api/instance/tunnel-v2', {
+        action: tunnelStatus?.type === 'named' ? 'delete-named' : 'disable',
       })
 
       const data = await response.json()
@@ -202,12 +184,7 @@ export default function TunnelSetup() {
 
   const enableTunnel = async () => {
     try {
-      const response = await fetch('/api/instance/tunnel', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ action: 'enable' }),
-      })
+      const response = await fetchWithCSRFAndJSON('/api/instance/tunnel', { action: 'enable' })
 
       if (!response.ok) {
         throw new Error('Failed to enable tunnel')

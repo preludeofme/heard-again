@@ -60,7 +60,8 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
   const { fetchToken } = useCSRF()
 
   const resetTraining = useCallback(() => {
-    setState({
+    setState(prev => ({
+      ...prev,
       trainingSamples: [],
       isTraining: false,
       trainingJob: null,
@@ -70,7 +71,7 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
       asrStatus: 'idle',
       queuePosition: null,
       estimatedStartTime: null,
-    })
+    }))
   }, [])
 
   const uploadTrainingSample = useCallback(async (file: File) => {

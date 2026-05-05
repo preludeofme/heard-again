@@ -15,7 +15,6 @@ import {
   RestartAlt,
   Add,
   AutoFixHigh,
-  AutoStories,
   PersonAdd,
   NearMe,
   PanTool,
@@ -23,6 +22,10 @@ import {
   FullscreenExit,
   ExpandMore,
   ExpandLess,
+  People,
+  UnfoldMore,
+  Upload,
+  Download,
 } from '@mui/icons-material'
 import { PersonDetailModal } from '@/components/modals/PersonDetailModal'
 import { AddEditPersonModal, PersonFormData } from '@/components/modals/AddEditPersonModal'
@@ -55,6 +58,7 @@ interface FamilyTreePageProps {
   onExportGedcom?: () => void
   onLoadMore?: (direction: 'up' | 'down', personId: string) => void
   onToggleSiblings?: () => void
+  onExpandDepth?: () => void
   onSetRoot?: (id: string) => void
   includeSiblings?: boolean
   loadedDepths?: { up: number; down: number }
@@ -71,13 +75,14 @@ export function FamilyTreePage({
   rawPeople = [],
   rootPersonId,
   onPeopleChanged: _onPeopleChanged,
-  onImportGedcom: _onImportGedcom,
-  onExportGedcom: _onExportGedcom,
+  onImportGedcom,
+  onExportGedcom,
   onLoadMore: _onLoadMore,
-  onToggleSiblings: _onToggleSiblings,
+  onToggleSiblings,
+  onExpandDepth,
   onSetRoot,
-  includeSiblings: _includeSiblings,
-  loadedDepths: _loadedDepths,
+  includeSiblings = false,
+  loadedDepths,
   isLoadingMore: _isLoadingMore,
   onPersonClick,
   onAddPerson,
@@ -296,7 +301,6 @@ export function FamilyTreePage({
       sx={{
         bgcolor: 'rgba(208, 227, 230, 0.2)',
         p: isFullscreen ? 1 : { xs: 2, md: 3 },
-        overflow: 'hidden',
         position: isFullscreen ? 'fixed' : 'relative',
         ...(isFullscreen && {
           top: 0,
@@ -304,10 +308,27 @@ export function FamilyTreePage({
           right: 0,
           bottom: 0,
           zIndex: 1300,
+          overflow: 'hidden',
         }),
       }}
     >
-      {/* Sticky toolbar */}
+      {/* Search — static, above the canvas, never floats over it */}
+      {!isFullscreen && (
+        <Box sx={{ maxWidth: 1200, mx: 'auto', mb: 2 }}>
+          <FamilyMemberSearch
+            members={searchableMembers}
+            selectedId={selectedSearchMemberId}
+            onSelect={(member) => setSelectedSearchMemberId(member?.id ?? null)}
+            defaultExpanded={initialSearchExpanded}
+            placeholder="Search by name or relationship"
+            title="Family Member Search"
+            showSelectedChip={true}
+            allowClear={true}
+          />
+        </Box>
+      )}
+
+      {/* Sticky toolbar — controls only */}
       <Box
         sx={{
           position: 'sticky',
@@ -321,20 +342,6 @@ export function FamilyTreePage({
           backdropFilter: 'blur(6px)',
         }}
       >
-        {/* Search Panel */}
-        <Box sx={{ maxWidth: 1200, mx: 'auto', mb: 2 }}>
-          <FamilyMemberSearch
-            members={searchableMembers}
-            selectedId={selectedSearchMemberId}
-            onSelect={(member) => setSelectedSearchMemberId(member?.id ?? null)}
-            defaultExpanded={initialSearchExpanded}
-            placeholder="Search by name or relationship"
-            title="Family Member Search"
-            showSelectedChip={true}
-            allowClear={true}
-          />
-        </Box>
-
         {/* Control Bar */}
         <Box sx={{ maxWidth: 1200, mx: 'auto', display: 'flex', justifyContent: 'center' }}>
           <Box
@@ -391,6 +398,62 @@ export function FamilyTreePage({
             >
               Edit Relationships
             </Button>
+            {onToggleSiblings && (
+              <>
+                <Divider orientation="vertical" flexItem sx={{ mx: 0.5, borderColor: 'rgba(208, 227, 230, 0.6)' }} />
+                <Button
+                  startIcon={<People />}
+                  size="small"
+                  onClick={onToggleSiblings}
+                  sx={{
+                    color: includeSiblings ? 'primary.main' : 'text.secondary',
+                    bgcolor: includeSiblings ? 'rgba(22, 51, 74, 0.08)' : 'transparent',
+                    textTransform: 'none',
+                    '&:hover': { bgcolor: includeSiblings ? 'rgba(22, 51, 74, 0.12)' : 'rgba(0,0,0,0.04)' },
+                  }}
+                >
+                  Siblings
+                </Button>
+              </>
+            )}
+            {onExpandDepth && (
+              <>
+                <Divider orientation="vertical" flexItem sx={{ mx: 0.5, borderColor: 'rgba(208, 227, 230, 0.6)' }} />
+                <Button
+                  startIcon={<UnfoldMore />}
+                  size="small"
+                  onClick={onExpandDepth}
+                  title={`Current depth: ${loadedDepths ? `↑${loadedDepths.up} ↓${loadedDepths.down}` : '2/2'}`}
+                  sx={{ color: 'primary.main', textTransform: 'none' }}
+                >
+                  Expand
+                </Button>
+              </>
+            )}
+            <Divider orientation="vertical" flexItem sx={{ mx: 0.5, borderColor: 'rgba(208, 227, 230, 0.6)' }} />
+            {onImportGedcom && (
+              <Button
+                startIcon={<Upload sx={{ fontSize: 18 }} />}
+                size="small"
+                onClick={onImportGedcom}
+                title="Import GEDCOM file"
+                sx={{ color: 'primary.main', textTransform: 'none' }}
+              >
+                Import
+              </Button>
+            )}
+            {onExportGedcom && (
+              <Button
+                startIcon={<Download sx={{ fontSize: 18 }} />}
+                size="small"
+                onClick={onExportGedcom}
+                title="Export GEDCOM file"
+                sx={{ color: 'primary.main', textTransform: 'none' }}
+              >
+                Export
+              </Button>
+            )}
+            <Divider orientation="vertical" flexItem sx={{ mx: 0.5, borderColor: 'rgba(208, 227, 230, 0.6)' }} />
             <Button
               startIcon={<RestartAlt />}
               size="small"
@@ -528,16 +591,16 @@ export function FamilyTreePage({
         </Box>
       )}
 
-      {/* Legend + Insights Sidebar */}
+      {/* Legend + Insights Sidebar — fixed so it overlays above canvas and all children */}
       <Box
         sx={{
-          position: 'absolute',
+          position: 'fixed',
           right: 48,
-          top: 80,
+          top: isFullscreen ? 16 : 160,
           display: { xs: 'none', xl: 'flex' },
           flexDirection: 'column',
           gap: 2,
-          zIndex: 10,
+          zIndex: 1250,
         }}
       >
         {/* Connection Legend */}

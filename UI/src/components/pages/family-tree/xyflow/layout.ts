@@ -16,7 +16,7 @@ const GRANDPARENT_HEIGHT = 152
 const CHILD_WIDTH = 240
 const CHILD_HEIGHT = 140
 const H_GAP = 48
-const V_ROW_GAP = 350
+const V_ROW_GAP = 460
 const FAMILY_NODE_SIZE = 1
 
 // Connector colours
@@ -247,6 +247,7 @@ export function buildFamilyTreeLayout(
 ): LayoutResult {
   if (people.length === 0) return { nodes: [], edges: [] }
 
+  const peopleById = new Map(people.map((p) => [p.id, p]))
   const { childrenByParent, parentsByChild, spousesByPerson } = buildRelationshipMaps(people)
   const generationById = assignGenerations(people, rootPersonId)
 
@@ -339,9 +340,22 @@ export function buildFamilyTreeLayout(
     }
 
     const sorted = [...ids].sort((a, b) => (desiredX.get(a) ?? 0) - (desiredX.get(b) ?? 0))
+
+    // Capture desired center before overlap resolution so we can re-center after
+    const dxValsAnc = sorted.map(id => desiredX.get(id) ?? 0)
+    const desiredCenterAnc = sorted.length > 0
+      ? (Math.min(...dxValsAnc) + Math.max(...dxValsAnc) + width) / 2
+      : 0
+
     const resolved = resolveOverlaps(sorted, desiredX, width, H_GAP)
+
+    // resolveOverlaps only shifts right; re-center the row around the desired center
+    const resolvedMinAnc = sorted.length > 0 ? (resolved.get(sorted[0]) ?? 0) : 0
+    const resolvedMaxAnc = sorted.length > 0 ? (resolved.get(sorted[sorted.length - 1]) ?? 0) + width : 0
+    const centerShiftAnc = desiredCenterAnc - (resolvedMinAnc + resolvedMaxAnc) / 2
+
     sorted.forEach((id, i) => {
-      personPositions.set(id, { x: resolved.get(id) ?? 0, y, width, height })
+      personPositions.set(id, { x: (resolved.get(id) ?? 0) + centerShiftAnc, y, width, height })
       personRanks.set(id, i)
     })
   }
@@ -402,9 +416,22 @@ export function buildFamilyTreeLayout(
     }
 
     const sorted = [...ids].sort((a, b) => (desiredX.get(a) ?? 0) - (desiredX.get(b) ?? 0))
+
+    // Capture desired center before overlap resolution so we can re-center after
+    const dxValsDesc = sorted.map(id => desiredX.get(id) ?? 0)
+    const desiredCenterDesc = sorted.length > 0
+      ? (Math.min(...dxValsDesc) + Math.max(...dxValsDesc) + width) / 2
+      : 0
+
     const resolved = resolveOverlaps(sorted, desiredX, width, H_GAP)
+
+    // resolveOverlaps only shifts right; re-center the row around the desired center
+    const resolvedMinDesc = sorted.length > 0 ? (resolved.get(sorted[0]) ?? 0) : 0
+    const resolvedMaxDesc = sorted.length > 0 ? (resolved.get(sorted[sorted.length - 1]) ?? 0) + width : 0
+    const centerShiftDesc = desiredCenterDesc - (resolvedMinDesc + resolvedMaxDesc) / 2
+
     sorted.forEach((id, i) => {
-      personPositions.set(id, { x: resolved.get(id) ?? 0, y, width, height })
+      personPositions.set(id, { x: (resolved.get(id) ?? 0) + centerShiftDesc, y, width, height })
       personRanks.set(id, i)
     })
   }

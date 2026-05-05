@@ -62,7 +62,7 @@ export class CustomNodeRenderer extends CompositeRenderer implements Renderer {
       return {
         id: `${node.data.id}-${index}`, // Ensure unique key for React even if person is duplicated in layout
         x: anyNode.x,
-        y: anyNode.y,
+        y: -anyNode.y, // INVERTED for "oldest at bottom"
         width: node.data.width || 260,
         height: node.data.height || 140,
         data: node.data

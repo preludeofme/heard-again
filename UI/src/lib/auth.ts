@@ -79,7 +79,22 @@ export const authOptions: NextAuthOptions = {
         token.avatarUrl = (user as any).avatarUrl || (user as any).image || null
         token.defaultFamilyspaceId = (user as any).defaultFamilyspaceId || null
       }
-      
+
+      // Self-heal: if defaultFamilyspaceId is missing (stale token, post-DB-reset, etc.)
+      if (!token.defaultFamilyspaceId && token.id) {
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: token.id as string },
+            select: { defaultFamilyspaceId: true },
+          })
+          if (dbUser?.defaultFamilyspaceId) {
+            token.defaultFamilyspaceId = dbUser.defaultFamilyspaceId
+          }
+        } catch (e) {
+          logger.error('Failed to re-fetch defaultFamilyspaceId:', e)
+        }
+      }
+
       // Ensure role is always present in token (for new and existing sessions)
       if (!token.role && token.id) {
         try {
@@ -93,7 +108,7 @@ export const authOptions: NextAuthOptions = {
           token.role = 'VIEWER'
         }
       }
-      
+
       return token
     },
     async session({ session, token }) {

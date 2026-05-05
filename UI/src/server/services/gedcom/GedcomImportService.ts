@@ -1,15 +1,85 @@
 import { prisma } from '@/lib/prisma'
-import { GedcomParser, ParsedIndividual, ParsedFamily } from './GedcomParser'
+import { GedcomParser } from './GedcomParser'
 import fs from 'fs/promises'
 
 export class GedcomImportService {
+  async previewGedcom(
+    userId: string,
+    filePath: string
+  ): Promise<{
+    potentialMatches: Array<{
+      xref: string;
+      fullName: string;
+      firstName: string;
+      lastName: string | null;
+      confidence: number;
+    }>;
+    summary: {
+      individualCount: number;
+      familyCount: number;
+    };
+  }> {
+    const content = await fs.readFile(filePath, 'utf-8')
+    const { individuals, families } = GedcomParser.parse(content)
+
+    // Get user info for matching
+    const person = await prisma.person.findFirst({
+      where: { createdById: userId, personType: 'FAMILY' }, // Assuming the user's person record is created during onboarding
+    })
+
+    if (!person) {
+      return {
+        potentialMatches: [],
+        summary: { individualCount: individuals.length, familyCount: families.length }
+      }
+    }
+
+    const potentialMatches = individuals
+      .map(indi => {
+        let confidence = 0
+        const firstNameMatch = indi.firstName.toLowerCase() === person.firstName.toLowerCase()
+        const lastNameMatch = indi.lastName?.toLowerCase() === person.lastName?.toLowerCase()
+
+        if (firstNameMatch && lastNameMatch) confidence = 0.9
+        else if (firstNameMatch) confidence = 0.5
+        else if (lastNameMatch) confidence = 0.3
+
+        // Further refine confidence with birth dates if available
+        if (indi.birthDate && person.birthDate) {
+          const yearsMatch = indi.birthDate.getFullYear() === person.birthDate.getFullYear()
+          if (yearsMatch) confidence += 0.1
+        }
+
+        return {
+          xref: indi.xref,
+          fullName: indi.fullName,
+          firstName: indi.firstName,
+          lastName: indi.lastName,
+          confidence
+        }
+      })
+      .filter(m => m.confidence > 0.4)
+      .sort((a, b) => b.confidence - a.confidence)
+
+    return {
+      potentialMatches,
+      summary: { individualCount: individuals.length, familyCount: families.length }
+    }
+  }
+
   async importGedcom(
     familyspaceId: string,
     userId: string,
     filePath: string,
     assetId: string,
-    jobId: string
-  ): Promise<any> {
+    jobId: string,
+    options?: {
+      linkToPersonId?: string;
+      gedcomXrefForLink?: string;
+      motherXref?: string;
+      fatherXref?: string;
+    }
+  ): Promise<Record<string, unknown>> {
     const content = await fs.readFile(filePath, 'utf-8')
     const { individuals, families } = GedcomParser.parse(content)
 
@@ -17,7 +87,6 @@ export class GedcomImportService {
       throw new Error('No GEDCOM individuals found in file')
     }
 
-    // Update job status to processing
     await prisma.importJob.update({
       where: { id: jobId },
       data: { status: 'PROCESSING', startedAt: new Date() },
@@ -26,10 +95,12 @@ export class GedcomImportService {
     const importStats = {
       parsedIndividuals: individuals.length,
       parsedFamilies: families.length,
-      parsedFamilyLinks: families.reduce((acc, family) => acc + family.childXrefs.length, 0),
+      parsedFamilyLinks: families.reduce((acc, f) => acc + f.childXrefs.length, 0),
       personUpserts: 0,
       personNamesWritten: 0,
       personEventsWritten: 0,
+      personNotesWritten: 0,
+      personSourceCitationsWritten: 0,
       personExternalRefUpserts: 0,
       familyUpserts: 0,
       familyChildLinksWritten: 0,
@@ -38,32 +109,43 @@ export class GedcomImportService {
     }
 
     const BATCH_SIZE = 100
+
+    // Resolve linkToPersonId up-front so the person-upsert loop and the
+    // parent-linking step both see the same value.
+    let resolvedLinkToPersonId = options?.linkToPersonId
+    if (!resolvedLinkToPersonId && (options?.gedcomXrefForLink || options?.motherXref || options?.fatherXref)) {
+      const userPerson = await prisma.person.findFirst({
+        where: { familyspaceId, createdById: userId },
+        select: { id: true },
+      })
+      resolvedLinkToPersonId = userPerson?.id
+    }
+
     try {
       const importedPersonIds: Record<string, string> = {}
 
-      // 1. Process individuals in batches
       for (let i = 0; i < individuals.length; i += BATCH_SIZE) {
         const batch = individuals.slice(i, i + BATCH_SIZE)
-        
+
         await prisma.$transaction(async (tx) => {
           for (const individual of batch) {
+            const isUserLink = options?.gedcomXrefForLink === individual.xref && resolvedLinkToPersonId
+            const personIdToUse = isUserLink ? resolvedLinkToPersonId : undefined
+
             const p = await tx.person.upsert({
-              where: {
-                familyspaceId_gedcomXref: {
-                  familyspaceId,
-                  gedcomXref: individual.xref,
-                },
-              },
+              where: personIdToUse ? { id: personIdToUse } : { familyspaceId_gedcomXref: { familyspaceId, gedcomXref: individual.xref } },
               update: {
                 firstName: individual.firstName,
                 lastName: individual.lastName,
                 displayName: individual.fullName,
                 nickname: individual.nickname,
-                sex: individual.sex || 'U',
+                sex: individual.sex ?? 'U',
                 birthDate: individual.birthDate,
                 deathDate: individual.deathDate,
-                isDeceased: Boolean(individual.deathDate),
+                isDeceased: individual.isDeceased,
+                causeOfDeath: individual.causeOfDeath,
                 bio: individual.note,
+                gedcomXref: individual.xref, // Ensure the xref is set if it was a user link
               },
               create: {
                 familyspaceId,
@@ -72,24 +154,24 @@ export class GedcomImportService {
                 displayName: individual.fullName,
                 nickname: individual.nickname,
                 gedcomXref: individual.xref,
-                sex: individual.sex || 'U',
+                sex: individual.sex ?? 'U',
                 birthDate: individual.birthDate,
                 deathDate: individual.deathDate,
-                isDeceased: Boolean(individual.deathDate),
+                isDeceased: individual.isDeceased,
+                causeOfDeath: individual.causeOfDeath,
                 bio: individual.note,
                 tags: [],
                 createdById: userId,
               },
             })
 
-            // Store for family processing
             importedPersonIds[individual.xref] = p.id
 
-            // Clean up related data
             await tx.personName.deleteMany({ where: { personId: p.id } })
             await tx.personEvent.deleteMany({ where: { personId: p.id } })
+            await tx.personNote.deleteMany({ where: { personId: p.id } })
+            await tx.personSourceCitation.deleteMany({ where: { personId: p.id } })
 
-            // Create primary name
             await tx.personName.create({
               data: {
                 personId: p.id,
@@ -101,44 +183,56 @@ export class GedcomImportService {
                 gedcomXref: `${individual.xref}:NAME:1`,
               },
             })
+            importStats.personNamesWritten += 1
 
-            // Create primary events
-            if (individual.birthDate || individual.birthPlace) {
+            for (const evt of individual.events) {
               await tx.personEvent.create({
                 data: {
                   personId: p.id,
-                  eventType: 'BIRTH',
-                  eventDate: individual.birthDate,
-                  place: individual.birthPlace,
-                  isPrimary: true,
-                  gedcomXref: `${individual.xref}:BIRT:1`,
+                  eventType: evt.eventType as any,
+                  eventDate: evt.eventDate,
+                  rawDate: evt.rawDate,
+                  place: evt.place,
+                  description: evt.description,
+                  customType: evt.customType,
+                  isPrimary: evt.eventType === 'BIRTH' || evt.eventType === 'DEATH',
+                  gedcomXref: `${individual.xref}:${evt.gedcomTag}:${evt.eventIndex}`,
                 },
               })
               importStats.personEventsWritten += 1
             }
 
-            if (individual.deathDate || individual.deathPlace) {
-              await tx.personEvent.create({
+            for (let n = 0; n < individual.notes.length; n++) {
+              const note = individual.notes[n]
+              await tx.personNote.create({
                 data: {
                   personId: p.id,
-                  eventType: 'DEATH',
-                  eventDate: individual.deathDate,
-                  place: individual.deathPlace,
-                  isPrimary: true,
-                  gedcomXref: `${individual.xref}:DEAT:1`,
+                  noteType: note.noteType,
+                  content: note.content,
+                  sortOrder: n,
+                  gedcomXref: `${individual.xref}:NOTE:${n + 1}`,
                 },
               })
-              importStats.personEventsWritten += 1
+              importStats.personNotesWritten += 1
+            }
+
+            for (const citation of individual.sourceCitations) {
+              await tx.personSourceCitation.create({
+                data: {
+                  personId: p.id,
+                  gedcomSRef: citation.gedcomSRef,
+                  page: citation.page,
+                  text: citation.text,
+                  sourceTitle: citation.sourceTitle,
+                  sourceAuthor: citation.sourceAuthor,
+                  sourceDate: citation.sourceDate,
+                },
+              })
+              importStats.personSourceCitationsWritten += 1
             }
 
             await tx.personExternalRef.upsert({
-              where: {
-                personId_system_externalId: {
-                  personId: p.id,
-                  system: 'GEDCOM',
-                  externalId: individual.xref,
-                },
-              },
+              where: { personId_system_externalId: { personId: p.id, system: 'GEDCOM', externalId: individual.xref } },
               update: { metadata: { importSourceAssetId: assetId } },
               create: {
                 personId: p.id,
@@ -149,25 +243,18 @@ export class GedcomImportService {
             })
 
             importStats.personUpserts += 1
-            importStats.personNamesWritten += 1
             importStats.personExternalRefUpserts += 1
           }
         })
       }
 
-      // 2. Process families in batches
       for (let i = 0; i < families.length; i += BATCH_SIZE) {
         const batch = families.slice(i, i + BATCH_SIZE)
-        
+
         await prisma.$transaction(async (tx) => {
           for (const family of batch) {
             const familyUnit = await tx.familyUnit.upsert({
-              where: {
-                familyspaceId_gedcomXref: {
-                  familyspaceId,
-                  gedcomXref: family.xref,
-                },
-              },
+              where: { familyspaceId_gedcomXref: { familyspaceId, gedcomXref: family.xref } },
               update: {
                 marriageDate: family.marriageDate,
                 marriagePlace: family.marriagePlace,
@@ -215,8 +302,7 @@ export class GedcomImportService {
               }))
               .filter((row) => Boolean(row.childId))
 
-            const skipped = family.childXrefs.length - childRows.length
-            importStats.skippedFamilyChildLinks += skipped
+            importStats.skippedFamilyChildLinks += family.childXrefs.length - childRows.length
             if (childRows.length > 0) {
               await tx.familyChild.createMany({ data: childRows })
               importStats.familyChildLinksWritten += childRows.length
@@ -227,27 +313,72 @@ export class GedcomImportService {
         })
       }
 
-      const result = importStats
+      // Final step: Link resolved person to selected parents
+      if (resolvedLinkToPersonId && (options?.motherXref || options?.fatherXref)) {
+        await prisma.$transaction(async (tx) => {
+          const motherId = options.motherXref ? importedPersonIds[options.motherXref] : null
+          const fatherId = options.fatherXref ? importedPersonIds[options.fatherXref] : null
+
+          if (motherId || fatherId) {
+            let familyId: string | null = null
+
+            const existingFamily = await tx.familyUnit.findFirst({
+              where: {
+                familyspaceId,
+                parents: {
+                  some: { parentId: { in: [motherId, fatherId].filter(Boolean) as string[] } }
+                }
+              },
+              include: { parents: true }
+            })
+
+            // Filter for exact match of parents if both provided
+            const matchedFamily = existingFamily && (
+              (!motherId || existingFamily.parents.some(p => p.parentId === motherId)) &&
+              (!fatherId || existingFamily.parents.some(p => p.parentId === fatherId))
+            ) ? existingFamily : null
+
+            if (matchedFamily) {
+              familyId = matchedFamily.id
+            } else {
+              // Create new family unit
+              const newFam = await tx.familyUnit.create({
+                data: { familyspaceId }
+              })
+              familyId = newFam.id
+
+              if (fatherId) {
+                await tx.familyParent.create({
+                  data: { familyId, parentId: fatherId, relationshipType: 'BIOLOGICAL', sortOrder: 0 }
+                })
+              }
+              if (motherId) {
+                await tx.familyParent.create({
+                  data: { familyId, parentId: motherId, relationshipType: 'BIOLOGICAL', sortOrder: 1 }
+                })
+              }
+            }
+
+            await tx.familyChild.upsert({
+              where: { familyId_childId: { familyId, childId: resolvedLinkToPersonId! } },
+              update: {},
+              create: { familyId, childId: resolvedLinkToPersonId!, relationshipType: 'BIOLOGICAL' }
+            })
+          }
+        })
+      }
 
       await prisma.importJob.update({
         where: { id: jobId },
-        data: {
-          status: 'COMPLETED',
-          completedAt: new Date(),
-          resultSummary: importStats,
-        },
+        data: { status: 'COMPLETED', completedAt: new Date(), resultSummary: importStats },
       })
 
       return importStats
-    } catch (error: any) {
-      // Mark job as failed
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error)
       await prisma.importJob.update({
         where: { id: jobId },
-        data: {
-          status: 'FAILED',
-          completedAt: new Date(),
-          errorMessage: error.message,
-        },
+        data: { status: 'FAILED', completedAt: new Date(), errorMessage: message },
       })
       throw error
     }

@@ -272,7 +272,7 @@ export default function FamilyTree() {
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false)
 
   const [loadedDepths, setLoadedDepths] = useState({ up: 2, down: 2 })
-  const [includeSiblings, setIncludeSiblings] = useState(true)
+  const [includeSiblings, setIncludeSiblings] = useState(false)
   const [isIncrementalLoading, setIsIncrementalLoading] = useState(false)
   const [expandedPersonIds, setExpandedPersonIds] = useState<{ up: Set<string>; down: Set<string> }>({ up: new Set(), down: new Set() })
 
@@ -306,7 +306,7 @@ export default function FamilyTree() {
   }, [selectedPersonIdFromQuery])
 
   useEffect(() => {
-    fetchPeople({ up: 2, down: 2 }, undefined, true)
+    fetchPeople({ up: 2, down: 2 }, undefined, false)
   }, [fetchPeople])
 
   // Logic to load more when needed — expands only the specific person's branch
@@ -330,12 +330,19 @@ export default function FamilyTree() {
     fetchPeople(loadedDepths, treeData?.rootPersonId, !includeSiblings, expandedPersonIds)
   }, [loadedDepths, treeData?.rootPersonId, includeSiblings, fetchPeople, isIncrementalLoading, expandedPersonIds])
 
+  const handleExpandDepth = useCallback(() => {
+    if (isIncrementalLoading) return
+    setIsIncrementalLoading(true)
+    const newDepths = { up: loadedDepths.up + 1, down: loadedDepths.down + 1 }
+    fetchPeople(newDepths, treeData?.rootPersonId, includeSiblings, expandedPersonIds)
+  }, [loadedDepths, treeData?.rootPersonId, includeSiblings, fetchPeople, isIncrementalLoading, expandedPersonIds])
+
   const handleSetRoot = useCallback((id: string) => {
     if (isIncrementalLoading) return
     setIsIncrementalLoading(true)
     const cleared = { up: new Set<string>(), down: new Set<string>() }
     setExpandedPersonIds(cleared)
-    fetchPeople({ up: 2, down: 2 }, id, true, cleared)
+    fetchPeople({ up: 2, down: 2 }, id, false, cleared)
   }, [fetchPeople, isIncrementalLoading])
 
   const handlePersonClick = (person: { id: string | number; name: string; avatar: string }) => {
@@ -445,7 +452,7 @@ export default function FamilyTree() {
       setIsSuccessModalOpen(true)
       
       // Refresh the tree, centering on the new person
-      fetchPeople({ up: 2, down: 2 }, createdPersonId, true)
+      fetchPeople({ up: 2, down: 2 }, createdPersonId, false)
     } catch (error) {
       console.error('Failed to create person:', error)
       // Show error to user but don't re-throw to allow modal to handle properly
@@ -497,6 +504,7 @@ export default function FamilyTree() {
         initialSearchQuery={initialSearchQuery}
         onLoadMore={handleLoadMore}
         onToggleSiblings={handleToggleSiblings}
+        onExpandDepth={handleExpandDepth}
         onSetRoot={handleSetRoot}
         includeSiblings={includeSiblings}
         loadedDepths={loadedDepths}

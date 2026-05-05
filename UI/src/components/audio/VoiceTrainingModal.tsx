@@ -65,6 +65,7 @@ export function VoiceTrainingModal({
   onUploadSample,
   onRemoveSample,
   onCreateVoice,
+  onResetTraining,
   isUploading,
   isTraining,
   trainingJob,
@@ -79,6 +80,21 @@ export function VoiceTrainingModal({
   // ── Local file state (before trimming / upload) ──
   const [rawFile, setRawFile] = useState<File | null>(null)
   const [isTrimming, setIsTrimming] = useState(false)
+
+  // ── Reset state when modal is closed ──
+  useEffect(() => {
+    if (!open) {
+      // Small timeout to avoid UI flicker during close animation
+      const timer = setTimeout(() => {
+        setVoiceName('')
+        setVoiceDescription('')
+        setRawFile(null)
+        setIsTrimming(false)
+        onResetTraining()
+      }, 300)
+      return () => clearTimeout(timer)
+    }
+  }, [open, onResetTraining])
 
   const handleFilePick = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -119,10 +135,6 @@ export function VoiceTrainingModal({
 
   const handleClose = () => {
     if (!isTraining) {
-      setVoiceName('')
-      setVoiceDescription('')
-      setRawFile(null)
-      setIsTrimming(false)
       onClose()
     }
   }

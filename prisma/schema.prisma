@@ -158,18 +158,23 @@ model PersonName {
 }
 
 model PersonEvent {
-  id             String          @id @default(uuid())
-  personId       String
-  eventType      PersonEventType
-  eventDate      DateTime?
-  place          String?
-  description    String?
-  sourceCitation String?
-  isPrimary      Boolean         @default(false)
-  gedcomXref     String?
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  person         Person          @relation(fields: [personId], references: [id], onDelete: Cascade)
+  id              String                  @id @default(uuid())
+  personId        String
+  eventType       PersonEventType
+  eventDate       DateTime?
+  rawDate         String?
+  place           String?
+  latitude        Float?
+  longitude       Float?
+  description     String?
+  customType      String?
+  sourceCitation  String?
+  isPrimary       Boolean                 @default(false)
+  gedcomXref      String?
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+  person          Person                  @relation(fields: [personId], references: [id], onDelete: Cascade)
+  sourceCitations PersonSourceCitation[]
 
   @@unique([personId, gedcomXref])
   @@index([personId, eventType, eventDate])
@@ -233,6 +238,43 @@ model PersonExternalRef {
 
   @@unique([personId, system, externalId])
   @@index([personId])
+}
+
+model PersonNote {
+  id         String         @id @default(uuid())
+  personId   String
+  noteType   PersonNoteType @default(GENERAL)
+  content    String
+  gedcomXref String?
+  sortOrder  Int            @default(0)
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  person     Person         @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@unique([personId, gedcomXref])
+  @@index([personId])
+  @@index([noteType])
+}
+
+model PersonSourceCitation {
+  id           String       @id @default(uuid())
+  personId     String?
+  eventId      String?
+  gedcomSRef   String?
+  page         String?
+  text         String?
+  sourceTitle  String?
+  sourceAuthor String?
+  sourceDate   String?
+  gedcomXref   String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  person       Person?      @relation(fields: [personId], references: [id], onDelete: Cascade)
+  event        PersonEvent? @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([personId])
+  @@index([eventId])
+  @@index([gedcomSRef])
 }
 
 model Instance {
@@ -330,6 +372,7 @@ model Person {
   updatedAt        DateTime                 @updatedAt
   createdById      String
   gedcomXref       String?
+  causeOfDeath     String?
   sex              GedcomSex?
   documentLinks    DocumentPerson[]
   familyChildLinks FamilyChild[]
@@ -342,6 +385,8 @@ model Person {
   events           PersonEvent[]
   externalRefs     PersonExternalRef[]
   names            PersonName[]
+  notes            PersonNote[]
+  sourceCitations  PersonSourceCitation[]
   personaProfiles  PersonaProfile[]
   storiesAsSpeaker Story[]                  @relation("StorySpeaker")
   storiesAsSubject Story[]                  @relation("StorySubject")
@@ -994,7 +1039,26 @@ enum PersonEventType {
   RESIDENCE
   OCCUPATION
   EDUCATION
+  MILITARY_SERVICE
+  NATURALIZATION
+  IMMIGRATION
+  EMIGRATION
+  CENSUS
+  RETIREMENT
+  WILL
+  TITLE
+  PHYSICAL_DESCRIPTION
+  MEDICAL
+  ADOPTION
   CUSTOM
+}
+
+enum PersonNoteType {
+  GENERAL
+  RESEARCH
+  OBITUARY
+  SOURCE
+  OTHER
 }
 
 enum ParentRelationshipType {

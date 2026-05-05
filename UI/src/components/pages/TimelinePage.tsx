@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
+import { fetchWithCSRFAndJSON } from '@/lib/api-client'
 import {
   Box,
   Typography,
@@ -200,17 +201,12 @@ export function TimelinePageComponent({ events, isLoading, hasMore, onLoadMore, 
     setSubmitError('')
 
     try {
-      const response = await fetch('/api/timeline', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          personId: newEvent.personId,
-          eventType: newEvent.eventType,
-          eventDate: new Date(newEvent.eventDate).toISOString(),
-          title: newEvent.title,
-          description: newEvent.description,
-        }),
+      const response = await fetchWithCSRFAndJSON('/api/timeline', {
+        personId: newEvent.personId,
+        eventType: newEvent.eventType,
+        eventDate: new Date(newEvent.eventDate).toISOString(),
+        title: newEvent.title,
+        description: newEvent.description,
       })
 
       const data = await response.json()
