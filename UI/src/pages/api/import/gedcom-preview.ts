@@ -100,6 +100,8 @@ async function previewGedcom(req: NextApiRequest, res: NextApiResponse) {
       allIndividuals: individuals.map((i: any) => ({
         xref: i.xref,
         fullName: i.fullName,
+        firstName: i.firstName,
+        lastName: i.lastName,
         birthDate: i.birthDate,
       }))
     })

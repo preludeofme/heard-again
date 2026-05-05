@@ -13,16 +13,22 @@ export default apiHandler({
       return successResponse(res, { stories: [], totalResults: 0 })
     }
 
-    const stories = await prisma.story.findMany({
-      where: {
-        familyspaceId: user.familyspaceId,
+    const tokens = query.split(/\s+/).filter(Boolean)
+    const where: any = { familyspaceId: user.familyspaceId }
+
+    if (tokens.length > 0) {
+      where.AND = tokens.map(token => ({
         OR: [
-          { title: { contains: query, mode: 'insensitive' } },
-          { content: { contains: query, mode: 'insensitive' } },
-          { excerpt: { contains: query, mode: 'insensitive' } },
-          { tags: { hasSome: [query] } },
+          { title: { contains: token, mode: 'insensitive' } },
+          { content: { contains: token, mode: 'insensitive' } },
+          { excerpt: { contains: token, mode: 'insensitive' } },
+          { tags: { hasSome: [token] } },
         ],
-      },
+      }))
+    }
+
+    const stories = await prisma.story.findMany({
+      where,
       select: {
         id: true,
         title: true,

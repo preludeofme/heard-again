@@ -34,6 +34,7 @@ import { fetchWithCSRFAndJSON, fetchWithCSRF } from '@/lib/api-client'
 import { ReactFlowTreeCanvas, ReactFlowTreeCanvasHandle } from '@/components/pages/family-tree/xyflow/ReactFlowTreeCanvas'
 import type { ApiPersonWithEdges, TreeLayoutPerson } from '@/components/pages/family-tree/xyflow/types'
 import type { PersonType } from '@/contracts'
+import { useSelectedFamilyMember } from '@/contexts/SelectedFamilyMemberContext'
 
 const CONNECTOR_BIOLOGICAL_COLOR = 'rgba(22, 51, 74, 0.52)'
 const CONNECTOR_NON_BIO_COLOR = 'rgba(22, 51, 74, 0.35)'
@@ -47,6 +48,8 @@ interface FamilyTreePageProps {
   people?: unknown
   /** Raw API data — drives the @xyflow/react canvas and search overlay */
   rawPeople?: ApiPersonWithEdges[]
+  /** All people in the familyspace for global search */
+  searchablePeople?: any[]
   rootPersonId?: string
   onPersonClick?: (person: { id: string | number; name: string; avatar: string }) => void
   onAddPerson?: () => void
@@ -65,6 +68,7 @@ interface FamilyTreePageProps {
   isLoadingMore?: boolean
   initialSearchExpanded?: boolean
   initialSearchQuery?: string
+  fitViewTrigger?: number
 }
 
 
@@ -73,6 +77,7 @@ interface FamilyTreePageProps {
 export function FamilyTreePage({
   people: _people,
   rawPeople = [],
+  searchablePeople = [],
   rootPersonId,
   onPeopleChanged: _onPeopleChanged,
   onImportGedcom,
@@ -90,9 +95,11 @@ export function FamilyTreePage({
   isFullscreen = false,
   onToggleFullscreen,
   initialSearchExpanded = false,
+  fitViewTrigger,
 }: FamilyTreePageProps): React.JSX.Element {
   const router = useRouter()
   useTheme()
+  const { setSelectedFamilyMember } = useSelectedFamilyMember()
 
   // Derive rootPersonId from rawPeople if not supplied by the page
   const effectiveRootId: string = useMemo(() => {
@@ -128,15 +135,16 @@ export function FamilyTreePage({
   const [isLoadingDetail, setIsLoadingDetail] = useState(false)
   const [detailError, setDetailError] = useState<string | null>(null)
 
-  // Search overlay members — derived directly from rawPeople
+  // Search overlay members — derived from searchablePeople if provided, else rawPeople
   const searchableMembers = useMemo<SearchableFamilyMember[]>(() => {
-    return rawPeople.map((p) => ({
+    const source = searchablePeople.length > 0 ? searchablePeople : rawPeople
+    return source.map((p) => ({
       id: p.id,
       name: p.displayName || `${p.firstName}${p.lastName ? ' ' + p.lastName : ''}`,
       relationship: 'Family Member',
-      avatar: p.avatarUrl || '',
+      avatar: p.avatarUrl || (p as any).avatar || '',
     }))
-  }, [rawPeople])
+  }, [searchablePeople, rawPeople])
 
   // ─── Handlers ───────────────────────────────────────────────────────────────
 
@@ -186,9 +194,16 @@ export function FamilyTreePage({
 
   const handleViewArchive = useCallback(
     (person: TreeLayoutPerson) => {
+      setSelectedFamilyMember({
+        id: String(person.id),
+        firstName: person.name.split(' ')[0] || '',
+        lastName: person.name.split(' ').slice(1).join(' ') || undefined,
+        displayName: person.name,
+        avatarUrl: person.avatar || undefined,
+      })
       router.push(`/profile/${person.id}`)
     },
-    [router],
+    [router, setSelectedFamilyMember],
   )
 
   const handleAddPerson = useCallback(() => {
@@ -281,9 +296,19 @@ export function FamilyTreePage({
 
   const handleViewFullProfile = useCallback(
     (personId: string) => {
+      const p = rawPeople.find(rp => rp.id === personId)
+      if (p) {
+        setSelectedFamilyMember({
+          id: p.id,
+          firstName: p.firstName,
+          lastName: p.lastName || undefined,
+          displayName: p.displayName || `${p.firstName}${p.lastName ? ' ' + p.lastName : ''}`,
+          avatarUrl: p.avatarUrl || undefined,
+        })
+      }
       router.push(`/profile/${personId}`)
     },
-    [router],
+    [router, rawPeople, setSelectedFamilyMember],
   )
 
   // ─── Zoom / pan controls ─────────────────────────────────────────────────────
@@ -318,7 +343,16 @@ export function FamilyTreePage({
           <FamilyMemberSearch
             members={searchableMembers}
             selectedId={selectedSearchMemberId}
-            onSelect={(member) => setSelectedSearchMemberId(member?.id ?? null)}
+            onSelect={(member) => {
+              setSelectedSearchMemberId(member?.id ?? null)
+              if (member) {
+                onSetRoot?.(member.id)
+                // Trigger a fit view after a short delay to allow the tree to re-render
+                setTimeout(() => {
+                  canvasRef.current?.fitView()
+                }, 100)
+              }
+            }}
             defaultExpanded={initialSearchExpanded}
             placeholder="Search by name or relationship"
             title="Family Member Search"
@@ -506,6 +540,7 @@ export function FamilyTreePage({
             onLoadMore={_onLoadMore}
             onEditRelationships={handleAddRelationship}
             isPanMode={isPanMode}
+            fitViewTrigger={fitViewTrigger}
           />
         ) : (
           /* Empty state */

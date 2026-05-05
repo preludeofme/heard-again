@@ -40,6 +40,7 @@ interface ReactFlowTreeCanvasProps {
   onLoadMore?: (direction: 'up' | 'down', personId: string) => void
   onEditRelationships?: (personId: string) => void
   isPanMode?: boolean
+  fitViewTrigger?: number
 }
 
 // Inner component — must be inside ReactFlowProvider to use useReactFlow
@@ -55,6 +56,7 @@ function ReactFlowTreeCanvasInner({
   onLoadMore,
   onEditRelationships,
   isPanMode = true,
+  fitViewTrigger,
 }: ReactFlowTreeCanvasProps): React.JSX.Element {
   const { zoomIn, zoomOut, fitView } = useReactFlow()
   const [nodes, setNodes, onNodesChange] = useNodesState([])
@@ -91,6 +93,14 @@ function ReactFlowTreeCanvasInner({
     }),
     [zoomIn, zoomOut, fitView],
   )
+
+  // Fit view when explicitly triggered (e.g. after GEDCOM import loads new nodes)
+  useEffect(() => {
+    if (!fitViewTrigger) return
+    // Delay lets React Flow finish measuring the newly laid-out nodes
+    const t = setTimeout(() => fitView({ duration: 500, padding: 0.15 }), 150)
+    return () => clearTimeout(t)
+  }, [fitViewTrigger, fitView])
 
   return (
     <ReactFlow

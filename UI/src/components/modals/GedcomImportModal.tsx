@@ -37,11 +37,14 @@ interface GedcomImportModalProps {
   open: boolean
   onClose: () => void
   onSuccess?: () => void
+  userPersonId?: string
 }
 
 interface GedcomIndividual {
   xref: string
   fullName: string
+  firstName: string
+  lastName: string | null
   birthDate: string | null
 }
 
@@ -103,8 +106,13 @@ function PersonAutocomplete({
       getOptionLabel={gedcomLabel}
       filterOptions={(opts, { inputValue }) => {
         if (inputValue.trim().length < 2) return []
-        const q = inputValue.toLowerCase()
-        return opts.filter(o => o.fullName.toLowerCase().includes(q)).slice(0, 50)
+        const words = inputValue.toLowerCase().trim().split(/\s+/)
+        return opts.filter(o => {
+          const first = o.firstName.toLowerCase()
+          const last = (o.lastName ?? '').toLowerCase()
+          const full = o.fullName.toLowerCase()
+          return words.every(w => first.includes(w) || last.includes(w) || full.includes(w))
+        }).slice(0, 50)
       }}
       noOptionsText="Type at least 2 characters to search"
       renderOption={(props, option) => (
@@ -171,13 +179,14 @@ function ExistingPersonAutocomplete({
   )
 }
 
-export function GedcomImportModal({ open, onClose, onSuccess }: GedcomImportModalProps) {
+export function GedcomImportModal({ open, onClose, onSuccess, userPersonId }: GedcomImportModalProps) {
   const { data: session } = useSession()
 
   // Upload state
   const [file, setFile] = useState<File | null>(null)
   const [status, setStatus] = useState<'idle' | 'uploading' | 'preview' | 'processing' | 'polling' | 'success' | 'error'>('idle')
   const [jobId, setJobId] = useState<string | null>(null)
+  const [importProgress, setImportProgress] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [previewData, setPreviewData] = useState<PreviewData | null>(null)
 
@@ -204,6 +213,7 @@ export function GedcomImportModal({ open, onClose, onSuccess }: GedcomImportModa
     setError(null)
     setPreviewData(null)
     setJobId(null)
+    setImportProgress(0)
     setConnectionMode('self')
     setSelfXref(null)
     setSelfSearch(null)
@@ -248,6 +258,16 @@ export function GedcomImportModal({ open, onClose, onSuccess }: GedcomImportModa
     return () => clearTimeout(timer)
   }, [anchorSearch])
 
+  // Slowly advance the simulated progress bar while polling (caps at 90 until job finishes)
+  useEffect(() => {
+    if (status !== 'polling') return
+    setImportProgress(0)
+    const timer = setInterval(() => {
+      setImportProgress(p => Math.min(p + 1.5, 90))
+    }, 500)
+    return () => clearInterval(timer)
+  }, [status])
+
   // Poll job status while import is processing in background
   useEffect(() => {
     if (status !== 'polling' || !jobId) return
@@ -259,8 +279,8 @@ export function GedcomImportModal({ open, onClose, onSuccess }: GedcomImportModa
         const jobStatus: string = data.data?.status
         if (jobStatus === 'COMPLETED') {
           clearInterval(interval)
-          setStatus('success')
-          onSuccess?.()
+          setImportProgress(100)
+          setTimeout(() => { setStatus('success'); onSuccess?.() }, 400)
         } else if (jobStatus === 'FAILED') {
           clearInterval(interval)
           setError(data.data?.errorMessage || 'Import failed during processing')
@@ -321,9 +341,13 @@ export function GedcomImportModal({ open, onClose, onSuccess }: GedcomImportModa
       const options: Record<string, string> = {}
 
       if (connectionMode === 'self') {
-        // linkToPersonId is omitted — the service auto-resolves to the user's own person record
         const chosenXref = selfXref ?? selfSearch?.xref
-        if (chosenXref) options.gedcomXrefForLink = chosenXref
+        if (chosenXref) {
+          options.gedcomXrefForLink = chosenXref
+          // Pass the explicit person ID so the service merges into the correct record
+          // rather than relying on unreliable createdById lookup
+          if (userPersonId) options.linkToPersonId = userPersonId
+        }
         if (gedcomFather) options.fatherXref = gedcomFather.xref
         if (gedcomMother) options.motherXref = gedcomMother.xref
       } else if (connectionMode === 'attach' && anchorPerson && gedcomParent) {
@@ -383,7 +407,7 @@ export function GedcomImportModal({ open, onClose, onSuccess }: GedcomImportModa
         </Typography>
         <IconButton
           onClick={onClose}
-          disabled={status === 'uploading' || status === 'processing'}
+          disabled={status === 'uploading' || status === 'processing' || status === 'polling'}
           sx={{ color: 'grey.500' }}
         >
           <CloseIcon />
@@ -437,11 +461,20 @@ export function GedcomImportModal({ open, onClose, onSuccess }: GedcomImportModa
         {/* ── POLLING ──────────────────────────────────────── */}
         {status === 'polling' && (
           <Box sx={{ py: 6, textAlign: 'center' }}>
-            <CircularProgress size={56} sx={{ mb: 3 }} />
             <Typography variant="h6" gutterBottom>Processing your family tree…</Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 4 }}>
               This may take a minute for large files. Please keep this window open.
             </Typography>
+            <Box sx={{ px: 4 }}>
+              <LinearProgress
+                variant="determinate"
+                value={importProgress}
+                sx={{ height: 10, borderRadius: 5 }}
+              />
+              <Typography variant="caption" color="text.secondary" sx={{ mt: 1.5, display: 'block' }}>
+                {importProgress < 90 ? 'Importing people and relationships…' : 'Finalizing…'}
+              </Typography>
+            </Box>
           </Box>
         )}
 

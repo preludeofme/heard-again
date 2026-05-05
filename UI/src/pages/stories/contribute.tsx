@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
+import { useSession } from 'next-auth/react'
 import { fetchWithCSRF } from '@/lib/api-client'
 import Head from 'next/head'
 import { 
   Box, Typography, Card, CardContent, Button, Grid, TextField, 
-  IconButton, Avatar, CircularProgress, Alert, Container
+  IconButton, Avatar, CircularProgress, Alert, Container,
+  MenuItem, Select, FormControl, InputLabel
 } from '@mui/material'
 import { 
   ArrowBack as ArrowBackIcon,
@@ -15,8 +17,23 @@ import {
 import { Layout } from '@/components/layout/Layout'
 import { AudioRecorder } from '@/components/audio/AudioRecorder'
 
+const RELATIONSHIP_OPTIONS = [
+  { value: 'Self', label: 'Self' },
+  { value: 'Dad', label: 'Dad' },
+  { value: 'Mother', label: 'Mother' },
+  { value: 'Sister', label: 'Sister' },
+  { value: 'Brother', label: 'Brother' },
+  { value: 'Grandchild', label: 'Grandchild' },
+  { value: 'Grandparent', label: 'Grandparent' },
+  { value: 'Spouse', label: 'Spouse' },
+  { value: 'Family', label: 'Family' },
+  { value: 'Friend', label: 'Friend' },
+  { value: 'Other', label: 'Other' },
+]
+
 export default function PublicContributePage() {
   const router = useRouter()
+  const { data: session, status } = useSession()
   const { subjectId } = router.query
 
   const [subject, setSubject] = useState<any>(null)
@@ -163,22 +180,36 @@ export default function PublicContributePage() {
           <Typography variant="h6" sx={{ mb: 4, color: '#546669' }}>
             Your story about {subject?.firstName} has been saved to the family story.
           </Typography>
-          <Card sx={{ bgcolor: '#f6f3ee', p: 4, borderRadius: 3, textAlign: 'left', mb: 4 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: '#16334a' }}>
-              Want to see your story and others?
-            </Typography>
-            <Typography variant="body2" sx={{ mb: 3, color: '#546669' }}>
-              Create a free account to keep track of your contributions and follow the family story as it grows.
-            </Typography>
-            <Button 
-              fullWidth 
-              variant="contained" 
-              onClick={() => router.push('/signup')}
-              sx={{ bgcolor: '#16334a', borderRadius: 2 }}
-            >
-              Create Free Account
-            </Button>
-          </Card>
+
+          {status === 'authenticated' ? (
+            <Box sx={{ mb: 4 }}>
+              <Button 
+                fullWidth 
+                variant="contained" 
+                onClick={() => router.push(`/profile/${subjectId}`)}
+                sx={{ bgcolor: '#1a6b5a', borderRadius: 2, py: 1.5, '&:hover': { bgcolor: '#145a4b' } }}
+              >
+                View {subject?.firstName}&apos;s Profile
+              </Button>
+            </Box>
+          ) : (
+            <Card sx={{ bgcolor: '#f6f3ee', p: 4, borderRadius: 3, textAlign: 'left', mb: 4 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: '#16334a' }}>
+                Want to see your story and others?
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 3, color: '#546669' }}>
+                Create a free account to keep track of your contributions and follow the family story as it grows.
+              </Typography>
+              <Button 
+                fullWidth 
+                variant="contained" 
+                onClick={() => router.push('/signup')}
+                sx={{ bgcolor: '#16334a', borderRadius: 2 }}
+              >
+                Create Free Account
+              </Button>
+            </Card>
+          )}
           <Button variant="text" onClick={() => router.push('/')}>Return to Homepage</Button>
         </Container>
       </Layout>
@@ -249,14 +280,22 @@ export default function PublicContributePage() {
                   </Box>
 
                   <Box component="form" onSubmit={handleSubmit}>
-                    <TextField
-                      fullWidth
-                      label="Your Relationship"
-                      placeholder="e.g. Grandchild, Friend, Colleague"
-                      value={authorRelationship}
-                      onChange={(e) => setAuthorRelationship(e.target.value)}
-                      sx={{ mb: 3 }}
-                    />
+                    <FormControl fullWidth sx={{ mb: 3 }}>
+                      <InputLabel id="relationship-label">Your Relationship</InputLabel>
+                      <Select
+                        labelId="relationship-label"
+                        value={authorRelationship}
+                        label="Your Relationship"
+                        onChange={(e) => setAuthorRelationship(e.target.value)}
+                        required
+                      >
+                        {RELATIONSHIP_OPTIONS.map((opt) => (
+                          <MenuItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
 
                     {showAudio ? (
                       <Box sx={{ mt: 2 }}>

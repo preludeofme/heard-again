@@ -22,9 +22,10 @@ export class GedcomImportService {
     const content = await fs.readFile(filePath, 'utf-8')
     const { individuals, families } = GedcomParser.parse(content)
 
-    // Get user info for matching
+    // Get user info for matching - pick the first person record created by this user (likely themselves)
     const person = await prisma.person.findFirst({
-      where: { createdById: userId, personType: 'FAMILY' }, // Assuming the user's person record is created during onboarding
+      where: { createdById: userId, personType: 'FAMILY' },
+      orderBy: { createdAt: 'asc' },
     })
 
     if (!person) {
@@ -110,16 +111,21 @@ export class GedcomImportService {
 
     const BATCH_SIZE = 100
 
-    // Resolve linkToPersonId up-front so the person-upsert loop and the
-    // parent-linking step both see the same value.
-    let resolvedLinkToPersonId = options?.linkToPersonId
-    if (!resolvedLinkToPersonId && (options?.gedcomXrefForLink || options?.motherXref || options?.fatherXref)) {
-      const userPerson = await prisma.person.findFirst({
-        where: { familyspaceId, createdById: userId },
-        select: { id: true },
-      })
-      resolvedLinkToPersonId = userPerson?.id
-    }
+    // Prefer explicitly supplied linkToPersonId (UI passes the root person's ID directly).
+    // Fall back to createdById lookup only when xrefs are set but no explicit ID was supplied.
+    // Using findFirst({ createdById }) alone is ambiguous once the user has added other people,
+    // so we order by createdAt ascending to bias toward the onboarding record.
+    const resolvedLinkToPersonId: string | undefined =
+      options?.linkToPersonId ??
+      (
+        !options?.linkToPersonId && (options?.gedcomXrefForLink || options?.motherXref || options?.fatherXref)
+          ? (await prisma.person.findFirst({
+              where: { familyspaceId, createdById: userId },
+              orderBy: { createdAt: 'asc' },
+              select: { id: true },
+            }))?.id
+          : undefined
+      )
 
     try {
       const importedPersonIds: Record<string, string> = {}

@@ -57,6 +57,23 @@ export default apiHandler({
       // If authenticated, we require EDITOR role
       if (user) {
         await requireFamilyspaceRole(user.id, user.familyspaceId, 'EDITOR')
+        
+        // Find the user's own person record (the first one they created)
+        const userPerson = await prisma.person.findFirst({
+          where: { familyspaceId, createdById: user.id },
+          orderBy: { createdAt: 'asc' },
+          select: { id: true },
+        })
+
+        // If no speakerId is provided but we found the user's person, use it
+        if (!req.body.speakerId && userPerson) {
+          req.body.speakerId = userPerson.id
+        }
+        
+        // If authorRelationship is "Self", ensure speakerId is the user's person
+        if (req.body.authorRelationship === 'Self' && userPerson) {
+          req.body.speakerId = userPerson.id
+        }
       }
 
       // If not authenticated, we use a null userId or a special system ID

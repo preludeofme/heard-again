@@ -106,7 +106,10 @@ export default apiHandler({
     let rootId = rootPersonId as string
     if (!rootId) {
       // Prioritize the person record created by the current user during onboarding
-      const userPerson = allPeople.find(p => p.createdById === user.id)
+      // Pick the earliest one to ensure we get the user themselves
+      const userPerson = allPeople
+        .filter(p => p.createdById === user.id)
+        .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())[0]
       
       if (userPerson) {
         rootId = userPerson.id

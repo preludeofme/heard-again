@@ -13,17 +13,23 @@ export default apiHandler({
       return successResponse(res, { people: [], totalResults: 0 })
     }
 
-    const people = await prisma.person.findMany({
-      where: {
-        familyspaceId: user.familyspaceId,
+    const tokens = query.split(/\s+/).filter(Boolean)
+    const where: any = { familyspaceId: user.familyspaceId }
+
+    if (tokens.length > 0) {
+      where.AND = tokens.map(token => ({
         OR: [
-          { firstName: { contains: query, mode: 'insensitive' } },
-          { lastName: { contains: query, mode: 'insensitive' } },
-          { displayName: { contains: query, mode: 'insensitive' } },
-          { nickname: { contains: query, mode: 'insensitive' } },
-          { bio: { contains: query, mode: 'insensitive' } },
+          { firstName: { contains: token, mode: 'insensitive' } },
+          { lastName: { contains: token, mode: 'insensitive' } },
+          { displayName: { contains: token, mode: 'insensitive' } },
+          { nickname: { contains: token, mode: 'insensitive' } },
+          { bio: { contains: token, mode: 'insensitive' } },
         ],
-      },
+      }))
+    }
+
+    const people = await prisma.person.findMany({
+      where,
       select: {
         id: true,
         firstName: true,

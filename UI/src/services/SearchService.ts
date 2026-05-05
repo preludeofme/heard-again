@@ -91,14 +91,17 @@ export class SearchService {
     query: string,
     limit: number
   ): Promise<SearchResult['stories']> {
+    const tokens = query.split(/\s+/).filter(Boolean)
     return this.prisma.story.findMany({
       where: {
         familyspaceId,
-        OR: [
-          { title: { contains: query, mode: 'insensitive' } },
-          { content: { contains: query, mode: 'insensitive' } },
-          { tags: { hasSome: [query] } },
-        ],
+        AND: tokens.map(token => ({
+          OR: [
+            { title: { contains: token, mode: 'insensitive' } },
+            { content: { contains: token, mode: 'insensitive' } },
+            { tags: { hasSome: [token] } },
+          ],
+        }))
       },
       select: {
         id: true,
@@ -122,16 +125,19 @@ export class SearchService {
     query: string,
     limit: number
   ): Promise<SearchResult['people']> {
+    const tokens = query.split(/\s+/).filter(Boolean)
     return this.prisma.person.findMany({
       where: {
         familyspaceId,
-        OR: [
-          { firstName: { contains: query, mode: 'insensitive' } },
-          { lastName: { contains: query, mode: 'insensitive' } },
-          { displayName: { contains: query, mode: 'insensitive' } },
-          { nickname: { contains: query, mode: 'insensitive' } },
-          { bio: { contains: query, mode: 'insensitive' } },
-        ],
+        AND: tokens.map(token => ({
+          OR: [
+            { firstName: { contains: token, mode: 'insensitive' } },
+            { lastName: { contains: token, mode: 'insensitive' } },
+            { displayName: { contains: token, mode: 'insensitive' } },
+            { nickname: { contains: token, mode: 'insensitive' } },
+            { bio: { contains: token, mode: 'insensitive' } },
+          ],
+        }))
       },
       select: {
         id: true,
@@ -155,13 +161,16 @@ export class SearchService {
     query: string,
     limit: number
   ): Promise<SearchResult['assets']> {
+    const tokens = query.split(/\s+/).filter(Boolean)
     return this.prisma.asset.findMany({
       where: {
         familyspaceId,
-        OR: [
-          { originalName: { contains: query, mode: 'insensitive' } },
-          { transcript: { contains: query, mode: 'insensitive' } },
-        ],
+        AND: tokens.map(token => ({
+          OR: [
+            { originalName: { contains: token, mode: 'insensitive' } },
+            { transcript: { contains: token, mode: 'insensitive' } },
+          ],
+        }))
       },
       select: {
         id: true,
@@ -184,17 +193,20 @@ export class SearchService {
     limit: number = 5
   ): Promise<SearchSuggestion[]> {
     if (!query.trim()) return []
+    const tokens = query.split(/\s+/).filter(Boolean)
 
     const [people, stories, assets] = await Promise.all([
       this.prisma.person.findMany({
         where: {
           familyspaceId,
-          OR: [
-            { firstName: { contains: query, mode: 'insensitive' } },
-            { lastName: { contains: query, mode: 'insensitive' } },
-            { displayName: { contains: query, mode: 'insensitive' } },
-            { nickname: { contains: query, mode: 'insensitive' } },
-          ],
+          AND: tokens.map(token => ({
+            OR: [
+              { firstName: { contains: token, mode: 'insensitive' } },
+              { lastName: { contains: token, mode: 'insensitive' } },
+              { displayName: { contains: token, mode: 'insensitive' } },
+              { nickname: { contains: token, mode: 'insensitive' } },
+            ],
+          }))
         },
         select: {
           id: true,
@@ -209,10 +221,12 @@ export class SearchService {
       this.prisma.story.findMany({
         where: {
           familyspaceId,
-          OR: [
-            { title: { contains: query, mode: 'insensitive' } },
-            { content: { contains: query, mode: 'insensitive' } },
-          ],
+          AND: tokens.map(token => ({
+            OR: [
+              { title: { contains: token, mode: 'insensitive' } },
+              { content: { contains: token, mode: 'insensitive' } },
+            ],
+          }))
         },
         select: {
           id: true,
@@ -226,10 +240,12 @@ export class SearchService {
       this.prisma.asset.findMany({
         where: {
           familyspaceId,
-          OR: [
-            { originalName: { contains: query, mode: 'insensitive' } },
-            { transcript: { contains: query, mode: 'insensitive' } },
-          ],
+          AND: tokens.map(token => ({
+            OR: [
+              { originalName: { contains: token, mode: 'insensitive' } },
+              { transcript: { contains: token, mode: 'insensitive' } },
+            ],
+          }))
         },
         select: {
           id: true,

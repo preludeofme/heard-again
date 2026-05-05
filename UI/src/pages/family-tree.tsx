@@ -56,6 +56,7 @@ interface FamilyTreePerson {
   spouseWithNext?: boolean
   upperGenerationLinkType?: 'biological' | 'nonBiological' | 'none'
   sex?: 'M' | 'F' | 'U' | 'X'
+  generation?: number
 }
 
 interface FamilyTreeRelationshipEdge {
@@ -271,10 +272,24 @@ export default function FamilyTree() {
   const [personModalInitialTab, setPersonModalInitialTab] = useState<'overview' | 'relationships'>('overview')
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false)
 
+  const [fitViewTrigger, setFitViewTrigger] = useState(0)
   const [loadedDepths, setLoadedDepths] = useState({ up: 2, down: 2 })
   const [includeSiblings, setIncludeSiblings] = useState(false)
   const [isIncrementalLoading, setIsIncrementalLoading] = useState(false)
   const [expandedPersonIds, setExpandedPersonIds] = useState<{ up: Set<string>; down: Set<string> }>({ up: new Set(), down: new Set() })
+  const [allSearchablePeople, setAllSearchablePeople] = useState<ApiPerson[]>([])
+
+  const fetchSearchablePeople = useCallback(async () => {
+    try {
+      const res = await fetch('/api/people?limit=500', { credentials: 'include' })
+      const data = await res.json()
+      if (data.success && data.data?.people) {
+        setAllSearchablePeople(data.data.people)
+      }
+    } catch (err) {
+      console.error('Failed to fetch searchable people:', err)
+    }
+  }, [])
 
   const fetchPeople = useCallback(async (depths = { up: 2, down: 2 }, rootId?: string, siblings = true, expandIds?: { up: Set<string>; down: Set<string> }) => {
     try {
@@ -307,7 +322,8 @@ export default function FamilyTree() {
 
   useEffect(() => {
     fetchPeople({ up: 2, down: 2 }, undefined, false)
-  }, [fetchPeople])
+    fetchSearchablePeople()
+  }, [fetchPeople, fetchSearchablePeople])
 
   // Logic to load more when needed — expands only the specific person's branch
   const handleLoadMore = useCallback(async (direction: 'up' | 'down', personId: string) => {
@@ -491,6 +507,7 @@ export default function FamilyTree() {
       <FamilyTreePage
         people={treeData ?? undefined}
         rawPeople={rawPeople}
+        searchablePeople={allSearchablePeople}
         rootPersonId={treeData?.rootPersonId}
         onPersonClick={handlePersonClick}
         onAddPerson={() => setIsAddPersonModalOpen(true)}
@@ -509,6 +526,7 @@ export default function FamilyTree() {
         includeSiblings={includeSiblings}
         loadedDepths={loadedDepths}
         isLoadingMore={isIncrementalLoading}
+        fitViewTrigger={fitViewTrigger}
       />
   )
 
@@ -554,8 +572,10 @@ export default function FamilyTree() {
       <GedcomImportModal
         open={isGedcomImportModalOpen}
         onClose={() => setIsGedcomImportModalOpen(false)}
-        onSuccess={() => {
-          fetchPeople()
+        userPersonId={treeData?.rootPersonId}
+        onSuccess={async () => {
+          await fetchPeople()
+          setFitViewTrigger(t => t + 1)
         }}
       />
     </>

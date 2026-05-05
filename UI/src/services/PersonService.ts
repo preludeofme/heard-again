@@ -33,11 +33,15 @@ export class PersonService {
     const where: any = { familyspaceId }
 
     if (search) {
-      where.OR = [
-        { firstName: { contains: search, mode: 'insensitive' } },
-        { lastName: { contains: search, mode: 'insensitive' } },
-        { nickname: { contains: search, mode: 'insensitive' } },
-      ]
+      const tokens = search.trim().split(/\s+/).filter(Boolean)
+      where.AND = tokens.map(token => ({
+        OR: [
+          { firstName: { contains: token, mode: 'insensitive' } },
+          { lastName: { contains: token, mode: 'insensitive' } },
+          { displayName: { contains: token, mode: 'insensitive' } },
+          { nickname: { contains: token, mode: 'insensitive' } },
+        ],
+      }))
     }
 
     if (type) {
