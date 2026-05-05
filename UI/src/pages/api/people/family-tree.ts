@@ -37,7 +37,7 @@ export default apiHandler({
   // GET /api/people/family-tree - Get people with relationships for family tree
   GET: async (req, res) => {
     const user = await getAuthUserWithFamilyspace(req, res)
-    const { rootPersonId, depthUp, depthDown, includeSiblings, expandUp, expandDown } = req.query
+    const { rootPersonId, depthUp, depthDown, includeSiblings, expandUp, expandDown, expandSiblings } = req.query
 
     // Fix: Properly handle "0" as a valid depth
     const dUp = (depthUp !== undefined && depthUp !== '') ? parseInt(depthUp as string, 10) : 2
@@ -45,6 +45,7 @@ export default apiHandler({
     const shouldIncludeSiblings = includeSiblings === 'true'
     const expandUpIds = expandUp ? (expandUp as string).split(',').filter(Boolean) : []
     const expandDownIds = expandDown ? (expandDown as string).split(',').filter(Boolean) : []
+    const expandSiblingIds = expandSiblings ? (expandSiblings as string).split(',').filter(Boolean) : []
 
     logger.info({ familyspaceId: user.familyspaceId, rootPersonId: rootPersonId || 'none' }, 'Family Tree API started')
 
@@ -65,6 +66,8 @@ export default apiHandler({
           bio: true,
           sex: true,
           createdById: true,
+          createdAt: true,
+          updatedAt: true,
         }
       }),
       prisma.familyUnit.findMany({
@@ -192,6 +195,12 @@ export default apiHandler({
     // C. Targeted branch expansions
     expandUpIds.forEach(id => { if (familiesByPersonId.has(id)) traverseUp(id, dUp - 1) })
     expandDownIds.forEach(id => { if (familiesByPersonId.has(id)) traverseDown(id, dDown - 1) })
+    expandSiblingIds.forEach(id => {
+      const families = familiesByPersonId.get(id) || []
+      families.filter(f => f.isChild).forEach(f => {
+        addFamilyUnit(f.unit)
+      })
+    })
 
     // D. Siblings Pass (Keep for backward compatibility with query param)
     if (shouldIncludeSiblings) {
@@ -260,6 +269,20 @@ export default apiHandler({
               notes: null,
               relatedPerson: p.parent as any
             })
+          })
+
+          // Siblings
+          unit.children.forEach(c => {
+            if (c.childId !== person.id) {
+              edges.push({
+                id: `sibling-${person.id}-${c.childId}`,
+                type: 'SIBLING',
+                direction: 'outgoing',
+                isBiological: true,
+                notes: null,
+                relatedPerson: c.child as any
+              })
+            }
           })
         }
       })

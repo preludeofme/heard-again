@@ -24,7 +24,7 @@ export const uuidSchema = z.string().uuid()
 
 export const paginationSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
-  limit: z.coerce.number().int().min(1).max(50).default(20),
+  limit: z.coerce.number().int().min(1).max(1000).default(20),
 })
 
 export const dateStringSchema = z.string().datetime().or(z.string().date())

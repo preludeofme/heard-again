@@ -4,9 +4,9 @@ import type { NodeProps } from '@xyflow/react'
 
 interface StubNodeData {
   targetId: string
-  direction: 'up' | 'down'
+  direction: 'up' | 'down' | 'left' | 'right'
   onSetRoot?: (id: string) => void
-  onLoadMore?: (direction: 'up' | 'down', personId: string) => void
+  onLoadMore?: (direction: 'up' | 'down' | 'left' | 'right', personId: string) => void
 }
 
 export function StubNode({ data }: NodeProps): React.JSX.Element {
@@ -20,10 +20,32 @@ export function StubNode({ data }: NodeProps): React.JSX.Element {
     }
   }
 
+  const getLabel = () => {
+    switch (d.direction) {
+      case 'up': return 'Load Parents'
+      case 'down': return 'Load Children'
+      case 'left':
+      case 'right': return 'Load Siblings'
+      default: return 'Load Branch'
+    }
+  }
+
+  const getRotation = () => {
+    switch (d.direction) {
+      case 'up': return 'none'
+      case 'down': return 'rotate(180deg)'
+      case 'left': return 'rotate(90deg)'
+      case 'right': return 'rotate(-90deg)'
+      default: return 'none'
+    }
+  }
+
   return (
     <>
       <Handle type="target" id="top" position={Position.Top} style={{ opacity: 0 }} />
       <Handle type="source" id="top" position={Position.Top} style={{ opacity: 0 }} />
+      <Handle type="target" id="left" position={Position.Left} style={{ opacity: 0 }} />
+      <Handle type="source" id="left" position={Position.Left} style={{ opacity: 0 }} />
       <div
         role="button"
         tabIndex={0}
@@ -70,7 +92,7 @@ export function StubNode({ data }: NodeProps): React.JSX.Element {
           strokeWidth="2.5"
           strokeLinecap="round"
           strokeLinejoin="round"
-          style={{ transform: d.direction === 'up' ? 'none' : 'rotate(180deg)', flexShrink: 0 }}
+          style={{ transform: getRotation(), flexShrink: 0 }}
         >
           <polyline points="7 13 12 18 17 13" />
           <polyline points="7 6 12 11 17 6" />
@@ -84,11 +106,13 @@ export function StubNode({ data }: NodeProps): React.JSX.Element {
             letterSpacing: '0.02em',
           }}
         >
-          Load Branch
+          {getLabel()}
         </span>
       </div>
       <Handle type="source" id="bottom" position={Position.Bottom} style={{ opacity: 0 }} />
       <Handle type="target" id="bottom" position={Position.Bottom} style={{ opacity: 0 }} />
+      <Handle type="source" id="right" position={Position.Right} style={{ opacity: 0 }} />
+      <Handle type="target" id="right" position={Position.Right} style={{ opacity: 0 }} />
     </>
   )
 }

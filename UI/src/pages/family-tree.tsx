@@ -276,7 +276,7 @@ export default function FamilyTree() {
   const [loadedDepths, setLoadedDepths] = useState({ up: 2, down: 2 })
   const [includeSiblings, setIncludeSiblings] = useState(false)
   const [isIncrementalLoading, setIsIncrementalLoading] = useState(false)
-  const [expandedPersonIds, setExpandedPersonIds] = useState<{ up: Set<string>; down: Set<string> }>({ up: new Set(), down: new Set() })
+  const [expandedPersonIds, setExpandedPersonIds] = useState<{ up: Set<string>; down: Set<string>; siblings: Set<string> }>({ up: new Set(), down: new Set(), siblings: new Set() })
   const [allSearchablePeople, setAllSearchablePeople] = useState<ApiPerson[]>([])
 
   const fetchSearchablePeople = useCallback(async () => {
@@ -291,12 +291,13 @@ export default function FamilyTree() {
     }
   }, [])
 
-  const fetchPeople = useCallback(async (depths = { up: 2, down: 2 }, rootId?: string, siblings = true, expandIds?: { up: Set<string>; down: Set<string> }) => {
+  const fetchPeople = useCallback(async (depths = { up: 2, down: 2 }, rootId?: string, siblings = true, expandIds?: { up: Set<string>; down: Set<string>; siblings: Set<string> }) => {
     try {
       const rootParam = rootId ? `&rootPersonId=${rootId}` : ''
       const expandUpParam = expandIds?.up.size ? `&expandUp=${Array.from(expandIds.up).join(',')}` : ''
       const expandDownParam = expandIds?.down.size ? `&expandDown=${Array.from(expandIds.down).join(',')}` : ''
-      const res = await fetch(`/api/people/family-tree?depthUp=${depths.up}&depthDown=${depths.down}&includeSiblings=${siblings}${rootParam}${expandUpParam}${expandDownParam}`, { credentials: 'include' })
+      const expandSiblingsParam = expandIds?.siblings.size ? `&expandSiblings=${Array.from(expandIds.siblings).join(',')}` : ''
+      const res = await fetch(`/api/people/family-tree?depthUp=${depths.up}&depthDown=${depths.down}&includeSiblings=${siblings}${rootParam}${expandUpParam}${expandDownParam}${expandSiblingsParam}`, { credentials: 'include' })
       const data = await res.json()
       
       if (data.success && data.data) {
@@ -326,15 +327,20 @@ export default function FamilyTree() {
   }, [fetchPeople, fetchSearchablePeople])
 
   // Logic to load more when needed — expands only the specific person's branch
-  const handleLoadMore = useCallback(async (direction: 'up' | 'down', personId: string) => {
+  const handleLoadMore = useCallback(async (direction: 'up' | 'down' | 'left' | 'right', personId: string) => {
     if (isIncrementalLoading) return
     setIsIncrementalLoading(true)
 
     const newExpanded = {
       up: new Set(expandedPersonIds.up),
       down: new Set(expandedPersonIds.down),
+      siblings: new Set(expandedPersonIds.siblings),
     }
-    newExpanded[direction].add(personId)
+    
+    if (direction === 'up') newExpanded.up.add(personId)
+    else if (direction === 'down') newExpanded.down.add(personId)
+    else newExpanded.siblings.add(personId) // left or right
+
     setExpandedPersonIds(newExpanded)
 
     await fetchPeople(loadedDepths, treeData?.rootPersonId, includeSiblings, newExpanded)
@@ -356,7 +362,7 @@ export default function FamilyTree() {
   const handleSetRoot = useCallback((id: string) => {
     if (isIncrementalLoading) return
     setIsIncrementalLoading(true)
-    const cleared = { up: new Set<string>(), down: new Set<string>() }
+    const cleared = { up: new Set<string>(), down: new Set<string>(), siblings: new Set<string>() }
     setExpandedPersonIds(cleared)
     fetchPeople({ up: 2, down: 2 }, id, false, cleared)
   }, [fetchPeople, isIncrementalLoading])

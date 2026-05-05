@@ -24,22 +24,18 @@ export interface SearchableFamilyMember {
 }
 
 export interface FamilyMemberSearchProps {
-  /** Array of family members to search through */
+  /** Array of family members to search through (local results) */
   members: SearchableFamilyMember[]
   /** Currently selected member ID (controlled) */
   selectedId?: string | null
   /** Callback when a member is selected */
   onSelect: (member: SearchableFamilyMember | null) => void
+  /** Callback when search query changes (for remote search) */
+  onSearch?: (query: string) => void
   /** Placeholder text for the search input */
   placeholder?: string
   /** Title displayed in the search panel header */
   title?: string
-  /** Whether the search panel is initially expanded */
-  defaultExpanded?: boolean
-  /** Control expanded state externally */
-  expanded?: boolean
-  /** Callback when expanded state changes */
-  onExpandedChange?: (expanded: boolean) => void
   /** Maximum number of results to show */
   maxResults?: number
   /** Custom renderer for member items */
@@ -48,8 +44,6 @@ export interface FamilyMemberSearchProps {
   filterFn?: (member: SearchableFamilyMember, query: string) => boolean
   /** Debounce delay in milliseconds */
   debounceMs?: number
-  /** Whether to show the expand/collapse button */
-  showExpandButton?: boolean
   /** Whether to show the selected member as a chip */
   showSelectedChip?: boolean
   /** Custom styles for the container */
@@ -63,33 +57,26 @@ export interface FamilyMemberSearchProps {
 }
 
 /**
- * Reusable family member search component with debounced type-ahead
- * and collapsible panel. Supports both controlled and uncontrolled modes.
+ * Reusable family member search component with debounced type-ahead.
+ * Supports both local filtering and remote searching.
  */
 export function FamilyMemberSearch({
   members,
   selectedId,
   onSelect,
+  onSearch,
   placeholder = 'Search by name or relationship',
   title = 'Family Member Search',
-  defaultExpanded = false,
-  expanded: controlledExpanded,
-  onExpandedChange,
   maxResults = 8,
   renderMember,
   filterFn,
   debounceMs = 250,
-  showExpandButton = true,
   showSelectedChip = true,
   sx,
   loading = false,
   allowClear = true,
   children,
 }: FamilyMemberSearchProps) {
-  const isControlled = controlledExpanded !== undefined
-  const [internalExpanded, setInternalExpanded] = useState(defaultExpanded)
-  const isExpanded = isControlled ? controlledExpanded : internalExpanded
-
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
 
@@ -97,16 +84,12 @@ export function FamilyMemberSearch({
   useEffect(() => {
     const timeout = setTimeout(() => {
       setDebouncedQuery(searchQuery)
+      if (onSearch) {
+        onSearch(searchQuery)
+      }
     }, debounceMs)
     return () => clearTimeout(timeout)
-  }, [searchQuery, debounceMs])
-
-  const handleExpandedChange = (newExpanded: boolean) => {
-    if (!isControlled) {
-      setInternalExpanded(newExpanded)
-    }
-    onExpandedChange?.(newExpanded)
-  }
+  }, [searchQuery, debounceMs, onSearch])
 
   const defaultFilter = (member: SearchableFamilyMember, query: string): boolean => {
     const lowerQuery = query.toLowerCase()
@@ -121,12 +104,16 @@ export function FamilyMemberSearch({
 
   const filteredResults = useMemo(() => {
     const query = debouncedQuery.trim()
+    if (!query && !onSearch) return []
     if (!query) return []
+
+    // If we have an onSearch prop, we assume 'members' contains the filtered results
+    if (onSearch) return members.slice(0, maxResults)
 
     return members
       .filter((member) => filter(member, query))
       .slice(0, maxResults)
-  }, [debouncedQuery, members, filter, maxResults])
+  }, [debouncedQuery, members, filter, maxResults, onSearch])
 
   const selectedMember = useMemo(
     () => members.find((m) => m.id === selectedId) || null,
@@ -215,91 +202,77 @@ export function FamilyMemberSearch({
             {title}
           </Typography>
         </Box>
-        {showExpandButton && (
-          <Button
-            size="small"
-            variant="text"
-            onClick={() => handleExpandedChange(!isExpanded)}
-            endIcon={isExpanded ? <ExpandLess /> : <ExpandMore />}
-            sx={{ textTransform: 'none', color: 'secondary.main' }}
-          >
-            {isExpanded ? 'Collapse' : 'Expand'}
-          </Button>
-        )}
       </Box>
 
-      {/* Expanded Content */}
-      {isExpanded && (
-        <Box sx={{ mt: 2.5 }}>
-          {/* Search Input */}
-          <Box
-            component="input"
-            value={searchQuery}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
-            placeholder={placeholder}
-            disabled={loading}
-            sx={{
-              width: '100%',
-              border: 0,
-              outline: 0,
-              bgcolor: loading ? 'rgba(235, 232, 227, 0.5)' : '#ebe8e3',
-              borderRadius: 2,
-              px: 2,
-              py: 1.5,
-              fontSize: '0.95rem',
-              color: '#1c1c19',
-              transition: 'all 0.2s ease',
-              cursor: loading ? 'not-allowed' : 'text',
-              '&:focus': {
-                bgcolor: '#ffffff',
-                boxShadow: '0 0 0 1px rgba(22, 51, 74, 0.2)',
-              },
-            }}
-          />
+      <Box sx={{ mt: 2.5 }}>
+        {/* Search Input */}
+        <Box
+          component="input"
+          value={searchQuery}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
+          placeholder={placeholder}
+          disabled={loading}
+          sx={{
+            width: '100%',
+            border: 0,
+            outline: 0,
+            bgcolor: loading ? 'rgba(235, 232, 227, 0.5)' : '#ebe8e3',
+            borderRadius: 2,
+            px: 2,
+            py: 1.5,
+            fontSize: '0.95rem',
+            color: '#1c1c19',
+            transition: 'all 0.2s ease',
+            cursor: loading ? 'not-allowed' : 'text',
+            '&:focus': {
+              bgcolor: '#ffffff',
+              boxShadow: '0 0 0 1px rgba(22, 51, 74, 0.2)',
+            },
+          }}
+        />
 
-          {/* Selected Member Chip */}
-          {showSelectedChip && selectedMember && (
-            <Box sx={{ mt: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Chip
-                avatar={<Avatar src={selectedMember.avatar} />}
-                label={selectedMember.name}
-                onDelete={allowClear ? handleClear : undefined}
-                deleteIcon={allowClear ? <Close /> : undefined}
-                sx={{
-                  bgcolor: 'rgba(22, 51, 74, 0.08)',
-                  '& .MuiChip-label': { color: 'primary.main', fontWeight: 500 },
-                }}
-              />
-            </Box>
-          )}
+        {/* Selected Member Chip */}
+        {showSelectedChip && selectedMember && (
+          <Box sx={{ mt: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Chip
+              avatar={<Avatar src={selectedMember.avatar} />}
+              label={selectedMember.name}
+              onDelete={allowClear ? handleClear : undefined}
+              deleteIcon={allowClear ? <Close /> : undefined}
+              sx={{
+                bgcolor: 'rgba(22, 51, 74, 0.08)',
+                '& .MuiChip-label': { color: 'primary.main', fontWeight: 500 },
+              }}
+            />
+          </Box>
+        )}
 
-          {/* Search Results */}
-          {debouncedQuery.trim() && (
-            <Box sx={{ mt: 2, maxHeight: 280, overflowY: 'auto', pr: 0.5 }}>
-              {loading ? (
-                <Typography variant="body2" sx={{ color: 'secondary.main', py: 2, textAlign: 'center' }}>
-                  Loading...
-                </Typography>
-              ) : filteredResults.length === 0 ? (
-                <Typography variant="body2" sx={{ color: 'secondary.main', py: 2 }}>
-                  No matching family members found.
-                </Typography>
-              ) : (
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                  {filteredResults.map((member) =>
-                    renderMember
-                      ? renderMember(member, member.id === selectedId)
-                      : defaultRenderMember(member, member.id === selectedId)
-                  )}
-                </Box>
-              )}
-            </Box>
-          )}
+        {/* Search Results */}
+        {debouncedQuery.trim() && (
+          <Box sx={{ mt: 2, maxHeight: 280, overflowY: 'auto', pr: 0.5 }}>
+            {loading ? (
+              <Typography variant="body2" sx={{ color: 'secondary.main', py: 2, textAlign: 'center' }}>
+                Searching...
+              </Typography>
+            ) : filteredResults.length === 0 ? (
+              <Typography variant="body2" sx={{ color: 'secondary.main', py: 2 }}>
+                No matching family members found.
+              </Typography>
+            ) : (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                {filteredResults.map((member) =>
+                  renderMember
+                    ? renderMember(member, member.id === selectedId)
+                    : defaultRenderMember(member, member.id === selectedId)
+                )}
+              </Box>
+            )}
+          </Box>
+        )}
 
-          {/* Additional Content */}
-          {children}
-        </Box>
-      )}
+        {/* Additional Content */}
+        {children}
+      </Box>
     </Card>
   )
 }

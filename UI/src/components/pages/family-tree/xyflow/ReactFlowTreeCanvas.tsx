@@ -26,6 +26,8 @@ export interface ReactFlowTreeCanvasHandle {
   zoomIn: () => void
   zoomOut: () => void
   resetView: () => void
+  fitView: (options?: { duration?: number; padding?: number }) => void
+  centerOnNode: (nodeId: string, options?: { duration?: number; zoom?: number }) => void
 }
 
 interface ReactFlowTreeCanvasProps {
@@ -58,7 +60,7 @@ function ReactFlowTreeCanvasInner({
   isPanMode = true,
   fitViewTrigger,
 }: ReactFlowTreeCanvasProps): React.JSX.Element {
-  const { zoomIn, zoomOut, fitView } = useReactFlow()
+  const { zoomIn, zoomOut, fitView, setCenter, getNodes } = useReactFlow()
   const [nodes, setNodes, onNodesChange] = useNodesState([])
   const [edges, setEdges, onEdgesChange] = useEdgesState([])
 
@@ -90,8 +92,17 @@ function ReactFlowTreeCanvasInner({
       zoomIn: () => zoomIn({ duration: 200 }),
       zoomOut: () => zoomOut({ duration: 200 }),
       resetView: () => fitView({ duration: 300, padding: 0.15 }),
+      fitView: (options) => fitView({ duration: 300, padding: 0.15, ...options }),
+      centerOnNode: (nodeId, options) => {
+        const node = getNodes().find((n) => n.id === nodeId)
+        if (node) {
+          const x = node.position.x + (node.measured?.width ?? 0) / 2
+          const y = node.position.y + (node.measured?.height ?? 0) / 2
+          setCenter(x, y, { duration: options?.duration ?? 300, zoom: options?.zoom ?? 1 })
+        }
+      },
     }),
-    [zoomIn, zoomOut, fitView],
+    [zoomIn, zoomOut, fitView, setCenter, getNodes],
   )
 
   // Fit view when explicitly triggered (e.g. after GEDCOM import loads new nodes)

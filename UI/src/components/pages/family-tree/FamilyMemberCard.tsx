@@ -41,12 +41,11 @@ export function FamilyMemberCard({
   onPersonClick,
   onAddPerson,
   onViewArchive,
-  onToggleSiblings,
+  onToggleSiblings: _onToggleSiblings,
   onSetRoot,
   onEditRelationships,
-  includeSiblings,
+  includeSiblings: _includeSiblings,
 }: FamilyMemberCardProps) {
-  const isParentLevel = level === 'parent'
   const selfCardColor = '#1a6b5a'
   const selfCardOutline = 'rgba(26, 107, 90, 0.08)'
 
@@ -66,6 +65,11 @@ export function FamilyMemberCard({
   }
   const lifeSpan = getLifeSpan();
 
+  const isParentLevel = level === 'parent'
+
+  // Standardized dark background for all except self
+  const cardBgColor = isSelf ? selfCardColor : 'primary.main'
+
   // Mobile: compact card — tap opens detail modal; no inline action buttons
   if (isMobile) {
     const avatarSize = isParentLevel ? 36 : level === 'grandparent' ? 30 : 28
@@ -75,18 +79,14 @@ export function FamilyMemberCard({
         onClick={() => onPersonClick(person)}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onPersonClick(person) } }}
         sx={{
-          bgcolor: isParentLevel
-            ? (isSelf ? selfCardColor : 'primary.main')
-            : 'background.paper',
+          bgcolor: cardBgColor,
           p: 1.5,
           borderRadius: isParentLevel ? 4 : 3,
           width: cardWidth,
           cursor: 'pointer',
-          boxShadow: isParentLevel
-            ? '0 8px 20px rgba(0,0,0,0.12)'
-            : '0 4px 12px rgba(28,28,25,0.06)',
-          border: isParentLevel ? 'none' : '1px solid rgba(22,51,74,0.06)',
-          outline: isParentLevel && isSelf ? `4px solid ${selfCardOutline}` : 'none',
+          boxShadow: '0 8px 20px rgba(0,0,0,0.12)',
+          border: 'none',
+          outline: isSelf ? `4px solid ${selfCardOutline}` : 'none',
           overflow: 'hidden',
         }}
       >
@@ -97,7 +97,7 @@ export function FamilyMemberCard({
               width: avatarSize,
               height: avatarSize,
               flexShrink: 0,
-              border: isParentLevel ? '1.5px solid rgba(205,229,255,0.4)' : 'none',
+              border: '1.5px solid rgba(255,255,255,0.4)',
             }}
           />
           <Box sx={{ overflow: 'hidden', minWidth: 0 }}>
@@ -106,7 +106,7 @@ export function FamilyMemberCard({
                 fontFamily: 'var(--font-newsreader), serif',
                 fontSize: isParentLevel ? '0.8rem' : '0.72rem',
                 fontWeight: 600,
-                color: isParentLevel ? 'white' : 'primary.main',
+                color: 'white',
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
@@ -116,33 +116,11 @@ export function FamilyMemberCard({
               {person.name}
             </Typography>
             {lifeSpan && (
-              <Typography sx={{ fontSize: '0.65rem', color: isParentLevel ? 'rgba(255,255,255,0.75)' : 'secondary.main', lineHeight: 1, mb: 0.25 }}>
+              <Typography sx={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.75)', lineHeight: 1, mb: 0.25 }}>
                 {lifeSpan}
               </Typography>
             )}
-            {isParentLevel && (
-              <Typography
-                sx={{
-                  fontSize: '0.65rem',
-                  color: 'rgba(255,255,255,0.6)',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                }}
-              >
-                {person.memories ? `${person.memories} memories` : 'Tap to view'}
-              </Typography>
-            )}
           </Box>
-          {isSelf && isParentLevel && onToggleSiblings && (
-            <IconButton
-              size="small"
-              onClick={(e) => { e.stopPropagation(); onToggleSiblings() }}
-              sx={{ color: 'white', ml: 'auto', p: 0.5 }}
-            >
-              <PeopleIcon sx={{ fontSize: 16, opacity: includeSiblings ? 1 : 0.6 }} />
-            </IconButton>
-          )}
         </Box>
       </Card>
     )
@@ -154,61 +132,50 @@ export function FamilyMemberCard({
       tabIndex={0}
       onClick={() => onPersonClick(person)}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onPersonClick(person) } }}
-      sx={
-        isParentLevel
-          ? {
-            bgcolor: isSelf ? selfCardColor : 'primary.main',
-            p: 4,
-            borderRadius: 6,
-            width: cardWidth,
-            position: 'relative',
-            boxShadow: isSelf
-              ? '0 20px 25px -5px rgba(26, 107, 90, 0.18)'
-              : '0 20px 25px -5px rgba(0,0,0,0.1)',
-            outline: 8,
-            outlineColor: isSelf ? selfCardOutline : 'rgba(22, 51, 74, 0.05)',
-            cursor: 'pointer',
-          }
-          : {
-            bgcolor: 'background.paper',
-            p: 3,
-            borderRadius: 4,
-            width: cardWidth,
-            boxShadow: '0 10px 40px rgba(28, 28, 25, 0.06)',
-            border: '1px solid',
-            borderColor: 'rgba(22, 51, 74, 0.05)',
-            transition: 'transform 0.3s',
-            cursor: 'pointer',
-            '&:hover': { transform: 'translateY(-4px)' },
-          }
-      }
+      sx={{
+        bgcolor: cardBgColor,
+        p: isParentLevel ? 4 : 3,
+        borderRadius: isParentLevel ? 6 : 4,
+        width: cardWidth,
+        position: 'relative',
+        boxShadow: isSelf
+          ? '0 20px 25px -5px rgba(26, 107, 90, 0.18)'
+          : '0 20px 25px -5px rgba(0,0,0,0.1)',
+        outline: isSelf ? 8 : 1,
+        outlineColor: isSelf ? selfCardOutline : 'rgba(255, 255, 255, 0.05)',
+        border: 'none',
+        cursor: 'pointer',
+        transition: 'transform 0.3s',
+        '&:hover': { transform: 'translateY(-4px)' },
+      }}
     >
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: isParentLevel ? 3 : 0 }}>
         <Avatar
           src={person.avatar}
-          sx={
-            isParentLevel
-              ? { width: 64, height: 64, border: 2, borderColor: 'rgba(205, 229, 255, 0.5)' }
-              : { width: level === 'grandparent' ? 56 : 48, height: level === 'grandparent' ? 56 : 48 }
-          }
+          sx={{ 
+            width: isParentLevel ? 64 : 52, 
+            height: isParentLevel ? 64 : 52, 
+            border: 2, 
+            borderColor: 'rgba(255, 255, 255, 0.4)' 
+          }}
         />
         <Box>
           <Typography
             variant={isParentLevel ? 'h5' : 'h6'}
             sx={{
               fontFamily: 'var(--font-newsreader), serif',
-              color: isParentLevel ? 'white' : 'primary.main',
+              color: 'white',
               fontSize: level === 'child' ? '1.125rem' : undefined,
             }}
           >
             {person.name}
           </Typography>
           {lifeSpan && (
-            <Typography variant="caption" sx={{ color: isParentLevel ? 'rgba(255,255,255,0.85)' : 'secondary.main', display: 'block', mb: 0.25 }}>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.85)', display: 'block', mb: 0.25 }}>
               {lifeSpan}
             </Typography>
           )}
-          <Typography variant={isParentLevel ? 'body2' : 'caption'} sx={{ color: isParentLevel ? 'rgba(255,255,255,0.7)' : 'secondary.main', fontWeight: 500 }}>
+          <Typography variant={isParentLevel ? 'body2' : 'caption'} sx={{ color: 'rgba(255,255,255,0.7)', fontWeight: 500 }}>
             {isParentLevel ? `${person.role} • ${person.memories || 0} Memories` : person.role}
           </Typography>
         </Box>
@@ -227,27 +194,6 @@ export function FamilyMemberCard({
             >
               Open Story
             </Button>
-            {isSelf && onToggleSiblings && (
-              <Button
-                variant="text"
-                className="nodrag"
-                onClick={(e) => { e.stopPropagation(); onToggleSiblings() }}
-                sx={{
-                  flex: 1,
-                  color: 'white',
-                  bgcolor: includeSiblings ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.1)',
-                  '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' },
-                  justifyContent: 'center',
-                  py: 1,
-                  borderRadius: 2,
-                  minWidth: 0,
-                  px: 0,
-                }}
-                title={includeSiblings ? 'Hide Siblings' : 'Show Siblings'}
-              >
-                <PeopleIcon />
-              </Button>
-            )}
           </Box>
           <Box sx={{ display: 'flex', gap: 1 }}>
             <Button variant="text" startIcon={<Edit />} className="nodrag"
@@ -284,7 +230,7 @@ export function FamilyMemberCard({
           sx={{
             mt: 1.5,
             pt: 1.5,
-            borderTop: '1px solid rgba(22,51,74,0.07)',
+            borderTop: '1.5px solid rgba(255,255,255,0.15)',
             display: 'flex',
             gap: 0.5,
           }}
@@ -294,7 +240,7 @@ export function FamilyMemberCard({
             className="nodrag"
             title="Stories"
             onClick={(e) => { e.stopPropagation(); onViewArchive(person) }}
-            sx={{ flex: 1, borderRadius: 1.5, color: 'secondary.main', '&:hover': { bgcolor: 'rgba(22,51,74,0.06)', color: 'primary.main' } }}
+            sx={{ flex: 1, borderRadius: 1.5, color: 'rgba(255,255,255,0.7)', '&:hover': { bgcolor: 'rgba(255,255,255,0.1)', color: 'white' } }}
           >
             <AutoStories sx={{ fontSize: 15 }} />
           </IconButton>
@@ -303,7 +249,7 @@ export function FamilyMemberCard({
             className="nodrag"
             title="Edit"
             onClick={(e) => { e.stopPropagation(); onPersonClick(person) }}
-            sx={{ flex: 1, borderRadius: 1.5, color: 'secondary.main', '&:hover': { bgcolor: 'rgba(22,51,74,0.06)', color: 'primary.main' } }}
+            sx={{ flex: 1, borderRadius: 1.5, color: 'rgba(255,255,255,0.7)', '&:hover': { bgcolor: 'rgba(255,255,255,0.1)', color: 'white' } }}
           >
             <Edit sx={{ fontSize: 15 }} />
           </IconButton>
@@ -313,7 +259,7 @@ export function FamilyMemberCard({
               className="nodrag"
               title="Focus"
               onClick={(e) => { e.stopPropagation(); onSetRoot(String(person.id)) }}
-              sx={{ flex: 1, borderRadius: 1.5, color: 'secondary.main', '&:hover': { bgcolor: 'rgba(22,51,74,0.06)', color: 'primary.main' } }}
+              sx={{ flex: 1, borderRadius: 1.5, color: 'rgba(255,255,255,0.7)', '&:hover': { bgcolor: 'rgba(255,255,255,0.1)', color: 'white' } }}
             >
               <TreeIcon sx={{ fontSize: 15 }} />
             </IconButton>
@@ -323,7 +269,7 @@ export function FamilyMemberCard({
             className="nodrag"
             title="Relatives"
             onClick={(e) => { e.stopPropagation(); onEditRelationships ? onEditRelationships(String(person.id)) : onAddPerson() }}
-            sx={{ flex: 1, borderRadius: 1.5, color: 'secondary.main', '&:hover': { bgcolor: 'rgba(22,51,74,0.06)', color: 'primary.main' } }}
+            sx={{ flex: 1, borderRadius: 1.5, color: 'rgba(255,255,255,0.7)', '&:hover': { bgcolor: 'rgba(255,255,255,0.1)', color: 'white' } }}
           >
             <PeopleIcon sx={{ fontSize: 15 }} />
           </IconButton>
@@ -332,7 +278,7 @@ export function FamilyMemberCard({
             className="nodrag"
             title="Add Person"
             onClick={(e) => { e.stopPropagation(); onAddPerson() }}
-            sx={{ flex: 1, borderRadius: 1.5, color: 'secondary.main', '&:hover': { bgcolor: 'rgba(22,51,74,0.06)', color: 'primary.main' } }}
+            sx={{ flex: 1, borderRadius: 1.5, color: 'rgba(255,255,255,0.7)', '&:hover': { bgcolor: 'rgba(255,255,255,0.1)', color: 'white' } }}
           >
             <PersonAdd sx={{ fontSize: 15 }} />
           </IconButton>

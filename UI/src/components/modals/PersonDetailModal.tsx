@@ -84,8 +84,9 @@ interface Relationship {
     firstName: string
     lastName?: string
     avatarUrl?: string
+    sex?: 'M' | 'F' | 'U' | 'X' | null
   }
-  relationshipType: string
+  type: string
   isMutual: boolean
 }
 
@@ -140,12 +141,32 @@ export function PersonDetailModal({
     return `Born ${birthYear}`
   }
 
-  const getRelationshipLabel = (type: string) => {
+  const getRelationshipLabel = (rel: Relationship) => {
+    const { type, relatedPerson } = rel
+    const sex = relatedPerson.sex
+
+    if (type === 'PARENT') {
+      if (sex === 'M') return 'Father'
+      if (sex === 'F') return 'Mother'
+      return 'Parent'
+    }
+    if (type === 'CHILD') {
+      if (sex === 'M') return 'Son'
+      if (sex === 'F') return 'Daughter'
+      return 'Child'
+    }
+    if (type === 'SPOUSE') {
+      if (sex === 'M') return 'Husband'
+      if (sex === 'F') return 'Wife'
+      return 'Spouse'
+    }
+    if (type === 'SIBLING') {
+      if (sex === 'M') return 'Brother'
+      if (sex === 'F') return 'Sister'
+      return 'Sibling'
+    }
+
     const labels: Record<string, string> = {
-      SPOUSE: 'Spouse',
-      CHILD: 'Child',
-      PARENT: 'Parent',
-      SIBLING: 'Sibling',
       GRANDPARENT: 'Grandparent',
       GRANDCHILD: 'Grandchild',
       AUNT_UNCLE: 'Aunt/Uncle',
@@ -649,16 +670,9 @@ export function PersonDetailModal({
                           <Typography variant="h6" sx={{ color: '#16334a', fontWeight: 600 }}>
                             {rel.relatedPerson.firstName} {rel.relatedPerson.lastName || ''}
                           </Typography>
-                          <Chip
-                            label={getRelationshipLabel(rel.relationshipType)}
-                            size="small"
-                            sx={{
-                              backgroundColor: '#f6f3ee',
-                              color: '#546669',
-                              fontSize: '0.7rem',
-                              mt: 0.5,
-                            }}
-                          />
+                          <Typography variant="body2" sx={{ color: 'secondary.main', fontWeight: 500 }}>
+                            {getRelationshipLabel(rel)}
+                          </Typography>
                         </Box>
                       </Card>
                     </Grid>

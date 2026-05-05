@@ -16,7 +16,7 @@ export interface ApiPerson {
 
 export interface RelationshipEdge {
   id: string
-  type: 'SPOUSE' | 'PARENT' | 'CHILD'
+  type: 'SPOUSE' | 'PARENT' | 'CHILD' | 'SIBLING'
   direction: 'outgoing' | 'incoming'
   isBiological: boolean
   notes?: string | null
@@ -56,6 +56,11 @@ export interface PersonNodeData {
   onViewArchive: (person: TreePerson) => void
   onSetRoot?: (id: string) => void
   onEditRelationships?: (personId: string) => void
+  onLoadMore?: (direction: 'up' | 'down' | 'left' | 'right', personId: string) => void
+  missingUp?: boolean
+  missingDown?: boolean
+  missingLeft?: boolean
+  missingRight?: boolean
 }
 
 /** Marker so TypeScript knows the node type */
@@ -78,6 +83,6 @@ export type FamilyFlowNode = {
 /** Data attached to a stubNode in React Flow */
 export interface StubNodeData {
   targetId: string
-  direction: 'up' | 'down'
+  direction: 'up' | 'down' | 'left' | 'right'
   onSetRoot?: (id: string) => void
 }

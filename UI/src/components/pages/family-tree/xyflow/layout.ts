@@ -15,15 +15,44 @@ const GRANDPARENT_WIDTH = 256
 const GRANDPARENT_HEIGHT = 152
 const CHILD_WIDTH = 240
 const CHILD_HEIGHT = 140
-const H_GAP = 48
-const V_ROW_GAP = 460
+const H_GAP = 100
+const V_ROW_GAP = 520
 const FAMILY_NODE_SIZE = 1
 
 // Connector colours
 const SPOUSE_COLOR = 'rgba(22, 51, 74, 0.34)'
 const BIO_COLOR = 'rgba(22, 51, 74, 0.52)'
-const NON_BIO_COLOR = 'rgba(22, 51, 74, 0.52)'
+const NON_BIO_COLOR = 'rgba(168, 85, 52, 0.52)' // More brownish/distinct
 const CONNECTOR_WIDTH = 3
+
+const FAMILY_COLORS = [
+  '#16334a', // Dark blue (primary)
+  '#1a6b5a', // Teal
+  '#7d5a50', // Brown
+  '#5a1a6b', // Purple
+  '#6b5a1a', // Olive
+  '#1a3a6b', // Blue
+  '#6b1a3a', // Maroon
+  '#3a6b1a', // Forest
+]
+
+function getFamilyColor(key: string): string {
+  let hash = 0
+  for (let i = 0; i < key.length; i++) {
+    hash = key.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  const index = Math.abs(hash) % FAMILY_COLORS.length
+  return FAMILY_COLORS[index]
+}
+
+function getFamilyYOffset(key: string): number {
+  let hash = 0
+  for (let i = 0; i < key.length; i++) {
+    hash = key.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  // Return an offset between -30 and 30
+  return (Math.abs(hash) % 61) - 30
+}
 
 // ─── Types local to layout ────────────────────────────────────────────────────
 
@@ -49,6 +78,7 @@ function buildRelationshipMaps(people: ApiPersonWithEdges[]) {
   const childrenByParent = new Map<string, Set<string>>()
   const parentsByChild = new Map<string, Set<string>>()
   const spousesByPerson = new Map<string, Set<string>>()
+  const siblingsByPerson = new Map<string, Set<string>>()
 
   for (const person of people) {
     for (const edge of person.relationshipEdges) {
@@ -79,10 +109,33 @@ function buildRelationshipMaps(people: ApiPersonWithEdges[]) {
         if (!spousesByPerson.has(relId)) spousesByPerson.set(relId, new Set())
         spousesByPerson.get(relId)!.add(person.id)
       }
+
+      if (edge.type === 'SIBLING') {
+        if (!siblingsByPerson.has(person.id)) siblingsByPerson.set(person.id, new Set())
+        siblingsByPerson.get(person.id)!.add(relId)
+
+        if (!siblingsByPerson.has(relId)) siblingsByPerson.set(relId, new Set())
+        siblingsByPerson.get(relId)!.add(person.id)
+      }
     }
   }
 
-  return { childrenByParent, parentsByChild, spousesByPerson }
+  // Treat co-parents as spouses for layout even if no explicit spouse edge
+  parentsByChild.forEach((parents) => {
+    const parentIds = Array.from(parents)
+    for (let i = 0; i < parentIds.length; i++) {
+      for (let j = i + 1; j < parentIds.length; j++) {
+        const pA = parentIds[i]
+        const pB = parentIds[j]
+        if (!spousesByPerson.has(pA)) spousesByPerson.set(pA, new Set())
+        spousesByPerson.get(pA)!.add(pB)
+        if (!spousesByPerson.has(pB)) spousesByPerson.set(pB, new Set())
+        spousesByPerson.get(pB)!.add(pA)
+      }
+    }
+  })
+
+  return { childrenByParent, parentsByChild, spousesByPerson, siblingsByPerson }
 }
 
 // ─── Step 2: BFS generation assignment ───────────────────────────────────────
@@ -248,7 +301,7 @@ export function buildFamilyTreeLayout(
   if (people.length === 0) return { nodes: [], edges: [] }
 
   const peopleById = new Map(people.map((p) => [p.id, p]))
-  const { childrenByParent, parentsByChild, spousesByPerson } = buildRelationshipMaps(people)
+  const { childrenByParent, parentsByChild, spousesByPerson, siblingsByPerson } = buildRelationshipMaps(people)
   const generationById = assignGenerations(people, rootPersonId)
 
   // Group people by generation
@@ -339,7 +392,31 @@ export function buildFamilyTreeLayout(
       }
     }
 
-    const sorted = [...ids].sort((a, b) => (desiredX.get(a) ?? 0) - (desiredX.get(b) ?? 0))
+    // --- Group spouses and sort by group-average desiredX ---
+    const groups: string[][] = []
+    const processed = new Set<string>()
+    for (const id of ids) {
+      if (processed.has(id)) continue
+      const group = [id]
+      processed.add(id)
+      const spouses = spousesByPerson.get(id)
+      if (spouses) {
+        for (const sid of spouses) {
+          if (ids.includes(sid) && !processed.has(sid)) {
+            group.push(sid)
+            processed.add(sid)
+          }
+        }
+      }
+      groups.push(group)
+    }
+
+    const sortedGroups = [...groups].sort((ga, gb) => {
+      const avgA = ga.reduce((s, id) => s + (desiredX.get(id) ?? 0), 0) / ga.length
+      const avgB = gb.reduce((s, id) => s + (desiredX.get(id) ?? 0), 0) / gb.length
+      return avgA - avgB
+    })
+    const sorted = sortedGroups.flat()
 
     // Capture desired center before overlap resolution so we can re-center after
     const dxValsAnc = sorted.map(id => desiredX.get(id) ?? 0)
@@ -415,7 +492,31 @@ export function buildFamilyTreeLayout(
       }
     }
 
-    const sorted = [...ids].sort((a, b) => (desiredX.get(a) ?? 0) - (desiredX.get(b) ?? 0))
+    // --- Group spouses and sort by group-average desiredX ---
+    const groups: string[][] = []
+    const processed = new Set<string>()
+    for (const id of ids) {
+      if (processed.has(id)) continue
+      const group = [id]
+      processed.add(id)
+      const spouses = spousesByPerson.get(id)
+      if (spouses) {
+        for (const sid of spouses) {
+          if (ids.includes(sid) && !processed.has(sid)) {
+            group.push(sid)
+            processed.add(sid)
+          }
+        }
+      }
+      groups.push(group)
+    }
+
+    const sortedGroups = [...groups].sort((ga, gb) => {
+      const avgA = ga.reduce((s, id) => s + (desiredX.get(id) ?? 0), 0) / ga.length
+      const avgB = gb.reduce((s, id) => s + (desiredX.get(id) ?? 0), 0) / gb.length
+      return avgA - avgB
+    })
+    const sorted = sortedGroups.flat()
 
     // Capture desired center before overlap resolution so we can re-center after
     const dxValsDesc = sorted.map(id => desiredX.get(id) ?? 0)
@@ -455,6 +556,28 @@ export function buildFamilyTreeLayout(
     const level = levelFromGen(gen)
     const isSelf = personId === rootPersonId
 
+    // Calculate missing relative flags
+    let missingUp = false
+    let missingDown = false
+    let missingLeft = false
+    let missingRight = false
+
+    for (const edge of person.relationshipEdges) {
+      if (peopleById.has(edge.relatedPerson.id)) continue
+
+      const isParentEdge = (edge.type === 'PARENT' && edge.direction === 'incoming') || (edge.type === 'CHILD' && edge.direction === 'incoming')
+      const isChildEdge = (edge.type === 'CHILD' && edge.direction === 'outgoing') || (edge.type === 'PARENT' && edge.direction === 'outgoing')
+      const isSiblingEdge = (edge.type === 'SIBLING')
+
+      if (isParentEdge && gen >= 0) missingUp = true
+      if (isChildEdge && gen <= 0) missingDown = true
+      if (isSiblingEdge) {
+        // Decide left or right based on some deterministic property, or just use one for now
+        // For simplicity, let's put missing siblings on the left
+        missingLeft = true
+      }
+    }
+
     const layoutPerson: TreeLayoutPerson = {
       id: person.id,
       name: buildDisplayName(person),
@@ -478,6 +601,11 @@ export function buildFamilyTreeLayout(
       onViewArchive: callbacks.onViewArchive,
       onSetRoot: callbacks.onSetRoot,
       onEditRelationships: callbacks.onEditRelationships,
+      onLoadMore: callbacks.onLoadMore,
+      missingUp,
+      missingDown,
+      missingLeft,
+      missingRight,
     }
 
     nodes.push({
@@ -520,8 +648,12 @@ export function buildFamilyTreeLayout(
       parentPositions.reduce((s, p) => s + p.x + p.width / 2, 0) / parentPositions.length
     const parentTopY = Math.min(...parentPositions.map((p) => p.y))
     const childBottomY = Math.max(...childPositionsArr.map((p) => p.y + p.height))
-    const junctionY = (parentTopY + childBottomY) / 2
+    
+    // Add deterministic Y offset to prevent overlapping horizontal lines
+    const baseJunctionY = (parentTopY + childBottomY) / 2
+    const junctionY = baseJunctionY + getFamilyYOffset(unit.key)
 
+    const familyColor = getFamilyColor(unit.key)
     const junctionId = `family::${unit.key}`
     nodes.push({
       id: junctionId,
@@ -541,7 +673,7 @@ export function buildFamilyTreeLayout(
         sourceHandle: 'top',
         targetHandle: 'bottom',
         type: 'smoothstep',
-        style: { stroke: BIO_COLOR, strokeWidth: CONNECTOR_WIDTH },
+        style: { stroke: familyColor, strokeWidth: CONNECTOR_WIDTH, opacity: 0.7 },
         animated: false,
       })
     }
@@ -577,7 +709,7 @@ export function buildFamilyTreeLayout(
         }
       }
 
-      const edgeColor = isBiological ? BIO_COLOR : NON_BIO_COLOR
+      const edgeColor = isBiological ? familyColor : NON_BIO_COLOR
       edges.push({
         id: `edge-family-${junctionId}-${childId}`,
         source: junctionId,
@@ -589,91 +721,8 @@ export function buildFamilyTreeLayout(
           stroke: edgeColor,
           strokeWidth: CONNECTOR_WIDTH,
           strokeDasharray: isBiological ? undefined : '6 4',
+          opacity: isBiological ? 0.8 : 0.6
         },
-        animated: false,
-      })
-    }
-  }
-
-  // ─── Step 5: Pagination Stubs ───────────────────────────────────────────────
-  
-  for (const person of people) {
-    const pos = personPositions.get(person.id)
-    if (!pos) continue
-
-    let hasMissingParent = false
-    let hasMissingChild = false
-
-    const gen = generationById.get(person.id) ?? 0
-
-    for (const edge of person.relationshipEdges) {
-      if (peopleById.has(edge.relatedPerson.id)) continue
-
-      const isParentEdge = (edge.type === 'PARENT' && edge.direction === 'incoming') || (edge.type === 'CHILD' && edge.direction === 'incoming')
-      const isChildEdge = (edge.type === 'CHILD' && edge.direction === 'outgoing') || (edge.type === 'PARENT' && edge.direction === 'outgoing')
-
-      if (isParentEdge && gen >= 0) hasMissingParent = true
-      if (isChildEdge && gen <= 0) hasMissingChild = true
-    }
-
-    if (hasMissingParent) {
-      const stubId = `stub-up-${person.id}`
-      const stubX = pos.x + pos.width / 2 - STUB_WIDTH / 2
-      const stubY = pos.y + pos.height + STUB_GAP
-
-      nodes.push({
-        id: stubId,
-        type: 'stubNode',
-        position: { x: stubX, y: stubY },
-        data: {
-          targetId: person.id,
-          direction: 'up',
-          onSetRoot: callbacks.onSetRoot,
-          onLoadMore: callbacks.onLoadMore,
-        } as unknown as Record<string, unknown>,
-        draggable: false,
-        style: { width: STUB_WIDTH, height: STUB_HEIGHT, pointerEvents: 'all' },
-      })
-
-      edges.push({
-        id: `edge-${stubId}`,
-        source: person.id,
-        target: stubId,
-        sourceHandle: 'bottom',
-        targetHandle: 'top',
-        type: 'straight',
-        style: { stroke: STUB_EDGE_COLOR, strokeWidth: STUB_EDGE_WIDTH, strokeDasharray: '4 4' },
-        animated: false,
-      })
-    }
-
-    if (hasMissingChild) {
-      const stubId = `stub-down-${person.id}`
-      const stubX = pos.x + pos.width / 2 - STUB_WIDTH / 2
-      const stubY = pos.y - STUB_GAP - STUB_HEIGHT
-
-      nodes.push({
-        id: stubId,
-        type: 'stubNode',
-        position: { x: stubX, y: stubY },
-        data: {
-          targetId: person.id,
-          direction: 'down',
-          onSetRoot: callbacks.onSetRoot,
-          onLoadMore: callbacks.onLoadMore,
-        } as unknown as Record<string, unknown>,
-        draggable: false,
-        style: { width: STUB_WIDTH, height: STUB_HEIGHT, pointerEvents: 'all' },
-      })
-
-      edges.push({
-        id: `edge-${stubId}`,
-        source: stubId,
-        target: person.id,
-        sourceHandle: 'bottom',
-        targetHandle: 'top',
-        type: 'straight',
-        style: { stroke: STUB_EDGE_COLOR, strokeWidth: STUB_EDGE_WIDTH, strokeDasharray: '4 4' },
         animated: false,
       })
     }

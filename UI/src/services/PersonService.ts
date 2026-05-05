@@ -27,7 +27,8 @@ export class PersonService {
     familyspaceId: string,
     query: ListPeopleQuery
   ): Promise<PersonListItem[]> {
-    const { search, type } = query
+    const { search, type, page = 1, limit = 50 } = query
+    const skip = (page - 1) * limit
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: any = { familyspaceId }
@@ -51,6 +52,8 @@ export class PersonService {
     const people = await this.repo.findMany(familyspaceId, {
       where,
       include: PERSON_INCLUDE,
+      skip,
+      take: limit,
     })
 
     return (people as any[]).map(this.mapToListItem)

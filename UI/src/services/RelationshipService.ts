@@ -7,7 +7,7 @@ import type { PrismaClient } from '@prisma/client'
 import { AppError } from '@/lib/api-helpers'
 import { logger } from '@/lib/logger'
 
-export type RelationshipType = 'SPOUSE' | 'PARENT' | 'CHILD'
+export type RelationshipType = 'SPOUSE' | 'PARENT' | 'CHILD' | 'SIBLING'
 
 export interface Relationship {
   id: string
@@ -21,6 +21,7 @@ export interface Relationship {
     lastName: string | null
     nickname: string | null
     avatarAssetId: string | null
+    sex: string | null
   }
 }
 
@@ -77,7 +78,7 @@ export class RelationshipService {
         parents: {
           include: {
             parent: {
-              select: { id: true, firstName: true, lastName: true, nickname: true, avatarAssetId: true },
+              select: { id: true, firstName: true, lastName: true, nickname: true, avatarAssetId: true, sex: true },
             },
           },
           orderBy: { sortOrder: 'asc' },
@@ -85,7 +86,7 @@ export class RelationshipService {
         children: {
           include: {
             child: {
-              select: { id: true, firstName: true, lastName: true, nickname: true, avatarAssetId: true },
+              select: { id: true, firstName: true, lastName: true, nickname: true, avatarAssetId: true, sex: true },
             },
           },
           orderBy: { sortOrder: 'asc' },
@@ -140,6 +141,20 @@ export class RelationshipService {
             notes: family.notes,
             relatedPerson: parentLink.parent,
           })
+        }
+
+        // Child -> Sibling relationships (other children in same family)
+        for (const childLink of family.children) {
+          if (childLink.childId !== personId) {
+            relationships.push({
+              id: `fc:${family.id}:${personId}:sibling:${childLink.child.id}`,
+              type: 'SIBLING',
+              direction: 'outgoing',
+              isBiological: true, // Assuming biological for simplicity in siblings
+              notes: family.notes,
+              relatedPerson: childLink.child,
+            })
+          }
         }
       }
     }

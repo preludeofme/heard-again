@@ -26,6 +26,7 @@ import {
   UnfoldMore,
   Upload,
   Download,
+  AccountCircle,
 } from '@mui/icons-material'
 import { PersonDetailModal } from '@/components/modals/PersonDetailModal'
 import { AddEditPersonModal, PersonFormData } from '@/components/modals/AddEditPersonModal'
@@ -125,7 +126,9 @@ export function FamilyTreePage({
   const [legendCollapsed, setLegendCollapsed] = useState(false)
   const [insightCollapsed, setInsightCollapsed] = useState(false)
   const [selectedSearchMemberId, setSelectedSearchMemberId] = useState<string | null>(null)
-  const [isPanMode, setIsPanMode] = useState(true)
+  const [isPanMode] = useState(true)
+  const [isSearching, setIsSearching] = useState(false)
+  const [searchResults, setSearchResults] = useState<any[]>([])
 
   // Data states
   const [personDetail, setPersonDetail] = useState<Record<string, unknown> | null>(null)
@@ -135,18 +138,50 @@ export function FamilyTreePage({
   const [isLoadingDetail, setIsLoadingDetail] = useState(false)
   const [detailError, setDetailError] = useState<string | null>(null)
 
-  // Search overlay members — derived from searchablePeople if provided, else rawPeople
+  // Search overlay members — derived from search results if searching, else searchablePeople, else rawPeople
   const searchableMembers = useMemo<SearchableFamilyMember[]>(() => {
-    const source = searchablePeople.length > 0 ? searchablePeople : rawPeople
+    const source = searchResults.length > 0 ? searchResults : (searchablePeople.length > 0 ? searchablePeople : rawPeople)
     return source.map((p) => ({
       id: p.id,
       name: p.displayName || `${p.firstName}${p.lastName ? ' ' + p.lastName : ''}`,
       relationship: 'Family Member',
       avatar: p.avatarUrl || (p as any).avatar || '',
     }))
-  }, [searchablePeople, rawPeople])
+  }, [searchResults, searchablePeople, rawPeople])
 
   // ─── Handlers ───────────────────────────────────────────────────────────────
+
+  const handleRemoteSearch = useCallback(async (query: string) => {
+    if (!query.trim()) {
+      setSearchResults([])
+      return
+    }
+    setIsSearching(true)
+    try {
+      const res = await fetch(`/api/people?search=${encodeURIComponent(query)}&limit=20`, { credentials: 'include' })
+      const data = await res.json()
+      if (data.success && data.data) {
+        setSearchResults(data.data)
+      }
+    } catch (err) {
+      console.error('Remote search failed:', err)
+    } finally {
+      setIsSearching(false)
+    }
+  }, [])
+
+  const handleFindMe = useCallback(() => {
+    if (effectiveRootId) {
+      // If root is already loaded, center on it
+      const isCurrentlyVisible = rawPeople.some(p => p.id === effectiveRootId)
+      if (isCurrentlyVisible) {
+        canvasRef.current?.centerOnNode(effectiveRootId, { zoom: 1 })
+      } else {
+        // Otherwise, reset root to effective root (usually the user's node)
+        onSetRoot?.(effectiveRootId)
+      }
+    }
+  }, [effectiveRootId, rawPeople, onSetRoot])
 
   const handlePersonClick = useCallback(
     async (person: TreeLayoutPerson) => {
@@ -266,9 +301,9 @@ export function FamilyTreePage({
     }
   }, [])
 
-  const handleAddStory = useCallback((_personId: string) => {
-    // Navigate to story creation with person pre-selected
-  }, [])
+  const handleAddStory = useCallback((personId: string) => {
+    router.push(`/stories/contribute?subjectId=${personId}`)
+  }, [router])
 
   const handleAddVoiceProfile = useCallback((_personId: string) => {
     // Open voice training modal with person pre-selected
@@ -337,47 +372,53 @@ export function FamilyTreePage({
         }),
       }}
     >
-      {/* Search — static, above the canvas, never floats over it */}
+      {/* Search & Toolbar Row — static, above the canvas, never floats over it */}
       {!isFullscreen && (
-        <Box sx={{ maxWidth: 1200, mx: 'auto', mb: 2 }}>
-          <FamilyMemberSearch
-            members={searchableMembers}
-            selectedId={selectedSearchMemberId}
-            onSelect={(member) => {
-              setSelectedSearchMemberId(member?.id ?? null)
-              if (member) {
-                onSetRoot?.(member.id)
-                // Trigger a fit view after a short delay to allow the tree to re-render
-                setTimeout(() => {
-                  canvasRef.current?.fitView()
-                }, 100)
-              }
-            }}
-            defaultExpanded={initialSearchExpanded}
-            placeholder="Search by name or relationship"
-            title="Family Member Search"
-            showSelectedChip={true}
-            allowClear={true}
-          />
-        </Box>
-      )}
+        <Box 
+          sx={{ 
+            maxWidth: 1200, 
+            mx: 'auto', 
+            mb: 2,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 2,
+            position: 'sticky',
+            top: { xs: 72, md: 84 },
+            zIndex: 25,
+            pt: 0.5,
+            pb: 1,
+            background: 'linear-gradient(to bottom, rgba(246,243,238,0.95), rgba(246,243,238,0.65), rgba(246,243,238,0))',
+            backdropFilter: 'blur(6px)',
+          }}
+        >
+          <Box sx={{ flex: 1 }}>
+            <FamilyMemberSearch
+              members={searchableMembers}
+              selectedId={selectedSearchMemberId}
+              onSelect={(member) => {
+                setSelectedSearchMemberId(member?.id ?? null)
+                if (member) {
+                  // If already in the current tree view, just center on them
+                  const isCurrentlyVisible = rawPeople.some(p => p.id === member.id)
+                  
+                  if (isCurrentlyVisible) {
+                    canvasRef.current?.centerOnNode(member.id, { zoom: 1 })
+                  } else {
+                    // Otherwise, fetch a new tree focused on them
+                    onSetRoot?.(member.id)
+                    // The tree will re-render and fit view automatically when data arrives
+                  }
+                }
+              }}
+              onSearch={handleRemoteSearch}
+              loading={isSearching}
+              placeholder="Search by name or relationship"
+              title="Family Member Search"
+              showSelectedChip={false}
+              allowClear={true}
+            />
+          </Box>
 
-      {/* Sticky toolbar — controls only */}
-      <Box
-        sx={{
-          position: 'sticky',
-          top: isFullscreen ? 8 : { xs: 72, md: 84 },
-          zIndex: 25,
-          pt: 0.5,
-          pb: 1.5,
-          mb: 1,
-          background:
-            'linear-gradient(to bottom, rgba(246,243,238,0.95), rgba(246,243,238,0.65), rgba(246,243,238,0))',
-          backdropFilter: 'blur(6px)',
-        }}
-      >
-        {/* Control Bar */}
-        <Box sx={{ maxWidth: 1200, mx: 'auto', display: 'flex', justifyContent: 'center' }}>
           <Box
             sx={{
               display: 'flex',
@@ -390,31 +431,19 @@ export function FamilyTreePage({
               boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
               border: '1px solid',
               borderColor: 'rgba(208, 227, 230, 0.5)',
+              height: 56, // Match height of search bar
             }}
           >
             <IconButton
               size="small"
+              onClick={handleFindMe}
+              title="Find Me (Root)"
               sx={{ 
-                color: !isPanMode ? 'primary.main' : 'text.secondary',
-                bgcolor: !isPanMode ? 'rgba(22, 51, 74, 0.08)' : 'transparent',
-                '&:hover': { bgcolor: !isPanMode ? 'rgba(22, 51, 74, 0.12)' : 'rgba(0,0,0,0.04)' }
+                color: 'primary.main',
+                '&:hover': { bgcolor: 'rgba(22, 51, 74, 0.08)' }
               }}
-              onClick={() => setIsPanMode(false)}
-              title="Pointer tool"
             >
-              <NearMe sx={{ fontSize: 18 }} />
-            </IconButton>
-            <IconButton
-              size="small"
-              sx={{ 
-                color: isPanMode ? 'primary.main' : 'text.secondary',
-                bgcolor: isPanMode ? 'rgba(22, 51, 74, 0.08)' : 'transparent',
-                '&:hover': { bgcolor: isPanMode ? 'rgba(22, 51, 74, 0.12)' : 'rgba(0,0,0,0.04)' }
-              }}
-              onClick={() => setIsPanMode(true)}
-              title="Pan (drag canvas)"
-            >
-              <PanTool sx={{ fontSize: 18 }} />
+              <AccountCircle sx={{ fontSize: 18 }} />
             </IconButton>
             <Divider orientation="vertical" flexItem sx={{ mx: 0.5, borderColor: 'rgba(208, 227, 230, 0.6)' }} />
             <IconButton size="small" sx={{ color: 'primary.main' }} onClick={handleZoomIn}>
@@ -423,33 +452,6 @@ export function FamilyTreePage({
             <IconButton size="small" sx={{ color: 'primary.main' }} onClick={handleZoomOut}>
               <ZoomOut />
             </IconButton>
-            <Divider orientation="vertical" flexItem sx={{ mx: 0.5, borderColor: 'rgba(208, 227, 230, 0.6)' }} />
-            <Button
-              startIcon={<PersonAdd />}
-              size="small"
-              onClick={handleOpenRelationshipEditor}
-              sx={{ color: 'primary.main', textTransform: 'none' }}
-            >
-              Edit Relationships
-            </Button>
-            {onToggleSiblings && (
-              <>
-                <Divider orientation="vertical" flexItem sx={{ mx: 0.5, borderColor: 'rgba(208, 227, 230, 0.6)' }} />
-                <Button
-                  startIcon={<People />}
-                  size="small"
-                  onClick={onToggleSiblings}
-                  sx={{
-                    color: includeSiblings ? 'primary.main' : 'text.secondary',
-                    bgcolor: includeSiblings ? 'rgba(22, 51, 74, 0.08)' : 'transparent',
-                    textTransform: 'none',
-                    '&:hover': { bgcolor: includeSiblings ? 'rgba(22, 51, 74, 0.12)' : 'rgba(0,0,0,0.04)' },
-                  }}
-                >
-                  Siblings
-                </Button>
-              </>
-            )}
             {onExpandDepth && (
               <>
                 <Divider orientation="vertical" flexItem sx={{ mx: 0.5, borderColor: 'rgba(208, 227, 230, 0.6)' }} />
@@ -464,28 +466,33 @@ export function FamilyTreePage({
                 </Button>
               </>
             )}
-            <Divider orientation="vertical" flexItem sx={{ mx: 0.5, borderColor: 'rgba(208, 227, 230, 0.6)' }} />
             {onImportGedcom && (
-              <Button
-                startIcon={<Upload sx={{ fontSize: 18 }} />}
-                size="small"
-                onClick={onImportGedcom}
-                title="Import GEDCOM file"
-                sx={{ color: 'primary.main', textTransform: 'none' }}
-              >
-                Import
-              </Button>
+              <>
+                <Divider orientation="vertical" flexItem sx={{ mx: 0.5, borderColor: 'rgba(208, 227, 230, 0.6)' }} />
+                <Button
+                  startIcon={<Upload sx={{ fontSize: 18 }} />}
+                  size="small"
+                  onClick={onImportGedcom}
+                  title="Import GEDCOM file"
+                  sx={{ color: 'primary.main', textTransform: 'none' }}
+                >
+                  Import
+                </Button>
+              </>
             )}
             {onExportGedcom && (
-              <Button
-                startIcon={<Download sx={{ fontSize: 18 }} />}
-                size="small"
-                onClick={onExportGedcom}
-                title="Export GEDCOM file"
-                sx={{ color: 'primary.main', textTransform: 'none' }}
-              >
-                Export
-              </Button>
+              <>
+                <Divider orientation="vertical" flexItem sx={{ mx: 0.5, borderColor: 'rgba(208, 227, 230, 0.6)' }} />
+                <Button
+                  startIcon={<Download sx={{ fontSize: 18 }} />}
+                  size="small"
+                  onClick={onExportGedcom}
+                  title="Export GEDCOM file"
+                  sx={{ color: 'primary.main', textTransform: 'none' }}
+                >
+                  Export
+                </Button>
+              </>
             )}
             <Divider orientation="vertical" flexItem sx={{ mx: 0.5, borderColor: 'rgba(208, 227, 230, 0.6)' }} />
             <Button
@@ -494,7 +501,7 @@ export function FamilyTreePage({
               onClick={handleResetView}
               sx={{ color: 'primary.main', textTransform: 'none' }}
             >
-              Reset View
+              Reset
             </Button>
             {onToggleFullscreen && (
               <>
@@ -515,7 +522,63 @@ export function FamilyTreePage({
             )}
           </Box>
         </Box>
-      </Box>
+      )}
+
+      {/* Fullscreen Toolbar */}
+      {isFullscreen && (
+        <Box
+          sx={{
+            position: 'fixed',
+            top: 8,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 1350,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 0.5,
+            bgcolor: 'background.paper',
+            px: 1,
+            py: 0.5,
+            borderRadius: 8,
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            border: '1px solid',
+            borderColor: 'rgba(208, 227, 230, 0.5)',
+          }}
+        >
+          <IconButton
+            size="small"
+            onClick={handleFindMe}
+            title="Find Me (Root)"
+            sx={{ color: 'primary.main' }}
+          >
+            <AccountCircle sx={{ fontSize: 18 }} />
+          </IconButton>
+          <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
+          <IconButton size="small" sx={{ color: 'primary.main' }} onClick={handleZoomIn}>
+            <ZoomIn />
+          </IconButton>
+          <IconButton size="small" sx={{ color: 'primary.main' }} onClick={handleZoomOut}>
+            <ZoomOut />
+          </IconButton>
+          <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
+          <Button
+            startIcon={<RestartAlt />}
+            size="small"
+            onClick={handleResetView}
+            sx={{ color: 'primary.main', textTransform: 'none' }}
+          >
+            Reset
+          </Button>
+          <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
+          <IconButton
+            size="small"
+            onClick={onToggleFullscreen}
+            sx={{ color: 'primary.main' }}
+          >
+            <FullscreenExit />
+          </IconButton>
+        </Box>
+      )}
 
       {/* Family Tree Canvas — React Flow requires explicit pixel height on its parent */}
       <Box
@@ -539,7 +602,7 @@ export function FamilyTreePage({
             onSetRoot={onSetRoot}
             onLoadMore={_onLoadMore}
             onEditRelationships={handleAddRelationship}
-            isPanMode={isPanMode}
+            isPanMode={true}
             fitViewTrigger={fitViewTrigger}
           />
         ) : (

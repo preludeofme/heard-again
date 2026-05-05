@@ -23,6 +23,7 @@ const RELATIONSHIP_OPTIONS = [
   { value: 'Mother', label: 'Mother' },
   { value: 'Sister', label: 'Sister' },
   { value: 'Brother', label: 'Brother' },
+  { value: 'Child', label: 'Child' },
   { value: 'Grandchild', label: 'Grandchild' },
   { value: 'Grandparent', label: 'Grandparent' },
   { value: 'Spouse', label: 'Spouse' },
@@ -42,6 +43,8 @@ export default function PublicContributePage() {
   
   const [storyTitle, setStoryTitle] = useState('')
   const [storyContent, setStoryContent] = useState('')
+  const [storyDate, setStoryDate] = useState('')
+  const [location, setLocation] = useState('')
   const [authorRelationship, setAuthorRelationship] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
@@ -83,6 +86,8 @@ export default function PublicContributePage() {
           content: storyContent,
           subjectId,
           authorRelationship,
+          storyDate: storyDate || undefined,
+          location: location || undefined,
           storyType: 'MEMORY',
           status: 'PUBLISHED'
         })
@@ -124,6 +129,8 @@ export default function PublicContributePage() {
           content: `Audio recording (${Math.round(duration)} seconds)`,
           subjectId,
           authorRelationship,
+          storyDate: storyDate || undefined,
+          location: location || undefined,
           storyType: 'RECORDING',
           assetIds: [assetId],
           status: 'PUBLISHED'
@@ -297,6 +304,37 @@ export default function PublicContributePage() {
                       </Select>
                     </FormControl>
 
+                    <TextField
+                      fullWidth
+                      label="Story Title (Optional)"
+                      placeholder="Give your memory a title"
+                      value={storyTitle}
+                      onChange={(e) => setStoryTitle(e.target.value)}
+                      sx={{ mb: 3 }}
+                    />
+                    
+                    <Grid container spacing={2} sx={{ mb: 3 }}>
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          fullWidth
+                          label="When did this happen? (Optional)"
+                          type="date"
+                          value={storyDate}
+                          onChange={(e) => setStoryDate(e.target.value)}
+                          InputLabelProps={{ shrink: true }}
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          fullWidth
+                          label="Where did this happen? (Optional)"
+                          placeholder="City, state, or specific place"
+                          value={location}
+                          onChange={(e) => setLocation(e.target.value)}
+                        />
+                      </Grid>
+                    </Grid>
+
                     {showAudio ? (
                       <Box sx={{ mt: 2 }}>
                         <AudioRecorder 
@@ -306,14 +344,6 @@ export default function PublicContributePage() {
                       </Box>
                     ) : (
                       <>
-                        <TextField
-                          fullWidth
-                          label="Story Title (Optional)"
-                          placeholder="Give your memory a title"
-                          value={storyTitle}
-                          onChange={(e) => setStoryTitle(e.target.value)}
-                          sx={{ mb: 3 }}
-                        />
                         <TextField
                           fullWidth
                           label="Share your memory"
