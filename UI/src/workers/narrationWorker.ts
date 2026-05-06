@@ -100,7 +100,7 @@ async function streamBatchSynth(
       text,
       language: 'English',
       familyspaceId,
-      silencePaddingMs: 50,
+      silencePaddingMs: 200,
     }),
   })
 

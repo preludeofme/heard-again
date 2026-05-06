@@ -9,7 +9,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!user) return
 
     const { personId } = req.query
-    const chatSystemUrl = process.env.CHAT_SYSTEM_URL || 'http://localhost:4778'
+    const chatSystemUrl = process.env.CHAT_SYSTEM_URL || 'https://localhost:4778'
 
     if (!personId || typeof personId !== 'string') {
       return res.status(400).json({

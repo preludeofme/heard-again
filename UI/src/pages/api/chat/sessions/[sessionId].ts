@@ -16,7 +16,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ success: false, error: 'Missing or invalid sessionId' })
   }
 
-  const chatSystemUrl = process.env.CHAT_SYSTEM_URL || 'http://localhost:4778'
+  const chatSystemUrl = process.env.CHAT_SYSTEM_URL || 'https://localhost:4778'
 
   try {
     const response = await fetch(`${chatSystemUrl}/api/chat/sessions/${sessionId}`, {

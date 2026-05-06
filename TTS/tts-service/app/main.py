@@ -79,6 +79,18 @@ def _encode_wav_to_mp3(wav_path: Path, mp3_path: Path) -> None:
     ]
     subprocess.run(cmd, check=True, timeout=120, capture_output=True)
 
+
+def _crossfade_join(a: np.ndarray, b: np.ndarray, fade_samples: int) -> np.ndarray:
+    """Join two audio arrays with a linear crossfade to eliminate click artifacts at the boundary."""
+    fade_samples = min(fade_samples, len(a), len(b))
+    if fade_samples <= 0:
+        return np.concatenate([a, b])
+    ramp_out = np.linspace(1.0, 0.0, fade_samples, dtype=np.float32)
+    ramp_in  = np.linspace(0.0, 1.0, fade_samples, dtype=np.float32)
+    blended  = a[-fade_samples:] * ramp_out + b[:fade_samples] * ramp_in
+    return np.concatenate([a[:-fade_samples], blended, b[fade_samples:]])
+
+
 app = FastAPI(
     title="Heard Again — Qwen3-TTS Service",
     description="Voice cloning and TTS backend powered by Qwen3-TTS",
@@ -1035,7 +1047,7 @@ class SynthesizeBatchRequest(BaseModel):
     language: str = "English"
     style: Optional[str] = None
     familyspaceId: Optional[str] = None
-    silencePaddingMs: int = 150
+    silencePaddingMs: int = 30
 
 
 @app.post("/api/tts/synthesize-batch")
@@ -1139,22 +1151,29 @@ async def synthesize_batch(
 
             pad_samples = int(sr * (padding_ms / 1000.0))
             silence = np.zeros(pad_samples, dtype=np.float32) if pad_samples > 0 else None
+            # 8 ms crossfade to smooth segment junctions; keeps speech flowing naturally
+            crossfade_samples = int(sr * 0.008)
 
             parts: list[np.ndarray] = []
             for i, arr in enumerate(audio_arrays):
-                # Trim silence from each segment to ensure smooth stitching
-                # We use a relatively high threshold (-30dB) to catch ambient noise from model
-                # and avoid double-padding between sentences.
                 try:
-                    trimmed_arr, _ = librosa.effects.trim(arr, top_db=30)
+                    trimmed_arr, _ = librosa.effects.trim(arr, top_db=20)
                     parts.append(trimmed_arr.astype(np.float32, copy=False))
                 except Exception as trim_err:
                     logger.warning(f"Failed to trim segment {i}: {trim_err}")
                     parts.append(arr.astype(np.float32, copy=False))
 
-                if silence is not None and i < len(audio_arrays) - 1:
-                    parts.append(silence)
-            full_audio = np.concatenate(parts) if parts else np.zeros(0, dtype=np.float32)
+            if not parts:
+                full_audio = np.zeros(0, dtype=np.float32)
+            elif len(parts) == 1:
+                full_audio = parts[0]
+            else:
+                result = parts[0]
+                for seg in parts[1:]:
+                    if silence is not None and len(silence) > 0:
+                        result = np.concatenate([result, silence])
+                    result = _crossfade_join(result, seg, crossfade_samples)
+                full_audio = result
 
             output_id = str(uuid.uuid4())
             wav_path = familyspace_audio_dir / f"{output_id}.wav"

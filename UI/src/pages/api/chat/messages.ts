@@ -4,7 +4,7 @@ import { getAuthUserWithFamilyspace } from '@/lib/auth-helpers'
 import { apiHandler } from '@/lib/api-helpers'
 
 async function proxyToChatSystem(req: NextApiRequest, res: NextApiResponse) {
-  const chatSystemUrl = process.env.CHAT_SYSTEM_URL || 'http://localhost:4778'
+  const chatSystemUrl = process.env.CHAT_SYSTEM_URL || 'https://localhost:4778'
   const user = await getAuthUserWithFamilyspace(req, res)
 
   const { sessionId } = req.query

@@ -5,7 +5,7 @@ import { AppError } from '@/lib/api-helpers'
 
 // Proxy to chat system API
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const chatSystemUrl = process.env.CHAT_SYSTEM_URL || 'http://localhost:4778'
+  const chatSystemUrl = process.env.CHAT_SYSTEM_URL || 'https://localhost:4778'
 
   let user: Awaited<ReturnType<typeof getAuthUserWithFamilyspace>>
   try {

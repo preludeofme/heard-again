@@ -20,7 +20,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ success: false, error: 'Method not allowed' })
   }
 
-  const chatSystemUrl = process.env.CHAT_SYSTEM_URL || 'http://localhost:4778'
+  const chatSystemUrl = process.env.CHAT_SYSTEM_URL || 'https://localhost:4778'
 
   let user: Awaited<ReturnType<typeof getAuthUserWithFamilyspace>>
   try {

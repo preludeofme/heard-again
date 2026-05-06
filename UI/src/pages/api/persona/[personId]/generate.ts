@@ -8,7 +8,7 @@ async function generatePersona(req: NextApiRequest, res: NextApiResponse) {
   const user = await getAuthUserWithFamilyspace(req, res)
 
   const { personId } = req.query
-  const chatSystemUrl = process.env.CHAT_SYSTEM_URL || 'http://localhost:4778'
+  const chatSystemUrl = process.env.CHAT_SYSTEM_URL || 'https://localhost:4778'
 
   if (!personId || typeof personId !== 'string') {
     throw Errors.badRequest('Missing or invalid personId')

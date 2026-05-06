@@ -102,11 +102,12 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
     const response = await fetch(`${TTS_SERVICE_URL}/api/tts/upload-reference`, {
       method: 'POST',
-      headers: { 
+      headers: {
         'Authorization': `Bearer ${TTS_SERVICE_TOKEN}`,
         'X-Familyspace-Id': user.familyspaceId
       },
       body: formData,
+      signal: AbortSignal.timeout(30_000),
     })
 
     if (!response.ok) {

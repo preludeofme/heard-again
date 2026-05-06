@@ -3,7 +3,7 @@ import { getAuthUserWithFamilyspace } from '@/lib/auth-helpers'
 import { logger } from '@/lib/logger'
 
 const CHAT_SERVICE_URL =
-  process.env.CHAT_SERVICE_URL || process.env.CHAT_SYSTEM_URL || 'http://localhost:4778'
+  process.env.CHAT_SERVICE_URL || process.env.CHAT_SYSTEM_URL || 'https://localhost:4778'
 
 if (CHAT_SERVICE_URL.includes('localhost') || CHAT_SERVICE_URL.includes('127.0.0.1')) {
   process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
