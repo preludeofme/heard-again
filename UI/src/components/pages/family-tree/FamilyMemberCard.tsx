@@ -21,6 +21,8 @@ interface FamilyMemberCardProps {
   person: TreePerson
   level: TreeNodeLevel
   isSelf?: boolean
+  isSelected?: boolean
+  levelIndex?: number
   cardWidth: number
   isMobile: boolean
   onPersonClick: (person: TreePerson) => void
@@ -30,12 +32,15 @@ interface FamilyMemberCardProps {
   onSetRoot?: (id: string) => void
   onEditRelationships?: (personId: string) => void
   includeSiblings?: boolean
+  compact?: boolean
 }
 
 export function FamilyMemberCard({
   person,
   level,
   isSelf,
+  isSelected,
+  levelIndex = 0,
   cardWidth,
   isMobile,
   onPersonClick,
@@ -45,8 +50,12 @@ export function FamilyMemberCard({
   onSetRoot,
   onEditRelationships,
   includeSiblings: _includeSiblings,
+  compact = false,
 }: FamilyMemberCardProps) {
   const selfCardColor = '#1a6b5a'
+  const selectedColor = '#7b1fa2' // Deep Purple for selected
+  const levelColors = ['#16334a', '#445558', '#6d5f44']
+  
   const selfCardOutline = 'rgba(26, 107, 90, 0.08)'
 
   const getLifeSpan = () => {
@@ -67,8 +76,127 @@ export function FamilyMemberCard({
 
   const isParentLevel = level === 'parent'
 
-  // Standardized dark background for all except self
-  const cardBgColor = isSelf ? selfCardColor : 'primary.main'
+  // Color logic
+  let cardBgColor = levelColors[levelIndex % 3]
+  if (isSelf) cardBgColor = selfCardColor
+  if (isSelected) cardBgColor = selectedColor
+
+  // Compact mode: avatar, name, life span and icons
+  if (compact) {
+    return (
+      <Card
+        tabIndex={0}
+        onClick={() => onPersonClick(person)}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onPersonClick(person) } }}
+        sx={{
+          bgcolor: cardBgColor,
+          p: 1.5,
+          borderRadius: 4,
+          width: cardWidth,
+          cursor: 'pointer',
+          boxShadow: isSelected ? '0 0 0 4px rgba(123, 31, 162, 0.3), 0 12px 24px rgba(0,0,0,0.2)' : '0 8px 20px rgba(0,0,0,0.12)',
+          border: isSelected ? '2px solid white' : 'none',
+          outline: isSelf ? `4px solid ${selfCardOutline}` : 'none',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 1,
+          transition: 'all 0.3s ease',
+          '&:hover': { transform: 'translateY(-4px)', boxShadow: '0 12px 30px rgba(0,0,0,0.2)' },
+        }}
+      >
+        <Avatar
+          src={person.avatar}
+          sx={{
+            width: isParentLevel ? 64 : 52,
+            height: isParentLevel ? 64 : 52,
+            flexShrink: 0,
+            border: '2px solid rgba(255,255,255,0.4)',
+          }}
+        />
+
+        <Box sx={{ textAlign: 'center', width: '100%', px: 1 }}>
+          <Typography
+            sx={{
+              fontFamily: 'var(--font-newsreader), serif',
+              color: 'white',
+              fontSize: '1rem',
+              fontWeight: 600,
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+              lineHeight: 1.2,
+              minHeight: '2.4em', // Reserved space for up to 2 lines
+            }}
+          >
+            {person.name}
+          </Typography>
+          {lifeSpan && (
+            <Typography 
+              variant="caption" 
+              sx={{ 
+                color: 'rgba(255,255,255,0.85)', 
+                fontSize: '0.75rem',
+                display: 'block',
+                mt: 0.5,
+                fontWeight: 500
+              }}
+            >
+              {lifeSpan}
+            </Typography>
+          )}
+        </Box>
+        
+        <Box
+          sx={{
+            pt: 1,
+            borderTop: '1px solid rgba(255,255,255,0.15)',
+            display: 'flex',
+            justifyContent: 'center',
+            gap: 0,
+            width: '100%',
+          }}
+        >
+          <IconButton
+            size="small"
+            className="nodrag"
+            onClick={(e) => { e.stopPropagation(); onViewArchive(person) }}
+            sx={{ color: 'rgba(255,255,255,0.8)', '&:hover': { bgcolor: 'rgba(255,255,255,0.1)', color: 'white' } }}
+          >
+            <AutoStories sx={{ fontSize: 16 }} />
+          </IconButton>
+          <IconButton
+            size="small"
+            className="nodrag"
+            onClick={(e) => { e.stopPropagation(); onPersonClick(person) }}
+            sx={{ color: 'rgba(255,255,255,0.8)', '&:hover': { bgcolor: 'rgba(255,255,255,0.1)', color: 'white' } }}
+          >
+            <Edit sx={{ fontSize: 16 }} />
+          </IconButton>
+          {onSetRoot && !isSelf && (
+            <IconButton
+              size="small"
+              className="nodrag"
+              onClick={(e) => { e.stopPropagation(); onSetRoot(String(person.id)) }}
+              sx={{ color: 'rgba(255,255,255,0.8)', '&:hover': { bgcolor: 'rgba(255,255,255,0.1)', color: 'white' } }}
+            >
+              <TreeIcon sx={{ fontSize: 16 }} />
+            </IconButton>
+          )}
+          <IconButton
+            size="small"
+            className="nodrag"
+            onClick={(e) => { e.stopPropagation(); onEditRelationships ? onEditRelationships(String(person.id)) : onAddPerson() }}
+            sx={{ color: 'rgba(255,255,255,0.8)', '&:hover': { bgcolor: 'rgba(255,255,255,0.1)', color: 'white' } }}
+          >
+            <PeopleIcon sx={{ fontSize: 16 }} />
+          </IconButton>
+        </Box>
+      </Card>
+    )
+  }
 
   // Mobile: compact card — tap opens detail modal; no inline action buttons
   if (isMobile) {

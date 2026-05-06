@@ -8,6 +8,8 @@ import {
   Divider,
   IconButton,
   useTheme,
+  useMediaQuery,
+  Dialog,
 } from '@mui/material'
 import {
   ZoomIn,
@@ -27,6 +29,8 @@ import {
   Upload,
   Download,
   AccountCircle,
+  Search,
+  Close,
 } from '@mui/icons-material'
 import { PersonDetailModal } from '@/components/modals/PersonDetailModal'
 import { AddEditPersonModal, PersonFormData } from '@/components/modals/AddEditPersonModal'
@@ -99,7 +103,8 @@ export function FamilyTreePage({
   fitViewTrigger,
 }: FamilyTreePageProps): React.JSX.Element {
   const router = useRouter()
-  useTheme()
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const { setSelectedFamilyMember } = useSelectedFamilyMember()
 
   // Derive rootPersonId from rawPeople if not supplied by the page
@@ -129,6 +134,7 @@ export function FamilyTreePage({
   const [isPanMode] = useState(true)
   const [isSearching, setIsSearching] = useState(false)
   const [searchResults, setSearchResults] = useState<any[]>([])
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false)
 
   // Data states
   const [personDetail, setPersonDetail] = useState<Record<string, unknown> | null>(null)
@@ -194,7 +200,7 @@ export function FamilyTreePage({
       try {
         const [personRes, storiesRes, relationshipsRes] = await Promise.all([
           fetch(`/api/people/${person.id}`, { credentials: 'include' }),
-          fetch(`/api/stories?personId=${person.id}&limit=20`, { credentials: 'include' }),
+          fetch(`/api/stories?subjectId=${person.id}&limit=20`, { credentials: 'include' }),
           fetch(`/api/people/${person.id}/relationships`, { credentials: 'include' }),
         ])
 
@@ -359,9 +365,14 @@ export function FamilyTreePage({
   return (
     <Box
       sx={{
-        bgcolor: 'rgba(208, 227, 230, 0.2)',
-        p: isFullscreen ? 1 : { xs: 2, md: 3 },
+        bgcolor: isMobile ? 'rgba(208, 227, 230, 0.3)' : 'rgba(208, 227, 230, 0.2)',
+        p: isFullscreen ? 1 : 0,
+        m: 0,
         position: isFullscreen ? 'fixed' : 'relative',
+        width: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: isMobile ? 'calc(100dvh - 112px)' : 'auto',
         ...(isFullscreen && {
           top: 0,
           left: 0,
@@ -376,64 +387,88 @@ export function FamilyTreePage({
       {!isFullscreen && (
         <Box 
           sx={{ 
-            maxWidth: 1200, 
+            width: '100%',
+            maxWidth: isMobile ? 'none' : 1200, 
             mx: 'auto', 
-            mb: 2,
+            mb: { xs: 0, md: 2 },
             display: 'flex',
             alignItems: 'center',
-            gap: 2,
+            gap: 1,
             position: 'sticky',
-            top: { xs: 72, md: 84 },
+            top: { xs: 56, md: 64 },
             zIndex: 25,
             pt: 0.5,
             pb: 1,
-            background: 'linear-gradient(to bottom, rgba(246,243,238,0.95), rgba(246,243,238,0.65), rgba(246,243,238,0))',
+            background: isMobile ? 'rgba(246,243,238,1)' : 'linear-gradient(to bottom, rgba(246,243,238,0.95), rgba(246,243,238,0.65), rgba(246,243,238,0))',
             backdropFilter: 'blur(6px)',
           }}
         >
-          <Box sx={{ flex: 1 }}>
-            <FamilyMemberSearch
-              members={searchableMembers}
-              selectedId={selectedSearchMemberId}
-              onSelect={(member) => {
-                setSelectedSearchMemberId(member?.id ?? null)
-                if (member) {
-                  // If already in the current tree view, just center on them
-                  const isCurrentlyVisible = rawPeople.some(p => p.id === member.id)
-                  
-                  if (isCurrentlyVisible) {
-                    canvasRef.current?.centerOnNode(member.id, { zoom: 1 })
-                  } else {
-                    // Otherwise, fetch a new tree focused on them
-                    onSetRoot?.(member.id)
-                    // The tree will re-render and fit view automatically when data arrives
-                  }
-                }
-              }}
-              onSearch={handleRemoteSearch}
-              loading={isSearching}
-              placeholder="Search by name or relationship"
-              title="Family Member Search"
-              showSelectedChip={false}
-              allowClear={true}
-            />
-          </Box>
-
           <Box
             sx={{
               display: 'flex',
               alignItems: 'center',
               gap: 0.5,
               bgcolor: 'background.paper',
-              px: 1,
+              px: { xs: 1, md: 1.5 },
               py: 0.5,
-              borderRadius: 8,
-              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-              border: '1px solid',
-              borderColor: 'rgba(208, 227, 230, 0.5)',
+              borderRadius: isMobile ? 0 : 8,
+              boxShadow: isMobile ? 'none' : '0 1px 3px rgba(0,0,0,0.1)',
+              border: 'none',
+              borderBottom: isMobile ? '1px solid rgba(22, 51, 74, 0.08)' : undefined,
               height: 56, // Match height of search bar
+              flex: 1,
+              width: '100%',
+              overflow: 'hidden',
             }}
           >
+            {isMobile ? (
+              <IconButton 
+                onClick={() => setIsMobileSearchOpen(true)}
+                sx={{ color: 'primary.main', mr: 0.5 }}
+              >
+                <Search />
+              </IconButton>
+            ) : (
+              <Box sx={{ flex: 1, mr: 1, minWidth: 0 }}>
+                <FamilyMemberSearch
+                  members={searchableMembers}
+                  selectedId={selectedSearchMemberId}
+                  onSelect={(member) => {
+                    setSelectedSearchMemberId(member?.id ?? null)
+                    if (member) {
+                      // If already in the current tree view, just center on them
+                      const isCurrentlyVisible = rawPeople.some(p => p.id === member.id)
+                      
+                      if (isCurrentlyVisible) {
+                        canvasRef.current?.centerOnNode(member.id, { zoom: 1 })
+                      } else {
+                        // Otherwise, fetch a new tree focused on them
+                        onSetRoot?.(member.id)
+                        // The tree will re-render and fit view automatically when data arrives
+                      }
+                    }
+                  }}
+                  onSearch={handleRemoteSearch}
+                  loading={isSearching}
+                  placeholder="Search family..."
+                  title="Search"
+                  showSelectedChip={false}
+                  allowClear={true}
+                  sx={{
+                    p: 0,
+                    bgcolor: 'transparent',
+                    boxShadow: 'none',
+                    backdropFilter: 'none',
+                    '& .MuiBox-root': { mt: 0 },
+                    '& input': { py: 1, bgcolor: 'transparent' },
+                    '& > .MuiBox-root:first-of-type': { display: 'none' } // Hide header
+                  }}
+                />
+              </Box>
+            )}
+
+            <Divider orientation="vertical" flexItem sx={{ mx: 0.5, borderColor: 'rgba(208, 227, 230, 0.6)' }} />
+            
             <IconButton
               size="small"
               onClick={handleFindMe}
@@ -452,57 +487,62 @@ export function FamilyTreePage({
             <IconButton size="small" sx={{ color: 'primary.main' }} onClick={handleZoomOut}>
               <ZoomOut />
             </IconButton>
-            {onExpandDepth && (
+            
+            {!isMobile && (
               <>
-                <Divider orientation="vertical" flexItem sx={{ mx: 0.5, borderColor: 'rgba(208, 227, 230, 0.6)' }} />
-                <Button
-                  startIcon={<UnfoldMore />}
-                  size="small"
-                  onClick={onExpandDepth}
-                  title={`Current depth: ${loadedDepths ? `↑${loadedDepths.up} ↓${loadedDepths.down}` : '2/2'}`}
-                  sx={{ color: 'primary.main', textTransform: 'none' }}
-                >
-                  Expand
-                </Button>
+                {onExpandDepth && (
+                  <>
+                    <Divider orientation="vertical" flexItem sx={{ mx: 0.5, borderColor: 'rgba(208, 227, 230, 0.6)' }} />
+                    <Button
+                      startIcon={<UnfoldMore />}
+                      size="small"
+                      onClick={onExpandDepth}
+                      title={`Current depth: ${loadedDepths ? `↑${loadedDepths.up} ↓${loadedDepths.down}` : '2/2'}`}
+                      sx={{ color: 'primary.main', textTransform: 'none' }}
+                    >
+                      Expand
+                    </Button>
+                  </>
+                )}
+                {onImportGedcom && (
+                  <>
+                    <Divider orientation="vertical" flexItem sx={{ mx: 0.5, borderColor: 'rgba(208, 227, 230, 0.6)' }} />
+                    <Button
+                      startIcon={<Upload sx={{ fontSize: 18 }} />}
+                      size="small"
+                      onClick={onImportGedcom}
+                      title="Import GEDCOM file"
+                      sx={{ color: 'primary.main', textTransform: 'none' }}
+                    >
+                      Import
+                    </Button>
+                  </>
+                )}
+                {onExportGedcom && (
+                  <>
+                    <Divider orientation="vertical" flexItem sx={{ mx: 0.5, borderColor: 'rgba(208, 227, 230, 0.6)' }} />
+                    <Button
+                      startIcon={<Download sx={{ fontSize: 18 }} />}
+                      size="small"
+                      onClick={onExportGedcom}
+                      title="Export GEDCOM file"
+                      sx={{ color: 'primary.main', textTransform: 'none' }}
+                    >
+                      Export
+                    </Button>
+                  </>
+                )}
               </>
             )}
-            {onImportGedcom && (
-              <>
-                <Divider orientation="vertical" flexItem sx={{ mx: 0.5, borderColor: 'rgba(208, 227, 230, 0.6)' }} />
-                <Button
-                  startIcon={<Upload sx={{ fontSize: 18 }} />}
-                  size="small"
-                  onClick={onImportGedcom}
-                  title="Import GEDCOM file"
-                  sx={{ color: 'primary.main', textTransform: 'none' }}
-                >
-                  Import
-                </Button>
-              </>
-            )}
-            {onExportGedcom && (
-              <>
-                <Divider orientation="vertical" flexItem sx={{ mx: 0.5, borderColor: 'rgba(208, 227, 230, 0.6)' }} />
-                <Button
-                  startIcon={<Download sx={{ fontSize: 18 }} />}
-                  size="small"
-                  onClick={onExportGedcom}
-                  title="Export GEDCOM file"
-                  sx={{ color: 'primary.main', textTransform: 'none' }}
-                >
-                  Export
-                </Button>
-              </>
-            )}
+
             <Divider orientation="vertical" flexItem sx={{ mx: 0.5, borderColor: 'rgba(208, 227, 230, 0.6)' }} />
-            <Button
-              startIcon={<RestartAlt />}
+            <IconButton
               size="small"
               onClick={handleResetView}
-              sx={{ color: 'primary.main', textTransform: 'none' }}
+              sx={{ color: 'primary.main' }}
             >
-              Reset
-            </Button>
+              <RestartAlt />
+            </IconButton>
             {onToggleFullscreen && (
               <>
                 <Divider
@@ -584,17 +624,19 @@ export function FamilyTreePage({
       <Box
         sx={{
           position: 'relative',
-          height: isFullscreen ? 'calc(100vh - 140px)' : 700,
+          height: isFullscreen ? 'calc(100vh - 140px)' : { xs: 'calc(100dvh - 168px)', md: 700 },
           width: '100%',
-          bgcolor: 'rgba(208, 227, 230, 0.3)',
-          borderRadius: 6,
+          bgcolor: 'transparent',
+          borderRadius: 0,
           overflow: 'hidden',
+          flexGrow: 1,
         }}
       >
         {hasData && effectiveRootId ? (
           <ReactFlowTreeCanvas
             people={rawPeople}
             rootPersonId={effectiveRootId}
+            selectedPersonId={selectedPersonId}
             canvasRef={canvasRef}
             onPersonClick={handlePersonClick}
             onAddPerson={handleAddPerson}
@@ -650,7 +692,7 @@ export function FamilyTreePage({
       </Box>
 
       {/* Add Relative Button (below canvas) */}
-      {hasData && (
+      {hasData && !isMobile && (
         <Box
           sx={{ mt: 4, cursor: 'pointer', display: 'flex', justifyContent: 'center' }}
           onClick={handleAddPerson}
@@ -912,6 +954,46 @@ export function FamilyTreePage({
           isSubmitting={isSubmitting}
         />
       )}
+
+      {/* Mobile Search Modal */}
+      <Dialog
+        fullScreen={isMobile}
+        open={isMobileSearchOpen}
+        onClose={() => setIsMobileSearchOpen(false)}
+        PaperProps={{
+          sx: { bgcolor: 'rgba(246, 243, 238, 0.98)', backdropFilter: 'blur(10px)' }
+        }}
+      >
+        <Box sx={{ p: 2 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+            <IconButton onClick={() => setIsMobileSearchOpen(false)}>
+              <Close />
+            </IconButton>
+          </Box>
+          <FamilyMemberSearch
+            members={searchableMembers}
+            selectedId={selectedSearchMemberId}
+            onSelect={(member) => {
+              setSelectedSearchMemberId(member?.id ?? null)
+              if (member) {
+                const isCurrentlyVisible = rawPeople.some(p => p.id === member.id)
+                if (isCurrentlyVisible) {
+                  canvasRef.current?.centerOnNode(member.id, { zoom: 1 })
+                } else {
+                  onSetRoot?.(member.id)
+                }
+                setIsMobileSearchOpen(false)
+              }
+            }}
+            onSearch={handleRemoteSearch}
+            loading={isSearching}
+            placeholder="Search family member..."
+            title="Family Search"
+            showSelectedChip={false}
+            allowClear={true}
+          />
+        </Box>
+      </Dialog>
     </Box>
   )
 }

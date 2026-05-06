@@ -4,19 +4,22 @@ import type { ApiPersonWithEdges, TreeLayoutPerson, PersonNodeData, TreeNodeLeve
 
 // ─── Layout constants ────────────────────────────────────────────────────────
 
-const PARENT_WIDTH = 288
+const COMPACT_WIDTH = 180
+const COMPACT_HEIGHT = 240
+
+const PARENT_WIDTH = COMPACT_WIDTH
 const STUB_WIDTH = 144
 const STUB_HEIGHT = 32
 const STUB_GAP = 40
 const STUB_EDGE_COLOR = 'rgba(22, 51, 74, 0.28)'
 const STUB_EDGE_WIDTH = 2
-const PARENT_HEIGHT = 290
-const GRANDPARENT_WIDTH = 256
-const GRANDPARENT_HEIGHT = 152
-const CHILD_WIDTH = 240
-const CHILD_HEIGHT = 140
-const H_GAP = 100
-const V_ROW_GAP = 520
+const PARENT_HEIGHT = COMPACT_HEIGHT
+const GRANDPARENT_WIDTH = COMPACT_WIDTH
+const GRANDPARENT_HEIGHT = COMPACT_HEIGHT
+const CHILD_WIDTH = COMPACT_WIDTH
+const CHILD_HEIGHT = COMPACT_HEIGHT
+const H_GAP = 80
+const V_ROW_GAP = 360
 const FAMILY_NODE_SIZE = 1
 
 // Connector colours
@@ -297,6 +300,7 @@ export function buildFamilyTreeLayout(
   people: ApiPersonWithEdges[],
   rootPersonId: string,
   callbacks: LayoutCallbacks,
+  selectedPersonId: string | null = null,
 ): LayoutResult {
   if (people.length === 0) return { nodes: [], edges: [] }
 
@@ -586,7 +590,7 @@ export function buildFamilyTreeLayout(
       birthDate: person.birthDate,
       deathDate: person.deathDate,
       memories: person.counts?.stories ?? 0,
-      selected: isSelf,
+      selected: isSelf || personId === selectedPersonId,
       width,
       height,
     }
@@ -595,6 +599,8 @@ export function buildFamilyTreeLayout(
       person: layoutPerson,
       level,
       isSelf,
+      isSelected: personId === selectedPersonId,
+      levelIndex: gen,
       isMobile: callbacks.isMobile,
       onPersonClick: callbacks.onPersonClick,
       onAddPerson: callbacks.onAddPerson,

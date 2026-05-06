@@ -50,6 +50,8 @@ export interface PersonNodeData {
   person: TreeLayoutPerson
   level: TreeNodeLevel
   isSelf: boolean
+  isSelected: boolean
+  levelIndex: number
   isMobile: boolean
   onPersonClick: (person: TreePerson) => void
   onAddPerson: () => void

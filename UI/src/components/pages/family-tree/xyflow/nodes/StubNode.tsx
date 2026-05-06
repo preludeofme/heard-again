@@ -1,6 +1,10 @@
 import React from 'react'
 import { Handle, Position } from '@xyflow/react'
 import type { NodeProps } from '@xyflow/react'
+import { Box, Typography } from '@mui/material'
+import { 
+  KeyboardDoubleArrowDown as ArrowIcon 
+} from '@mui/icons-material'
 
 interface StubNodeData {
   targetId: string
@@ -22,18 +26,18 @@ export function StubNode({ data }: NodeProps): React.JSX.Element {
 
   const getLabel = () => {
     switch (d.direction) {
-      case 'up': return 'Load Parents'
-      case 'down': return 'Load Children'
+      case 'up': return 'Parents'
+      case 'down': return 'Children'
       case 'left':
-      case 'right': return 'Load Siblings'
-      default: return 'Load Branch'
+      case 'right': return 'Siblings'
+      default: return 'Branch'
     }
   }
 
   const getRotation = () => {
     switch (d.direction) {
-      case 'up': return 'none'
-      case 'down': return 'rotate(180deg)'
+      case 'up': return 'rotate(180deg)'
+      case 'down': return 'none'
       case 'left': return 'rotate(90deg)'
       case 'right': return 'rotate(-90deg)'
       default: return 'none'
@@ -46,7 +50,7 @@ export function StubNode({ data }: NodeProps): React.JSX.Element {
       <Handle type="source" id="top" position={Position.Top} style={{ opacity: 0 }} />
       <Handle type="target" id="left" position={Position.Left} style={{ opacity: 0 }} />
       <Handle type="source" id="left" position={Position.Left} style={{ opacity: 0 }} />
-      <div
+      <Box
         role="button"
         tabIndex={0}
         className="nodrag nopan"
@@ -57,58 +61,48 @@ export function StubNode({ data }: NodeProps): React.JSX.Element {
             handleClick()
           }
         }}
-        style={{
+        sx={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: 4,
+          gap: 0.5,
           width: '100%',
           height: '100%',
           borderRadius: 20,
-          border: '1.5px dashed rgba(22, 51, 74, 0.35)',
-          background: 'rgba(255, 255, 255, 0.88)',
+          border: '1.5px solid rgba(22, 51, 74, 0.15)',
+          background: 'rgba(255, 255, 255, 0.9)',
           backdropFilter: 'blur(8px)',
           cursor: 'pointer',
-          boxSizing: 'border-box',
-          transition: 'background 0.15s, border-color 0.15s',
-        }}
-        onMouseEnter={(e) => {
-          const el = e.currentTarget as HTMLDivElement
-          el.style.background = 'rgba(22, 51, 74, 0.06)'
-          el.style.borderColor = 'rgba(22, 51, 74, 0.55)'
-        }}
-        onMouseLeave={(e) => {
-          const el = e.currentTarget as HTMLDivElement
-          el.style.background = 'rgba(255, 255, 255, 0.88)'
-          el.style.borderColor = 'rgba(22, 51, 74, 0.35)'
+          transition: 'all 0.2s ease',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+          '&:hover': {
+            background: 'white',
+            borderColor: 'primary.main',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+            transform: 'scale(1.02)',
+          }
         }}
       >
-        <svg
-          width="12"
-          height="12"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="rgba(22,51,74,0.55)"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          style={{ transform: getRotation(), flexShrink: 0 }}
-        >
-          <polyline points="7 13 12 18 17 13" />
-          <polyline points="7 6 12 11 17 6" />
-        </svg>
-        <span
-          style={{
-            fontSize: '0.68rem',
-            fontWeight: 600,
-            color: 'rgba(22, 51, 74, 0.6)',
+        <ArrowIcon 
+          sx={{ 
+            fontSize: 18, 
+            color: 'primary.main',
+            transform: getRotation() 
+          }} 
+        />
+        <Typography
+          sx={{
+            fontSize: '0.7rem',
+            fontWeight: 700,
+            color: 'primary.main',
             whiteSpace: 'nowrap',
-            letterSpacing: '0.02em',
+            letterSpacing: '0.01em',
+            textTransform: 'uppercase',
           }}
         >
           {getLabel()}
-        </span>
-      </div>
+        </Typography>
+      </Box>
       <Handle type="source" id="bottom" position={Position.Bottom} style={{ opacity: 0 }} />
       <Handle type="target" id="bottom" position={Position.Bottom} style={{ opacity: 0 }} />
       <Handle type="source" id="right" position={Position.Right} style={{ opacity: 0 }} />

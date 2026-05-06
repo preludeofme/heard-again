@@ -33,6 +33,7 @@ export interface ReactFlowTreeCanvasHandle {
 interface ReactFlowTreeCanvasProps {
   people: ApiPersonWithEdges[]
   rootPersonId: string
+  selectedPersonId?: string | null
   isMobile?: boolean
   canvasRef?: React.Ref<ReactFlowTreeCanvasHandle>
   onPersonClick: (person: TreeLayoutPerson) => void
@@ -49,6 +50,7 @@ interface ReactFlowTreeCanvasProps {
 function ReactFlowTreeCanvasInner({
   people,
   rootPersonId,
+  selectedPersonId = null,
   isMobile = false,
   canvasRef,
   onPersonClick,
@@ -79,11 +81,12 @@ function ReactFlowTreeCanvasInner({
       people,
       rootPersonId,
       callbacksRef.current,
+      selectedPersonId,
     )
 
     setNodes(newNodes)
     setEdges(newEdges)
-  }, [people, rootPersonId, setNodes, setEdges])
+  }, [people, rootPersonId, selectedPersonId, setNodes, setEdges])
 
   // Expose zoom/pan controls via ref
   React.useImperativeHandle(

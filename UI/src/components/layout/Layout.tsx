@@ -256,8 +256,8 @@ export function Layout({ children }: LayoutProps) {
         component="main"
         sx={{
           backgroundColor: ProfileColors.surface,
-          minHeight: 'calc(100vh - 64px)',
-          pb: isMobile ? 9 : 0,
+          minHeight: isMobile ? 'calc(100vh - 56px)' : 'calc(100vh - 64px)',
+          pb: isMobile ? (router.pathname === '/family-tree' ? 7 : 9) : 0, // Reduced padding for family tree to touch bottom nav
         }}
       >
         {children}

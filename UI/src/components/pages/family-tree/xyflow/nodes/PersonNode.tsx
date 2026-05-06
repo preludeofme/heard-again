@@ -240,6 +240,8 @@ export function PersonNode({ data }: NodeProps): React.JSX.Element {
         person={d.person}
         level={d.level}
         isSelf={d.isSelf}
+        isSelected={d.isSelected}
+        levelIndex={d.levelIndex}
         cardWidth={d.person.width}
         isMobile={d.isMobile}
         onPersonClick={d.onPersonClick}
@@ -247,6 +249,7 @@ export function PersonNode({ data }: NodeProps): React.JSX.Element {
         onViewArchive={d.onViewArchive}
         onSetRoot={d.onSetRoot}
         onEditRelationships={d.onEditRelationships}
+        compact={true}
       />
       
       <Handle type="source" id="bottom" position={Position.Bottom} style={{ opacity: 0 }} />
