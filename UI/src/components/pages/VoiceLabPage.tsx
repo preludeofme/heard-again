@@ -20,6 +20,7 @@ import { ProfileColors } from '@/components/profile/ProfileConstants'
 
 interface VoiceLabPageProps {
   voiceModels: VoiceModel[]
+  autoCreate?: boolean
   controller: {
     isUploading: boolean
     showRecordingModal: boolean
@@ -38,7 +39,7 @@ interface VoiceLabPageProps {
   }
 }
 
-export function VoiceLabPage({ voiceModels, controller }: VoiceLabPageProps) {
+export function VoiceLabPage({ voiceModels, controller, autoCreate }: VoiceLabPageProps) {
   const {
     isUploading,
     showRecordingModal,
@@ -58,6 +59,14 @@ export function VoiceLabPage({ voiceModels, controller }: VoiceLabPageProps) {
   const { selectedFamilyMember } = useSelectedFamilyMember()
   const memberName = selectedFamilyMember?.firstName || 'this person'
   const hasSelectedPerson = Boolean(selectedFamilyMember?.id)
+
+  const autoCreateTriggered = useRef(false)
+  useEffect(() => {
+    if (autoCreate && hasSelectedPerson && !autoCreateTriggered.current) {
+      autoCreateTriggered.current = true
+      toggleRecordingModal()
+    }
+  }, [autoCreate, hasSelectedPerson, toggleRecordingModal])
 
   // ── Local state ──
   const [selectedVoiceId, setSelectedVoiceId] = useState<string | null>(null)

@@ -1,4 +1,4 @@
-import { useMemo, useEffect, useState, useCallback, ReactNode } from 'react'
+import { useMemo, useEffect, useRef, useState, useCallback, ReactNode } from 'react'
 import { useRouter } from 'next/router'
 import { Box, Typography, Avatar, Chip, Button, ToggleButton, ToggleButtonGroup, Skeleton, useMediaQuery, useTheme, TextField } from '@mui/material'
 import Autocomplete from '@mui/material/Autocomplete'
@@ -104,6 +104,16 @@ export function ArchiveShell({ lens, onLensChange, children }: ArchiveShellProps
       })
     }
   }, [people, setSelectedFamilyMember, clearSelectedFamilyMember])
+
+  const hasAutoSelectedRef = useRef(false)
+  useEffect(() => {
+    if (people.length === 0 || hasAutoSelectedRef.current) return
+    const personIdFromQuery = typeof router.query.personId === 'string' ? router.query.personId : null
+    if (personIdFromQuery) {
+      hasAutoSelectedRef.current = true
+      handlePersonChange(personIdFromQuery)
+    }
+  }, [people, router.query.personId, handlePersonChange])
 
   const familyspaceName = dashboard.familyspace?.name ?? 'Family Story'
   const archiveTitle = selectedPerson

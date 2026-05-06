@@ -151,48 +151,76 @@ export function FamilyMemberCard({
         
         <Box
           sx={{
-            pt: 1,
+            pt: 1.5,
+            pb: 0.5,
             borderTop: '1px solid rgba(255,255,255,0.15)',
-            display: 'flex',
-            justifyContent: 'center',
-            gap: 0,
+            display: 'grid',
+            gridTemplateColumns: 'repeat(4, 1fr)',
             width: '100%',
           }}
         >
-          <IconButton
-            size="small"
-            className="nodrag"
-            onClick={(e) => { e.stopPropagation(); onViewArchive(person) }}
-            sx={{ color: 'rgba(255,255,255,0.8)', '&:hover': { bgcolor: 'rgba(255,255,255,0.1)', color: 'white' } }}
-          >
-            <AutoStories sx={{ fontSize: 16 }} />
-          </IconButton>
-          <IconButton
-            size="small"
-            className="nodrag"
-            onClick={(e) => { e.stopPropagation(); onPersonClick(person) }}
-            sx={{ color: 'rgba(255,255,255,0.8)', '&:hover': { bgcolor: 'rgba(255,255,255,0.1)', color: 'white' } }}
-          >
-            <Edit sx={{ fontSize: 16 }} />
-          </IconButton>
-          {onSetRoot && !isSelf && (
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
             <IconButton
               size="small"
               className="nodrag"
-              onClick={(e) => { e.stopPropagation(); onSetRoot(String(person.id)) }}
-              sx={{ color: 'rgba(255,255,255,0.8)', '&:hover': { bgcolor: 'rgba(255,255,255,0.1)', color: 'white' } }}
+              onClick={(e) => { e.stopPropagation(); onViewArchive(person) }}
+              sx={{ color: 'rgba(255,255,255,0.85)', '&:hover': { bgcolor: 'rgba(255,255,255,0.15)', color: 'white' } }}
             >
-              <TreeIcon sx={{ fontSize: 16 }} />
+              <AutoStories sx={{ fontSize: 18 }} />
             </IconButton>
-          )}
-          <IconButton
-            size="small"
-            className="nodrag"
-            onClick={(e) => { e.stopPropagation(); onEditRelationships ? onEditRelationships(String(person.id)) : onAddPerson() }}
-            sx={{ color: 'rgba(255,255,255,0.8)', '&:hover': { bgcolor: 'rgba(255,255,255,0.1)', color: 'white' } }}
-          >
-            <PeopleIcon sx={{ fontSize: 16 }} />
-          </IconButton>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.6rem', fontWeight: 600, textTransform: 'uppercase' }}>Story</Typography>
+          </Box>
+
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
+            <IconButton
+              size="small"
+              className="nodrag"
+              onClick={(e) => { e.stopPropagation(); onPersonClick(person) }}
+              sx={{ color: 'rgba(255,255,255,0.85)', '&:hover': { bgcolor: 'rgba(255,255,255,0.15)', color: 'white' } }}
+            >
+              <Edit sx={{ fontSize: 18 }} />
+            </IconButton>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.6rem', fontWeight: 600, textTransform: 'uppercase' }}>Edit</Typography>
+          </Box>
+
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
+            {onSetRoot && !isSelf ? (
+              <>
+                <IconButton
+                  size="small"
+                  className="nodrag"
+                  onClick={(e) => { e.stopPropagation(); onSetRoot(String(person.id)) }}
+                  sx={{ color: 'rgba(255,255,255,0.85)', '&:hover': { bgcolor: 'rgba(255,255,255,0.15)', color: 'white' } }}
+                >
+                  <TreeIcon sx={{ fontSize: 18 }} />
+                </IconButton>
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.6rem', fontWeight: 600, textTransform: 'uppercase' }}>Focus</Typography>
+              </>
+            ) : (
+              <>
+                <IconButton
+                  size="small"
+                  disabled
+                  sx={{ color: 'rgba(255,255,255,0.3)' }}
+                >
+                  <TreeIcon sx={{ fontSize: 18 }} />
+                </IconButton>
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.6rem', fontWeight: 600, textTransform: 'uppercase' }}>Focus</Typography>
+              </>
+            )}
+          </Box>
+
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
+            <IconButton
+              size="small"
+              className="nodrag"
+              onClick={(e) => { e.stopPropagation(); onEditRelationships ? onEditRelationships(String(person.id)) : onAddPerson() }}
+              sx={{ color: 'rgba(255,255,255,0.85)', '&:hover': { bgcolor: 'rgba(255,255,255,0.15)', color: 'white' } }}
+            >
+              <PeopleIcon sx={{ fontSize: 18 }} />
+            </IconButton>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.6rem', fontWeight: 600, textTransform: 'uppercase' }}>Kin</Typography>
+          </Box>
         </Box>
       </Card>
     )

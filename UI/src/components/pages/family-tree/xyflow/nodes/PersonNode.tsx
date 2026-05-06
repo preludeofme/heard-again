@@ -19,7 +19,7 @@ const STUB_BASE_STYLE = {
   gap: 1,
   cursor: 'pointer',
   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-  zIndex: -1,
+  zIndex: 5,
   overflow: 'hidden',
   whiteSpace: 'nowrap',
   boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
@@ -45,13 +45,6 @@ export function PersonNode({ data }: NodeProps): React.JSX.Element {
 
   return (
     <Box sx={{ position: 'relative', width: d.person.width, minHeight: d.person.height }}>
-      <Handle type="target" id="top" position={Position.Top} style={{ opacity: 0 }} />
-      <Handle type="source" id="top" position={Position.Top} style={{ opacity: 0 }} />
-      <Handle type="target" id="left" position={Position.Left} style={{ opacity: 0 }} />
-      <Handle type="source" id="left" position={Position.Left} style={{ opacity: 0 }} />
-      <Handle type="source" id="right" position={Position.Right} style={{ opacity: 0 }} />
-      <Handle type="target" id="right" position={Position.Right} style={{ opacity: 0 }} />
-      
       {/* Integrated "Load" Buttons (Tabs) */}
       
       {/* Siblings - Left */}
@@ -62,32 +55,34 @@ export function PersonNode({ data }: NodeProps): React.JSX.Element {
             ...STUB_BASE_STYLE,
             bgcolor: cardBgColor,
             border: `1.5px solid ${borderColor}`,
-            left: -35, 
+            left: -45, 
             top: '50%',
             transform: 'translateY(-50%)',
-            width: 44, 
-            height: 52,
-            borderRadius: '26px 0 0 26px',
+            width: 56, 
+            height: 64,
+            borderRadius: '32px 0 0 32px',
             borderRight: 'none',
-            pl: 1.25,
+            pl: 1.5,
             justifyContent: 'flex-start',
             color: iconColor,
+            zIndex: 5,
             '&:hover': { 
-              width: 100, 
-              left: -91,
+              width: 110, 
+              left: -99,
               borderColor: 'rgba(255,255,255,0.3)',
+              zIndex: 15,
             }
           }}
         >
-          <SiblingLeftIcon sx={{ fontSize: 22, flexShrink: 0 }} />
+          <SiblingLeftIcon sx={{ fontSize: 24, flexShrink: 0 }} />
           <Typography 
             variant="caption" 
             sx={{ 
-              fontSize: '0.6rem', 
+              fontSize: '0.65rem', 
               fontWeight: 800, 
               textTransform: 'uppercase', 
               lineHeight: 1.1,
-              opacity: 0, 
+              opacity: 0.8, 
               transition: 'opacity 0.2s', 
               color: textColor,
               textAlign: 'left',
@@ -107,31 +102,33 @@ export function PersonNode({ data }: NodeProps): React.JSX.Element {
             ...STUB_BASE_STYLE,
             bgcolor: cardBgColor,
             border: `1.5px solid ${borderColor}`,
-            right: -35,
+            right: -45,
             top: '50%',
             transform: 'translateY(-50%)',
-            width: 44,
-            height: 52,
-            borderRadius: '0 26px 26px 0',
+            width: 56,
+            height: 64,
+            borderRadius: '0 32px 32px 0',
             borderLeft: 'none',
-            pr: 1.25,
+            pr: 1.5,
             justifyContent: 'flex-end',
             color: iconColor,
+            zIndex: 5,
             '&:hover': { 
-              width: 100,
-              right: -91,
+              width: 110,
+              right: -99,
               borderColor: 'rgba(255,255,255,0.3)',
+              zIndex: 15,
             }
           }}
         >
           <Typography 
             variant="caption" 
             sx={{ 
-              fontSize: '0.6rem', 
+              fontSize: '0.65rem', 
               fontWeight: 800, 
               textTransform: 'uppercase', 
               lineHeight: 1.1,
-              opacity: 0, 
+              opacity: 0.8, 
               transition: 'opacity 0.2s', 
               color: textColor,
               textAlign: 'right',
@@ -140,7 +137,7 @@ export function PersonNode({ data }: NodeProps): React.JSX.Element {
           >
             Load<br/>Siblings
           </Typography>
-          <SiblingRightIcon sx={{ fontSize: 22, flexShrink: 0 }} />
+          <SiblingRightIcon sx={{ fontSize: 24, flexShrink: 0 }} />
         </Box>
       )}
 
@@ -152,34 +149,36 @@ export function PersonNode({ data }: NodeProps): React.JSX.Element {
             ...STUB_BASE_STYLE,
             bgcolor: cardBgColor,
             border: `1.5px solid ${borderColor}`,
-            top: -30, 
+            top: -35, 
             left: '50%',
             transform: 'translateX(-50%)',
-            width: 64,
-            height: 40,
-            borderRadius: '20px 20px 0 0',
+            width: 100,
+            height: 48,
+            borderRadius: '24px 24px 0 0',
             borderBottom: 'none',
             pt: 0.5,
             color: iconColor,
+            zIndex: 5,
             '&:hover': { 
-              height: 56,
-              top: -35, 
-              width: 140,
+              height: 64,
+              top: -45, 
+              width: 160,
               borderColor: 'rgba(255,255,255,0.3)',
+              zIndex: 15,
             }
           }}
         >
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
-            <ParentIcon sx={{ fontSize: 20 }} />
+            <ParentIcon sx={{ fontSize: 22 }} />
             <Typography 
               variant="caption" 
               sx={{ 
-                fontSize: '0.625rem', 
+                fontSize: '0.65rem', 
                 fontWeight: 800, 
                 textTransform: 'uppercase', 
                 letterSpacing: '0.05em',
                 color: textColor,
-                opacity: 0,
+                opacity: 0.8,
                 transition: 'opacity 0.2s',
                 '.MuiBox-root:hover &': { opacity: 1 }
               }}
@@ -198,20 +197,22 @@ export function PersonNode({ data }: NodeProps): React.JSX.Element {
             ...STUB_BASE_STYLE,
             bgcolor: cardBgColor,
             border: `1.5px solid ${borderColor}`,
-            bottom: -25, // Final adjustment: Shifted up by 5px from -30
+            bottom: -15, 
             left: '50%',
             transform: 'translateX(-50%)',
-            width: 64,
-            height: 40,
-            borderRadius: '0 0 20px 20px',
+            width: 100,
+            height: 48,
+            borderRadius: '0 0 24px 24px',
             borderTop: 'none',
             pb: 0.5,
             color: iconColor,
+            zIndex: 5,
             '&:hover': { 
-              height: 56,
-              bottom: -55, // Final adjustment: Shifted up by 5px from -60
-              width: 140,
+              height: 64,
+              bottom: -40,
+              width: 160,
               borderColor: 'rgba(255,255,255,0.3)',
+              zIndex: 15,
             }
           }}
         >
@@ -219,43 +220,50 @@ export function PersonNode({ data }: NodeProps): React.JSX.Element {
             <Typography 
               variant="caption" 
               sx={{ 
-                fontSize: '0.625rem', 
+                fontSize: '0.65rem', 
                 fontWeight: 800, 
                 textTransform: 'uppercase', 
                 letterSpacing: '0.05em',
                 color: textColor,
-                opacity: 0,
+                opacity: 0.8,
                 transition: 'opacity 0.2s',
                 '.MuiBox-root:hover &': { opacity: 1 }
               }}
             >
               Load Parents
             </Typography>
-            <ChildIcon sx={{ fontSize: 20 }} />
+            <ChildIcon sx={{ fontSize: 22 }} />
           </Box>
         </Box>
       )}
 
-      <FamilyMemberCard
-        person={d.person}
-        level={d.level}
-        isSelf={d.isSelf}
-        isSelected={d.isSelected}
-        levelIndex={d.levelIndex}
-        cardWidth={d.person.width}
-        isMobile={d.isMobile}
-        onPersonClick={d.onPersonClick}
-        onAddPerson={d.onAddPerson}
-        onViewArchive={d.onViewArchive}
-        onSetRoot={d.onSetRoot}
-        onEditRelationships={d.onEditRelationships}
-        compact={true}
-      />
+      <Box sx={{ position: 'relative', zIndex: 10 }}>
+        <FamilyMemberCard
+          person={d.person}
+          level={d.level}
+          isSelf={d.isSelf}
+          isSelected={d.isSelected}
+          levelIndex={d.levelIndex}
+          cardWidth={d.person.width}
+          isMobile={d.isMobile}
+          onPersonClick={d.onPersonClick}
+          onAddPerson={d.onAddPerson}
+          onViewArchive={d.onViewArchive}
+          onSetRoot={d.onSetRoot}
+          onEditRelationships={d.onEditRelationships}
+          compact={true}
+        />
+      </Box>
       
-      <Handle type="source" id="bottom" position={Position.Bottom} style={{ opacity: 0 }} />
-      <Handle type="target" id="bottom" position={Position.Bottom} style={{ opacity: 0 }} />
-      <Handle type="source" id="right" position={Position.Right} style={{ opacity: 0 }} />
-      <Handle type="target" id="right" position={Position.Right} style={{ opacity: 0 }} />
+      {/* Handles at the end, lowest z-index and non-blocking */}
+      <Handle type="target" id="top" position={Position.Top} style={{ opacity: 0, zIndex: 0, pointerEvents: 'none' }} />
+      <Handle type="source" id="top" position={Position.Top} style={{ opacity: 0, zIndex: 0, pointerEvents: 'none' }} />
+      <Handle type="target" id="left" position={Position.Left} style={{ opacity: 0, zIndex: 0, pointerEvents: 'none' }} />
+      <Handle type="source" id="left" position={Position.Left} style={{ opacity: 0, zIndex: 0, pointerEvents: 'none' }} />
+      <Handle type="source" id="right" position={Position.Right} style={{ opacity: 0, zIndex: 0, pointerEvents: 'none' }} />
+      <Handle type="target" id="right" position={Position.Right} style={{ opacity: 0, zIndex: 0, pointerEvents: 'none' }} />
+      <Handle type="source" id="bottom" position={Position.Bottom} style={{ opacity: 0, zIndex: 0, pointerEvents: 'none' }} />
+      <Handle type="target" id="bottom" position={Position.Bottom} style={{ opacity: 0, zIndex: 0, pointerEvents: 'none' }} />
     </Box>
   )
 }

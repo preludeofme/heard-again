@@ -4,13 +4,13 @@ import type { ApiPersonWithEdges, TreeLayoutPerson, PersonNodeData, TreeNodeLeve
 
 // ─── Layout constants ────────────────────────────────────────────────────────
 
-const COMPACT_WIDTH = 180
-const COMPACT_HEIGHT = 240
+const COMPACT_WIDTH = 220
+const COMPACT_HEIGHT = 300
 
 const PARENT_WIDTH = COMPACT_WIDTH
-const STUB_WIDTH = 144
-const STUB_HEIGHT = 32
-const STUB_GAP = 40
+const STUB_WIDTH = 160
+const STUB_HEIGHT = 40
+const STUB_GAP = 48
 const STUB_EDGE_COLOR = 'rgba(22, 51, 74, 0.28)'
 const STUB_EDGE_WIDTH = 2
 const PARENT_HEIGHT = COMPACT_HEIGHT
@@ -18,8 +18,8 @@ const GRANDPARENT_WIDTH = COMPACT_WIDTH
 const GRANDPARENT_HEIGHT = COMPACT_HEIGHT
 const CHILD_WIDTH = COMPACT_WIDTH
 const CHILD_HEIGHT = COMPACT_HEIGHT
-const H_GAP = 80
-const V_ROW_GAP = 360
+const H_GAP = 120
+const V_ROW_GAP = 460
 const FAMILY_NODE_SIZE = 1
 
 // Connector colours
