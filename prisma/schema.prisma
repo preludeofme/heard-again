@@ -36,6 +36,7 @@ model User {
   mfaBackupCodes            String?
   mfaEnabled                Boolean               @default(false)
   mfaSecret                 String?
+  linkedPersonId            String?               @unique
   uploadedAssets            Asset[]
   collections               Collection[]
   collectionStories       CollectionStory[]
@@ -50,6 +51,7 @@ model User {
   narrationApprovals      Story[]               @relation("StoryNarrationApprover")
   comments                StoryComment[]
   defaultFamilyspace        Familyspace?          @relation("UserDefaultFamilyspace", fields: [defaultFamilyspaceId], references: [id])
+  linkedPerson              Person?               @relation("UserLinkedPerson", fields: [linkedPersonId], references: [id], onDelete: SetNull)
   favorites                 UserStoryFavorite[]
   voiceConsents             VoiceConsent[]
   voiceProfiles             VoiceProfile[]
@@ -61,6 +63,7 @@ model User {
 
   @@index([email])
   @@index([oauthProvider, oauthId])
+  @@index([linkedPersonId])
 }
 
 model Familyspace {
@@ -393,6 +396,7 @@ model Person {
   voiceConsents    VoiceConsent[]
   voiceProfiles    VoiceProfile[]
   chatSessions     ChatSession[]
+  linkedUser       User?                    @relation("UserLinkedPerson")
 
   @@unique([familyspaceId, gedcomXref])
   @@index([familyspaceId])

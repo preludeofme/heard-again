@@ -57,22 +57,35 @@ export default apiHandler({
       // If authenticated, we require EDITOR role
       if (user) {
         await requireFamilyspaceRole(user.id, user.familyspaceId, 'EDITOR')
-        
-        // Find the user's own person record (the first one they created)
-        const userPerson = await prisma.person.findFirst({
-          where: { familyspaceId, createdById: user.id },
-          orderBy: { createdAt: 'asc' },
-          select: { id: true },
+
+        // Resolve the user's own person: prefer their explicitly linked person,
+        // fall back to the oldest person they created in this familyspace.
+        const userRecord = await prisma.user.findUnique({
+          where: { id: user.id },
+          select: {
+            linkedPersonId: true,
+            linkedPerson: { select: { id: true, familyspaceId: true } },
+          },
         })
 
-        // If no speakerId is provided but we found the user's person, use it
-        if (!req.body.speakerId && userPerson) {
-          req.body.speakerId = userPerson.id
+        let userPersonId: string | undefined
+        if (userRecord?.linkedPerson?.familyspaceId === familyspaceId) {
+          userPersonId = userRecord.linkedPersonId ?? undefined
+        } else {
+          const fallback = await prisma.person.findFirst({
+            where: { familyspaceId, createdById: user.id },
+            orderBy: { createdAt: 'asc' },
+            select: { id: true },
+          })
+          userPersonId = fallback?.id
         }
-        
-        // If authorRelationship is "Self", ensure speakerId is the user's person
-        if (req.body.authorRelationship === 'Self' && userPerson) {
-          req.body.speakerId = userPerson.id
+
+        if (!req.body.speakerId && userPersonId) {
+          req.body.speakerId = userPersonId
+        }
+
+        if (req.body.authorRelationship === 'Self' && userPersonId) {
+          req.body.speakerId = userPersonId
         }
       }
 

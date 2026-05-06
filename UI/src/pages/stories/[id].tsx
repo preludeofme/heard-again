@@ -5,6 +5,7 @@ import { useEffect, useState, useCallback } from 'react'
 import {
   Box, Typography, Card, Avatar, Chip, IconButton, Button,
   TextField, Divider, CircularProgress, Grid,
+  Dialog, DialogTitle, DialogContent, DialogActions,
 } from '@mui/material'
 import {
   ArrowBack, Favorite, FavoriteBorder,
@@ -93,6 +94,9 @@ export default function StoryDetailPage() {
   const [isPreparingNarration, setIsPreparingNarration] = useState(false)
   const [narrationError, setNarrationError] = useState<string | null>(null)
   const [savedNarration, setSavedNarration] = useState<SavedNarration | null>(null)
+  const [linkedPersonId, setLinkedPersonId] = useState<string | null | undefined>(undefined)
+  const [narratorDialogOpen, setNarratorDialogOpen] = useState(false)
+  const [narratorName, setNarratorName] = useState('')
 
   const fetchStory = useCallback(async () => {
     if (!id) return
@@ -154,15 +158,42 @@ export default function StoryDetailPage() {
     }
   }, [])
 
+  useEffect(() => {
+    fetch('/api/user/linked-person', { credentials: 'include' })
+      .then((r) => r.json())
+      .then((payload) => {
+        if (payload.success) {
+          setLinkedPersonId(payload.data?.linkedPersonId ?? null)
+        }
+      })
+      .catch(() => {
+        setLinkedPersonId(null)
+      })
+  }, [])
+
   const handlePrepareNarration = useCallback(async () => {
+    if (!story) return
+
+    // If the user has no linked person, ask for their name so the model has context
+    if (linkedPersonId === null) {
+      setNarratorDialogOpen(true)
+      return
+    }
+
+    await triggerNarrationRewrite()
+  }, [story, linkedPersonId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const triggerNarrationRewrite = useCallback(async (overrideName?: string) => {
     if (!story) return
     setIsPreparingNarration(true)
     setNarrationError(null)
     try {
+      const body = overrideName ? JSON.stringify({ narratorName: overrideName }) : undefined
       const res = await fetchWithCSRF(`/api/stories/${story.id}/rewrite-first-person`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
+        body,
       })
       const payload = await res.json()
       if (!res.ok || !payload.success) {
@@ -280,6 +311,66 @@ export default function StoryDetailPage() {
         <title>{story.title} - Heard Again</title>
         <meta name="description" content={story.excerpt || story.title} />
       </Head>
+
+      {/* Narrator identity dialog — shown when user has no linked person node */}
+      <Dialog
+        open={narratorDialogOpen}
+        onClose={() => setNarratorDialogOpen(false)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle sx={{ color: '#16334a', fontWeight: 600 }}>
+          Who is telling this story?
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ color: '#546669', mb: 2 }}>
+            To rewrite this story accurately, we need to know your name so the narrator
+            can refer to you correctly (e.g. "I was telling Ryan about a time…").
+          </Typography>
+          <TextField
+            autoFocus
+            fullWidth
+            label="Your name"
+            value={narratorName}
+            onChange={(e) => setNarratorName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && narratorName.trim()) {
+                setNarratorDialogOpen(false)
+                triggerNarrationRewrite(narratorName.trim())
+              }
+            }}
+            placeholder="e.g. Jon Smith"
+            size="small"
+          />
+          <Typography variant="caption" sx={{ color: '#8fa3ab', mt: 1, display: 'block' }}>
+            You can permanently link your account to a person in Settings → Profile.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button
+            onClick={() => setNarratorDialogOpen(false)}
+            sx={{ color: '#546669', textTransform: 'none' }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            disabled={!narratorName.trim()}
+            onClick={() => {
+              setNarratorDialogOpen(false)
+              triggerNarrationRewrite(narratorName.trim())
+            }}
+            sx={{
+              backgroundColor: '#16334a',
+              textTransform: 'none',
+              '&:hover': { backgroundColor: '#2e4a62' },
+            }}
+          >
+            Continue
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <Layout>
         <Box sx={{ minHeight: '100vh', backgroundColor: '#fcf9f4' }}>
           {/* Header Bar */}

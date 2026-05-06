@@ -5,6 +5,7 @@ export interface RewriteRequest {
   content: string
   subjectName?: string
   speakerName?: string
+  narratorName?: string
   styleHints?: string
 }
 
@@ -24,13 +25,15 @@ export class FirstPersonRewriter {
     const start = Date.now()
 
     const subject = request.subjectName?.trim() || 'the subject of this story'
-    const systemPrompt = buildSystemPrompt(subject, request.styleHints)
+    const speaker = request.speakerName?.trim()
+    const narrator = request.narratorName?.trim()
+    const systemPrompt = buildSystemPrompt(subject, speaker, request.styleHints)
 
     const prompt: CompiledPrompt = {
       systemPrompt,
       context: '',
       history: [],
-      userMessage: buildUserMessage(request.content, subject, request.speakerName),
+      userMessage: buildUserMessage(request.content, subject, speaker, narrator),
       metadata: {
         model:
           process.env.NARRATION_LLM_MODEL ||
@@ -79,9 +82,13 @@ export class FirstPersonRewriter {
   }
 }
 
-function buildSystemPrompt(subject: string, styleHints?: string): string {
+function buildSystemPrompt(subject: string, speakerName?: string, styleHints?: string): string {
   const styleSection = styleHints?.trim()
     ? `\n\nSpeaking style notes for ${subject}:\n${styleHints.trim()}\n`
+    : ''
+
+  const speakerSection = speakerName
+    ? `\n\nIMPORTANT — Pronoun resolution:\nThe ORIGINAL TEXT was written by ${speakerName}. Any first-person pronouns in the original (I, me, my, myself, we, our, us) refer to ${speakerName} — the author — NOT to ${subject}. When converting those author-voice references into ${subject}'s first-person narration, replace them with "${speakerName}" in third person (e.g. "I remember" written by ${speakerName} about ${subject} becomes "${subject} once told me" only if it's ${speakerName} recalling something — otherwise rephrase naturally). If the original says "he was telling me" or "she showed me", that "me" = ${speakerName}; convert it to "${speakerName}" in the rewrite.\n`
     : ''
 
   return `You are rewriting a family memory so that ${subject} can narrate it aloud in their own voice, in first person. The ORIGINAL TEXT was written by a family member ABOUT ${subject}.
@@ -91,18 +98,37 @@ Rules (absolute):
 2. Do not add feelings, opinions, or memories that were not written.
 3. Preserve every name, date, place, and quoted dialogue exactly as written.
 4. Rewrite the perspective from third-person to first-person, as if ${subject} is telling this story aloud to their family today.
-5. Convert references to ${subject} (they/he/she/their/his/her) into "I/me/my" where appropriate. Other people remain in third person.
+5. Convert references to ${subject} (they/he/she/their/his/her) into "I/me/my" where appropriate. All other people, including the author, remain in third person by name.
 6. Keep the original pacing and emotional register. Do not dramatize.
 7. Write in plain spoken English, the way someone speaks aloud. No stage directions, no headings, no markdown, no meta commentary. Just the story.
 8. If the ORIGINAL TEXT is already written in first person from ${subject}'s perspective, return it nearly verbatim with only minor cleanup for spoken cadence.
-9. Do not add a preamble like "Here is the rewrite" or "Sure,". Return only the rewritten story text.${styleSection}`
+9. Do not add a preamble like "Here is the rewrite" or "Sure,". Return only the rewritten story text.${speakerSection}${styleSection}`
 }
 
-function buildUserMessage(content: string, subject: string, speakerName?: string): string {
-  const authorLine = speakerName?.trim()
-    ? `The ORIGINAL TEXT below was written by ${speakerName.trim()}.\n\n`
-    : ''
-  return `${authorLine}ORIGINAL TEXT (about ${subject}):\n"""\n${content}\n"""\n\nRewrite the ORIGINAL TEXT so ${subject} can narrate it in first person. Return only the rewritten story.`
+function buildUserMessage(
+  content: string,
+  subject: string,
+  speakerName?: string,
+  narratorName?: string,
+): string {
+  const lines: string[] = []
+
+  if (speakerName) {
+    lines.push(`This story was written by ${speakerName} about ${subject}.`)
+  }
+  if (narratorName && narratorName !== speakerName && narratorName !== subject) {
+    lines.push(`Context: the person triggering this narration is ${narratorName}.`)
+  }
+  if (lines.length > 0) lines.push('')
+
+  lines.push(`ORIGINAL TEXT (about ${subject}):`)
+  lines.push(`"""`)
+  lines.push(content)
+  lines.push(`"""`)
+  lines.push(``)
+  lines.push(`Rewrite the ORIGINAL TEXT so ${subject} can narrate it in first person. Return only the rewritten story.`)
+
+  return lines.join('\n')
 }
 
 function cleanRewrite(raw: string): string {

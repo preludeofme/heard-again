@@ -55,6 +55,20 @@ export default apiHandler({
     const subjectName = formatPersonName(story.subject)
     const speakerName = formatPersonName(story.speaker)
 
+    // Resolve the narrator: the logged-in user's linked person gives richer context
+    // for pronoun resolution (e.g. "me" in the original = the narrator in third person).
+    const userRecord = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: {
+        displayName: true,
+        linkedPerson: { select: { firstName: true, lastName: true, nickname: true } },
+      },
+    })
+    const narratorName =
+      formatPersonName(userRecord?.linkedPerson) ||
+      req.body?.narratorName ||
+      undefined
+
     // Ensure we only send the text content, stripping media and HTML/Markdown formatting
     const cleanContent = stripMediaAndFormatting(story.content)
 
@@ -64,7 +78,7 @@ export default apiHandler({
 
     try {
       logger.info('[narration] calling rewrite service', { url: `${CHAT_SERVICE_URL}/api/rewrite/first-person`, storyId })
-      
+
       const response = await fetch(`${CHAT_SERVICE_URL}/api/rewrite/first-person`, {
         method: 'POST',
         headers: {
@@ -77,6 +91,7 @@ export default apiHandler({
           content: cleanContent,
           subjectName,
           speakerName,
+          narratorName,
         }),
       })
 

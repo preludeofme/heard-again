@@ -22,7 +22,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ success: false, error: 'Missing x-familyspace-id header' })
   }
 
-  const { content, subjectName, speakerName, styleHints } = req.body ?? {}
+  const { content, subjectName, speakerName, narratorName, styleHints } = req.body ?? {}
 
   if (typeof content !== 'string' || content.trim().length === 0) {
     return res.status(400).json({ success: false, error: 'content is required' })
@@ -39,6 +39,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       content,
       subjectName: typeof subjectName === 'string' ? subjectName : undefined,
       speakerName: typeof speakerName === 'string' ? speakerName : undefined,
+      narratorName: typeof narratorName === 'string' ? narratorName : undefined,
       styleHints: typeof styleHints === 'string' ? styleHints : undefined,
     })
 
