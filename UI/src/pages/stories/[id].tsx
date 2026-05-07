@@ -11,7 +11,8 @@ import {
   ArrowBack, Favorite, FavoriteBorder,
   Edit, Schedule, Send, Person, Comment as CommentIcon,
   Share, ShareOutlined,
-  Mic, AutoStories, AudioFile,
+  Mic, AutoStories,
+  GraphicEq,
 } from '@mui/icons-material'
 import { formatDistanceToNow, format } from 'date-fns'
 import { NarrationPreparationBanner } from '@/components/stories/NarrationPreparationBanner'
@@ -281,6 +282,11 @@ export default function StoryDetailPage() {
     }
   }
 
+
+  const originalAudioAsset = story.assets.find((sa) =>
+    sa.asset.mimeType?.startsWith('audio/') || sa.asset.assetType?.toLowerCase() === 'audio'
+  )
+
   const personName = (p?: { firstName: string; lastName?: string; nickname?: string }) => {
     if (!p) return ''
     return p.nickname || `${p.firstName}${p.lastName ? ' ' + p.lastName : ''}`
@@ -497,134 +503,145 @@ export default function StoryDetailPage() {
               </Box>
             )}
 
-            {/* Narration */}
-            <Box sx={{ mb: 4 }}>
-              {(!story.narrationStatus || story.narrationStatus === 'NONE') && (
-                <NarrationPreparationBanner
-                  mode="opt-in"
-                  subjectName={personName(story.subject)}
-                  isWorking={isPreparingNarration}
-                  error={narrationError}
-                  onPrepare={handlePrepareNarration}
-                  onDiscardError={() => setNarrationError(null)}
-                />
-              )}
 
-              {story.narrationStatus === 'STALE' && (
-                <NarrationPreparationBanner
-                  mode="stale"
-                  subjectName={personName(story.subject)}
-                  isWorking={isPreparingNarration}
-                  error={narrationError}
-                  onPrepare={handlePrepareNarration}
-                  onKeep={async () => {
-                    await patchNarration('approve')
-                  }}
-                  onDiscardError={() => setNarrationError(null)}
-                />
-              )}
+            {/* Listen + Transcript Experience */}
+            <Box sx={{ mb: 5 }}>
+              <Typography variant="h6" sx={{ color: '#16334a', fontWeight: 700, mb: 2 }}>
+                Listen & Read
+              </Typography>
 
-              {(story.narrationStatus === 'FAILED' ||
-                (story.narrationStatus === 'READY' && !story.narratedContent)) && (
-                <NarrationPreparationBanner
-                  mode="failed"
-                  subjectName={personName(story.subject)}
-                  isWorking={isPreparingNarration}
-                  error={narrationError}
-                  onPrepare={handlePrepareNarration}
-                  onDiscardError={() => setNarrationError(null)}
-                />
-              )}
+              <Grid container spacing={2.5}>
+                <Grid size={{ xs: 12, md: 7 }}>
+                  <Card sx={{ p: 3, borderRadius: 4, border: '1px solid #d9e7ea', backgroundColor: '#f8fcfd', mb: 2 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                      <Mic sx={{ color: '#16334a', fontSize: 18 }} />
+                      <Typography variant="subtitle1" sx={{ color: '#16334a', fontWeight: 700 }}>Original Recording</Typography>
+                    </Box>
+                    {originalAudioAsset ? (
+                      <audio
+                        controls
+                        preload="metadata"
+                        src={`/api/assets/${originalAudioAsset.asset.id}/download`}
+                        style={{ width: '100%', height: 40 }}
+                      />
+                    ) : (
+                      <Typography variant="body2" sx={{ color: '#546669' }}>
+                        No original recording is available for this story.
+                      </Typography>
+                    )}
+                  </Card>
 
-              {story.narrationStatus === 'PENDING' && (
-                <Box
-                  sx={{
-                    backgroundColor: '#eef3f4',
-                    border: '1px solid #d0e3e6',
-                    borderRadius: 3,
-                    p: 3,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 2,
-                  }}
-                >
-                  <CircularProgress size={20} sx={{ color: '#16334a' }} />
-                  <Typography variant="body2" sx={{ color: '#546669' }}>
-                    Preparing first-person narration — this usually takes a few seconds.
-                  </Typography>
-                </Box>
-              )}
+                  <Card sx={{ p: 3, borderRadius: 4, border: '1px solid #d9e7ea', backgroundColor: '#f8fcfd' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, mb: 2 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <AutoStories sx={{ color: '#16334a', fontSize: 18 }} />
+                        <Typography variant="subtitle1" sx={{ color: '#16334a', fontWeight: 700 }}>Transcript</Typography>
+                      </Box>
+                      <Chip label="Readable version" size="small" sx={{ backgroundColor: '#eaf2f4', color: '#16334a' }} />
+                    </Box>
+                    <Typography variant="body1" sx={{ color: '#334a4f', lineHeight: 1.8 }}>
+                      {story.excerpt || 'Scroll below for the full transcript and story details.'}
+                    </Typography>
+                  </Card>
+                </Grid>
+
+                <Grid size={{ xs: 12, md: 5 }}>
+                  <Card sx={{ p: 3, borderRadius: 4, border: '1px solid #ebe8e3', backgroundColor: '#fffdfa' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                      <GraphicEq sx={{ color: '#16334a', fontSize: 18 }} />
+                      <Typography variant="subtitle1" sx={{ color: '#16334a', fontWeight: 700 }}>
+                        AI Narration
+                      </Typography>
+                    </Box>
+                    <Typography variant="body2" sx={{ color: '#546669', mb: 2 }}>
+                      Choose a voice and instantly play or download narration.
+                    </Typography>
+
+                    {(!story.narrationStatus || story.narrationStatus === 'NONE') && (
+                      <NarrationPreparationBanner
+                        mode="opt-in"
+                        subjectName={personName(story.subject)}
+                        isWorking={isPreparingNarration}
+                        error={narrationError}
+                        onPrepare={handlePrepareNarration}
+                        onDiscardError={() => setNarrationError(null)}
+                      />
+                    )}
+                    {story.narrationStatus === 'STALE' && (
+                      <NarrationPreparationBanner
+                        mode="stale"
+                        subjectName={personName(story.subject)}
+                        isWorking={isPreparingNarration}
+                        error={narrationError}
+                        onPrepare={handlePrepareNarration}
+                        onKeep={async () => {
+                          await patchNarration('approve')
+                        }}
+                        onDiscardError={() => setNarrationError(null)}
+                      />
+                    )}
+                    {(story.narrationStatus === 'FAILED' ||
+                      (story.narrationStatus === 'READY' && !story.narratedContent)) && (
+                      <NarrationPreparationBanner
+                        mode="failed"
+                        subjectName={personName(story.subject)}
+                        isWorking={isPreparingNarration}
+                        error={narrationError}
+                        onPrepare={handlePrepareNarration}
+                        onDiscardError={() => setNarrationError(null)}
+                      />
+                    )}
+                    {story.narrationStatus === 'PENDING' && (
+                      <Box sx={{ backgroundColor: '#eef3f4', border: '1px solid #d0e3e6', borderRadius: 3, p: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <CircularProgress size={20} sx={{ color: '#16334a' }} />
+                        <Typography variant="body2" sx={{ color: '#546669' }}>Preparing narration…</Typography>
+                      </Box>
+                    )}
+                    {story.narrationStatus === 'APPROVED' && (
+                      <StoryNarrationPlayer
+                        storyId={story.id}
+                        title={story.title}
+                        narrationSource="approved"
+                        voiceProfiles={voiceProfiles.map((vp) => ({
+                          id: vp.id,
+                          name: vp.name,
+                          personId: vp.personId,
+                          personName: vp.person
+                            ? vp.person.nickname || `${vp.person.firstName}${vp.person.lastName ? ' ' + vp.person.lastName : ''}`
+                            : null,
+                        }))}
+                        defaultVoiceProfileId={story.voiceProfile?.id}
+                        savedNarration={savedNarration}
+                        activeJobId={story.narrationRenderJobId}
+                        onSaved={(saved) => {
+                          setSavedNarration(saved)
+                          fetchStory()
+                        }}
+                      />
+                    )}
+                  </Card>
+                </Grid>
+              </Grid>
 
               {story.narrationStatus === 'READY' && story.narratedContent && (
-                <NarrationReviewPanel
-                  subjectName={personName(story.subject)}
-                  originalContent={story.content}
-                  initialNarratedContent={story.narratedContent}
-                  narrationModel={story.narrationModel}
-                  onSaveDraft={async (draft) => {
-                    await patchNarration('update', draft)
-                  }}
-                  onApprove={async (draft) => {
-                    await patchNarration('approve', draft)
-                  }}
-                  onDiscard={async () => {
-                    await patchNarration('discard')
-                  }}
-                  onRepolish={handlePrepareNarration}
-                />
-              )}
-
-              {story.narrationStatus === 'APPROVED' && (
-                <StoryNarrationPlayer
-                  storyId={story.id}
-                  title={story.title}
-                  narrationSource="approved"
-                  voiceProfiles={voiceProfiles.map((vp) => ({
-                    id: vp.id,
-                    name: vp.name,
-                    personId: vp.personId,
-                    personName: vp.person
-                      ? vp.person.nickname ||
-                        `${vp.person.firstName}${vp.person.lastName ? ' ' + vp.person.lastName : ''}`
-                      : null,
-                  }))}
-                  defaultVoiceProfileId={story.voiceProfile?.id}
-                  savedNarration={savedNarration}
-                  activeJobId={story.narrationRenderJobId}
-                  onSaved={(saved) => {
-                    setSavedNarration(saved)
-                    fetchStory()
-                  }}
-                />
-              )}
-            </Box>
-
-            {/* Versions Bar */}
-            <Box sx={{ display: 'flex', gap: 2, mb: 4, flexWrap: 'wrap' }}>
-              {story.storyType === 'RECORDING' && (
-                <Chip
-                  icon={<Mic sx={{ fontSize: '18px !important' }} />}
-                  label="Raw Audio"
-                  variant="outlined"
-                  size="small"
-                  sx={{ borderColor: '#d0e3e6', color: '#16334a' }}
-                />
-              )}
-              <Chip
-                icon={<AutoStories sx={{ fontSize: '18px !important' }} />}
-                label="Transcript"
-                variant="outlined"
-                size="small"
-                sx={{ borderColor: '#d0e3e6', color: '#16334a' }}
-              />
-              {story.narrationStatus === 'APPROVED' && (
-                <Chip
-                  icon={<AudioFile sx={{ fontSize: '18px !important' }} />}
-                  label="AI Narration"
-                  variant="outlined"
-                  size="small"
-                  sx={{ borderColor: '#d0e3e6', color: '#16334a' }}
-                />
+                <Box sx={{ mt: 2 }}>
+                  <NarrationReviewPanel
+                    subjectName={personName(story.subject)}
+                    originalContent={story.content}
+                    initialNarratedContent={story.narratedContent}
+                    narrationModel={story.narrationModel}
+                    onSaveDraft={async (draft) => {
+                      await patchNarration('update', draft)
+                    }}
+                    onApprove={async (draft) => {
+                      await patchNarration('approve', draft)
+                    }}
+                    onDiscard={async () => {
+                      await patchNarration('discard')
+                    }}
+                    onRepolish={handlePrepareNarration}
+                  />
+                </Box>
               )}
             </Box>
 
