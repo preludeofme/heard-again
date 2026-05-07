@@ -88,21 +88,29 @@ async function streamBatchSynth(
   familyspaceId: string,
   onProgress: (done: number, total: number, lastSecs?: number) => Promise<void>
 ): Promise<Extract<BatchProgressEvent, { type: 'complete' }>> {
-  const response = await fetch(`${TTS_SERVICE_URL}/api/tts/synthesize-batch`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${TTS_SERVICE_TOKEN}`,
-      'X-Familyspace-Id': familyspaceId,
-    },
-    body: JSON.stringify({
-      profileId: profileName,
-      text,
-      language: 'English',
-      familyspaceId,
-      silencePaddingMs: 200,
-    }),
-  })
+  const synthUrl = `${TTS_SERVICE_URL}/api/tts/synthesize-batch`
+  let response: Response
+  try {
+    response = await fetch(synthUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${TTS_SERVICE_TOKEN}`,
+        'X-Familyspace-Id': familyspaceId,
+      },
+      body: JSON.stringify({
+        profileId: profileName,
+        text,
+        language: 'English',
+        familyspaceId,
+        silencePaddingMs: 200,
+      }),
+    })
+  } catch (err: any) {
+    throw new Error(
+      `TTS synth request failed (url=${synthUrl}, tokenConfigured=${Boolean(TTS_SERVICE_TOKEN)}): ${err?.message || String(err)}`
+    )
+  }
 
   if (!response.ok || !response.body) {
     const errorText = await response.text().catch(() => '')
@@ -151,12 +159,20 @@ async function streamBatchSynth(
 }
 
 async function downloadAudio(audioId: string, familyspaceId: string): Promise<Buffer> {
-  const response = await fetch(`${TTS_SERVICE_URL}/api/tts/audio/${audioId}`, {
-    headers: {
-      'Authorization': `Bearer ${TTS_SERVICE_TOKEN}`,
-      'X-Familyspace-Id': familyspaceId,
-    },
-  })
+  const audioUrl = `${TTS_SERVICE_URL}/api/tts/audio/${audioId}`
+  let response: Response
+  try {
+    response = await fetch(audioUrl, {
+      headers: {
+        'Authorization': `Bearer ${TTS_SERVICE_TOKEN}`,
+        'X-Familyspace-Id': familyspaceId,
+      },
+    })
+  } catch (err: any) {
+    throw new Error(
+      `TTS audio download request failed (url=${audioUrl}, tokenConfigured=${Boolean(TTS_SERVICE_TOKEN)}): ${err?.message || String(err)}`
+    )
+  }
   if (!response.ok) {
     throw new Error(`Audio download failed (${response.status}) for ${audioId}`)
   }
