@@ -56,10 +56,12 @@ export class FileOptimizer {
       }
     }
 
-    // Route to appropriate optimizer based on MIME type
+    // Route to appropriate optimizer based on MIME type.
+    // video/webm from MediaRecorder is audio-only — treat it as audio so it gets
+    // transcoded to MP3 (fixes duration metadata and reduces file size).
     if (mimeType.startsWith('image/')) {
       return this.imageOptimizer.optimize(file, mimeType, originalName, options)
-    } else if (mimeType.startsWith('audio/')) {
+    } else if (mimeType.startsWith('audio/') || mimeType === 'video/webm') {
       return this.audioOptimizer.optimize(file, mimeType, originalName, options)
     } else if (mimeType.startsWith('video/')) {
       return this.videoOptimizer.optimize(file, mimeType, originalName, options)

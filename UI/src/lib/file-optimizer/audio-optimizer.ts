@@ -1,5 +1,22 @@
+import { execFile } from 'child_process'
+import { promisify } from 'util'
+import fs from 'fs'
+import os from 'os'
+import path from 'path'
 import { logger } from '@/lib/logger'
 import { OptimizationOptions, OptimizationResult } from './index'
+
+const execFileAsync = promisify(execFile)
+
+// Inputs that should be transcoded to MP3 (fixes duration metadata + reduces size)
+const TRANSCODE_TO_MP3 = new Set([
+  'audio/webm',
+  'video/webm', // MediaRecorder produces webm that gets detected as video/webm
+  'audio/wav',
+  'audio/x-wav',
+  'audio/flac',
+  'audio/x-flac',
+])
 
 export class AudioOptimizer {
   private supportedMimeTypes = [
@@ -12,7 +29,8 @@ export class AudioOptimizer {
     'audio/m4a',
     'audio/mp4',
     'audio/ogg',
-    'audio/webm'
+    'audio/webm',
+    'video/webm', // MediaRecorder recordings often detected as video/webm
   ]
 
   async optimize(
@@ -25,80 +43,40 @@ export class AudioOptimizer {
     const quality = options.quality || 80
 
     try {
-      // For audio, we'll primarily focus on format conversion and basic compression
       let optimizedBuffer: Buffer
-      let outputFormat = mimeType
+      let outputMimeType = mimeType
       let optimizationMethod = 'none'
 
-      switch (mimeType) {
-        case 'audio/wav':
-        case 'audio/x-wav':
-          // Convert WAV to MP3 for significant size reduction
-          optimizedBuffer = await this.convertToMp3(file, quality)
-          outputFormat = 'audio/mpeg'
-          optimizationMethod = 'wav-to-mp3'
-          break
-
-        case 'audio/flac':
-        case 'audio/x-flac':
-          // Convert FLAC to MP3 for better compression
-          optimizedBuffer = await this.convertToMp3(file, quality)
-          outputFormat = 'audio/mpeg'
-          optimizationMethod = 'flac-to-mp3'
-          break
-
-        case 'audio/m4a':
-        case 'audio/mp4':
-          // M4A is already compressed, but we can optimize bitrate
-          optimizedBuffer = await this.optimizeM4a(file, quality)
-          optimizationMethod = 'm4a-bitrate-optimization'
-          break
-
-        case 'audio/mpeg':
-        case 'audio/mp3':
-          // MP3 is already compressed, but we can re-encode at lower bitrate if needed
-          if (originalSize > 10 * 1024 * 1024) { // 10MB threshold
-            optimizedBuffer = await this.optimizeMp3(file, quality)
-            optimizationMethod = 'mp3-bitrate-optimization'
-          } else {
-            optimizedBuffer = file
-          }
-          break
-
-        case 'audio/ogg':
-        case 'audio/webm':
-          // These are already well-compressed formats
-          optimizedBuffer = file
-          optimizationMethod = 'none'
-          break
-
-        default:
-          optimizedBuffer = file
-          optimizationMethod = 'none'
+      if (TRANSCODE_TO_MP3.has(mimeType)) {
+        optimizedBuffer = await this.convertToMp3(file, quality)
+        outputMimeType = 'audio/mpeg'
+        optimizationMethod = `${mimeType.split('/')[1]}-to-mp3`
+      } else if ((mimeType === 'audio/mpeg' || mimeType === 'audio/mp3') && originalSize > 10 * 1024 * 1024) {
+        optimizedBuffer = await this.reEncodeMp3(file, quality)
+        optimizationMethod = 'mp3-reencode'
+      } else {
+        optimizedBuffer = file
       }
 
       const optimizedSize = optimizedBuffer.length
-      const compressionRatio = originalSize > 0 ? optimizedSize / originalSize : 1
 
       return {
         optimizedFile: optimizedBuffer,
         originalSize,
         optimizedSize,
-        compressionRatio,
-        mimeType: outputFormat,
-        optimizationMethod
+        compressionRatio: originalSize > 0 ? optimizedSize / originalSize : 1,
+        mimeType: outputMimeType,
+        optimizationMethod,
       }
-
     } catch (error) {
       logger.error('Audio optimization failed:', error)
-      // Return original file if optimization fails
       return {
         optimizedFile: file,
         originalSize,
         optimizedSize: originalSize,
         compressionRatio: 1,
         mimeType,
-        optimizationMethod: 'failed'
+        optimizationMethod: 'failed',
       }
     }
   }
@@ -108,52 +86,67 @@ export class AudioOptimizer {
   }
 
   private async convertToMp3(file: Buffer, quality: number): Promise<Buffer> {
-    // This would typically use FFmpeg or similar library
-    // For now, we'll return the original file as a placeholder
-    // In a real implementation, you would:
-    // 1. Use fluent-ffmpeg or similar
-    // 2. Convert to MP3 with specified bitrate
-    // 3. Return the converted buffer
-    
-    logger.info('Audio conversion to MP3 not implemented yet, returning original')
-    return file
+    // Bitrate tiers: voice recordings don't need more than 64kbps mono
+    const bitrate = quality >= 90 ? '128k' : quality >= 70 ? '96k' : '64k'
+
+    const tmpIn = path.join(os.tmpdir(), `ha-audio-in-${Date.now()}-${process.pid}.webm`)
+    const tmpOut = path.join(os.tmpdir(), `ha-audio-out-${Date.now()}-${process.pid}.mp3`)
+
+    try {
+      fs.writeFileSync(tmpIn, file)
+
+      await execFileAsync('ffmpeg', [
+        '-i', tmpIn,
+        '-vn',                  // strip any video stream
+        '-acodec', 'libmp3lame',
+        '-ab', bitrate,
+        '-ac', '1',             // mono — sufficient for voice
+        '-ar', '22050',         // 22kHz — sufficient for voice, halves file size vs 44kHz
+        '-y',
+        tmpOut,
+      ])
+
+      return fs.readFileSync(tmpOut)
+    } finally {
+      try { fs.unlinkSync(tmpIn) } catch {}
+      try { fs.unlinkSync(tmpOut) } catch {}
+    }
   }
 
-  private async optimizeMp3(file: Buffer, quality: number): Promise<Buffer> {
-    // Re-encode MP3 at lower bitrate if it's too large
-    // This would use FFmpeg to re-encode at a lower bitrate
-    logger.info('MP3 bitrate optimization not implemented yet, returning original')
-    return file
+  private async reEncodeMp3(file: Buffer, quality: number): Promise<Buffer> {
+    const bitrate = quality >= 90 ? '128k' : '64k'
+    const tmpIn = path.join(os.tmpdir(), `ha-mp3-in-${Date.now()}-${process.pid}.mp3`)
+    const tmpOut = path.join(os.tmpdir(), `ha-mp3-out-${Date.now()}-${process.pid}.mp3`)
+
+    try {
+      fs.writeFileSync(tmpIn, file)
+      await execFileAsync('ffmpeg', ['-i', tmpIn, '-acodec', 'libmp3lame', '-ab', bitrate, '-y', tmpOut])
+      return fs.readFileSync(tmpOut)
+    } finally {
+      try { fs.unlinkSync(tmpIn) } catch {}
+      try { fs.unlinkSync(tmpOut) } catch {}
+    }
   }
 
-  private async optimizeM4a(file: Buffer, quality: number): Promise<Buffer> {
-    // Optimize M4A bitrate
-    logger.info('M4A optimization not implemented yet, returning original')
-    return file
-  }
+  async extractDuration(file: Buffer, mimeType: string): Promise<number | null> {
+    const ext = mimeType.includes('webm') ? 'webm' : mimeType.includes('mp3') || mimeType.includes('mpeg') ? 'mp3' : 'audio'
+    const tmpIn = path.join(os.tmpdir(), `ha-probe-${Date.now()}-${process.pid}.${ext}`)
 
-  async extractAudioMetadata(file: Buffer): Promise<{
-    duration?: number
-    bitrate?: number
-    sampleRate?: number
-    channels?: number
-    format?: string
-  }> {
-    // This would use a library like music-metadata to extract audio information
-    // For now, return empty object
-    return {}
-  }
-
-  async generateWaveform(file: Buffer, width: number = 800, height: number = 200): Promise<Buffer> {
-    // Generate waveform image data for audio visualization
-    // This would typically use Web Audio API or similar
-    logger.info('Waveform generation not implemented yet')
-    return Buffer.alloc(0)
-  }
-
-  async trimAudio(file: Buffer, startTime: number, endTime: number): Promise<Buffer> {
-    // Trim audio to specified time range
-    logger.info('Audio trimming not implemented yet')
-    return file
+    try {
+      fs.writeFileSync(tmpIn, file)
+      const { stdout } = await execFileAsync('ffprobe', [
+        '-v', 'quiet',
+        '-print_format', 'json',
+        '-show_format',
+        tmpIn,
+      ])
+      const info = JSON.parse(stdout)
+      const duration = parseFloat(info?.format?.duration)
+      return isFinite(duration) ? duration : null
+    } catch {
+      return null
+    } finally {
+      try { fs.unlinkSync(tmpIn) } catch {}
+    }
   }
 }

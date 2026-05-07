@@ -2,7 +2,7 @@ import { prisma } from '@/lib/prisma'
 import { successResponse, errorResponse } from '@/lib/api-helpers'
 import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 import { getStorageService } from '@/lib/storage/storage-service'
-import { FileOptimizer } from '@/lib/file-optimizer'
+import { FileOptimizer, AudioOptimizer } from '@/lib/file-optimizer'
 import { validateFileContent, generateSecureFilename } from '@/lib/security/file-validator'
 import { scanAndQuarantineFile } from '@/lib/security/malware-scanner'
 import { rateLimitCheck } from '@/lib/redis-client'
@@ -41,6 +41,7 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse) {
     const storageService = getStorageService()
     const storageMode = storageService.getMode()
     const fileOptimizer = new FileOptimizer()
+    const audioOptimizer = new AudioOptimizer()
 
     // We need to parse form first to get fields (like personId/subjectId)
     // But formidable needs a path. We'll use a generic temp dir for unauthenticated uploads.
@@ -199,11 +200,21 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse) {
       }
     }
 
+    // Use the mime type and filename from after optimization (may differ if format was converted)
+    const finalMimeType = optimizationResult?.mimeType ?? validationResult.detectedType!
+
+    // Extract audio duration for audio assets so the player can show it immediately
+    let durationSeconds: number | null = null
+    if (finalMimeType.startsWith('audio/') || validationResult.detectedType?.includes('webm')) {
+      durationSeconds = await audioOptimizer.extractDuration(optimizedBuffer, finalMimeType).catch(() => null)
+    }
+    const finalFilename = remapExtension(secureFilename, validationResult.detectedType!, finalMimeType)
+
     // Upload file using storage service
     const uploadResult = await storageService.uploadFile(
       optimizedBuffer,
-      secureFilename,
-      validationResult.detectedType!,
+      finalFilename,
+      finalMimeType,
       {
         folder: `familyspace-${familyspaceId}`,
         metadata: {
@@ -225,13 +236,14 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse) {
         familyspaceId: familyspaceId,
         filename: uploadResult.filename,
         originalName: file.originalFilename || 'unknown',
-        mimeType: validationResult.detectedType!,
+        mimeType: finalMimeType,
         sizeBytes: BigInt(uploadResult.sizeBytes),
         storageType: storageMode.toUpperCase() as any,
         storagePath: uploadResult.storagePath,
         assetType: uploadResult.assetType as any,
         processingStatus: uploadResult.processingStatus,
         uploadedById: user?.id || null,
+        ...(durationSeconds != null ? { durationSeconds } : {}),
       },
     })
 
@@ -374,6 +386,22 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse) {
     }
     return errorResponse(res, error.message || 'Upload failed', 500)
   }
+}
+
+// When optimization converts a file to a different format, update the filename extension.
+function remapExtension(filename: string, fromMime: string, toMime: string): string {
+  if (fromMime === toMime) return filename
+  const EXT_MAP: Record<string, string> = {
+    'audio/mpeg': '.mp3',
+    'audio/ogg': '.ogg',
+    'audio/wav': '.wav',
+    'image/jpeg': '.jpg',
+    'image/png': '.png',
+    'image/webp': '.webp',
+  }
+  const newExt = EXT_MAP[toMime]
+  if (!newExt) return filename
+  return filename.replace(/\.[^.]+$/, '') + newExt
 }
 
 // Custom handler (not apiHandler) — formidable needs raw body, so wrap explicitly.
