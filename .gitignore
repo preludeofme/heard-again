@@ -55,3 +55,7 @@ UI/test-frontend*.js
 UI/test-find-*.js
 UI/test-import*.js
 UI/test-layout*.ts
+# Remove all env files from source control
+**/.env
+**/.env.*
+**/.env*
