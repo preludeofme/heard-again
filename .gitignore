@@ -35,3 +35,23 @@ generated/**
 data
 data/
 Chat/temp-ingestion/
+
+# Dev-only scripts — moved to UI/scripts/dev-only/, excluded from source tracking
+UI/scripts/dev-only/
+
+# ClamAV quarantine artifacts — never commit virus scan payloads
+UI/quarantine/
+
+# Scratch and ad-hoc debug files at service roots
+UI/scratch*.js
+UI/scratch*.ts
+UI/debug-*.js
+UI/debug-*.ts
+UI/test-api*.js
+UI/test-api*.ts
+UI/test-db*.js
+UI/test-db*.ts
+UI/test-frontend*.js
+UI/test-find-*.js
+UI/test-import*.js
+UI/test-layout*.ts

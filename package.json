@@ -31,7 +31,8 @@
     "docker:build": "docker compose build",
     "install:all": "npm install && cd UI && npm install && cd ../Chat && npm install",
     "e2e:test": "playwright test",
-    "e2e:test:ui": "playwright test --ui"
+    "e2e:test:ui": "playwright test --ui",
+    "verify": "./Scripts/ci-verify.sh"
   },
   "familyspaces": [
     "UI",

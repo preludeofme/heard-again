@@ -1,0 +1,41 @@
+node_modules
+.next
+*.log
+.env
+.env.*
+!.env.example
+
+# Dev-only scripts — not needed in build context
+scripts/dev-only/
+
+# ClamAV quarantine payloads
+quarantine/
+
+# Scratch and ad-hoc files
+scratch*.js
+scratch*.ts
+debug-*.ts
+debug-*.js
+test-api*.js
+test-api*.ts
+test-db*.js
+test-frontend*.js
+test-find-*.js
+test-import*.js
+test-layout*.ts
+
+# Test artifacts
+__tests__/
+*.test.ts
+*.spec.ts
+coverage/
+playwright-report/
+test-results/
+
+# Dev tooling
+.eslintrc*
+.prettierrc*
+jest.config.*
+
+# CI / analysis artifacts
+sonar-reports/
