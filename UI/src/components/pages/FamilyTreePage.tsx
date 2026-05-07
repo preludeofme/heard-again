@@ -64,7 +64,7 @@ interface FamilyTreePageProps {
   onToggleFullscreen?: () => void
   onImportGedcom?: () => void
   onExportGedcom?: () => void
-  onLoadMore?: (direction: 'up' | 'down', personId: string) => void
+  onLoadMore?: (direction: 'up' | 'down' | 'left' | 'right', personId: string) => void
   onToggleSiblings?: () => void
   onExpandDepth?: () => void
   onSetRoot?: (id: string) => void
@@ -916,10 +916,10 @@ export function FamilyTreePage({
       <PersonDetailModal
         open={detailModalOpen}
         onClose={() => setDetailModalOpen(false)}
-        person={personDetail}
-        stories={personStories}
-        voiceProfiles={personVoiceProfiles}
-        relationships={personRelationships}
+        person={personDetail as any}
+        stories={personStories as any}
+        voiceProfiles={personVoiceProfiles as any}
+        relationships={personRelationships as any}
         isLoading={isLoadingDetail}
         error={detailError}
         onEdit={handleEditPerson}

@@ -41,7 +41,7 @@ export default apiHandler({
       const storyId = req.query.id as string
       await requireFamilyspaceRole(user.id, user.familyspaceId, 'EDITOR')
 
-      const result = await storyService.updateStory(storyId, user.familyspaceId, req.body)
+      const result = await storyService.updateStory(storyId, user.familyspaceId, req.body, user.id)
       return successResponse(res, result)
     }
   },
@@ -52,7 +52,7 @@ export default apiHandler({
     const storyId = req.query.id as string
     await requireFamilyspaceRole(user.id, user.familyspaceId, 'EDITOR')
 
-    await storyService.deleteStory(storyId, user.familyspaceId)
+    await storyService.deleteStory(storyId, user.familyspaceId, user.id)
     return successResponse(res, { deleted: true })
   },
 })

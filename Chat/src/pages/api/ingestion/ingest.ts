@@ -4,9 +4,6 @@ import { queueManager, QUEUE_NAMES } from '@/utils/queues'
 import { Document, DocumentStatus, DocumentType, EmbeddingStatus } from '@/types/retrieval'
 import { logger } from '@/lib/logger'
 import { v4 as uuidv4 } from 'uuid'
-import axios from 'axios'
-import path from 'path'
-import fs from 'fs'
 
 // RAG-extractable MIME types this service can process
 const EXTRACTABLE_MIME_TYPES = new Set([
@@ -52,7 +49,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
   }
 
-  // SECURITY: Only allow downloads from configured storage origins to prevent SSRF.
+  // SECURITY: Validate storageUrl origin before queuing — prevents SSRF in the worker.
   // Set STORAGE_ALLOWED_ORIGINS as a comma-separated list of URL prefixes, e.g.
   // "https://storage.googleapis.com,https://s3.amazonaws.com,http://localhost:9000"
   const allowedOrigins = (process.env.STORAGE_ALLOWED_ORIGINS || '').split(',').map(o => o.trim()).filter(Boolean)
@@ -64,28 +61,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   }
 
-  let filePath: string | null = null
   try {
-    // Familyspace-scoped temp directory prevents cross-tenant file commingling.
-    const tempDir = path.join(process.cwd(), 'temp-ingestion', familyspaceId)
-    await fs.promises.mkdir(tempDir, { recursive: true })
-
     const documentId = uuidv4()
-    const ext = getExtForMime(mimeType)
-    filePath = path.join(tempDir, `${documentId}${ext}`)
-
-    const response = await axios.get(storageUrl, {
-      responseType: 'arraybuffer',
-      timeout: 60000,
-      maxContentLength: 100 * 1024 * 1024, // 100 MB hard cap
-      maxBodyLength: 100 * 1024 * 1024,
-      headers: {
-        'X-Chat-Service-Secret': process.env.CHAT_SERVICE_SECRET || '',
-      },
-    })
-    const fileBytes = Buffer.from(response.data)
-    await fs.promises.writeFile(filePath, fileBytes)
-    logger.info({ assetId, documentId, filePath, sizeBytes: fileBytes.length }, 'File downloaded to temp dir')
 
     // Create or update Document record in the Chat DB.
     // Using upsertByAssetId so that re-ingestion of a retroactively-linked asset
@@ -114,14 +91,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const savedDocument = await documentRepository.upsertByAssetId(document)
     logger.info({ assetId, documentId: savedDocument.id, familyspaceId, personId: personId ?? null }, 'Document record upserted in Chat DB')
 
-    // Queue ingestion job for the worker to process
+    // Queue ingestion job — the worker downloads the file from storageUrl directly.
+    // This keeps the Chat API stateless (no local file I/O, no shared volume needed).
     const traceId = uuidv4()
     const queue = queueManager.createQueue(QUEUE_NAMES.DOCUMENT_INGESTION)
     const job = await queue.add(
       'process-document',
       {
         documentId: savedDocument.id,
-        filePath,
+        storageUrl,
         mimeType,
         familyspaceId,
         title,
@@ -141,28 +119,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       message: 'Document queued for RAG ingestion',
     })
   } catch (error) {
-    // Clean up temp file on any error path to avoid sensitive data accumulation.
-    if (filePath) {
-      fs.unlink(filePath, () => {}) // best-effort, non-blocking
-    }
     logger.error({ assetId, familyspaceId, mimeType, err: error instanceof Error ? error.message : String(error) }, 'RAG ingest failed — document not queued')
     return res.status(500).json({
       error: 'Failed to queue document for ingestion',
     })
   }
-}
-
-function getExtForMime(mimeType: string): string {
-  const map: Record<string, string> = {
-    'application/pdf': '.pdf',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
-    'application/msword': '.doc',
-    'text/plain': '.txt',
-    'text/csv': '.csv',
-    'text/markdown': '.md',
-    'image/jpeg': '.jpg',
-    'image/png': '.png',
-    'image/tiff': '.tiff',
-  }
-  return map[mimeType] || '.bin'
 }

@@ -1,8 +1,7 @@
-import fs from 'fs/promises'
-import path from 'path'
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse } from '@/lib/api-helpers'
 import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
+import { getStorageService } from '@/lib/storage/storage-service'
 function escapePdfText(text: string): string {
   return text.replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)')
 }
@@ -107,26 +106,35 @@ export default apiHandler({
 
     const pdfBuffer = buildSimplePdf(lines.slice(0, 180))
 
-    const exportDir = path.join(process.cwd(), 'exports', user.familyspaceId)
-    await fs.mkdir(exportDir, { recursive: true })
-
     const fileName = `familyspace-stories-${Date.now()}.pdf`
-    const absoluteFilePath = path.join(exportDir, fileName)
-    await fs.writeFile(absoluteFilePath, pdfBuffer)
 
-    const stats = await fs.stat(absoluteFilePath)
-    const relativePath = path.relative(process.cwd(), absoluteFilePath)
+    const storageService = getStorageService()
+    const storageMode = storageService.getMode()
+    const uploadResult = await storageService.uploadFile(
+      pdfBuffer,
+      fileName,
+      'application/pdf',
+      {
+        folder: `${user.familyspaceId}/exports`,
+        metadata: {
+          exportType: 'PDF',
+          generatedBy: 'api.export.pdf',
+          familyspaceId: user.familyspaceId,
+          storyCount: String(stories.length),
+        },
+      }
+    )
 
     const [asset, exportJob] = await prisma.$transaction(async (tx) => {
       const createdAsset = await tx.asset.create({
         data: {
           familyspaceId: user.familyspaceId,
-          filename: fileName,
+          filename: uploadResult.filename,
           originalName: fileName,
           mimeType: 'application/pdf',
-          sizeBytes: BigInt(stats.size),
-          storageType: 'LOCAL',
-          storagePath: relativePath,
+          sizeBytes: BigInt(pdfBuffer.length),
+          storageType: storageMode.toUpperCase() as any,
+          storagePath: uploadResult.storagePath,
           assetType: 'DOCUMENT',
           processingStatus: 'COMPLETED',
           uploadedById: user.id,

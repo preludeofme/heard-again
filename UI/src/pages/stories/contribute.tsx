@@ -4,7 +4,7 @@ import { useSession } from 'next-auth/react'
 import { fetchWithCSRF } from '@/lib/api-client'
 import Head from 'next/head'
 import { 
-  Box, Typography, Card, CardContent, Button, Grid, TextField, 
+  Box, Typography, Card, CardContent, Button, TextField,
   IconButton, Avatar, CircularProgress, Alert, Container,
   MenuItem, Select, FormControl, InputLabel
 } from '@mui/material'
@@ -251,8 +251,8 @@ export default function PublicContributePage() {
 
           {error && <Alert severity="error" sx={{ mb: 4, borderRadius: 2 }}>{error}</Alert>}
 
-          <Grid container spacing={4}>
-            <Grid item xs={12} md={showAudio ? 12 : 12}>
+          <Box>
+            <Box>
               <Card sx={{ borderRadius: 4, boxShadow: 2, overflow: 'hidden' }}>
                 <CardContent sx={{ p: 4 }}>
                   <Box sx={{ display: 'flex', gap: 2, mb: 4 }}>
@@ -313,8 +313,8 @@ export default function PublicContributePage() {
                       sx={{ mb: 3 }}
                     />
                     
-                    <Grid container spacing={2} sx={{ mb: 3 }}>
-                      <Grid item xs={12} sm={6}>
+                    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2, mb: 3 }}>
+                      <Box>
                         <TextField
                           fullWidth
                           label="When did this happen? (Optional)"
@@ -323,8 +323,8 @@ export default function PublicContributePage() {
                           onChange={(e) => setStoryDate(e.target.value)}
                           InputLabelProps={{ shrink: true }}
                         />
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
+                      </Box>
+                      <Box>
                         <TextField
                           fullWidth
                           label="Where did this happen? (Optional)"
@@ -332,8 +332,8 @@ export default function PublicContributePage() {
                           value={location}
                           onChange={(e) => setLocation(e.target.value)}
                         />
-                      </Grid>
-                    </Grid>
+                      </Box>
+                    </Box>
 
                     {showAudio ? (
                       <Box sx={{ mt: 2 }}>
@@ -374,8 +374,8 @@ export default function PublicContributePage() {
                   </Box>
                 </CardContent>
               </Card>
-            </Grid>
-          </Grid>
+            </Box>
+          </Box>
         </Container>
       </Box>
     </Layout>

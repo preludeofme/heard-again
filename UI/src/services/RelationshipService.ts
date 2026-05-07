@@ -211,12 +211,16 @@ export class RelationshipService {
       )
     }
 
+    if (relationshipType === 'SIBLING') {
+      throw new AppError('SIBLING relationships must be created via shared parent', 400, 'SIBLING_NOT_DIRECT')
+    }
+
     // Handle parent/child relationship
     return this.createParentChildRelationship(
       familyspaceId,
       sourcePersonId,
       targetPersonId,
-      relationshipType,
+      relationshipType as 'PARENT' | 'CHILD',
       relationshipKind,
       isBiological,
       target,

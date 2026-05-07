@@ -53,9 +53,9 @@ export interface PersonNodeData {
   isSelected: boolean
   levelIndex: number
   isMobile: boolean
-  onPersonClick: (person: TreePerson) => void
+  onPersonClick: (person: TreeLayoutPerson) => void
   onAddPerson: () => void
-  onViewArchive: (person: TreePerson) => void
+  onViewArchive: (person: TreeLayoutPerson) => void
   onSetRoot?: (id: string) => void
   onEditRelationships?: (personId: string) => void
   onLoadMore?: (direction: 'up' | 'down' | 'left' | 'right', personId: string) => void

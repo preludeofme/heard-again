@@ -44,6 +44,28 @@ services:
       retries: 3
       start_period: 10s
 
+  # Fake GCS server for local GCS emulation
+  fake-gcs:
+    image: fsouza/fake-gcs-server
+    ports:
+      - "4443:4443"
+    command:
+      - "-scheme"
+      - "http"
+      - "-port"
+      - "4443"
+      - "-external-url"
+      - "http://localhost:4443"
+    volumes:
+      - fake-gcs-data:/data
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:4443/storage/v1/b"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
 # Include the main compose file's networks and volumes
 networks:
   internal:
@@ -59,3 +81,4 @@ volumes:
   chroma_data:
   ollama_data:
   temp_ingestion:
+  fake-gcs-data:

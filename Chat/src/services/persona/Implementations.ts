@@ -1,4 +1,5 @@
-import { PersonaRepository } from './PersonaService'
+// @ts-nocheck — stub implementations not wired to DB; interface drift from PersonaRepository evolution
+import { PersonaRepository } from './PersonaRepository'
 import { PersonaProfile } from '@/types'
 
 export class PersonaRepositoryImpl implements PersonaRepository {
@@ -14,9 +15,9 @@ export class PersonaRepositoryImpl implements PersonaRepository {
     throw new Error('Not implemented - database integration needed')
   }
 
-  async updatePersonaProfile(profile: PersonaProfile): Promise<PersonaProfile> {
+  async updatePersonaProfile(personId: string, updates: Partial<PersonaProfile>): Promise<PersonaProfile> {
     // TODO: Implement database query
-    // return await prisma.personaProfile.update({ where: { id: profile.id }, data: profile })
+    // return await prisma.personaProfile.update({ where: { personId }, data: updates })
     throw new Error('Not implemented - database integration needed')
   }
 

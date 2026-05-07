@@ -2,6 +2,10 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { ServiceFactory } from '@/services'
 import { verifyServiceToken } from '@/utils/auth-guard'
 
+// res.flush() is provided by Next.js compression middleware at runtime
+// but is not reflected in the NextApiResponse type.
+type FlushableResponse = NextApiResponse & { flush: () => void }
+
 // Allow long-running SSE streams (LLM generation + validation can exceed 60s)
 export const config = {
   api: { bodyParser: true, responseLimit: false },
@@ -10,7 +14,7 @@ export const config = {
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse
+  res: FlushableResponse
 ) {
   if (!verifyServiceToken(req, res)) return
 

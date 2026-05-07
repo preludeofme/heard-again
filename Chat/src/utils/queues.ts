@@ -1,4 +1,4 @@
-import { Queue, Worker, QueueScheduler, ConnectionOptions } from 'bullmq'
+import { Queue, Worker, ConnectionOptions } from 'bullmq'
 import Redis from 'ioredis'
 
 // Redis connection configuration
@@ -7,7 +7,6 @@ const redisConfig: ConnectionOptions = {
   port: parseInt(process.env.REDIS_PORT || '6379'),
   password: process.env.REDIS_PASSWORD,
   maxRetriesPerRequest: 3,
-  retryDelayOnFailover: 100,
   enableReadyCheck: false,
   lazyConnect: true,
 }
@@ -30,8 +29,6 @@ export const QUEUE_NAMES = {
 export class QueueManager {
   private queues: Map<string, Queue> = new Map()
   private workers: Map<string, Worker> = new Map()
-  private schedulers: Map<string, QueueScheduler> = new Map()
-
   // Create a new queue
   createQueue(name: string, options?: any): Queue {
     if (this.queues.has(name)) {
@@ -76,20 +73,6 @@ export class QueueManager {
     return worker
   }
 
-  // Create a queue scheduler
-  createScheduler(name: string): QueueScheduler {
-    if (this.schedulers.has(name)) {
-      return this.schedulers.get(name)!
-    }
-
-    const scheduler = new QueueScheduler(name, {
-      connection: redisConfig,
-    })
-
-    this.schedulers.set(name, scheduler)
-    return scheduler
-  }
-
   // Get a queue by name
   getQueue(name: string): Queue | undefined {
     return this.queues.get(name)
@@ -106,12 +89,10 @@ export class QueueManager {
 
     this.queues.forEach(queue => closePromises.push(queue.close()))
     this.workers.forEach(worker => closePromises.push(worker.close()))
-    this.schedulers.forEach(scheduler => closePromises.push(scheduler.close()))
 
     await Promise.all(closePromises)
     this.queues.clear()
     this.workers.clear()
-    this.schedulers.clear()
   }
 
   // Get queue statistics

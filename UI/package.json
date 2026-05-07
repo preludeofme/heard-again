@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
+    "workers:start": "tsx --tsconfig tsconfig.json -r tsconfig-paths/register src/workers/start-workers.ts",
     "dev": "next dev -p 4777 --experimental-https --webpack",
     "dev:debug": "NODE_ENV=development DEBUG=* next dev -p 4777 --experimental-https --webpack",
     "build": "next build --webpack",
@@ -92,6 +93,7 @@
     "jest-environment-jsdom": "^30.3.0",
     "prisma": "^6.6.0",
     "ts-jest": "^29.4.6",
+    "tsconfig-paths": "^4.2.0",
     "tsx": "^4.19.0"
   }
 }

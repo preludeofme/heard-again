@@ -16,18 +16,21 @@ import {
 } from '@mui/icons-material'
 
 import { TreeNodeLevel, TreePerson } from './types'
+import type { TreeLayoutPerson } from './xyflow/types'
+
+type PersonArg = TreePerson | TreeLayoutPerson
 
 interface FamilyMemberCardProps {
-  person: TreePerson
+  person: PersonArg
   level: TreeNodeLevel
   isSelf?: boolean
   isSelected?: boolean
   levelIndex?: number
   cardWidth: number
   isMobile: boolean
-  onPersonClick: (person: TreePerson) => void
+  onPersonClick: (person: PersonArg) => void
   onAddPerson: () => void
-  onViewArchive: (person: TreePerson) => void
+  onViewArchive: (person: PersonArg) => void
   onToggleSiblings?: () => void
   onSetRoot?: (id: string) => void
   onEditRelationships?: (personId: string) => void

@@ -5,7 +5,7 @@ import { logger } from '@/lib/logger'
 
 interface RelationshipEdge {
   id: string
-  type: 'SPOUSE' | 'PARENT' | 'CHILD'
+  type: 'SPOUSE' | 'PARENT' | 'CHILD' | 'SIBLING'
   direction: 'outgoing' | 'incoming'
   isBiological: boolean
   notes: string | null
@@ -95,11 +95,11 @@ export default apiHandler({
     const familiesByPersonId = new Map<string, { isParent: boolean, isChild: boolean, unit: any }[]>()
 
     allFamilyUnits.forEach(unit => {
-      unit.parents.forEach(p => {
+      unit.parents.forEach((p: { parentId: string }) => {
         if (!familiesByPersonId.has(p.parentId)) familiesByPersonId.set(p.parentId, [])
         familiesByPersonId.get(p.parentId)!.push({ isParent: true, isChild: false, unit })
       })
-      unit.children.forEach(c => {
+      unit.children.forEach((c: { childId: string }) => {
         if (!familiesByPersonId.has(c.childId)) familiesByPersonId.set(c.childId, [])
         familiesByPersonId.get(c.childId)!.push({ isParent: false, isChild: true, unit })
       })
@@ -185,7 +185,7 @@ export default apiHandler({
       // For anyone in the tree, find families where they are a parent (their children's unit)
       families.filter(f => f.isParent).forEach(f => {
         addFamilyUnit(f.unit)
-        f.unit.children.forEach(c => {
+        f.unit.children.forEach((c: { childId: string }) => {
           traverseDown(c.childId, currentDepth + 1)
         })
       })
@@ -216,8 +216,8 @@ export default apiHandler({
     baseCollected.forEach(id => {
       const families = familiesByPersonId.get(id) || []
       families.forEach(f => {
-        if (f.unit.parents.some(p => p.parentId === id)) {
-          f.unit.parents.forEach(p => results.add(p.parentId))
+        if (f.unit.parents.some((p: { parentId: string }) => p.parentId === id)) {
+          f.unit.parents.forEach((p: { parentId: string }) => results.add(p.parentId))
         }
       })
     })
@@ -233,7 +233,7 @@ export default apiHandler({
       families.forEach(({ isParent, isChild, unit }) => {
         if (isParent) {
           // Spouses
-          unit.parents.forEach(p => {
+          unit.parents.forEach((p: any) => {
             if (p.parentId !== person.id && peopleIdsInResult.has(p.parentId)) {
               edges.push({
                 id: `spouse-${person.id}-${p.parentId}`,
@@ -246,7 +246,7 @@ export default apiHandler({
             }
           })
           // Children
-          unit.children.forEach(c => {
+          unit.children.forEach((c: any) => {
             edges.push({
               id: `parent-${person.id}-${c.childId}`,
               type: 'CHILD',
@@ -260,7 +260,7 @@ export default apiHandler({
         
         if (isChild) {
           // Parents
-          unit.parents.forEach(p => {
+          unit.parents.forEach((p: any) => {
             edges.push({
               id: `child-${person.id}-${p.parentId}`,
               type: 'PARENT',
@@ -272,7 +272,7 @@ export default apiHandler({
           })
 
           // Siblings
-          unit.children.forEach(c => {
+          unit.children.forEach((c: any) => {
             if (c.childId !== person.id) {
               edges.push({
                 id: `sibling-${person.id}-${c.childId}`,

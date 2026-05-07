@@ -257,9 +257,10 @@ export class VoiceIntegrationServiceImpl implements VoiceIntegrationService {
     return similarity
   }
 
-  private async createStreamIterator(stream: ReadableStream): AsyncIterable<VoiceChunk> {
+  private createStreamIterator(stream: ReadableStream): AsyncIterable<VoiceChunk> {
     const reader = stream.getReader()
     const decoder = new TextDecoder()
+    const self = this
 
     return {
       async *[Symbol.asyncIterator]() {
@@ -292,7 +293,7 @@ export class VoiceIntegrationServiceImpl implements VoiceIntegrationService {
                 try {
                   const parsed = JSON.parse(data)
                   if (parsed.audio) {
-                    const audioBuffer = this.base64ToArrayBuffer(parsed.audio)
+                    const audioBuffer = self.base64ToArrayBuffer(parsed.audio)
                     yield {
                       audio: audioBuffer,
                       isFinal: false,

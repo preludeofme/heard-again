@@ -11,13 +11,13 @@ export class IngestionWorker {
   private worker: Worker | null = null
   private ingestionService: SimpleIngestionService
   private documentProcessor: SimpleDocumentProcessor
+  private documentRepository: PrismaDocumentRepository
 
   constructor() {
-    // Create services
-    const documentRepository = new PrismaDocumentRepository()
+    this.documentRepository = new PrismaDocumentRepository()
     const embeddingGenerator = new EmbeddingGeneratorImpl()
     this.ingestionService = new SimpleIngestionService(
-      documentRepository,
+      this.documentRepository,
       embeddingGenerator
     )
     this.documentProcessor = new SimpleDocumentProcessor()
@@ -69,10 +69,34 @@ export class IngestionWorker {
   }
 
   private async processJob(job: any): Promise<any> {
-    const { documentId, filePath, familyspaceId, mimeType, title, personId, config, traceId } = job.data
+    const { documentId, storageUrl, familyspaceId, mimeType, title, personId, config, traceId } = job.data
     const startMs = Date.now()
 
     logger.info({ jobId: job.id, documentId, familyspaceId, mimeType, title, traceId }, 'RAG ingestion job started')
+
+    // Download the file from storageUrl into a per-worker temp path.
+    // The worker owns the full file lifecycle — no shared volumes required.
+    const fs = require('fs').promises
+    const path = require('path')
+    const axios = require('axios')
+
+    const ext = getExtForMime(mimeType)
+    const tempDir = path.join('/tmp', 'heard-again-ingestion', familyspaceId)
+    await fs.mkdir(tempDir, { recursive: true })
+    const filePath = path.join(tempDir, `${documentId}${ext}`)
+
+    try {
+      const dlResponse = await axios.get(storageUrl, {
+        responseType: 'arraybuffer',
+        timeout: 120000,
+        maxContentLength: 100 * 1024 * 1024,
+        maxBodyLength: 100 * 1024 * 1024,
+      })
+      await fs.writeFile(filePath, Buffer.from(dlResponse.data))
+      logger.info({ documentId, traceId, filePath, sizeBytes: dlResponse.data.byteLength }, 'File downloaded for ingestion')
+    } catch (dlError) {
+      throw new Error(`Failed to download file for ingestion: ${dlError instanceof Error ? dlError.message : String(dlError)}`)
+    }
 
     try {
       // Step 1: Extract text
@@ -83,7 +107,6 @@ export class IngestionWorker {
         currentOperation: 'Reading file and extracting text content'
       })
 
-      const fs = require('fs').promises
       const buffer = await fs.readFile(filePath)
 
       // Extract text using document processor (mimeType comes from job.data)
@@ -206,17 +229,16 @@ export class IngestionWorker {
 
     } catch (error) {
       await JobUtils.addJobError(job, error instanceof Error ? error.message : 'Unknown error')
-      
+
       logger.error(
         { jobId: job.id, documentId, traceId, err: error instanceof Error ? error.message : String(error) },
         'Document processing failed'
       )
-      
+
       // Only clean up temp file on final attempt — preserve for BullMQ retries
       const maxAttempts = job.opts?.attempts || 3
       if (job.attemptsMade >= maxAttempts) {
         try {
-          const fs = require('fs').promises
           await fs.unlink(filePath)
           logger.info({ filePath }, 'Temp file cleaned up after final attempt')
         } catch (cleanupError) {
@@ -226,25 +248,6 @@ export class IngestionWorker {
 
       throw error
     }
-  }
-
-  private getMimeTypeFromPath(filePath: string): string {
-    const path = require('path')
-    const ext = path.extname(filePath).toLowerCase()
-    
-    const mimeTypes: Record<string, string> = {
-      '.pdf': 'application/pdf',
-      '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      '.doc': 'application/msword',
-      '.txt': 'text/plain',
-      '.md': 'text/markdown',
-      '.jpg': 'image/jpeg',
-      '.jpeg': 'image/jpeg',
-      '.png': 'image/png',
-      '.tiff': 'image/tiff'
-    }
-
-    return mimeTypes[ext] || 'application/octet-stream'
   }
 
   private chunkText(text: string, config: any): Array<{ id: string; content: string; index: number }> {
@@ -289,7 +292,7 @@ export class IngestionWorker {
 
     try {
       // 1. Update document record with extracted content + mark as completed
-      await this.ingestionService.documentRepository.updateDocument({
+      await this.documentRepository.updateDocument({
         id: documentData.id,
         content: documentData.content,
         status: DocumentStatus.PROCESSED,
@@ -299,7 +302,7 @@ export class IngestionWorker {
 
       // 2. Persist chunks + embeddings to Postgres
       for (const chunk of documentData.chunks) {
-        await this.ingestionService.documentRepository.createChunk({
+        await this.documentRepository.createChunk({
           id: chunk.id,
           documentId: documentData.id,
           chunkIndex: chunk.index,
@@ -361,6 +364,21 @@ export class IngestionWorker {
       throw error
     }
   }
+}
+
+function getExtForMime(mimeType: string): string {
+  const map: Record<string, string> = {
+    'application/pdf': '.pdf',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
+    'application/msword': '.doc',
+    'text/plain': '.txt',
+    'text/csv': '.csv',
+    'text/markdown': '.md',
+    'image/jpeg': '.jpg',
+    'image/png': '.png',
+    'image/tiff': '.tiff',
+  }
+  return map[mimeType] || '.bin'
 }
 
 // Worker startup

@@ -8,6 +8,8 @@ import {
   useReactFlow,
   ReactFlowProvider,
   type NodeTypes,
+  type Node,
+  type Edge,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { PersonNode } from './nodes/PersonNode'
@@ -40,7 +42,7 @@ interface ReactFlowTreeCanvasProps {
   onAddPerson: () => void
   onViewArchive: (person: TreeLayoutPerson) => void
   onSetRoot?: (id: string) => void
-  onLoadMore?: (direction: 'up' | 'down', personId: string) => void
+  onLoadMore?: (direction: 'up' | 'down' | 'left' | 'right', personId: string) => void
   onEditRelationships?: (personId: string) => void
   isPanMode?: boolean
   fitViewTrigger?: number
@@ -63,8 +65,8 @@ function ReactFlowTreeCanvasInner({
   fitViewTrigger,
 }: ReactFlowTreeCanvasProps): React.JSX.Element {
   const { zoomIn, zoomOut, fitView, setCenter, getNodes } = useReactFlow()
-  const [nodes, setNodes, onNodesChange] = useNodesState([])
-  const [edges, setEdges, onEdgesChange] = useEdgesState([])
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([])
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
 
   // Keep a stable ref to callbacks to avoid re-running layout when parent re-renders
   const callbacksRef = useRef({ onPersonClick, onAddPerson, onViewArchive, onSetRoot, onLoadMore, onEditRelationships, isMobile })

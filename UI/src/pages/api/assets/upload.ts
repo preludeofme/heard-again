@@ -255,7 +255,7 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse) {
         assetId: asset.id,
         familyspaceId: familyspaceId,
         title: file.originalFilename || asset.filename,
-        createdById: user?.id || null,
+        createdById: user?.id || 'public',
       },
     })
     if (personId) {

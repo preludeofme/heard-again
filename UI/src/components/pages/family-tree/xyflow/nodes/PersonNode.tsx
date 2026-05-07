@@ -246,9 +246,9 @@ export function PersonNode({ data }: NodeProps): React.JSX.Element {
           levelIndex={d.levelIndex}
           cardWidth={d.person.width}
           isMobile={d.isMobile}
-          onPersonClick={d.onPersonClick}
+          onPersonClick={d.onPersonClick as any}
           onAddPerson={d.onAddPerson}
-          onViewArchive={d.onViewArchive}
+          onViewArchive={d.onViewArchive as any}
           onSetRoot={d.onSetRoot}
           onEditRelationships={d.onEditRelationships}
           compact={true}

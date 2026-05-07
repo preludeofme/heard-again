@@ -3,6 +3,7 @@ import logging
 import os
 import time
 import uuid
+from pythonjsonlogger import jsonlogger
 from pathlib import Path
 from typing import Optional, Annotated
 
@@ -39,11 +40,15 @@ from app.text_chunker import chunk_text
 from app.audio_encoder import encode_pcm_to_mp3, check_ffmpeg_available
 from app.services.consent_validator import consent_validator
 from app.services.encryption_service import encryption_service
+from app.services import gcs_profile_storage
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-)
+_handler = logging.StreamHandler()
+_handler.setFormatter(jsonlogger.JsonFormatter(
+    fmt="%(asctime)s %(levelname)s %(name)s %(message)s",
+    datefmt="%Y-%m-%dT%H:%M:%S",
+))
+logging.root.handlers = [_handler]
+logging.root.setLevel(logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Constants for error messages to avoid duplication
@@ -411,19 +416,20 @@ async def create_voice_profile(
         # Reference metadata path (for auto-deletion)
         ref_meta_path = familyspace_dir / f"{req.fileId}{JSON_EXTENSION}"
 
-        # Save style metadata alongside the profile
-        if req.styleInstruct or style_params:
-            style_meta_path = familyspace_profiles_dir / f"{safe_name}{JSON_EXTENSION}"
-            metadata = {
-                "profileId": safe_name,
-                "styleInstruct": req.styleInstruct or "",
-                "styleParams": style_params,
-                "familyspaceId": auth_data['familyspace_id'],
-                "createdBy": auth_data['user_id'],
-                "fileId": req.fileId
-            }
-            style_meta_path.write_text(json.dumps(metadata))
-            logger.info(f"Saved style metadata: {style_meta_path}", extra={'user_context': user_context})
+        # Save profile metadata (always — required for GCS listing across pods)
+        metadata = {
+            "profileId": safe_name,
+            "styleInstruct": req.styleInstruct or "",
+            "styleParams": style_params,
+            "familyspaceId": auth_data['familyspace_id'],
+            "createdBy": auth_data['user_id'],
+            "fileId": req.fileId,
+        }
+        style_meta_path = familyspace_profiles_dir / f"{safe_name}{JSON_EXTENSION}"
+        style_meta_path.write_text(json.dumps(metadata))
+
+        # Upload to GCS so the profile is accessible on any pod (horizontal scaling)
+        gcs_profile_storage.upload_profile(profile_path, style_meta_path, auth_data['familyspace_id'], safe_name)
 
         await log_auth_event('VOICE_PROFILE_CREATED', auth_data, {
             'profileId': safe_name,
@@ -462,33 +468,34 @@ async def list_voice_profiles(auth_data: Annotated[dict, Depends(require_familys
     """List all saved voice profiles for the authenticated user's familyspace."""
     user_context = get_user_context(auth_data)
     
-    profiles = []
-    familyspace_profiles_dir = VOICE_PROFILES_DIR / auth_data['familyspace_id']
-    
-    # Only list profiles from the user's familyspace
-    for pt_file in sorted(familyspace_profiles_dir.glob("*.pt")):
-        stat = pt_file.stat()
-        
-        # Load metadata for additional info
-        meta_path = familyspace_profiles_dir / f"{pt_file.stem}{JSON_EXTENSION}"
-        metadata = {}
-        if meta_path.exists():
-            try:
-                metadata = json.loads(meta_path.read_text())
-            except Exception:
-                pass
-        
-        profiles.append({
-            "id": pt_file.stem,
-            "name": pt_file.stem.replace("_", " ").title(),
-            "fileName": pt_file.name,
-            "filePath": str(pt_file),
-            "sizeBytes": stat.st_size,
-            "createdAt": stat.st_mtime,
-            "createdBy": metadata.get("createdBy"),
-            "familyspaceId": auth_data['familyspace_id'],
-            "styleInstruct": metadata.get("styleInstruct"),
-        })
+    # GCS is source of truth for cross-pod scaling; fall back to local filesystem in dev
+    gcs_profiles = gcs_profile_storage.list_profiles_from_gcs(auth_data['familyspace_id'])
+    if gcs_profiles is not None:
+        profiles = gcs_profiles
+    else:
+        profiles = []
+        familyspace_profiles_dir = VOICE_PROFILES_DIR / auth_data['familyspace_id']
+
+        for pt_file in sorted(familyspace_profiles_dir.glob("*.pt")):
+            stat = pt_file.stat()
+            meta_path = familyspace_profiles_dir / f"{pt_file.stem}{JSON_EXTENSION}"
+            metadata: dict = {}
+            if meta_path.exists():
+                try:
+                    metadata = json.loads(meta_path.read_text())
+                except Exception:
+                    pass
+            profiles.append({
+                "id": pt_file.stem,
+                "name": pt_file.stem.replace("_", " ").title(),
+                "fileName": pt_file.name,
+                "filePath": str(pt_file),
+                "sizeBytes": stat.st_size,
+                "createdAt": stat.st_mtime,
+                "createdBy": metadata.get("createdBy"),
+                "familyspaceId": auth_data['familyspace_id'],
+                "styleInstruct": metadata.get("styleInstruct"),
+            })
 
     await log_auth_event('VOICE_PROFILES_LISTED', auth_data, {'count': len(profiles)})
     
@@ -508,10 +515,13 @@ async def delete_voice_profile(
     profile_path = familyspace_profiles_dir / f"{profile_id}.pt"
     
     if not profile_path.exists():
-        await log_auth_event('PROFILE_DELETE_NOT_FOUND', auth_data, {'profileId': profile_id})
-        raise HTTPException(status_code=404, detail="Voice profile not found")
+        # Profile may exist in GCS only on a fresh pod — check before returning 404
+        if not gcs_profile_storage.profile_exists_in_gcs(auth_data['familyspace_id'], profile_id):
+            await log_auth_event('PROFILE_DELETE_NOT_FOUND', auth_data, {'profileId': profile_id})
+            raise HTTPException(status_code=404, detail="Voice profile not found")
 
-    # Verify tenant access
+    # Verify tenant access via local metadata when available
+    # (path-based isolation already enforces familyspace separation when metadata is absent)
     meta_path = familyspace_profiles_dir / f"{profile_id}{JSON_EXTENSION}"
     if meta_path.exists():
         try:
@@ -522,11 +532,12 @@ async def delete_voice_profile(
             raise HTTPException(status_code=403, detail="Access denied")
 
     try:
-        profile_path.unlink()
-        # Also delete metadata if exists
+        if profile_path.exists():
+            profile_path.unlink()
         if meta_path.exists():
             meta_path.unlink()
-            
+        gcs_profile_storage.delete_profile(auth_data['familyspace_id'], profile_id)
+
         await log_auth_event('VOICE_PROFILE_DELETED', auth_data, {'profileId': profile_id})
         return {"success": True, "message": f"Profile '{profile_id}' deleted"}
     except Exception as e:
@@ -574,7 +585,6 @@ async def design_voice(
             text=req.text,
             instruct=req.instruct,
             language=req.language,
-            familyspace_id=auth_data['familyspace_id']  # Pass familyspace for scoping
         )
         elapsed = time.time() - start
 
@@ -658,9 +668,29 @@ async def design_and_clone(
             instruct=req.instruct,
             profile_name=safe_name,
             language=req.language,
-            familyspace_id=auth_data['familyspace_id']  # Pass familyspace for scoping
         )
         elapsed = time.time() - start
+
+        # Move to familyspace directory for tenant isolation
+        familyspace_profiles_dir = VOICE_PROFILES_DIR / auth_data['familyspace_id']
+        familyspace_profiles_dir.mkdir(parents=True, exist_ok=True)
+        familyspace_profile_path = familyspace_profiles_dir / f"{safe_name}.pt"
+        if profile_path != familyspace_profile_path:
+            profile_path.rename(familyspace_profile_path)
+            profile_path = familyspace_profile_path
+
+        # Save metadata and upload to GCS for cross-pod availability
+        profile_meta = {
+            "profileId": safe_name,
+            "styleInstruct": req.instruct,
+            "styleParams": {},
+            "familyspaceId": auth_data['familyspace_id'],
+            "createdBy": auth_data['user_id'],
+            "source": "design_and_clone",
+        }
+        meta_path = familyspace_profiles_dir / f"{safe_name}{JSON_EXTENSION}"
+        meta_path.write_text(json.dumps(profile_meta))
+        gcs_profile_storage.upload_profile(profile_path, meta_path, auth_data['familyspace_id'], safe_name)
 
         # Get the design audio ID for preview
         design_audio_id = Path(design_audio_path).stem.replace("design_", "")
@@ -772,9 +802,29 @@ async def blend_voice(
             style_ref_text=style_ref_text,
             profile_name=safe_name,
             language=req.language,
-            familyspace_id=auth_data['familyspace_id']  # Pass familyspace for scoping
         )
         elapsed = time.time() - start
+
+        # Move to familyspace directory for tenant isolation
+        familyspace_profiles_dir = VOICE_PROFILES_DIR / auth_data['familyspace_id']
+        familyspace_profiles_dir.mkdir(parents=True, exist_ok=True)
+        familyspace_profile_path = familyspace_profiles_dir / f"{safe_name}.pt"
+        if profile_path != familyspace_profile_path:
+            profile_path.rename(familyspace_profile_path)
+            profile_path = familyspace_profile_path
+
+        # Save metadata and upload to GCS for cross-pod availability
+        profile_meta = {
+            "profileId": safe_name,
+            "styleInstruct": req.instruct,
+            "styleParams": {},
+            "familyspaceId": auth_data['familyspace_id'],
+            "createdBy": auth_data['user_id'],
+            "source": "blend_voice",
+        }
+        meta_path = familyspace_profiles_dir / f"{safe_name}{JSON_EXTENSION}"
+        meta_path.write_text(json.dumps(profile_meta))
+        gcs_profile_storage.upload_profile(profile_path, meta_path, auth_data['familyspace_id'], safe_name)
 
         design_audio_id = Path(design_audio_path).stem.replace("design_", "")
         
@@ -883,6 +933,10 @@ async def synthesize_speech(
         for f in files:
             logger.info(f"DEBUG: File '{f.name}' at path: {f}")
     
+    if not profile_path.exists():
+        # Cache miss on this pod — attempt download from GCS before raising 404
+        gcs_profile_storage.ensure_local(familyspace_id, safe_profile_id, familyspace_profiles_dir)
+
     if not profile_path.exists():
         await log_auth_event('PROFILE_ACCESS_DENIED', auth_data, {
             'profileId': req.profileId,
@@ -1012,6 +1066,10 @@ async def synthesize_speech_stream(
     safe_profile_id = "".join(c if c.isalnum() or c in "-_ " else "" for c in req.profileId)
     safe_profile_id = safe_profile_id.strip().replace(" ", "_")
     profile_path = familyspace_profiles_dir / f"{safe_profile_id}.pt"
+
+    if not profile_path.exists():
+        # Cache miss on this pod — attempt download from GCS before raising 404
+        gcs_profile_storage.ensure_local(familyspace_id, safe_profile_id, familyspace_profiles_dir)
 
     if not profile_path.exists():
         await log_auth_event('PROFILE_ACCESS_DENIED', auth_data, {

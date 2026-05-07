@@ -1,14 +1,20 @@
 import { StorageProvider } from './providers'
 import { LocalStorageProvider } from './providers/local-provider'
-import { GCPStorageProvider } from './providers/gcp-provider'
+import { GCSStorageProvider } from './providers/gcp-provider'
 import { S3StorageProvider } from './providers/s3-provider'
 
 export interface StorageConfig {
-  mode: 'local' | 'gcp' | 's3' | 'r2'
+  mode: 'local' | 'gcs' | 'gcp' | 's3' | 'r2'
   local?: {
     uploadDir: string
     baseUrl: string
   }
+  gcs?: {
+    bucketName: string
+    keyFilename?: string
+    projectId?: string
+  }
+  /** @deprecated Use gcs */
   gcp?: {
     bucketName: string
     keyFilename?: string
@@ -52,20 +58,24 @@ export class StorageService {
           throw new Error('Local storage configuration is required')
         }
         return new LocalStorageProvider(config.local)
-      
-      case 'gcp':
-        if (!config.gcp) {
-          throw new Error('GCP storage configuration is required')
+
+      case 'gcs':
+      case 'gcp': {
+        // 'gcs' is preferred; 'gcp' is kept as a backward-compat alias
+        const gcsCfg = config.gcs ?? config.gcp
+        if (!gcsCfg) {
+          throw new Error('GCS storage configuration is required')
         }
-        return new GCPStorageProvider(config.gcp)
-      
+        return new GCSStorageProvider(gcsCfg)
+      }
+
       case 's3':
       case 'r2':
         if (!config.s3) {
           throw new Error('S3/R2 storage configuration is required')
         }
         return new S3StorageProvider(config.s3)
-      
+
       default:
         throw new Error(`Unsupported storage mode: ${config.mode}`)
     }
@@ -138,25 +148,37 @@ let storageServiceInstance: StorageService | null = null
 
 export function getStorageService(): StorageService {
   if (!storageServiceInstance) {
+    // GCS_BUCKET_NAME is preferred; GCP_BUCKET_NAME is a backward-compat fallback
+    const gcsBucketName = process.env.GCS_BUCKET_NAME ?? process.env.GCP_BUCKET_NAME
+    const gcsProjectId = process.env.GOOGLE_CLOUD_PROJECT ?? process.env.GCP_PROJECT_ID
+    const gcsKeyFilename = process.env.GOOGLE_APPLICATION_CREDENTIALS ?? process.env.GCP_KEY_FILENAME
+
+    const rawMode = process.env.STORAGE_MODE ?? 'local'
+    const mode = rawMode as StorageConfig['mode']
+
     const config: StorageConfig = {
-      mode: (process.env.STORAGE_MODE as any) || 'local',
+      mode,
       local: {
-        uploadDir: process.env.UPLOAD_DIR || './uploads',
-        baseUrl: process.env.UPLOAD_BASE_URL || '/api/assets',
+        uploadDir: process.env.UPLOAD_DIR ?? './uploads',
+        baseUrl: process.env.UPLOAD_BASE_URL ?? '/api/assets',
       },
-      gcp: process.env.GCP_BUCKET_NAME ? {
-        bucketName: process.env.GCP_BUCKET_NAME,
-        keyFilename: process.env.GCP_KEY_FILENAME,
-        projectId: process.env.GCP_PROJECT_ID,
-      } : undefined,
-      s3: process.env.S3_BUCKET ? {
-        bucket: process.env.S3_BUCKET,
-        region: process.env.S3_REGION || 'us-east-1',
-        accessKey: process.env.S3_ACCESS_KEY || '',
-        secretKey: process.env.S3_SECRET_KEY || '',
-        endpoint: process.env.S3_ENDPOINT,
-        publicUrlBase: process.env.S3_PUBLIC_URL_BASE,
-      } : undefined,
+      gcs: gcsBucketName
+        ? {
+            bucketName: gcsBucketName,
+            keyFilename: gcsKeyFilename,
+            projectId: gcsProjectId,
+          }
+        : undefined,
+      s3: process.env.S3_BUCKET
+        ? {
+            bucket: process.env.S3_BUCKET,
+            region: process.env.S3_REGION ?? 'us-east-1',
+            accessKey: process.env.S3_ACCESS_KEY ?? '',
+            secretKey: process.env.S3_SECRET_KEY ?? '',
+            endpoint: process.env.S3_ENDPOINT,
+            publicUrlBase: process.env.S3_PUBLIC_URL_BASE,
+          }
+        : undefined,
     }
 
     storageServiceInstance = new StorageService(config)

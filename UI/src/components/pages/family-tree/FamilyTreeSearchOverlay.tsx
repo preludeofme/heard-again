@@ -92,13 +92,12 @@ export function FamilyTreeSearchOverlay({
             </Typography>
             <FamilyMemberSearch
               members={searchableMembers}
-              onSelect={(id) => {
-                onMemberSelect(id)
-                onClose()
+              onSelect={(member) => {
+                if (member) {
+                  onMemberSelect(member.id)
+                  onClose()
+                }
               }}
-              query={query}
-              autoFocus={false}
-              showAllOnEmpty={true}
             />
           </Box>
         </Box>

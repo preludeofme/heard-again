@@ -98,13 +98,13 @@ export function TopolaTreeCanvas({
       const chart = new HourglassChart({
         data: dataAdapter,
         renderer,
-        svgSelector: chartGroup.node() as any, // Pass the group node
+        svgSelector: chartGroup.node() as any,
         startIndi,
         horizontal: false,
         animate: true,
         ancestorGenerations: loadedDepths.up,
         descendantGenerations: loadedDepths.down,
-      });
+      } as any);
 
       chartRef.current = chart;
       chart.render();
@@ -214,10 +214,10 @@ export function TopolaTreeCanvas({
               role: apiPerson.id === rootPersonId ? 'Self' : 'Family Member',
               avatar: apiPerson.avatarUrl || '',
               memories: apiPerson.counts?.stories || 0,
-              sex: apiPerson.sex,
               generation: 0,
               selected: apiPerson.id === rootPersonId
             };
+            (treePerson as any).sex = apiPerson.sex;
 
             return (
               <Box

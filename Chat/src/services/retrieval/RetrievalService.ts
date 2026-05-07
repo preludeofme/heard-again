@@ -1,14 +1,15 @@
-import { 
-  RetrievalService, 
-  SearchContext, 
-  RetrievedDocument, 
-  Document, 
+import {
+  RetrievalService,
+  SearchContext,
+  RetrievedDocument,
+  Document,
   DocumentChunk,
   DocumentType,
   DocumentRepository,
   SearchResult,
   SearchQuery
 } from '@/types'
+import { DocumentStatus, EmbeddingStatus } from '@/types/retrieval'
 import { PrismaDocumentRepository } from '@/repositories/DocumentRepository'
 import { ChromaClient, DefaultEmbeddingFunction } from 'chromadb'
 import { v4 as uuidv4 } from 'uuid'
@@ -90,14 +91,15 @@ export class RetrievalServiceImpl implements RetrievalService {
           // If no document found in DB, create one from ChromaDB data
           if (!document && metadata) {
             document = {
-              id: metadataDocumentId || chunkId,
-              title: metadata.title || 'Untitled Document',
+              id: String(metadataDocumentId || chunkId),
+              familyspaceId: String(metadata.familyspaceId || context.familyspaceId || ''),
+              title: String(metadata.title || 'Untitled Document'),
               content: content || '',
-              source: metadata.source || 'chromadb',
-              personId: metadata.personId || context.personId || '',
+              source: String(metadata.source || 'chromadb'),
+              personId: String(metadata.personId || context.personId || ''),
               documentType: (metadata.documentType as DocumentType) || DocumentType.OTHER,
-              status: 'processed',
-              embeddingStatus: 'completed',
+              status: DocumentStatus.PROCESSED,
+              embeddingStatus: EmbeddingStatus.COMPLETED,
               metadata: {},
               createdAt: new Date(Number(metadata.createdAt) || Date.now()),
               updatedAt: new Date(Number(metadata.createdAt) || Date.now())
@@ -122,7 +124,7 @@ export class RetrievalServiceImpl implements RetrievalService {
               personId: document.personId || '',
               documentType: (metadata?.documentType as DocumentType) ?? DocumentType.OTHER,
               relevanceScore,
-              extractedAt: new Date(Number(metadata?.extractedAt) || metadata?.createdAt || Date.now()),
+              extractedAt: new Date(Number(metadata?.extractedAt) || Number(metadata?.createdAt) || Date.now()),
               embeddingModel: String(metadata?.embeddingModel ?? 'nomic-embed-text'),
               chunkSize: Number(metadata?.chunkSize ?? (content?.length ?? 0)),
               overlapSize: Number(metadata?.overlapSize ?? 0)
@@ -164,6 +166,10 @@ export class RetrievalServiceImpl implements RetrievalService {
     // 4. Apply diversity metrics
 
     return documents.sort((a, b) => b.metadata.relevanceScore - a.metadata.relevanceScore)
+  }
+
+  async getDocumentById(documentId: string): Promise<Document | null> {
+    return await this.documentRepository.getDocument(documentId)
   }
 
   async getChunkById(chunkId: string): Promise<DocumentChunk | null> {

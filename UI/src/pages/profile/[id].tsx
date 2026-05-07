@@ -282,7 +282,7 @@ export default function PersonProfilePage() {
               {/* Action buttons */}
               <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mt: 3.5, justifyContent: { xs: 'center', md: 'flex-start' } }}>
                 <Box
-                  component={router.components ? 'div' : 'a'}
+                  component={'div' as React.ElementType}
                   onClick={() => router.push(`/family-tree?personId=${personId}`)}
                   sx={{
                     display: 'inline-flex',

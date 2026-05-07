@@ -2,6 +2,7 @@ import { logger } from '@/lib/logger'
 import { prisma } from '@/lib/prisma'
 import { successResponse, errorResponse } from '@/lib/api-helpers'
 import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
+import { getStorageService } from '@/lib/storage/storage-service'
 import formidable from 'formidable'
 import path from 'path'
 import fs from 'fs'
@@ -14,8 +15,6 @@ export const config = {
     bodyParser: false,
   },
 }
-
-const UPLOAD_DIR = path.join(process.cwd(), 'uploads')
 
 // Allowed MIME types for avatar images
 const ALLOWED_IMAGE_MIME_TYPES = [
@@ -44,16 +43,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return errorResponse(res, 'Person not found', 404)
     }
 
-    // Create avatars directory
-    const avatarDir = path.join(UPLOAD_DIR, user.familyspaceId, 'avatars')
-    if (!fs.existsSync(avatarDir)) {
-      fs.mkdirSync(avatarDir, { recursive: true })
-    }
+    // Use a temp directory for formidable — cleaned up after upload
+    const tempDir = path.join(process.cwd(), 'temp-uploads', 'avatars', user.familyspaceId)
+    fs.mkdirSync(tempDir, { recursive: true })
 
     const form = formidable({
       keepExtensions: false, // Don't trust original extensions
       maxFileSize: 5 * 1024 * 1024, // 5MB
-      uploadDir: avatarDir, // Restrict to secure avatar directory
+      uploadDir: tempDir, // Temporary directory — cleaned up after use
       filename: () => `${uuidv4()}.tmp`, // Use temporary extension
       filter: ({ mimetype }) => {
         // Basic filter - will be validated more thoroughly below
@@ -109,22 +106,50 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       validationResult.detectedType!
     )
 
-    // Move to final location with secure name
-    const finalPath = path.join(avatarDir, secureFilename)
-    fs.renameSync(file.filepath, finalPath)
+    // Upload to storage service — no persistent local write
+    const storageService = getStorageService()
+    const storageMode = storageService.getMode()
+    const uploadResult = await storageService.uploadFile(
+      fileBuffer,
+      secureFilename,
+      validationResult.detectedType!,
+      {
+        folder: `${user.familyspaceId}/avatars`,
+        metadata: {
+          uploadedById: user.id,
+          familyspaceId: user.familyspaceId,
+          originalName: file.originalFilename || 'avatar',
+          importType: 'AVATAR',
+          validatedType: validationResult.detectedType!,
+        },
+      }
+    )
+
+    // Clean up temp file
+    try {
+      fs.unlinkSync(file.filepath)
+    } catch (cleanupError) {
+      logger.warn('Failed to clean up avatar temp file:', cleanupError)
+    }
+
+    // Clean up temp directory
+    try {
+      fs.rmSync(tempDir, { recursive: true, force: true })
+    } catch (cleanupError) {
+      logger.warn('Failed to clean up avatar temp directory:', cleanupError)
+    }
 
     // Create an asset record and link it to the person
-    const relativePath = path.relative(process.cwd(), finalPath)
     const result = await prisma.$transaction(async (tx) => {
       const asset = await tx.asset.create({
         data: {
           familyspaceId: user.familyspaceId,
-          filename: path.basename(finalPath),
+          filename: uploadResult.filename,
           originalName: file.originalFilename || 'avatar',
           mimeType: validationResult.detectedType!,
           sizeBytes: BigInt(fileBuffer.length),
-          storageType: 'LOCAL',
-          storagePath: relativePath,
+          storageType: storageMode.toUpperCase() as any,
+          storagePath: uploadResult.storagePath,
           assetType: 'IMAGE',
           processingStatus: 'COMPLETED',
           uploadedById: user.id,

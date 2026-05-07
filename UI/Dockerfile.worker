@@ -1,0 +1,40 @@
+FROM node:18-alpine AS deps
+
+RUN apk add --no-cache libc6-compat curl
+
+WORKDIR /app
+
+COPY UI/package.json UI/package-lock.json* ./
+RUN npm ci
+
+# Runtime stage — workers run TypeScript directly via tsx + tsconfig-paths
+FROM node:18-alpine AS runtime
+
+RUN apk add --no-cache libc6-compat curl
+
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+WORKDIR /app
+
+# Install all deps (tsx + tsconfig-paths are devDeps)
+COPY UI/package.json UI/package-lock.json* ./
+RUN npm ci
+
+# Copy source and config
+COPY --chown=nextjs:nodejs UI/src ./src
+COPY --chown=nextjs:nodejs UI/tsconfig.json ./tsconfig.json
+
+# Copy shared Prisma schema and generate client
+COPY prisma/ ./prisma/
+RUN npx prisma generate --schema ./prisma/schema.prisma
+
+COPY --from=deps /app/node_modules/.prisma ./node_modules/.prisma
+
+RUN mkdir -p /tmp/heard-again-workers && chown -R nextjs:nodejs /tmp/heard-again-workers
+
+USER nextjs
+
+ENV NODE_ENV=production
+
+CMD ["npm", "run", "workers:start"]

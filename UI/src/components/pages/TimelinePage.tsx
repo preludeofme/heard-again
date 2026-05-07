@@ -112,7 +112,7 @@ function formatEventDate(date: string | null, precision: string): string {
   }
 }
 
-function getPersonDisplayName(person: { firstName: string; lastName?: string; displayName?: string }): string {
+function getPersonDisplayName(person: { firstName: string; lastName?: string | null; displayName?: string | null }): string {
   return person.displayName || `${person.firstName} ${person.lastName || ''}`.trim()
 }
 

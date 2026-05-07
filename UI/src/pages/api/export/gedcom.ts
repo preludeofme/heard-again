@@ -1,8 +1,7 @@
-import fs from 'fs/promises'
-import path from 'path'
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse } from '@/lib/api-helpers'
 import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
+import { getStorageService } from '@/lib/storage/storage-service'
 function formatGedcomDate(date: Date | null | undefined): string | null {
   if (!date) return null
   const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
@@ -219,27 +218,38 @@ export default apiHandler({
 
     lines.push('0 TRLR')
 
-    const exportDir = path.join(process.cwd(), 'exports', user.familyspaceId)
-    await fs.mkdir(exportDir, { recursive: true })
-
     const fileName = `familyspace-export-${Date.now()}.ged`
-    const absoluteFilePath = path.join(exportDir, fileName)
     const gedcomContent = `${lines.join('\n')}\n`
-    await fs.writeFile(absoluteFilePath, gedcomContent, 'utf-8')
+    const gedcomBuffer = Buffer.from(gedcomContent, 'utf-8')
 
-    const stats = await fs.stat(absoluteFilePath)
-    const relativePath = path.relative(process.cwd(), absoluteFilePath)
+    const storageService = getStorageService()
+    const storageMode = storageService.getMode()
+    const uploadResult = await storageService.uploadFile(
+      gedcomBuffer,
+      fileName,
+      'application/octet-stream',
+      {
+        folder: `${user.familyspaceId}/exports`,
+        metadata: {
+          exportType: 'GEDCOM',
+          generatedBy: 'api.export.gedcom',
+          familyspaceId: user.familyspaceId,
+          peopleCount: String(people.length),
+          familyCount: String(families.length),
+        },
+      }
+    )
 
     const [asset, exportJob] = await prisma.$transaction(async (tx) => {
       const createdAsset = await tx.asset.create({
         data: {
           familyspaceId: user.familyspaceId,
-          filename: fileName,
+          filename: uploadResult.filename,
           originalName: fileName,
           mimeType: 'application/octet-stream',
-          sizeBytes: BigInt(stats.size),
-          storageType: 'LOCAL',
-          storagePath: relativePath,
+          sizeBytes: BigInt(gedcomBuffer.length),
+          storageType: storageMode.toUpperCase() as any,
+          storagePath: uploadResult.storagePath,
           assetType: 'DOCUMENT',
           processingStatus: 'COMPLETED',
           uploadedById: user.id,

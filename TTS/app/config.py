@@ -18,6 +18,9 @@ VOICE_DESIGN_MODEL_NAME = os.getenv("QWEN_TTS_DESIGN_MODEL", "Qwen/Qwen3-TTS-12H
 DEVICE = os.getenv("QWEN_TTS_DEVICE", "cuda:0")
 DTYPE = os.getenv("QWEN_TTS_DTYPE", "bfloat16")
 
+# GCS storage (set to enable cross-pod voice profile sharing)
+GCS_TTS_MODELS_BUCKET = os.getenv("GCS_TTS_MODELS_BUCKET", "")
+
 # Server configuration
 HOST = os.getenv("TTS_HOST", "0.0.0.0")
 PORT = int(os.getenv("TTS_PORT", "8101"))

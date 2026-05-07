@@ -154,7 +154,7 @@ export function VoiceLabPage({ voiceModels, controller, autoCreate }: VoiceLabPa
     if (!selectedFamilyMember?.id) {
       throw new Error('Select a family member before creating a voice.')
     }
-    await startVoiceTraining(modelName, language, styleInstruct, selectedFamilyMember.id)
+    await startVoiceTraining(modelName, language, styleInstruct)
     await refreshData()
   }
 
@@ -212,7 +212,7 @@ export function VoiceLabPage({ voiceModels, controller, autoCreate }: VoiceLabPa
               px: 3,
               textTransform: 'none',
               fontWeight: 600,
-              '&:hover': { backgroundColor: ProfileColors.primaryContainer, color: ProfileColors.onPrimaryContainer }
+              '&:hover': { backgroundColor: ProfileColors.primaryContainer, color: ProfileColors.surfaceContainerLowest }
             }}
           >
             {hasSelectedPerson ? `Preserve ${memberName}'s Voice` : 'Select a person to begin'}
@@ -278,7 +278,7 @@ export function VoiceLabPage({ voiceModels, controller, autoCreate }: VoiceLabPa
                       >
                         <CardContent sx={{ p: 3, display: 'flex', alignItems: 'center', gap: 3, '&:last-child': { pb: 3 } }}>
                           <Avatar
-                            src={model.person?.avatarAssetId ? `/api/assets/serve/${model.person.avatarAssetId}` : undefined}
+                            src={(model.person as any)?.avatarAssetId ? `/api/assets/serve/${(model.person as any).avatarAssetId}` : undefined}
                             sx={{
                               width: 56,
                               height: 56,

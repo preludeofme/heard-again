@@ -333,12 +333,10 @@ export class HealthCheckService {
           uptime: `${Math.round(health.uptime / 1000)}s`,
         })
 
-        // Start queue health monitoring if not already started
-        if (!queueHealthMonitor) {
-          queueHealthMonitor.startHealthCheck('document-ingestion')
-          queueHealthMonitor.startHealthCheck('embedding-generation')
-          queueHealthMonitor.startHealthCheck('persona-generation')
-        }
+        // Start queue health monitoring
+        queueHealthMonitor.startHealthCheck('document-ingestion')
+        queueHealthMonitor.startHealthCheck('embedding-generation')
+        queueHealthMonitor.startHealthCheck('persona-generation')
       } catch (error) {
         console.error('Health monitoring error:', error)
       }

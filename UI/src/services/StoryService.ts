@@ -89,7 +89,7 @@ export class StoryService {
     data: CreateStoryInput
   ): Promise<CreateStoryResponse> {
     // Validate subject/speaker belong to familyspace if provided
-    await this.validateStoryReferences(familyspaceId, data.subjectId, data.speakerId)
+    await this.validateStoryReferences(familyspaceId, data.subjectId ?? undefined, data.speakerId ?? undefined)
 
     // Handle audio asset for recordings
     let generatedAudioAssetId = null
@@ -143,7 +143,7 @@ export class StoryService {
   ): Promise<CreateStoryResponse> {
     // Validate subject/speaker if changing
     if (data.subjectId || data.speakerId) {
-      await this.validateStoryReferences(familyspaceId, data.subjectId, data.speakerId)
+      await this.validateStoryReferences(familyspaceId, data.subjectId ?? undefined, data.speakerId ?? undefined)
     }
 
     const updateData: Record<string, unknown> = {}

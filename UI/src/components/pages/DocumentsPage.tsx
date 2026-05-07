@@ -44,7 +44,7 @@ export function DocumentsPage({ documents, onUploadSuccess, onDelete, onLink, pe
 
   const filteredDocuments = documents.filter(doc => {
     if (selectedFilter === 'All') return true
-    if (selectedFilter === 'Document') return doc.type === 'PDF' || doc.type === 'Document'
+    if (selectedFilter === 'Document') return doc.type === 'PDF'
     return doc.type === selectedFilter
   })
 
@@ -159,7 +159,7 @@ export function DocumentsPage({ documents, onUploadSuccess, onDelete, onLink, pe
                 px: 3,
                 textTransform: 'none',
                 fontWeight: 600,
-                '&:hover': { backgroundColor: ProfileColors.primaryContainer, color: ProfileColors.onPrimaryContainer }
+                '&:hover': { backgroundColor: ProfileColors.primaryContainer, color: ProfileColors.surfaceContainerLowest }
               }}
             >
               Add to the Box

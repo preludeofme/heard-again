@@ -140,8 +140,10 @@ export function AudioTrimmer({ file, onTrimComplete, disabled }: AudioTrimmerPro
         setRegion([0, end])
         setIsReady(true)
 
-        peaks.on('player.play', () => setIsPlaying(true))
-        peaks.on('player.pause', () => setIsPlaying(false))
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ;(peaks as any).on('player.play', () => setIsPlaying(true))
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ;(peaks as any).on('player.pause', () => setIsPlaying(false))
 
         // Sync Peaks.js segment changes back to React state
         const syncRegion = (segment: any) => {
@@ -151,8 +153,10 @@ export function AudioTrimmer({ file, onTrimComplete, disabled }: AudioTrimmerPro
         }
         peaks.on('segments.dragged', syncRegion)
         peaks.on('segments.dragend', syncRegion)
-        peaks.on('segments.resize', syncRegion)
-        peaks.on('segments.resizeend', syncRegion)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ;(peaks as any).on('segments.resize', syncRegion)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ;(peaks as any).on('segments.resizeend', syncRegion)
       })
     }
 

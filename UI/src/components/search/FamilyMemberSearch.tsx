@@ -7,6 +7,8 @@ import {
   Avatar,
   IconButton,
   Chip,
+  type SxProps,
+  type Theme,
 } from '@mui/material'
 import {
   Search,
@@ -47,7 +49,7 @@ export interface FamilyMemberSearchProps {
   /** Whether to show the selected member as a chip */
   showSelectedChip?: boolean
   /** Custom styles for the container */
-  sx?: React.CSSProperties
+  sx?: SxProps<Theme>
   /** Whether the search is loading */
   loading?: boolean
   /** Show "Clear" button to reset selection */

@@ -227,13 +227,11 @@ export function SecuritySettings() {
                       Save these codes in a safe place. They can be used to access your account if you lose access to your authenticator app.
                     </Typography>
                     <Paper sx={{ p: 2, bgcolor: '#f5f5f5', mb: 2, position: 'relative' }}>
-                      <Grid container spacing={1}>
+                      <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
                         {backupCodes.map((code, i) => (
-                          <Grid item xs={6} key={i}>
-                            <Typography sx={{ fontFamily: 'monospace' }}>{code}</Typography>
-                          </Grid>
+                          <Typography key={i} sx={{ fontFamily: 'monospace' }}>{code}</Typography>
                         ))}
-                      </Grid>
+                      </Box>
                       <Button
                         size="small"
                         startIcon={<ContentCopy />}

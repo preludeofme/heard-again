@@ -1,8 +1,7 @@
-import fs from 'fs/promises'
-import path from 'path'
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse } from '@/lib/api-helpers'
 import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
+import { getStorageService } from '@/lib/storage/storage-service'
 export default apiHandler({
   // POST /api/export/json - Export familyspace data as JSON
   POST: async (req, res) => {
@@ -117,27 +116,36 @@ export default apiHandler({
       },
     }
 
-    const exportDir = path.join(process.cwd(), 'exports', user.familyspaceId)
-    await fs.mkdir(exportDir, { recursive: true })
-
     const fileName = `familyspace-export-${Date.now()}.json`
-    const absoluteFilePath = path.join(exportDir, fileName)
     const fileContent = JSON.stringify(exportPayload, null, 2)
-    await fs.writeFile(absoluteFilePath, fileContent, 'utf-8')
+    const fileBuffer = Buffer.from(fileContent, 'utf-8')
 
-    const stats = await fs.stat(absoluteFilePath)
-    const relativePath = path.relative(process.cwd(), absoluteFilePath)
+    const storageService = getStorageService()
+    const storageMode = storageService.getMode()
+    const uploadResult = await storageService.uploadFile(
+      fileBuffer,
+      fileName,
+      'application/json',
+      {
+        folder: `${user.familyspaceId}/exports`,
+        metadata: {
+          exportType: 'JSON',
+          generatedBy: 'api.export.json',
+          familyspaceId: user.familyspaceId,
+        },
+      }
+    )
 
     const [asset, exportJob] = await prisma.$transaction(async (tx) => {
       const createdAsset = await tx.asset.create({
         data: {
           familyspaceId: user.familyspaceId,
-          filename: fileName,
+          filename: uploadResult.filename,
           originalName: fileName,
           mimeType: 'application/json',
-          sizeBytes: BigInt(stats.size),
-          storageType: 'LOCAL',
-          storagePath: relativePath,
+          sizeBytes: BigInt(fileBuffer.length),
+          storageType: storageMode.toUpperCase() as any,
+          storagePath: uploadResult.storagePath,
           assetType: 'DOCUMENT',
           processingStatus: 'COMPLETED',
           uploadedById: user.id,

@@ -2,9 +2,9 @@ FROM node:18-alpine AS builder
 
 WORKDIR /app
 
-# Install dependencies
+# Install all deps (devDeps needed for ts-node/tsx to run the worker)
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm ci
 
 # Copy source code
 COPY . .
@@ -37,15 +37,19 @@ RUN adduser -S nextjs -u 1001
 
 WORKDIR /app
 
+# Worker runs TypeScript directly via tsx — needs all deps
+COPY package*.json ./
+RUN npm ci
+
 # Copy application
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
-COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
 COPY --from=builder --chown=nextjs:nodejs /app/src ./src
+COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 
 # Create required directories
-RUN mkdir -p /app/uploads /app/logs
-RUN chown -R nextjs:nodejs /app/uploads /app/logs
+RUN mkdir -p /app/uploads /app/logs /app/temp-ingestion
+RUN chown -R nextjs:nodejs /app/uploads /app/logs /app/temp-ingestion
 
 USER nextjs
 

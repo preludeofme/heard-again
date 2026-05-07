@@ -98,8 +98,7 @@ export function FamilyTreeModals({
         open={addEditModalOpen}
         onClose={() => setAddEditModalOpen(false)}
         mode={addEditMode}
-        personId={selectedPersonId || undefined}
-        initialData={addEditMode === 'edit' ? personDetail : undefined}
+        person={addEditMode === 'edit' ? ({ id: selectedPersonId || undefined, ...personDetail } as any) : undefined}
         onSubmit={onSubmitPerson}
         isSubmitting={isSubmitting}
       />

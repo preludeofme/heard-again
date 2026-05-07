@@ -171,9 +171,10 @@ interface SessionErrorBoundaryProps {
 }
 
 export default function SessionErrorBoundaryWrapper({ children, fallback }: SessionErrorBoundaryProps) {
+  const Boundary = ErrorBoundaryWithRouter as any
   return (
-    <ErrorBoundaryWithRouter fallback={fallback}>
+    <Boundary fallback={fallback}>
       {children}
-    </ErrorBoundaryWithRouter>
+    </Boundary>
   )
 }

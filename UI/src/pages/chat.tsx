@@ -3,8 +3,8 @@ import { useRouter } from 'next/router'
 import { useEffect, useState } from 'react'
 import {
   Box,
+  Stack,
   Typography,
-  Grid,
   Card,
   CardContent,
   Avatar,
@@ -12,7 +12,7 @@ import {
   Container,
   Button,
   List,
-  ListItem,
+  ListItemButton,
   ListItemAvatar,
   ListItemText,
   ListItemSecondaryAction,
@@ -74,9 +74,9 @@ export default function ChatListPage() {
           </Typography>
         </Box>
 
-        <Grid container spacing={4}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '7fr 5fr' }, gap: 4 }}>
           {/* Active Sessions */}
-          <Grid item xs={12} md={7}>
+          <Box>
             <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Typography variant="h5" sx={{ fontWeight: 700, color: '#16334a' }}>
                 Recent Chats
@@ -101,8 +101,7 @@ export default function ChatListPage() {
                     const person = people.find(p => p.id === session.personId)
                     return (
                       <Box key={session.id}>
-                        <ListItem 
-                          button 
+                        <ListItemButton
                           onClick={() => router.push(`/chat/${session.personId}`)}
                           sx={{ py: 2, px: 3 }}
                         >
@@ -124,7 +123,7 @@ export default function ChatListPage() {
                               <DeleteIcon fontSize="small" />
                             </IconButton>
                           </ListItemSecondaryAction>
-                        </ListItem>
+                        </ListItemButton>
                         {index < sessions.length - 1 && <Divider />}
                       </Box>
                     )
@@ -132,10 +131,10 @@ export default function ChatListPage() {
                 </List>
               </Card>
             )}
-          </Grid>
+          </Box>
 
           {/* Family Members Selection */}
-          <Grid item xs={12} md={5}>
+          <Box>
             <Typography variant="h5" sx={{ fontWeight: 700, color: '#16334a', mb: 3 }}>
               Start a New Chat
             </Typography>
@@ -180,8 +179,8 @@ export default function ChatListPage() {
                 ))}
               </Stack>
             )}
-          </Grid>
-        </Grid>
+          </Box>
+        </Box>
       </Container>
     </Layout>
   )

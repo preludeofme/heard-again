@@ -20,7 +20,7 @@ export default apiHandler({
     // Validate query parameters
     const queryValidation = validateQuery(listStoriesQuerySchema, req.query)
     if (!queryValidation.success) {
-      throw Errors.badRequest('Invalid query parameters', formatZodError(queryValidation.details))
+      throw Errors.badRequest('Invalid query parameters', queryValidation.details)
     }
 
     const result = await storyService.listStories(user.familyspaceId, queryValidation.data)
@@ -70,7 +70,7 @@ export default apiHandler({
 
         let userPersonId: string | undefined
         if (userRecord?.linkedPerson?.familyspaceId === familyspaceId) {
-          userPersonId = userRecord.linkedPersonId ?? undefined
+          userPersonId = userRecord?.linkedPersonId ?? undefined
         } else {
           const fallback = await prisma.person.findFirst({
             where: { familyspaceId, createdById: user.id },
@@ -91,7 +91,7 @@ export default apiHandler({
 
       // If not authenticated, we use a null userId or a special system ID
       // The service needs to handle null userId for public contributions
-      const result = await storyService.createStory(familyspaceId, user?.id || null, req.body)
+      const result = await storyService.createStory(familyspaceId!, user?.id || null, req.body)
       return successResponse(res, result, 201)
     }
   },
