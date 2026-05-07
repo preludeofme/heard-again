@@ -12,7 +12,7 @@ import {
   Edit, Schedule, Send, Person, Comment as CommentIcon,
   Share, ShareOutlined,
   Mic, AutoStories,
-  GraphicEq,
+  GraphicEq, AudioFile,
 } from '@mui/icons-material'
 import { formatDistanceToNow, format } from 'date-fns'
 import { NarrationPreparationBanner } from '@/components/stories/NarrationPreparationBanner'
@@ -21,6 +21,7 @@ import { StoryNarrationPlayer, type SavedNarration } from '@/components/stories/
 import { fetchWithCSRF } from '@/lib/api-client'
 
 type NarrationStatus = 'NONE' | 'PENDING' | 'READY' | 'APPROVED' | 'STALE' | 'FAILED'
+type TranscriptionStatus = 'NONE' | 'PENDING' | 'COMPLETED' | 'FAILED'
 
 interface VoiceProfileRow {
   id: string
@@ -46,6 +47,8 @@ interface StoryDetail {
   speaker?: { id: string; firstName: string; lastName?: string; nickname?: string }
   createdBy: { id: string; displayName?: string; email: string; avatarUrl?: string }
   voiceProfile?: { id: string; name: string }
+  transcript?: string | null
+  transcriptionStatus?: TranscriptionStatus
   narratedContent?: string | null
   narrationStatus?: NarrationStatus
   narrationModel?: string | null
@@ -92,6 +95,8 @@ export default function StoryDetailPage() {
   const [commentText, setCommentText] = useState('')
   const [isSubmittingComment, setIsSubmittingComment] = useState(false)
   const [voiceProfiles, setVoiceProfiles] = useState<VoiceProfileRow[]>([])
+  const [isTranscribing, setIsTranscribing] = useState(false)
+  const [transcriptionError, setTranscriptionError] = useState<string | null>(null)
   const [isPreparingNarration, setIsPreparingNarration] = useState(false)
   const [narrationError, setNarrationError] = useState<string | null>(null)
   const [savedNarration, setSavedNarration] = useState<SavedNarration | null>(null)
@@ -184,6 +189,36 @@ export default function StoryDetailPage() {
     await triggerNarrationRewrite()
   }, [story, linkedPersonId]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  const handleTranscribeAudio = useCallback(async () => {
+    if (!story) return
+    setIsTranscribing(true)
+    setTranscriptionError(null)
+    try {
+      const res = await fetchWithCSRF(`/api/stories/${story.id}/transcribe`, {
+        method: 'POST',
+        credentials: 'include',
+      })
+      const payload = await res.json()
+      if (!res.ok || !payload.success) {
+        throw new Error(payload.error || 'Transcription failed')
+      }
+      setStory((prev) =>
+        prev
+          ? {
+              ...prev,
+              transcript: payload.data.transcript,
+              transcriptionStatus: payload.data.transcriptionStatus,
+              content: payload.data.transcript,
+            }
+          : prev
+      )
+    } catch (err) {
+      setTranscriptionError(err instanceof Error ? err.message : 'Transcription failed')
+    } finally {
+      setIsTranscribing(false)
+    }
+  }, [story])
+
   const triggerNarrationRewrite = useCallback(async (overrideName?: string) => {
     if (!story) return
     setIsPreparingNarration(true)
@@ -198,6 +233,10 @@ export default function StoryDetailPage() {
       })
       const payload = await res.json()
       if (!res.ok || !payload.success) {
+        if (payload.code === 'TRANSCRIPT_REQUIRED') {
+          setNarrationError('Transcribe the audio first before generating a narration rewrite.')
+          return
+        }
         throw new Error(payload.error || 'Failed to prepare narration')
       }
       setStory((prev) =>
@@ -283,7 +322,7 @@ export default function StoryDetailPage() {
   }
 
 
-  const originalAudioAsset = story.assets.find((sa) =>
+  const originalAudioAsset = story?.assets.find((sa) =>
     sa.asset.mimeType?.startsWith('audio/') || sa.asset.assetType?.toLowerCase() === 'audio'
   )
 
@@ -504,6 +543,77 @@ export default function StoryDetailPage() {
             )}
 
 
+            {/* Transcription — for audio RECORDING stories */}
+            {story.storyType === 'RECORDING' && (
+              <Box sx={{ mb: 4 }}>
+                {(!story.transcriptionStatus || story.transcriptionStatus === 'NONE' || story.transcriptionStatus === 'FAILED') && (
+                  <Box
+                    sx={{
+                      backgroundColor: '#f5f9fa',
+                      border: '1px solid #d0e3e6',
+                      borderRadius: 3,
+                      p: 3,
+                    }}
+                  >
+                    <Typography variant="subtitle2" sx={{ color: '#16334a', mb: 1 }}>
+                      Transcribe Audio
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: '#546669', mb: 2 }}>
+                      Generate a text transcript of this audio recording. The transcript is required before you can create a first-person narration rewrite.
+                    </Typography>
+                    {transcriptionError && (
+                      <Typography variant="body2" sx={{ color: 'error.main', mb: 2 }}>
+                        {transcriptionError}
+                      </Typography>
+                    )}
+                    <Button
+                      variant="contained"
+                      size="small"
+                      disabled={isTranscribing}
+                      onClick={handleTranscribeAudio}
+                      startIcon={isTranscribing ? <CircularProgress size={14} sx={{ color: 'inherit' }} /> : <Mic />}
+                      sx={{ backgroundColor: '#16334a', '&:hover': { backgroundColor: '#0f2233' } }}
+                    >
+                      {isTranscribing ? 'Transcribing…' : story.transcriptionStatus === 'FAILED' ? 'Retry Transcription' : 'Transcribe Audio'}
+                    </Button>
+                  </Box>
+                )}
+
+                {story.transcriptionStatus === 'PENDING' && (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 3, backgroundColor: '#eef3f4', border: '1px solid #d0e3e6', borderRadius: 3 }}>
+                    <CircularProgress size={20} sx={{ color: '#16334a' }} />
+                    <Typography variant="body2" sx={{ color: '#546669' }}>Transcribing audio…</Typography>
+                  </Box>
+                )}
+
+                {story.transcriptionStatus === 'COMPLETED' && story.transcript && (
+                  <Box sx={{ backgroundColor: '#f5f9fa', border: '1px solid #d0e3e6', borderRadius: 3, p: 3 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <AutoStories sx={{ fontSize: 18, color: '#16334a' }} />
+                        <Typography variant="subtitle2" sx={{ color: '#16334a' }}>Transcript</Typography>
+                      </Box>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        disabled={isTranscribing}
+                        onClick={handleTranscribeAudio}
+                        sx={{ borderColor: '#d0e3e6', color: '#546669', fontSize: '0.75rem' }}
+                      >
+                        Re-transcribe
+                      </Button>
+                    </Box>
+                    <Typography
+                      variant="body2"
+                      sx={{ color: '#333', lineHeight: 1.8, whiteSpace: 'pre-wrap' }}
+                    >
+                      {story.transcript}
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
+            )}
+
             {/* Listen + Transcript Experience */}
             <Box sx={{ mb: 5 }}>
               <Typography variant="h6" sx={{ color: '#16334a', fontWeight: 700, mb: 2 }}>
@@ -643,6 +753,38 @@ export default function StoryDetailPage() {
                   />
                 </Box>
               )}
+            </Box>
+
+            {/* Versions Bar */}
+            <Box sx={{ display: 'flex', gap: 2, mb: 4, flexWrap: 'wrap' }}>
+              {story.storyType === 'RECORDING' && (
+                <Chip
+                  icon={<Mic sx={{ fontSize: '18px !important' }} />}
+                  label="Original Audio"
+                  size="small"
+                  sx={{ backgroundColor: '#16334a', color: '#fff', '& .MuiChip-icon': { color: '#fff' } }}
+                />
+              )}
+              <Chip
+                icon={<AutoStories sx={{ fontSize: '18px !important' }} />}
+                label="Transcript"
+                size="small"
+                variant={story.transcriptionStatus === 'COMPLETED' ? 'filled' : 'outlined'}
+                sx={story.transcriptionStatus === 'COMPLETED'
+                  ? { backgroundColor: '#2e6b7a', color: '#fff', '& .MuiChip-icon': { color: '#fff' } }
+                  : { borderColor: '#d0e3e6', color: '#9ab0b5' }
+                }
+              />
+              <Chip
+                icon={<AudioFile sx={{ fontSize: '18px !important' }} />}
+                label="AI Narration"
+                size="small"
+                variant={story.narrationStatus === 'APPROVED' ? 'filled' : 'outlined'}
+                sx={story.narrationStatus === 'APPROVED'
+                  ? { backgroundColor: '#2e6b7a', color: '#fff', '& .MuiChip-icon': { color: '#fff' } }
+                  : { borderColor: '#d0e3e6', color: '#9ab0b5' }
+                }
+              />
             </Box>
 
             {/* Story Content */}

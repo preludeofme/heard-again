@@ -463,6 +463,8 @@ model Story {
   authorRelationship    String?
   isPublic              Boolean              @default(false)
   shareToken            String?              @unique
+  transcript            String?
+  transcriptionStatus   TranscriptionStatus  @default(NONE)
   narratedContent       String?
   narrationStatus       NarrationStatus      @default(NONE)
   narrationModel        String?
@@ -1181,6 +1183,13 @@ enum StoryStatus {
   REVIEW
   PUBLISHED
   ARCHIVED
+}
+
+enum TranscriptionStatus {
+  NONE
+  PENDING
+  COMPLETED
+  FAILED
 }
 
 enum NarrationStatus {

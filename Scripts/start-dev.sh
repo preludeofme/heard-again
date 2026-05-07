@@ -276,6 +276,21 @@ if [ ! -f "$MAIN_APP_DIR/.env" ]; then
         cp "$MAIN_APP_DIR/.env.example" "$MAIN_APP_DIR/.env"
     fi
 fi
+
+# TTS .env bootstrap — pull shared secrets from UI .env if TTS .env is missing
+if [ ! -f "$TTS_SERVICE_DIR/.env" ] && [ -f "$UI_DIR/.env" ]; then
+    echo "  Bootstrapping TTS .env from UI .env..."
+    {
+        echo "# Auto-generated from UI/.env — update as needed"
+        echo "QWEN_TTS_VENV=$HOME/qwen3-tts/venv"
+        _SECRET=$(grep '^NEXTAUTH_SECRET=' "$UI_DIR/.env" | cut -d'=' -f2-)
+        [ -n "$_SECRET" ] && echo "NEXTAUTH_SECRET=$_SECRET"
+        _TOKEN=$(grep '^TTS_SERVICE_TOKEN=' "$UI_DIR/.env" | cut -d'=' -f2-)
+        [ -n "$_TOKEN" ] && echo "TTS_SERVICE_TOKEN=$_TOKEN"
+    } > "$TTS_SERVICE_DIR/.env"
+    echo -e "  ${GREEN}✓ TTS .env created${NC}"
+fi
+
 echo -e "  ${GREEN}✓ Environment files ready${NC}"
 
 echo ""
@@ -441,8 +456,8 @@ if command -v python3 &> /dev/null && [ -d "$TTS_SERVICE_DIR" ]; then
         export $(grep -v '^#' "$TTS_SERVICE_DIR/.env" | xargs)
     fi
 
-    # Use Qwen3-TTS venv if specified, otherwise fall back to local venv
-    VENV_PATH="${QWEN_TTS_VENV:-$TTS_SERVICE_DIR/venv}"
+    # Use Qwen3-TTS venv if specified, otherwise fall back to the shared Qwen3-TTS install
+    VENV_PATH="${QWEN_TTS_VENV:-$HOME/qwen3-tts/venv}"
 
     if [ -d "$VENV_PATH" ]; then
         cd "$TTS_SERVICE_DIR"
