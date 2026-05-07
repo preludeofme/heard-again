@@ -12,11 +12,10 @@ terraform {
     }
   }
 
-  # Store state in GCS — create this bucket manually before first apply
-  backend "gcs" {
-    bucket = "heard-again-terraform-state"
-    prefix = "terraform/state"
-  }
+  # Partial backend config — bucket and prefix are supplied at init time:
+  #   terraform init -backend-config=backends/prod.gcs.tfvars
+  # Bootstrap: create the GCS bucket out-of-band before first init.
+  backend "gcs" {}
 }
 
 provider "google" {
