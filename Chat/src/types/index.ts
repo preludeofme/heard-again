@@ -6,6 +6,7 @@ export * from './persona'
 export * from './retrieval'
 export * from './llm'
 export * from './ingestion'
+export * from './audioProcessing'
 
 // Import types for interface definitions
 import type { PersonaProfile } from './persona'
