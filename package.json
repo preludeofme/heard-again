@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "./Scripts/start-dev.sh --live",
     "dev_worktree": "./Scripts/start-dev-worktree.sh --live",
-    "build": "cd UI && npm run build",
+    "build": "cd UI && npm run build && cd ../Chat && npm run build",
+    "type-check": "cd UI && npx tsc --noEmit && cd ../Chat && npm run type-check",
     "start": "cd UI && npm run start",
     "test": "cd UI && npm test",
     "test:watch": "cd UI && npm run test:watch",

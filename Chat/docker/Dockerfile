@@ -12,7 +12,7 @@ COPY . .
 # Generate Prisma client
 RUN npx prisma generate
 
-# Build the application
+# Compile TypeScript
 RUN npm run build
 
 # Production stage
@@ -36,7 +36,7 @@ RUN apk add --no-cache \
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs
-RUN adduser -S nextjs -u 1001
+RUN adduser -S nodejs -u 1001
 
 WORKDIR /app
 
@@ -44,20 +44,19 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --only=production
 
-# Copy built application
-COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
-COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
-COPY --from=builder --chown=nextjs:nodejs /app/next.config.js ./next.config.js
-COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
+# Copy compiled output and config
+COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
+COPY --from=builder --chown=nodejs:nodejs /app/package.json ./package.json
+COPY --from=builder --chown=nodejs:nodejs /app/prisma ./prisma
 
 # Prisma client is generated into node_modules — regenerate against production node_modules
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 
 # Create required directories
 RUN mkdir -p /app/uploads /app/logs
-RUN chown -R nextjs:nodejs /app/uploads /app/logs
+RUN chown -R nodejs:nodejs /app/uploads /app/logs
 
-USER nextjs
+USER nodejs
 
 EXPOSE 4778
 
@@ -67,4 +66,4 @@ ENV PORT=4778
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
   CMD curl -f http://localhost:4778/api/health || exit 1
 
-CMD ["npm", "start"]
+CMD ["node", "-r", "tsconfig-paths/register", "dist/server.js"]
