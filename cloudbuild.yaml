@@ -25,7 +25,7 @@ steps:
     name: gcr.io/cloud-builders/docker
     args:
       - build
-      - --file=Chat/docker/Dockerfile
+      - --file=docker/Dockerfile
       - --tag=$_REGION-docker.pkg.dev/$PROJECT_ID/$_APP_NAME-$_ENV/chat:$COMMIT_SHA
       - --tag=$_REGION-docker.pkg.dev/$PROJECT_ID/$_APP_NAME-$_ENV/chat:latest
       - --cache-from=$_REGION-docker.pkg.dev/$PROJECT_ID/$_APP_NAME-$_ENV/chat:latest
