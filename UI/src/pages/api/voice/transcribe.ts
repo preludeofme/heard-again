@@ -33,7 +33,7 @@ async function transcribeHandler(req: NextApiRequest, res: NextApiResponse) {
     const fileBuffer = fs.readFileSync(file.filepath)
 
     // Forward to TTS service
-    const ttsServiceUrl = process.env.TTS_SERVICE_URL || 'http://localhost:4779'
+    const ttsServiceUrl = process.env.TTS_SERVICE_URL || 'http://127.0.0.1:4779'
     const formData = new FormData()
     formData.append('audio', new Blob([fileBuffer]), file.originalFilename || 'audio.webm')
 
