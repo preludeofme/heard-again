@@ -12,7 +12,6 @@ NC='\033[0m' # No Color
 
 # Ports configuration (only these ports will be killed by stop_app_processes)
 MAIN_APP_PORT=4777
-CHAT_SYSTEM_PORT=4778
 TTS_SERVICE_PORT=4779
 REDIS_PORT=6379
 # Note: Port 8101 is also managed for cleanup (legacy TTS port)
@@ -28,7 +27,6 @@ fi
 # Directories
 MAIN_APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 UI_DIR="${UI_DIR_OVERRIDE:-$MAIN_APP_DIR/UI}"
-CHAT_SYSTEM_DIR="$MAIN_APP_DIR/Chat"
 TTS_SERVICE_DIR="$MAIN_APP_DIR/TTS/tts-service"
 
 # Ensure logs directory exists
@@ -54,11 +52,6 @@ cleanup() {
         done < "$PIDS_FILE"
         rm -f "$PIDS_FILE"
     fi
-    # Stop ChromaDB if running
-    if docker ps | grep -q chromadb; then
-        echo "  Stopping ChromaDB container..."
-        docker stop chromadb >/dev/null 2>&1 || true
-    fi
     # Stop Redis dev container if it was started by this script
     if docker ps --format '{{.Names}}' | grep -q '^redis-dev$'; then
         echo "  Stopping Redis container..."
@@ -80,7 +73,7 @@ check_port() {
 
 # Stop only this application's processes (never touches postgres, redis, chromadb, ollama)
 stop_app_processes() {
-    local APP_PORTS=($MAIN_APP_PORT $CHAT_SYSTEM_PORT $TTS_SERVICE_PORT 8101)
+    local APP_PORTS=($MAIN_APP_PORT $TTS_SERVICE_PORT 8101)
     local STOPPED=0
 
     # Step 1: SIGTERM any PIDs we previously tracked (and their process groups)
@@ -246,26 +239,11 @@ echo ""
 echo -e "${YELLOW}Checking port availability...${NC}"
 PORT_CONFLICTS=0
 
-# Check ChromaDB port
-CHROMA_PORT=8004
-if ! check_port $CHROMA_PORT; then
-    echo -e "  ${GREEN}✓ Port $CHROMA_PORT in use (ChromaDB)${NC}"
-else
-    echo -e "  ${YELLOW}⚠ Port $CHROMA_PORT available - ChromaDB needs to start${NC}"
-fi
-
 if ! check_port $MAIN_APP_PORT; then
     echo -e "  ${RED}✗ Port $MAIN_APP_PORT is already in use (Main App)${NC}"
     PORT_CONFLICTS=$((PORT_CONFLICTS + 1))
 else
     echo -e "  ${GREEN}✓ Port $MAIN_APP_PORT available${NC} (Main App)"
-fi
-
-if ! check_port $CHAT_SYSTEM_PORT; then
-    echo -e "  ${RED}✗ Port $CHAT_SYSTEM_PORT is already in use (Chat System)${NC}"
-    PORT_CONFLICTS=$((PORT_CONFLICTS + 1))
-else
-    echo -e "  ${GREEN}✓ Port $CHAT_SYSTEM_PORT available${NC} (Chat System)"
 fi
 
 if ! check_port $TTS_SERVICE_PORT; then
@@ -296,15 +274,6 @@ if [ ! -f "$MAIN_APP_DIR/.env" ]; then
     if [ -f "$MAIN_APP_DIR/.env.example" ]; then
         echo "  Creating main app .env from example..."
         cp "$MAIN_APP_DIR/.env.example" "$MAIN_APP_DIR/.env"
-    fi
-fi
-
-# Chat-system .env check
-if [ ! -f "$CHAT_SYSTEM_DIR/.env" ]; then
-    if [ -f "$CHAT_SYSTEM_DIR/.env.example" ]; then
-        echo "  Creating chat-system .env from example..."
-        cp "$CHAT_SYSTEM_DIR/.env.example" "$CHAT_SYSTEM_DIR/.env"
-        echo -e "  ${YELLOW}⚠ Please review $CHAT_SYSTEM_DIR/.env and update database credentials${NC}"
     fi
 fi
 echo -e "  ${GREEN}✓ Environment files ready${NC}"
@@ -377,7 +346,7 @@ wait_for_postgres() {
 }
 wait_for_postgres
 
-# Start Redis with host port exposed so the Chat service (running on host) can reach it.
+# Start Redis with host port exposed for rate limiting.
 REDIS_STARTED=false
 if ! check_port $REDIS_PORT; then
     echo -e "  ${GREEN}✓ Redis already running on port $REDIS_PORT${NC}"
@@ -398,71 +367,14 @@ else
             echo -e "    ${YELLOW}⚠ Redis container may still be starting${NC}"
         fi
     else
-        echo -e "    ${YELLOW}⚠ Docker not found - Redis cannot start (BullMQ queues will fail)${NC}"
+        echo -e "    ${YELLOW}⚠ Docker not found - Redis cannot start (rate limiting will fail)${NC}"
     fi
-fi
-
-# Start ChromaDB if not running
-CHROMA_STARTED=false
-if ! check_port 8004; then
-    echo -e "  ${GREEN}✓ ChromaDB already running${NC}"
-    CHROMA_STARTED=true
-else
-    echo "  Starting ChromaDB (port 8004)..."
-    if command -v docker &> /dev/null; then
-        docker run -d --name chromadb -p 8004:8000 -v chroma_data:/chroma/chroma \
-            -e IS_PERSISTENT=TRUE \
-            -e ANONYMIZED_TELEMETRY=FALSE \
-            chromadb/chroma:latest 2>/dev/null || docker start chromadb 2>/dev/null || {
-            echo -e "    ${YELLOW}⚠ Could not start ChromaDB via Docker${NC}"
-            echo -e "    ${BLUE}  Run manually: docker run -p 8004:8000 chromadb/chroma:latest${NC}"
-        }
-        sleep 2
-        if docker ps | grep -q chromadb; then
-            echo -e "    ${GREEN}✓ ChromaDB started via Docker${NC}"
-            CHROMA_STARTED=true
-        fi
-    else
-        echo -e "    ${YELLOW}⚠ Docker not found - ChromaDB cannot start${NC}"
-    fi
-fi
-
-# Start Ollama if not running
-# Read OLLAMA_URL from Chat .env so we check the right address
-OLLAMA_URL_ENV="http://localhost:11434"
-if [ -f "$CHAT_SYSTEM_DIR/.env" ]; then
-    _PARSED=$(grep '^OLLAMA_URL=' "$CHAT_SYSTEM_DIR/.env" | cut -d'=' -f2- | tr -d '"')
-    [ -n "$_PARSED" ] && OLLAMA_URL_ENV="$_PARSED"
-fi
-
-OLLAMA_STARTED=false
-if curl -sk "$OLLAMA_URL_ENV/api/tags" >/dev/null 2>&1; then
-    echo -e "  ${GREEN}✓ Ollama already running${NC} ($OLLAMA_URL_ENV)"
-    OLLAMA_STARTED=true
-elif command -v ollama &> /dev/null; then
-    echo "  Starting Ollama..."
-    ollama serve > /tmp/ollama.log 2>&1 &
-    OLLAMA_PID=$!
-    sleep 4
-    if curl -sk "$OLLAMA_URL_ENV/api/tags" >/dev/null 2>&1; then
-        echo -e "    ${GREEN}✓ Ollama started (PID: $OLLAMA_PID)${NC}"
-        OLLAMA_STARTED=true
-    else
-        echo -e "    ${YELLOW}⚠ Ollama started but not yet reachable at $OLLAMA_URL_ENV${NC}"
-    fi
-else
-    echo -e "  ${YELLOW}⚠ Ollama not found and not reachable at $OLLAMA_URL_ENV — LLM features unavailable${NC}"
 fi
 
 echo ""
 
 # Wait for all infrastructure to be ready before starting application services
 echo -e "${YELLOW}Waiting for infrastructure health...${NC}"
-
-# Verify ChromaDB health
-if [ "$CHROMA_STARTED" = true ]; then
-    wait_for_service "ChromaDB" "http://localhost:8004/api/v2/heartbeat" 30
-fi
 
 # Verify Redis
 if [ "$REDIS_STARTED" = true ]; then
@@ -473,55 +385,6 @@ if [ "$REDIS_STARTED" = true ]; then
         echo -e " ${YELLOW}⚠ May not be fully ready${NC}"
     fi
 fi
-
-echo ""
-
-# Database setup for chat-system (NOW: after PostgreSQL is confirmed running)
-echo -e "${YELLOW}Setting up Chat System database...${NC}"
-cd "$CHAT_SYSTEM_DIR"
-
-# Create uploads directory
-mkdir -p "$CHAT_SYSTEM_DIR/uploads"
-echo "  ✓ Created uploads directory"
-
-# Install dependencies if needed
-if [ ! -d "node_modules" ]; then
-    echo "  Installing chat-system dependencies..."
-    npm install
-fi
-
-# Generate Prisma client
-echo "  Generating Prisma client..."
-npx prisma generate --schema=../prisma/schema.prisma --silent 2>/dev/null || npx prisma generate --schema=../prisma/schema.prisma
-
-# Run migrations — resolve any failed ones first, then fall back to db push
-echo "  Running database migrations..."
-if npx prisma migrate deploy --schema=../prisma/schema.prisma 2>/tmp/prisma-migrate.log; then
-    echo "  ✓ Migrations applied"
-else
-    FAILED_MIGRATION=$(grep 'The.*migration' /tmp/prisma-migrate.log | grep -oP '\`\K[^\`]+' | head -1)
-    if [ -n "$FAILED_MIGRATION" ]; then
-        echo "  Resolving failed migration: $FAILED_MIGRATION"
-        npx prisma migrate resolve --rolled-back "$FAILED_MIGRATION" --schema=../prisma/schema.prisma 2>/dev/null || true
-    fi
-    echo "  Falling back to prisma db push..."
-    npx prisma db push --accept-data-loss --schema=../prisma/schema.prisma 2>/dev/null || {
-        echo -e "  ${YELLOW}⚠ Could not sync database schema — check Chat/.env DATABASE_URL${NC}"
-    }
-fi
-
-# Validate CHAT_SERVICE_SECRET is set in Chat .env
-if [ -f "$CHAT_SYSTEM_DIR/.env" ]; then
-    SECRET_VAL=$(grep '^CHAT_SERVICE_SECRET=' "$CHAT_SYSTEM_DIR/.env" | cut -d'=' -f2- | tr -d '"')
-    if [ -z "$SECRET_VAL" ]; then
-        echo -e "  ${RED}✗ CHAT_SERVICE_SECRET is not set in Chat/.env — service auth will fail${NC}"
-    else
-        echo "  ✓ CHAT_SERVICE_SECRET is set"
-    fi
-fi
-
-cd "$MAIN_APP_DIR"
-echo -e "  ${GREEN}✓ Chat System database ready${NC}"
 
 echo ""
 
@@ -545,31 +408,7 @@ echo -e "${YELLOW}Starting application services...${NC}"
 rm -f "$PIDS_FILE"
 touch "$PIDS_FILE"
 
-# Start Chat System first (other services depend on it)
-echo "  Starting Chat System (port $CHAT_SYSTEM_PORT)..."
-cd "$CHAT_SYSTEM_DIR"
-if [ "$LOG_MODE" = "live" ]; then
-    npm run dev 2>&1 | tee "$MAIN_APP_DIR/logs/chat-system.log" &
-else
-    npm run dev > "$MAIN_APP_DIR/logs/chat-system.log" 2>&1 &
-fi
-CHAT_PID=$!
-echo $CHAT_PID >> "$PIDS_FILE"
-cd "$MAIN_APP_DIR"
-echo -e "    ${GREEN}✓ Chat System started (PID: $CHAT_PID)${NC}"
-if [ "$LOG_MODE" != "live" ]; then
-    echo -e "    ${BLUE}  Logs: $MAIN_APP_DIR/logs/chat-system.log${NC}"
-fi
-
-# Wait for Chat System to be healthy before starting Main App
-echo -n "  Waiting for Chat System health..."
-if wait_for_service "Chat System" "https://localhost:$CHAT_SYSTEM_PORT/api/health" 60; then
-    :
-else
-    echo -e "  ${YELLOW}⚠ Chat System may need more time (continuing anyway)${NC}"
-fi
-
-# Start Main App (depends on Chat System and ChromaDB)
+# Start Main App
 echo "  Starting Main App (port $MAIN_APP_PORT)..."
 cd "$UI_DIR"
 if [ "$LOG_MODE" = "live" ]; then
@@ -641,22 +480,6 @@ echo ""
 # Final health checks
 echo -e "${YELLOW}Running final health checks...${NC}"
 
-# Check ChromaDB
-if [ "$CHROMA_STARTED" = true ]; then
-    if curl -s http://localhost:8004/api/v2/heartbeat >/dev/null 2>&1; then
-        echo -e "  ${GREEN}✓ ChromaDB is healthy${NC}"
-    else
-        echo -e "  ${YELLOW}⚠ ChromaDB may still be starting${NC}"
-    fi
-fi
-
-# Check Chat System
-if curl -sk https://localhost:$CHAT_SYSTEM_PORT/api/health >/dev/null 2>&1 || curl -sk https://localhost:$CHAT_SYSTEM_PORT >/dev/null 2>&1; then
-    echo -e "  ${GREEN}✓ Chat System is responding${NC}"
-else
-    echo -e "  ${YELLOW}⚠ Chat System may still be starting (check logs)${NC}"
-fi
-
 # Check Main App
 if wait_for_service "Main App" "https://localhost:$MAIN_APP_PORT/api/instance/health" 15; then
     echo -e "  ${GREEN}✓ Main App is healthy${NC}"
@@ -679,13 +502,6 @@ echo -e "${GREEN}  All services started successfully!${NC}"
 echo -e "${GREEN}═══════════════════════════════════════════════════════════════${NC}"
 echo ""
 echo -e "  ${BLUE}Main App:${NC}      https://localhost:$MAIN_APP_PORT"
-echo -e "  ${BLUE}Chat System:${NC}   https://localhost:$CHAT_SYSTEM_PORT"
-if [ "$CHROMA_STARTED" = true ]; then
-    echo -e "  ${BLUE}ChromaDB:${NC}      http://localhost:8004"
-fi
-if [ "$OLLAMA_STARTED" = true ]; then
-    echo -e "  ${BLUE}Ollama:${NC}        $OLLAMA_URL_ENV"
-fi
 if [ "$TTS_STARTED" = true ]; then
     echo -e "  ${BLUE}TTS Service:${NC}   http://localhost:$TTS_SERVICE_PORT"
 fi

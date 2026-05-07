@@ -107,9 +107,8 @@ async function streamBatchSynth(
       }),
     })
   } catch (err: any) {
-    const causeCode = err?.cause?.code ? `, causeCode=${err.cause.code}` : ''
     throw new Error(
-      `TTS synth request failed (url=${synthUrl}, tokenConfigured=${Boolean(TTS_SERVICE_TOKEN)}${causeCode}): ${err?.message || String(err)}`
+      `TTS synth request failed (url=${synthUrl}, tokenConfigured=${Boolean(TTS_SERVICE_TOKEN)}): ${err?.message || String(err)}`
     )
   }
 
@@ -170,9 +169,8 @@ async function downloadAudio(audioId: string, familyspaceId: string): Promise<Bu
       },
     })
   } catch (err: any) {
-    const causeCode = err?.cause?.code ? `, causeCode=${err.cause.code}` : ''
     throw new Error(
-      `TTS audio download request failed (url=${audioUrl}, tokenConfigured=${Boolean(TTS_SERVICE_TOKEN)}${causeCode}): ${err?.message || String(err)}`
+      `TTS audio download request failed (url=${audioUrl}, tokenConfigured=${Boolean(TTS_SERVICE_TOKEN)}): ${err?.message || String(err)}`
     )
   }
   if (!response.ok) {
