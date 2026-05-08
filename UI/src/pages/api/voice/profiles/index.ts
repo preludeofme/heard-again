@@ -27,7 +27,19 @@ export default apiHandler({
       where,
       include: {
         person: {
-          select: { id: true, firstName: true, lastName: true },
+          select: { 
+            id: true, 
+            firstName: true, 
+            lastName: true,
+            voiceConsents: {
+              where: {
+                revokedAt: null,
+                allowsGeneration: true,
+                voiceProfileId: null,
+              },
+              take: 1,
+            },
+          },
         },
         createdBy: {
           select: { id: true, displayName: true },
@@ -51,7 +63,7 @@ export default apiHandler({
       name: p.name,
       description: p.description,
       person: p.person,
-      hasConsent: p.voiceConsents.length > 0,
+      hasConsent: p.voiceConsents.length > 0 || (p.person?.voiceConsents?.length || 0) > 0,
       modelType: p.modelType,
       engineName: p.engineName,
       isDefault: p.isDefault,

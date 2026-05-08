@@ -39,11 +39,13 @@ const AudioRecorder = dynamic(() => import('./AudioRecorder').then(mod => mod.Au
 interface VoiceTrainingModalProps {
   open: boolean
   onClose: () => void
+  personId?: string
   trainingSamples: File[]
-  onUploadSample: (file: File) => Promise<void>
+  onUploadSample: (file: File, personId?: string) => Promise<void>
   onRemoveSample: (index: number) => void
   onCreateVoice: (modelName: string, language: string, styleInstruct?: string) => Promise<void>
   onResetTraining: () => void
+  onRecordConsent?: (modelId: string) => void
   isUploading: boolean
   isTraining: boolean
   trainingJob: { status?: string; modelId?: string } | null
@@ -61,11 +63,13 @@ const STYLE_SUGGESTIONS = [
 export function VoiceTrainingModal({
   open,
   onClose,
+  personId,
   trainingSamples,
   onUploadSample,
   onRemoveSample,
   onCreateVoice,
   onResetTraining,
+  onRecordConsent,
   isUploading,
   isTraining,
   trainingJob,
@@ -110,7 +114,7 @@ export function VoiceTrainingModal({
   const handleTrimComplete = async (trimmedFile: File) => {
     setIsTrimming(false)
     setRawFile(null)
-    await onUploadSample(trimmedFile)
+    await onUploadSample(trimmedFile, personId)
   }
 
   const handleDiscardFile = () => {
@@ -146,7 +150,7 @@ export function VoiceTrainingModal({
   const handleRecordingComplete = async (audioBlob: Blob, _duration: number) => {
     const ext = audioBlob.type.includes('mp4') ? 'm4a' : 'webm'
     const file = new File([audioBlob], `recording-${Date.now()}.${ext}`, { type: audioBlob.type })
-    await onUploadSample(file)
+    await onUploadSample(file, personId)
   }
 
   const isComplete = trainingJob?.status === 'completed'
@@ -155,10 +159,11 @@ export function VoiceTrainingModal({
 
   // For navigating to consent from success state
   const handleRecordConsent = () => {
-    // This is handled by the parent component (VoiceLabPage) 
-    // when it sees the voice list refresh.
-    // For now, we'll just close and let the user click the "Needs Consent" badge.
-    handleClose()
+    if (onRecordConsent && trainingJob?.modelId) {
+      onRecordConsent(trainingJob.modelId)
+    } else {
+      handleClose()
+    }
   }
 
   return (

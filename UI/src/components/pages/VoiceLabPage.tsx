@@ -12,6 +12,7 @@ import {
   Lock as LockIcon,
 } from '@mui/icons-material'
 import { useState, useEffect, useRef } from 'react'
+import { useSnackbar } from 'notistack'
 import { VoiceTrainingModal } from '@/components/audio/VoiceTrainingModal'
 import { VoiceConsentModal } from '@/components/audio/VoiceConsentModal'
 import { useSelectedFamilyMember } from '@/contexts/SelectedFamilyMemberContext'
@@ -57,6 +58,7 @@ export function VoiceLabPage({ voiceModels, controller, autoCreate }: VoiceLabPa
   } = controller
 
   const { selectedFamilyMember } = useSelectedFamilyMember()
+  const { enqueueSnackbar } = useSnackbar()
   const memberName = selectedFamilyMember?.firstName || 'this person'
   const hasSelectedPerson = Boolean(selectedFamilyMember?.id)
 
@@ -160,7 +162,20 @@ export function VoiceLabPage({ voiceModels, controller, autoCreate }: VoiceLabPa
 
   const handleConsentRecorded = () => {
     setShowConsentModal(false)
+    enqueueSnackbar('Voice authorization recorded', { variant: 'success' })
     refreshData()
+  }
+
+  const handleOpenConsent = (modelId: string) => {
+    const model = voiceModels.find(m => m.id === modelId)
+    const person = model?.person || selectedFamilyMember
+    if (person) {
+      setConsentPersonId(person.id)
+      setConsentPersonName(person.firstName + (person.lastName ? ` ${person.lastName}` : ''))
+      setConsentVoiceProfileId(modelId)
+      setShowConsentModal(true)
+      toggleRecordingModal()
+    }
   }
 
   return (
@@ -443,11 +458,13 @@ export function VoiceLabPage({ voiceModels, controller, autoCreate }: VoiceLabPa
       <VoiceTrainingModal
         open={showRecordingModal}
         onClose={toggleRecordingModal}
+        personId={selectedFamilyMember?.id}
         trainingSamples={trainingSamples}
         onUploadSample={uploadTrainingSample}
         onRemoveSample={removeTrainingSample}
         onCreateVoice={handleCreateVoice}
         onResetTraining={resetTraining}
+        onRecordConsent={handleOpenConsent}
         isUploading={isUploading}
         isTraining={isTraining}
         trainingJob={trainingJob}

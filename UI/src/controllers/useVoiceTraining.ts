@@ -32,7 +32,7 @@ interface VoiceTrainingState {
 }
 
 interface VoiceTrainingActions {
-  uploadTrainingSample: (file: File) => Promise<void>
+  uploadTrainingSample: (file: File, personId?: string) => Promise<void>
   removeTrainingSample: (index: number) => void
   startVoiceTraining: (modelName: string, language: string, styleInstruct?: string, personId?: string) => Promise<void>
   checkTrainingStatus: (jobId: string) => Promise<void>
@@ -74,13 +74,16 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
     }))
   }, [])
 
-  const uploadTrainingSample = useCallback(async (file: File) => {
+  const uploadTrainingSample = useCallback(async (file: File, personId?: string) => {
     setState(prev => ({ ...prev, isUploading: true }))
 
     try {
       const csrfToken = await fetchToken()
       const formData = new FormData()
       formData.append('audio', file)
+      if (personId) {
+        formData.append('personId', personId)
+      }
 
       const response = await fetch('/api/voice/upload-sample', {
         method: 'POST',

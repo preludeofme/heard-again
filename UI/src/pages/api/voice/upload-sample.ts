@@ -54,6 +54,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
     const [fields, files] = await form.parse(req)
     const fileArray = files.audio
+    const personId = Array.isArray(fields.personId) ? fields.personId[0] : fields.personId
     
     if (!fileArray || fileArray.length === 0) {
       return res.status(400).json({ success: false, error: 'No audio file provided' })
@@ -95,6 +96,40 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       })
     }
 
+    // 2.5 Register with Audio Processing Service (Chat Service)
+    let audioProcessingId: string | undefined = undefined
+    const chatServiceUrl = process.env.CHAT_SERVICE_URL || 'http://localhost:4778'
+    
+    try {
+      const registerResponse = await fetch(`${chatServiceUrl}/api/audio/uploads`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Familyspace-Id': user.familyspaceId,
+          'X-User-Id': user.id
+        },
+        body: JSON.stringify({
+          familyspaceId: user.familyspaceId,
+          userId: user.id,
+          personId: personId || undefined,
+          fileName: audioFile.originalFilename || 'audio.wav',
+          mimeType: audioFile.mimetype || 'audio/wav',
+          processingPreference: 'enhanced' // Default to enhanced for voice cloning
+        }),
+      })
+
+      if (registerResponse.ok) {
+        const registerData = await registerResponse.json()
+        audioProcessingId = registerData.data?.uploadId
+        logger.info({ audioProcessingId }, 'Registered voice sample for audio processing')
+      } else {
+        logger.warn('[API] Failed to register voice sample for audio processing:', registerResponse.status)
+      }
+    } catch (err) {
+      logger.error('[API] Audio processing registration error:', err)
+      // Non-blocking
+    }
+
     // 3. Forward to TTS service
     const formData = new FormData()
     const blob = new Blob([fileBuffer], { type: audioFile.mimetype || 'audio/wav' })
@@ -118,7 +153,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
     const ttsData = await response.json()
 
-    // Create Asset record in database with transcript
+    // Create Asset record in database with transcript and audioProcessingId
     const asset = await prisma.asset.create({
       data: {
         familyspaceId: user.familyspaceId,
@@ -136,6 +171,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         uploadedById: user.id,
         metadata: {
           ttsFileId: ttsData.fileId,
+          audioProcessingId, // Link to the processing job
         },
       },
     })

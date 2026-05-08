@@ -12,7 +12,7 @@ export function registerAudioProcessingRoutes(app: FastifyInstance): void {
       })
     }
 
-    const created = audioProcessingService.registerUpload({
+    const created = await audioProcessingService.registerUpload({
       familyspaceId: body.familyspaceId,
       userId: body.userId,
       personId: body.personId,

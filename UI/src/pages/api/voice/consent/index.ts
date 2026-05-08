@@ -10,12 +10,13 @@ export default apiHandler({
 
     const { valid, errors } = validate(req.body, {
       personId: [rules.required, rules.uuid],
+      voiceProfileId: [rules.uuid],
       consentType: [rules.required, rules.oneOf(['SELF', 'FAMILY_ATTESTATION', 'ESTATE_REPRESENTATIVE', 'OTHER'])],
     })
     if (!valid) throw Errors.badRequest('Validation failed', errors)
 
     const {
-      personId, consentType, attestationText,
+      personId, voiceProfileId, consentType, attestationText,
       allowsGeneration = true, allowsCloudProcessing = false, allowsSharing = false,
     } = req.body
 
@@ -27,7 +28,7 @@ export default apiHandler({
 
     // Check for existing active consent (no revokedAt means active)
     const existing = await prisma.voiceConsent.findFirst({
-      where: { personId, revokedAt: null },
+      where: { personId, voiceProfileId: voiceProfileId || null, revokedAt: null },
     })
     if (existing) {
       return successResponse(res, { message: 'Active consent already exists', consent: existing })
@@ -37,6 +38,7 @@ export default apiHandler({
       data: {
         familyspaceId: user.familyspaceId,
         personId,
+        voiceProfileId: voiceProfileId || null,
         grantedByUserId: user.id,
         consentType,
         attestationText: attestationText || null,

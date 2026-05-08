@@ -23,6 +23,7 @@ export const QUEUE_NAMES = {
   INDEXING: 'indexing',
   PERSONA_GENERATION: 'persona-generation',
   STYLE_EXTRACTION: 'style-extraction',
+  AUDIO_PROCESSING: 'audio-processing',
 } as const
 
 // Queue configuration
