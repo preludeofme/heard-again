@@ -200,7 +200,7 @@ export default function FamilyspaceSettingsPage() {
       }
 
       if (result.deleted) {
-        router.push('/archive')
+        router.push('/memories')
       } else {
         setSuccess(`Deletion vote recorded. ${result.votesReceived} of ${result.votesNeeded} members have voted.`)
         setShowDeleteDialog(false)

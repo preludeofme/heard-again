@@ -3,7 +3,7 @@ import { useRouter } from 'next/router'
 
 /**
  * Legacy Documents Page
- * Redirects to the unified Archive Shell with the 'keepsakes' lens active.
+ * Redirects to the unified Memories Shell with the 'keepsakes' lens active.
  */
 export default function DocumentsRedirect() {
   const router = useRouter()
@@ -11,7 +11,7 @@ export default function DocumentsRedirect() {
   useEffect(() => {
     if (router.isReady) {
       router.replace({
-        pathname: '/archive',
+        pathname: '/memories',
         query: { ...router.query, lens: 'keepsakes' },
       })
     }

@@ -6,7 +6,7 @@ import Head from 'next/head'
 import { 
   Box, Typography, Card, CardContent, Button, TextField,
   IconButton, Avatar, CircularProgress, Alert, Container,
-  MenuItem, Select, FormControl, InputLabel
+  MenuItem, Select, FormControl, InputLabel, Divider
 } from '@mui/material'
 import { 
   ArrowBack as ArrowBackIcon,
@@ -16,6 +16,8 @@ import {
 } from '@mui/icons-material'
 import { Layout } from '@/components/layout/Layout'
 import { AudioRecorder } from '@/components/audio/AudioRecorder'
+import { FamilyMemberSelect } from '@/components/search'
+import { RichTextEditor } from '@/components/editor/RichTextEditor'
 
 const RELATIONSHIP_OPTIONS = [
   { value: 'Self', label: 'Self' },
@@ -161,15 +163,39 @@ export default function PublicContributePage() {
   if (!subjectId) {
     return (
       <Layout>
-        <Container sx={{ py: 8, textAlign: 'center' }}>
-          <Typography variant="h5" sx={{ mb: 2, color: '#16334a' }}>
+        <Container maxWidth="sm" sx={{ py: 8, textAlign: 'center' }}>
+          <Typography variant="h5" sx={{ mb: 3, color: '#16334a', fontWeight: 600, fontFamily: 'var(--font-newsreader), serif' }}>
             Who is this story about?
           </Typography>
-          <Typography variant="body1" sx={{ mb: 4, color: '#546669', maxWidth: 400, mx: 'auto' }}>
-            Select a family member from the archive first, then use &ldquo;Add a Story&rdquo; to contribute.
+          <Typography variant="body1" sx={{ mb: 4, color: '#546669' }}>
+            Search for a family member below to start sharing a memory.
           </Typography>
-          <Button variant="contained" onClick={() => router.push('/archive?lens=stories')} sx={{ bgcolor: '#16334a', borderRadius: 2 }}>
-            Go to Archive
+          
+          <Box sx={{ textAlign: 'left', mb: 4 }}>
+            <FamilyMemberSelect
+              value={null}
+              onChange={(id) => {
+                if (id) {
+                  router.push(`/stories/contribute?subjectId=${id}`, undefined, { shallow: true })
+                }
+              }}
+              label="Search family member"
+              placeholder="Start typing a name..."
+            />
+          </Box>
+
+          <Divider sx={{ my: 4 }}>
+            <Typography variant="caption" sx={{ color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+              Or
+            </Typography>
+          </Divider>
+
+          <Button 
+            variant="outlined" 
+            onClick={() => router.push('/memories?lens=stories')} 
+            sx={{ borderRadius: 2, color: '#16334a', borderColor: '#16334a' }}
+          >
+            Browse all Memories
           </Button>
         </Container>
       </Layout>
@@ -344,17 +370,14 @@ export default function PublicContributePage() {
                       </Box>
                     ) : (
                       <>
-                        <TextField
-                          fullWidth
-                          label="Share your memory"
-                          placeholder="Start writing here..."
-                          value={storyContent}
-                          onChange={(e) => setStoryContent(e.target.value)}
-                          multiline
-                          rows={8}
-                          required
-                          sx={{ mb: 4 }}
-                        />
+                        <Box sx={{ mb: 4 }}>
+                          <Typography variant="subtitle2" sx={{ mb: 1, color: '#16334a' }}>Share your memory</Typography>
+                          <RichTextEditor
+                            content={storyContent}
+                            onChange={(html) => setStoryContent(html)}
+                            placeholder="Start writing here..."
+                          />
+                        </Box>
                         <Button
                           fullWidth
                           type="submit"

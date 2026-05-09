@@ -485,4 +485,68 @@ export class RelationshipService {
       },
     }
   }
+
+  /**
+   * Calculate the total number of generations in a familyspace
+   */
+  async calculateGenerations(familyspaceId: string): Promise<number> {
+    const parentChildLinks = await this.prisma.familyChild.findMany({
+      where: {
+        family: { familyspaceId }
+      },
+      include: {
+        family: {
+          include: {
+            parents: true
+          }
+        }
+      }
+    })
+
+    if (parentChildLinks.length === 0) {
+      // If there are people but no parent-child links, there's at least 1 generation if there are people
+      const peopleCount = await this.prisma.person.count({ where: { familyspaceId } })
+      return peopleCount > 0 ? 1 : 0
+    }
+
+    // Build adjacency list: parentId -> [childId]
+    const adj = new Map<string, Set<string>>()
+    const allPeople = new Set<string>()
+
+    for (const link of parentChildLinks) {
+      const childId = link.childId
+      allPeople.add(childId)
+      for (const parent of link.family.parents) {
+        const parentId = parent.parentId
+        allPeople.add(parentId)
+        if (!adj.has(parentId)) adj.set(parentId, new Set())
+        adj.get(parentId)!.add(childId)
+      }
+    }
+
+    // Use memoized DFS to find the longest path from each node
+    const memo = new Map<string, number>()
+
+    const longestPath = (u: string): number => {
+      if (memo.has(u)) return memo.get(u)!
+      
+      let maxDist = 0
+      const neighbors = adj.get(u)
+      if (neighbors) {
+        for (const v of neighbors) {
+          maxDist = Math.max(maxDist, 1 + longestPath(v))
+        }
+      }
+      
+      memo.set(u, maxDist)
+      return maxDist
+    }
+
+    let maxGenerations = 0
+    for (const personId of allPeople) {
+      maxGenerations = Math.max(maxGenerations, 1 + longestPath(personId))
+    }
+
+    return maxGenerations
+  }
 }

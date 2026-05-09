@@ -8,7 +8,7 @@ import { ProfileColors } from '@/components/profile/ProfileConstants'
 import { VoiceSignature } from '@/components/profile/VoiceSignature'
 import { MiniFamilyTree } from '@/components/profile/MiniFamilyTree'
 import { NarrativeTimeline } from '@/components/profile/NarrativeTimeline'
-import { ArchiveGrid } from '@/components/profile/ArchiveGrid'
+import { MemoriesGrid } from '@/components/profile/MemoriesGrid'
 
 interface PersonDetails {
   id: string
@@ -342,7 +342,7 @@ export default function PersonProfilePage() {
             hasDragged={hasDragged}
           />
 
-          <ArchiveGrid 
+          <MemoriesGrid 
             documents={documents}
             docTotal={docTotal}
             personId={personId}

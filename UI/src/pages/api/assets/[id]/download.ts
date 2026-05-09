@@ -8,7 +8,8 @@ import path from 'path'
 import fs from 'fs'
 import type { NextApiRequest, NextApiResponse } from 'next'
 
-const STORAGE_ROOT = path.resolve(process.cwd())
+const UPLOAD_DIR = process.env.UPLOAD_DIR || 'uploads'
+const STORAGE_ROOT = path.resolve(process.cwd(), UPLOAD_DIR)
 const INLINE_MIME_PREFIXES = ['audio/', 'image/', 'video/']
 
 function isMediaMimeType(mimeType: string | null | undefined): boolean {

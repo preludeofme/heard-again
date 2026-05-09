@@ -34,6 +34,7 @@ import {
 } from '@mui/icons-material'
 import { PersonType } from '@/contracts'
 import { useCSRF } from '@/hooks/useCSRF'
+import { FamilyMemberSelect } from '@/components/search'
 
 export interface PersonFormData {
   firstName: string
@@ -519,24 +520,18 @@ export function AddEditPersonModal({
               </Select>
             </FormControl>
 
-            {mode === 'create' && existingPeople && existingPeople.length > 0 && (
+            {mode === 'create' && (
               <Box sx={{ p: 2, backgroundColor: '#f6f3ee', borderRadius: 2 }}>
                 <Typography variant="subtitle2" sx={{ mb: 2 }}>Quick Relationship (Optional)</Typography>
                 <Grid container spacing={2}>
                   <Grid size={{ xs: 12, sm: 6 }}>
-                    <FormControl fullWidth size="small">
-                      <InputLabel>Related To</InputLabel>
-                      <Select
-                        value={formData.relationshipTo || ''}
-                        label="Related To"
-                        onChange={(e) => handleChange('relationshipTo', e.target.value)}
-                      >
-                        <MenuItem value=""><em>None</em></MenuItem>
-                        {existingPeople.map((p) => (
-                          <MenuItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
+                    <FamilyMemberSelect
+                      value={formData.relationshipTo || null}
+                      onChange={(id) => handleChange('relationshipTo', id || '')}
+                      label="Related To"
+                      size="small"
+                      placeholder="Search for person..."
+                    />
                   </Grid>
                   {formData.relationshipTo && (
                     <Grid size={{ xs: 12, sm: 6 }}>

@@ -12,6 +12,7 @@ export interface TreePerson {
   spouseWithNext?: boolean
   upperGenerationLinkType?: 'biological' | 'nonBiological' | 'none'
   generation?: number // Added for multi-generation support
+  relationship?: string // Added for relationship to user display
 }
 
 export interface FamilyTreeRelationshipEdge {

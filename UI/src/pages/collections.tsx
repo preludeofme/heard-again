@@ -3,7 +3,7 @@ import { useRouter } from 'next/router'
 
 /**
  * Legacy Collections Page
- * Redirects to the unified Archive Shell with the 'stories' lens active.
+ * Redirects to the unified Memories Shell with the 'stories' lens active.
  */
 export default function CollectionsRedirect() {
   const router = useRouter()
@@ -11,7 +11,7 @@ export default function CollectionsRedirect() {
   useEffect(() => {
     if (router.isReady) {
       router.replace({
-        pathname: '/archive',
+        pathname: '/memories',
         query: { ...router.query, lens: 'stories' },
       })
     }

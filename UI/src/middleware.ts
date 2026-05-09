@@ -43,7 +43,7 @@ export async function middleware(request: NextRequest) {
   }
   
   // Public paths that don't require authentication
-  const publicPaths = ['/', '/login', '/signup', '/api/auth', '/forgot-password', '/reset-password', '/onboarding', '/pricing', '/self-hosting']
+  const publicPaths = ['/', '/login', '/signup', '/api/auth', '/forgot-password', '/reset-password', '/onboarding', '/pricing', '/self-hosting', '/privacy', '/terms']
   const isPublicPath = publicPaths.some((path) => pathname === path || pathname.startsWith(`${path}/`))
   
   // Static files, API routes (API routes handle their own auth), and auth routes

@@ -5,43 +5,105 @@ import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-h
 export default apiHandler({
   // GET /api/billing/plans - List available active plans
   GET: async (req, res) => {
-    const user = await getAuthUserWithFamilyspace(req, res)
-    await requireFamilyspaceRole(user.id, user.familyspaceId, 'VIEWER')
-
-    const plans = await prisma.plan.findMany({
-      where: {
-        isActive: true,
-      },
-      orderBy: {
-        priceMonthlyCents: 'asc',
-      },
-    })
-
-    return successResponse(res, {
-      plans: plans.map((plan) => ({
-        id: plan.id,
-        name: plan.name,
-        planType: plan.planType,
+    const plans = [
+      {
+        id: 'free',
+        name: 'Self-Hosted',
+        planType: 'FREE',
         pricing: {
-          monthlyCents: plan.priceMonthlyCents,
-          yearlyCents: plan.priceYearlyCents,
-          monthlyDisplay: (plan.priceMonthlyCents / 100).toFixed(2),
-          yearlyDisplay: plan.priceYearlyCents != null ? (plan.priceYearlyCents / 100).toFixed(2) : null,
+          monthlyCents: 0,
+          yearlyCents: 0,
+          monthlyDisplay: '0.00',
+          yearlyDisplay: '0.00',
         },
         entitlements: {
-          tunnelEnabled: plan.tunnelEnabled,
-          cloudGpuEnabled: plan.cloudGpuEnabled,
-          cloudStorageEnabled: plan.cloudStorageEnabled,
-          generationMinutesIncluded: plan.generationMinutesIncluded,
-          storageQuotaBytes: Number(plan.storageQuotaBytes),
-          memberQuota: plan.memberQuota,
-          voiceProfileQuota: plan.voiceProfileQuota,
+          tunnelEnabled: false,
+          cloudGpuEnabled: false,
+          cloudStorageEnabled: false,
+          generationMinutesIncluded: 0,
+          storageQuotaBytes: 0,
+          memberQuota: 100,
+          voiceProfileQuota: 5,
         },
         features: {
-          prioritySupport: plan.prioritySupport,
-          advancedAnalytics: plan.advancedAnalytics,
+          prioritySupport: false,
+          advancedAnalytics: false,
         },
-      })),
-    })
+      },
+      {
+        id: 'cloud_min',
+        name: 'Cloud Access — Starter',
+        planType: 'CLOUD',
+        pricing: {
+          monthlyCents: 999,
+          yearlyCents: 9990,
+          monthlyDisplay: '9.99',
+          yearlyDisplay: '99.90',
+        },
+        entitlements: {
+          tunnelEnabled: true,
+          cloudGpuEnabled: true,
+          cloudStorageEnabled: true,
+          generationMinutesIncluded: 30,
+          storageQuotaBytes: 10 * 1024 * 1024 * 1024,
+          memberQuota: 1000,
+          voiceProfileQuota: 50,
+        },
+        features: {
+          prioritySupport: true,
+          advancedAnalytics: true,
+        },
+      },
+      {
+        id: 'cloud_mid',
+        name: 'Cloud Access — Family',
+        planType: 'CLOUD',
+        pricing: {
+          monthlyCents: 1999,
+          yearlyCents: 19990,
+          monthlyDisplay: '19.99',
+          yearlyDisplay: '199.90',
+        },
+        entitlements: {
+          tunnelEnabled: true,
+          cloudGpuEnabled: true,
+          cloudStorageEnabled: true,
+          generationMinutesIncluded: 60,
+          storageQuotaBytes: 50 * 1024 * 1024 * 1024,
+          memberQuota: 1000,
+          voiceProfileQuota: 50,
+        },
+        features: {
+          prioritySupport: true,
+          advancedAnalytics: true,
+        },
+      },
+      {
+        id: 'cloud_max',
+        name: 'Cloud Access — Legacy',
+        planType: 'CLOUD',
+        pricing: {
+          monthlyCents: 3999,
+          yearlyCents: 39990,
+          monthlyDisplay: '39.99',
+          yearlyDisplay: '399.90',
+        },
+        entitlements: {
+          tunnelEnabled: true,
+          cloudGpuEnabled: true,
+          cloudStorageEnabled: true,
+          generationMinutesIncluded: 999999, // unlimited representation
+          storageQuotaBytes: 100 * 1024 * 1024 * 1024,
+          memberQuota: 1000,
+          voiceProfileQuota: 50,
+        },
+        features: {
+          prioritySupport: true,
+          advancedAnalytics: true,
+        },
+      }
+    ]
+
+    return successResponse(res, { plans })
   },
 })

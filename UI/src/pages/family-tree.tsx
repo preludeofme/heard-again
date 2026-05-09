@@ -8,6 +8,7 @@ import { GedcomImportModal } from '@/components/modals/GedcomImportModal'
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { Box, CircularProgress } from '@mui/material'
 import { useRouter } from 'next/router'
+import { useSession } from 'next-auth/react'
 import { useSelectedFamilyMember } from '@/contexts/SelectedFamilyMemberContext'
 import { fetchWithCSRF, fetchWithCSRFAndJSON } from '@/lib/api-client'
 
@@ -252,6 +253,9 @@ function mapPeopleToTree(people: ApiPersonWithEdges[], activePersonId?: string):
 
 export default function FamilyTree() {
   const router = useRouter()
+  const { data: session } = useSession()
+  const familyspaceId = session?.user?.defaultFamilyspaceId
+
   const { setSelectedFamilyMember } = useSelectedFamilyMember()
   const selectedPersonIdFromQuery = typeof router.query.personId === 'string' ? router.query.personId : undefined
   const initialSearchExpanded =
@@ -259,11 +263,15 @@ export default function FamilyTree() {
     || router.query.expandSearch === 'true'
   const initialSearchQuery = typeof router.query.search === 'string' ? router.query.search : ''
   const [treeData, setTreeData] = useState<FamilyTreeData | null>(null)
-  const [rawPeopleData, setRawPeopleData] = useState<ApiPersonWithEdges[]>([])
   const [people, setPeople] = useState<ApiPerson[]>([])
   const [rawPeople, setRawPeople] = useState<ApiPersonWithEdges[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [allSearchablePeople, setAllSearchablePeople] = useState<any[]>([])
   
+  // Family Bio state
+  const [familyBio, setFamilyBio] = useState<string | null>(null)
+  const [isGeneratingBio, setIsGeneratingBio] = useState(false)
+
   // Modal states
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null)
   const [isPersonModalOpen, setIsPersonModalOpen] = useState(false)
@@ -277,7 +285,43 @@ export default function FamilyTree() {
   const [includeSiblings, setIncludeSiblings] = useState(false)
   const [isIncrementalLoading, setIsIncrementalLoading] = useState(false)
   const [expandedPersonIds, setExpandedPersonIds] = useState<{ up: Set<string>; down: Set<string>; siblings: Set<string> }>({ up: new Set(), down: new Set(), siblings: new Set() })
-  const [allSearchablePeople, setAllSearchablePeople] = useState<ApiPerson[]>([])
+
+  const fetchFamilyBio = useCallback(async () => {
+    if (!familyspaceId) return
+    try {
+      const res = await fetch(`/api/familyspaces/${familyspaceId}/generate-bio`)
+      const data = await res.json()
+      if (data.success) {
+        setFamilyBio(data.data.bio)
+      }
+    } catch (err) {
+      console.error('Failed to fetch family bio:', err)
+    }
+  }, [familyspaceId])
+
+  const handleGenerateBio = useCallback(async () => {
+    if (!familyspaceId) return
+    setIsGeneratingBio(true)
+    try {
+      const response = await fetchWithCSRFAndJSON(`/api/familyspaces/${familyspaceId}/generate-bio`, {})
+      const data = await response.json()
+      if (data.success) {
+        setFamilyBio(data.data.bio)
+      } else {
+        alert(data.error || 'Failed to generate biography.')
+      }
+    } catch (err) {
+      console.error('Failed to generate family bio:', err)
+    } finally {
+      setIsGeneratingBio(false)
+    }
+  }, [familyspaceId])
+
+  useEffect(() => {
+    if (familyspaceId) {
+      fetchFamilyBio()
+    }
+  }, [familyspaceId, fetchFamilyBio])
 
   const fetchSearchablePeople = useCallback(async () => {
     try {
@@ -533,6 +577,13 @@ export default function FamilyTree() {
         loadedDepths={loadedDepths}
         isLoadingMore={isIncrementalLoading}
         fitViewTrigger={fitViewTrigger}
+        familyBio={familyBio}
+        onGenerateBio={handleGenerateBio}
+        isGeneratingBio={isGeneratingBio}
+        userPersonId={session?.user?.linkedPersonId}
+        onViewFullProfile={(id) => {
+          router.push(`/profile/${id}`)
+        }}
       />
   )
 
@@ -552,6 +603,9 @@ export default function FamilyTree() {
           setIsPersonModalOpen(false)
           setSelectedPersonId(null)
           fetchPeople()
+        }}
+        onPersonClick={(id) => {
+          setSelectedPersonId(id)
         }}
         onSave={() => fetchPeople()}
         onDelete={() => fetchPeople()}

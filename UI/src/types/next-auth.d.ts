@@ -11,6 +11,7 @@ declare module 'next-auth' {
       displayName?: string | null
       avatarUrl?: string | null
       defaultFamilyspaceId?: string | null
+      linkedPersonId?: string | null
       role?: string | null
     }
   }
@@ -19,6 +20,7 @@ declare module 'next-auth' {
     displayName?: string | null
     avatarUrl?: string | null
     defaultFamilyspaceId?: string | null
+    linkedPersonId?: string | null
   }
 }
 
@@ -28,6 +30,7 @@ declare module 'next-auth/jwt' {
     displayName?: string | null
     avatarUrl?: string | null
     defaultFamilyspaceId?: string | null
+    linkedPersonId?: string | null
     role?: string | null
   }
 }

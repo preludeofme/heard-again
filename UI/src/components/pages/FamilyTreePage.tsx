@@ -74,6 +74,11 @@ interface FamilyTreePageProps {
   initialSearchExpanded?: boolean
   initialSearchQuery?: string
   fitViewTrigger?: number
+  familyBio?: string | null
+  onGenerateBio?: () => Promise<void>
+  isGeneratingBio?: boolean
+  userPersonId?: string | null
+  onViewFullProfile?: (personId: string) => void
 }
 
 
@@ -101,6 +106,11 @@ export function FamilyTreePage({
   onToggleFullscreen,
   initialSearchExpanded = false,
   fitViewTrigger,
+  familyBio,
+  onGenerateBio,
+  isGeneratingBio = false,
+  userPersonId,
+  onViewFullProfile,
 }: FamilyTreePageProps): React.JSX.Element {
   const router = useRouter()
   const theme = useTheme()
@@ -233,7 +243,7 @@ export function FamilyTreePage({
     [onPersonClick],
   )
 
-  const handleViewArchive = useCallback(
+  const handleViewMemories = useCallback(
     (person: TreeLayoutPerson) => {
       setSelectedFamilyMember({
         id: String(person.id),
@@ -415,10 +425,10 @@ export function FamilyTreePage({
               boxShadow: isMobile ? 'none' : '0 1px 3px rgba(0,0,0,0.1)',
               border: 'none',
               borderBottom: isMobile ? '1px solid rgba(22, 51, 74, 0.08)' : undefined,
-              height: 56, // Match height of search bar
+              minHeight: 56, // Match height of search bar but allow growth
               flex: 1,
               width: '100%',
-              overflow: 'hidden',
+              zIndex: 100, // Ensure search results are above canvas
             }}
           >
             {isMobile ? (
@@ -637,10 +647,12 @@ export function FamilyTreePage({
             people={rawPeople}
             rootPersonId={effectiveRootId}
             selectedPersonId={selectedPersonId}
+            userPersonId={userPersonId}
             canvasRef={canvasRef}
             onPersonClick={handlePersonClick}
             onAddPerson={handleAddPerson}
-            onViewArchive={handleViewArchive}
+            onViewMemories={handleViewMemories}
+            onViewFullProfile={onViewFullProfile}
             onSetRoot={onSetRoot}
             onLoadMore={_onLoadMore}
             onEditRelationships={handleAddRelationship}
@@ -868,11 +880,12 @@ export function FamilyTreePage({
                   p: 3,
                   borderRadius: 4,
                   mb: 3,
+                  maxHeight: 300,
+                  overflowY: 'auto'
                 }}
               >
-                <Typography variant="body2" sx={{ color: 'secondary.main', fontStyle: 'italic' }}>
-                  &quot;Most family stories reference &apos;The Summer of &apos;84&apos; at the lake
-                  house.&quot;
+                <Typography variant="body2" sx={{ color: 'secondary.main', fontStyle: familyBio ? 'normal' : 'italic', lineHeight: 1.6 }}>
+                  {familyBio || '"Each family member added here contributes to a larger narrative of resilience and connection waiting to be told."'}
                 </Typography>
               </Card>
 
@@ -881,7 +894,7 @@ export function FamilyTreePage({
                   sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'tertiary.main' }}
                 />
                 <Typography variant="body2" sx={{ color: 'secondary.main' }}>
-                  3 Shared voice patterns found
+                  {rawPeople.length} family members charted
                 </Typography>
               </Box>
 
@@ -902,10 +915,12 @@ export function FamilyTreePage({
               <Button
                 fullWidth
                 variant="contained"
-                endIcon={<AutoFixHigh />}
-                sx={{ mt: 4, py: 1.5, borderRadius: 3 }}
+                disabled={isGeneratingBio || rawPeople.length === 0}
+                onClick={onGenerateBio}
+                endIcon={isGeneratingBio ? <CircularProgress size={20} color="inherit" /> : <AutoFixHigh />}
+                sx={{ mt: 4, py: 1.5, borderRadius: 3, textTransform: 'none', fontWeight: 600 }}
               >
-                Generate Family Bio
+                {isGeneratingBio ? 'Generating...' : familyBio ? 'Regenerate Family Bio' : 'Generate Family Bio'}
               </Button>
             </>
           )}

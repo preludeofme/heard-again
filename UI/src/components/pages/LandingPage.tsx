@@ -15,6 +15,7 @@ import {
   Favorite,
 } from '@mui/icons-material'
 import Link from 'next/link'
+import { LandingPricingSection } from './LandingPricingSection'
 
 // Material Symbols Icon component
 const MaterialSymbol = ({ icon, sx }: { icon: string; sx?: any }) => (
@@ -35,38 +36,44 @@ const MaterialSymbol = ({ icon, sx }: { icon: string; sx?: any }) => (
 const collaborationSteps = [
   {
     icon: 'groups',
-    title: 'Invite Contributors',
-    description: 'Securely invite family members and lifelong friends to join the story as contributors.',
+    title: 'Invite Family and Friends',
+    description: 'Securely invite the people who knew your loved one best. Each contributor can add their own stories, recordings, photos, letters, and reflections — helping preserve memories that might otherwise fade away.',
   },
   {
     icon: 'settings_voice',
-    title: 'Voice Memories',
-    description: 'Anyone invited can record audio stories, capturing the diverse voices that defined a lifetime.',
+    title: 'Save Their Voice',
+    description: 'Upload recordings, voicemails, or interviews to save family voices from aging tech. We organize and protect these memories from being lost. Optionally enable story narration in a familiar voice, always with your consent.',
   },
   {
     icon: 'edit_note',
-    title: 'Text & Anecdotes',
-    description: 'Share written memories, letters, and the little details only close friends would remember.',
+    title: 'Capture the Stories Behind the Photos',
+    description: 'Photos show a moment. Stories explain why it mattered. Add written memories, scanned letters, personal notes, family jokes, recipes, sayings, and small details that make someone feel real again.',
   },
   {
     icon: 'auto_stories',
-    title: 'The Living Record',
-    description: 'Witness as individual contributions weave together into a complete, soulful family tree.',
+    title: 'Create a Family Legacy Library',
+    description: 'Over time, your family’s contributions become something bigger than a scrapbook. They become a private family memory library — one that future generations can read, hear, explore, and add to.',
   },
 ]
 
 const testimonials = [
   {
-    quote: "It's incredible to see the story grow. My father's old army buddies added stories I'd never heard before. It's like seeing him through new eyes.",
-    name: 'Eleanor Vance',
-    role: 'Heritage Member',
+    quote: "I had old recordings of my mother, but they were scattered everywhere. Heard Again gave our family one place to preserve them and share the stories behind them.",
+    name: 'Heritage Member',
+    role: '',
     avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&h=200&fit=crop&crop=face',
   },
   {
-    quote: "We started this for my grandmother, but seeing all my cousins contribute their own memories has turned it into a family bonding experience.",
-    name: 'Julian Thorne',
-    role: 'Legacy Builder',
+    quote: "My dad’s friends added memories I had never heard before. It felt like meeting another side of him.",
+    name: 'Legacy Builder',
+    role: '',
     avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=face',
+  },
+  {
+    quote: "We started this for my grandmother, but it became something our whole family built together.",
+    name: 'Family Contributor',
+    role: '',
+    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&h=200&fit=crop&crop=face',
   },
 ]
 
@@ -81,12 +88,77 @@ export function LandingPage() {
         sx={{
           position: 'relative',
           px: { xs: 4, md: 8 },
-          pt: 10,
+          pt: 4,
           pb: 16,
           maxWidth: '1400px',
           mx: 'auto',
         }}
       >
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 8 }}>
+          <Typography
+            variant="h5"
+            sx={{
+              fontFamily: 'var(--font-newsreader), serif',
+              fontStyle: 'italic',
+              color: 'primary.main',
+              fontWeight: 700,
+            }}
+          >
+            Heard Again
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+            <Button
+              component={Link}
+              href="/pricing"
+              variant="text"
+              sx={{
+                color: 'primary.main',
+                fontWeight: 600,
+                fontSize: '0.9rem',
+              }}
+            >
+              Pricing
+            </Button>
+            <Button
+              component={Link}
+              href="/privacy"
+              variant="text"
+              sx={{
+                color: 'primary.main',
+                fontWeight: 600,
+                fontSize: '0.9rem',
+              }}
+            >
+              Privacy
+            </Button>
+            <Button
+              component={Link}
+              href="/terms"
+              variant="text"
+              sx={{
+                color: 'primary.main',
+                fontWeight: 600,
+                fontSize: '0.9rem',
+              }}
+            >
+              Terms & Conditions
+            </Button>
+            <Button
+              component={Link}
+              href="/login"
+              variant="contained"
+              sx={{
+                ml: 1,
+                borderRadius: '999px',
+                px: 3,
+                textTransform: 'none',
+                fontWeight: 600,
+              }}
+            >
+              Sign In
+            </Button>
+          </Box>
+        </Box>
         <Grid container spacing={8} alignItems="center">
           <Grid size={{ xs: 12, lg: 6 }} sx={{ position: 'relative', zIndex: 10 }}>
             <Typography
@@ -99,7 +171,7 @@ export function LandingPage() {
                 fontFamily: 'var(--font-newsreader), serif',
               }}
             >
-              Preserve the voices that matter most
+              Stories fade. Voices don&apos;t have to.
             </Typography>
             <Typography
               variant="body1"
@@ -107,11 +179,13 @@ export function LandingPage() {
                 fontSize: '1.25rem',
                 color: 'secondary.main',
                 mb: 5,
-                maxWidth: 500,
+                maxWidth: 600,
                 lineHeight: 1.6,
               }}
             >
-              A collaborative sanctuary for your family&apos;s identity. Invite loved ones to share memories and build a collective portrait of a legacy that lasts forever.
+              Preserve the voices, stories, and memories of the people who shaped your family. Heard Again gives your family a private place to collect recordings, photos, letters, and personal stories — and, when you choose, hear those memories narrated in a familiar voice again.
+              <br /><br />
+              <b>Your family&apos;s memories are never sold</b>, never used to train public models, and never shared with third parties. Cloud-host with us, or self-host it yourself. Your family&apos;s legacy stays your way.
             </Typography>
             <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
               <Button
@@ -127,22 +201,6 @@ export function LandingPage() {
                 }}
               >
                 Start Your Story
-              </Button>
-              <Button
-                variant="text"
-                size="large"
-                startIcon={<PlayCircle />}
-                sx={{
-                  px: 4,
-                  py: 2,
-                  color: 'primary.main',
-                  fontWeight: 600,
-                  '&:hover': {
-                    bgcolor: 'rgba(208, 227, 230, 0.3)',
-                  },
-                }}
-              >
-                Watch the Story
               </Button>
             </Box>
           </Grid>
@@ -222,7 +280,7 @@ export function LandingPage() {
                 fontFamily: 'var(--font-newsreader), serif',
               }}
             >
-              A collective portrait, built by those who love them.
+              A fuller picture, built by everyone who loved them.
             </Typography>
             <Typography
               variant="body1"
@@ -232,7 +290,8 @@ export function LandingPage() {
                 maxWidth: 600,
               }}
             >
-              Legacies aren&apos;t built in isolation. Heard Again allows friends and family to contribute their unique perspectives, forming a rich, multi-faceted history.
+              No one person remembers everything. A daughter may remember bedtime stories. A grandson may remember fishing trips. An old friend may remember the jokes no one else heard. A sibling may remember who they were before they became “Mom,” “Dad,” “Grandpa,” or “Grandma.”<br /><br />
+              Heard Again lets family members and trusted friends contribute their own memories, creating a richer and more complete portrait of someone&apos;s life.
             </Typography>
           </Box>
 
@@ -336,7 +395,7 @@ export function LandingPage() {
                 pl: 3,
               }}
             >
-              &quot;Preserving my mother&apos;s voice was the greatest gift I could give my children.&quot;
+              &quot;Over time, your family&apos;s contributions become a private family memory library.&quot;
             </Typography>
           </Box>
 
@@ -401,6 +460,9 @@ export function LandingPage() {
         </Container>
       </Box>
 
+      {/* Pricing Section */}
+      <LandingPricingSection />
+
       {/* Final CTA Banner */}
       <Box
         component="section"
@@ -439,7 +501,7 @@ export function LandingPage() {
                   fontFamily: 'var(--font-newsreader), serif',
                 }}
               >
-                Begin your legacy today.
+                Begin with one story.
               </Typography>
               <Typography
                 variant="body1"
@@ -451,7 +513,8 @@ export function LandingPage() {
                   mb: 6,
                 }}
               >
-                Join thousands of families who are ensuring their stories are heard for generations. Secure your memories now.
+                You do not need to have everything ready. Start with a voicemail. A cassette tape. A favorite memory. A letter. A story your family always tells.<br /><br />
+                Heard Again gives your family a private place to preserve it — and, when the time feels right, a way to hear those memories again.
               </Typography>
               <Button
                 variant="outlined"
@@ -473,7 +536,7 @@ export function LandingPage() {
                   },
                 }}
               >
-                Create Your Free Account
+                Start preserving your family&apos;s stories today
               </Button>
               <Typography
                 variant="caption"
@@ -485,7 +548,7 @@ export function LandingPage() {
                   letterSpacing: '0.1em',
                 }}
               >
-                No credit card required to start recording.
+                No credit card required to begin.
               </Typography>
             </Box>
           </Box>
@@ -532,7 +595,7 @@ export function LandingPage() {
                   letterSpacing: '0.05em',
                 }}
               >
-                © 2024 Heard Again. A sanctuary for identity.
+                Family stories, preserved with care. © 2026 Heard Again.
               </Typography>
             </Box>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 4, justifyContent: 'center' }}>

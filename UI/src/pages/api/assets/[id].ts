@@ -20,6 +20,9 @@ export default apiHandler({
             story: { select: { id: true, title: true } },
           },
         },
+        document: {
+          select: { documentType: true },
+        },
       },
     })
 
@@ -47,9 +50,35 @@ export default apiHandler({
         role: sa.assetRole,
       })),
       createdAt: asset.createdAt,
+      documentType: asset.document?.documentType,
     })
 
     return successResponse(res, sanitizedAsset)
+  },
+
+  // PUT /api/assets/[id] - Update asset/document details
+  PUT: async (req, res) => {
+    const user = await getAuthUserWithFamilyspace(req, res)
+    await requireFamilyspaceRole(user.id, user.familyspaceId, 'EDITOR')
+    const assetId = req.query.id as string
+    const { documentType, title, description } = req.body
+
+    const document = await prisma.document.findFirst({
+      where: { assetId, familyspaceId: user.familyspaceId },
+    })
+
+    if (!document) throw Errors.notFound('Document for asset')
+
+    const updatedDocument = await prisma.document.update({
+      where: { id: document.id },
+      data: {
+        documentType: documentType || undefined,
+        title: title || undefined,
+        description: description || undefined,
+      },
+    })
+
+    return successResponse(res, updatedDocument)
   },
 
   // PATCH /api/assets/[id] - Link or unlink a person from the document for this asset

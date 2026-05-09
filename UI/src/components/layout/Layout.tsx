@@ -39,11 +39,13 @@ import {
 import Link from 'next/link'
 import { ActiveMemberHeader } from './ActiveMemberHeader'
 import { ProfileColors } from '@/components/profile/ProfileConstants'
+import { useSelectedFamilyMember } from '@/contexts/SelectedFamilyMemberContext'
 
 interface LayoutProps {
   children: ReactNode
 }
 
+const bottomNavRoutes = ['/memories', '/contribute', '/family-tree', '/favorites', 'more']
 const navItems = [
   { label: 'Living Legacy', href: '/archive' },
   { label: 'Contribute', href: '/contribute' },
@@ -52,8 +54,8 @@ const navItems = [
 
 const bottomNavRoutes = ['/archive', '/contribute', '/family-tree', '/favorites', 'more']
 const moreMenuRoutes = [
-  { label: 'Voice Memories', href: '/archive?lens=voices', icon: <StoriesIcon /> },
-  { label: 'Keepsakes', href: '/archive?lens=keepsakes', icon: <DocumentsIcon /> },
+  { label: 'Voice Memories', href: '/memories?lens=voices', icon: <StoriesIcon /> },
+  { label: 'Keepsakes', href: '/memories?lens=keepsakes', icon: <DocumentsIcon /> },
   { label: 'Account', href: '/account', icon: <SettingsIcon /> },
 ]
 
@@ -108,7 +110,7 @@ function UserMenu() {
         <MenuItem component={Link} href="/support" onClick={handleClose}>
           <Typography variant="body2" sx={{ ml: 4 }}>Support</Typography>
         </MenuItem>
-        <MenuItem component={Link} href="/privacy" onClick={handleClose}>
+        <MenuItem component={Link} href="/privacy-settings" onClick={handleClose}>
           <Typography variant="body2" sx={{ ml: 4 }}>Privacy Settings</Typography>
         </MenuItem>
         <Divider />
@@ -125,8 +127,23 @@ export function Layout({ children }: LayoutProps) {
   const router = useRouter()
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
+  const { selectedFamilyMember } = useSelectedFamilyMember()
   const [moreMenuAnchor, setMoreMenuAnchor] = useState<null | HTMLElement>(null)
   const [speedDialOpen, setSpeedDialOpen] = useState(false)
+
+  const dynamicNavItems = [
+    { label: 'Story', href: '/memories' },
+    { label: 'Contribute', href: '/contribute' },
+    { label: 'Family', href: '/family-tree' },
+  ]
+
+  if (selectedFamilyMember) {
+    // Add Profile link next to Story
+    dynamicNavItems.splice(1, 0, {
+      label: 'Profile',
+      href: `/profile/${selectedFamilyMember.id}`
+    })
+  }
 
   const currentPath = router.pathname
   const currentLens = typeof router.query.lens === 'string' ? router.query.lens : null
@@ -138,7 +155,7 @@ export function Layout({ children }: LayoutProps) {
   const handleAction = (action: string) => {
     setSpeedDialOpen(false)
     if (action === 'story') router.push('/contribute')
-    else if (action === 'document') router.push('/archive?lens=keepsakes')
+    else if (action === 'document') router.push('/memories?lens=keepsakes')
     else if (action === 'person') router.push('/family-tree?add=1')
   }
 
@@ -160,8 +177,8 @@ export function Layout({ children }: LayoutProps) {
 
   const isNavActive = (href: string) => {
     const [itemPath] = href.split('?')
-    if (itemPath === '/archive') {
-      return currentPath === '/archive' || currentPath === '/'
+    if (itemPath === '/memories') {
+      return currentPath === '/memories' || currentPath === '/'
     }
     return currentPath === itemPath || currentPath.startsWith(itemPath + '/')
   }
@@ -189,7 +206,7 @@ export function Layout({ children }: LayoutProps) {
           {/* Brand */}
           <Typography
             component={Link}
-            href="/archive"
+            href="/memories"
             sx={{
               fontFamily: 'var(--font-newsreader), serif',
               fontSize: { xs: '1.3rem', md: '1.5rem' },
@@ -207,7 +224,7 @@ export function Layout({ children }: LayoutProps) {
           {/* Desktop nav links */}
           {!isMobile && (
             <Box sx={{ display: 'flex', gap: 0.5 }}>
-              {navItems.map((item) => {
+              {dynamicNavItems.map((item) => {
                 const active = isNavActive(item.href)
                 return (
                   <Typography

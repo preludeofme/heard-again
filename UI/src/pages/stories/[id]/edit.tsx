@@ -9,6 +9,7 @@ import {
 } from '@mui/material'
 import { ArrowBack, Save, Delete, AutoFixHigh as RegenerateIcon } from '@mui/icons-material'
 import { fetchWithCSRF } from '@/lib/api-client'
+import { RichTextEditor } from '@/components/editor/RichTextEditor'
 
 type NarrationStatus = 'NONE' | 'PENDING' | 'READY' | 'APPROVED' | 'STALE' | 'FAILED'
 
@@ -264,15 +265,14 @@ export default function StoryEditPage() {
               />
 
               {/* Content */}
-              <TextField
-                fullWidth
-                multiline
-                rows={10}
-                label="Story"
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                sx={fieldSx}
-              />
+              <Box sx={{ mb: 1 }}>
+                <Typography variant="subtitle2" sx={{ mb: 1, color: C.primary, fontWeight: 600 }}>Story</Typography>
+                <RichTextEditor
+                  content={content}
+                  onChange={(html) => setContent(html)}
+                  placeholder="Share your story..."
+                />
+              </Box>
 
               {/* Optional: date + location */}
               <Box>

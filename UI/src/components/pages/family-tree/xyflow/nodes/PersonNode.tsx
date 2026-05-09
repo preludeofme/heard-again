@@ -197,7 +197,7 @@ export function PersonNode({ data }: NodeProps): React.JSX.Element {
             ...STUB_BASE_STYLE,
             bgcolor: cardBgColor,
             border: `1.5px solid ${borderColor}`,
-            bottom: -15, 
+            bottom: 35, 
             left: '50%',
             transform: 'translateX(-50%)',
             width: 100,
@@ -209,7 +209,7 @@ export function PersonNode({ data }: NodeProps): React.JSX.Element {
             zIndex: 5,
             '&:hover': { 
               height: 64,
-              bottom: -40,
+              bottom: 10,
               width: 160,
               borderColor: 'rgba(255,255,255,0.3)',
               zIndex: 15,
@@ -248,7 +248,8 @@ export function PersonNode({ data }: NodeProps): React.JSX.Element {
           isMobile={d.isMobile}
           onPersonClick={d.onPersonClick as any}
           onAddPerson={d.onAddPerson}
-          onViewArchive={d.onViewArchive as any}
+          onViewMemories={d.onViewMemories as any}
+          onViewFullProfile={d.onViewFullProfile}
           onSetRoot={d.onSetRoot}
           onEditRelationships={d.onEditRelationships}
           compact={true}

@@ -76,7 +76,7 @@ export function CreateAccountPage() {
   }
 
   const handleGoogleSignUp = () => {
-    signIn('google', { callbackUrl: '/archive' })
+    signIn('google', { callbackUrl: '/memories' })
   }
 
   return (
@@ -226,8 +226,8 @@ export function CreateAccountPage() {
                 >
                   <Box
                     component="img"
-                    src="https://images.unsplash.com/photo-1590602847861-f357a9332bbc?w=600&h=300&fit=crop"
-                    alt="Vintage microphone"
+                    src="https://images.unsplash.com/photo-1551818255-e6e10975bc17?w=600&h=300&fit=crop"
+                    alt="Family looking at memories"
                     sx={{
                       width: '100%',
                       height: '100%',
@@ -298,64 +298,33 @@ export function CreateAccountPage() {
                 )}
 
                 {/* Social Logins */}
-                <Grid container spacing={2} sx={{ mb: 4 }}>
-                  <Grid size={{ xs: 12, md: 6 }}>
-                    <Button
-                      fullWidth
-                      variant="outlined"
-                      onClick={handleGoogleSignUp}
-                      disabled={isLoading}
-                      sx={{
-                        py: 1.5,
-                        borderColor: 'rgba(208, 227, 230, 0.5)',
-                        color: 'text.primary',
-                        '&:hover': {
-                          bgcolor: 'rgba(208, 227, 230, 0.3)',
-                          borderColor: 'rgba(208, 227, 230, 0.8)',
-                        },
-                      }}
-                      startIcon={
-                        <Box
-                          component="img"
-                          src="https://www.google.com/favicon.ico"
-                          alt="Google"
-                          sx={{ width: 20, height: 20 }}
-                        />
-                      }
-                    >
-                      Sign up with Google
-                    </Button>
-                  </Grid>
-                  <Grid size={{ xs: 12, md: 6 }}>
-                    <Button
-                      fullWidth
-                      variant="outlined"
-                      sx={{
-                        py: 1.5,
-                        borderColor: 'rgba(208, 227, 230, 0.5)',
-                        color: 'text.primary',
-                        '&:hover': {
-                          bgcolor: 'rgba(208, 227, 230, 0.3)',
-                          borderColor: 'rgba(208, 227, 230, 0.8)',
-                        },
-                      }}
-                      startIcon={
-                        <Typography
-                          component="span"
-                          sx={{
-                            fontFamily: '"Material Symbols Outlined", sans-serif',
-                            fontVariationSettings: "'FILL' 1, 'wght' 400",
-                            fontSize: 20,
-                          }}
-                        >
-                          apple
-                        </Typography>
-                      }
-                    >
-                      Sign up with Apple
-                    </Button>
-                  </Grid>
-                </Grid>
+                <Box sx={{ mb: 4 }}>
+                  <Button
+                    fullWidth
+                    variant="outlined"
+                    onClick={handleGoogleSignUp}
+                    disabled={isLoading}
+                    sx={{
+                      py: 1.5,
+                      borderColor: 'rgba(208, 227, 230, 0.5)',
+                      color: 'text.primary',
+                      '&:hover': {
+                        bgcolor: 'rgba(208, 227, 230, 0.3)',
+                        borderColor: 'rgba(208, 227, 230, 0.8)',
+                      },
+                    }}
+                    startIcon={
+                      <Box
+                        component="img"
+                        src="https://www.google.com/favicon.ico"
+                        alt="Google"
+                        sx={{ width: 20, height: 20 }}
+                      />
+                    }
+                  >
+                    Sign up with Google
+                  </Button>
+                </Box>
 
                 <Divider sx={{ my: 4 }}>
                   <Typography

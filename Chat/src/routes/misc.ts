@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { bearerAuthHook } from '@/hooks/auth';
 import { logger } from '@/lib/logger';
+import { prisma } from '@/lib/prisma';
 import { LLMGatewayImpl } from '@/services/llm/LLMGateway';
 import { FirstPersonRewriter } from '@/services/rewrite/FirstPersonRewriter';
 import { RELEASE_CANDIDATE_MODEL_POLICY } from '@/config/releaseCandidate';
@@ -185,6 +186,78 @@ export function registerMiscRoutes(app: FastifyInstance): void {
     } catch (error) {
       logger.error({ familyspaceId, error }, '[rewrite] first-person rewrite failed');
       const message = error instanceof Error ? error.message : 'Rewrite failed';
+      return reply.code(502).send({ success: false, error: message });
+    }
+  });
+
+  // POST /api/generate/family-bio
+  app.post('/api/generate/family-bio', { preHandler: [bearerAuthHook] }, async (req, reply) => {
+    const familyspaceId = req.headers['x-familyspace-id'] as string | undefined;
+    if (!familyspaceId) {
+      return reply.code(400).send({ success: false, error: 'Missing x-familyspace-id header' });
+    }
+
+    try {
+      const people = await prisma.person.findMany({
+        where: { familyspaceId },
+        select: {
+          firstName: true,
+          lastName: true,
+          displayName: true,
+          bio: true,
+          birthDate: true,
+          deathDate: true,
+          isDeceased: true,
+          personType: true,
+        },
+        orderBy: { createdAt: 'asc' },
+        take: 50,
+      });
+
+      if (people.length === 0) {
+        return reply.code(400).send({ success: false, error: 'No family members found to generate bio' });
+      }
+
+      const familyInfo = people.map(p => {
+        const name = p.displayName || `${p.firstName} ${p.lastName || ''}`.trim();
+        const dates = p.birthDate ? `${p.birthDate.getFullYear()}${p.deathDate ? '-' + p.deathDate.getFullYear() : (p.isDeceased ? '-?' : '')}` : '';
+        return `- ${name} (${p.personType})${dates ? ' ' + dates : ''}: ${p.bio || 'No details provided'}`;
+      }).join('\n');
+
+      const systemPrompt = `You are a family historian and storyteller. Your goal is to write a compelling, warm, and professional "Family Story" overview (bio) based on the provided family members and their brief details.
+
+Rules:
+1. Write 2-3 engaging paragraphs.
+2. Focus on the legacy, the names, and the connections.
+3. Use a warm, narrative tone.
+4. If there are ancestors (deceased), mention the roots.
+5. If there are many people, group them logically (e.g. "The family").
+6. Do not mention individual birth/death dates explicitly unless they are particularly significant to the story.
+7. End with a forward-looking sentence about preserving this legacy.
+8. Output ONLY the bio text. No preamble or postamble.`;
+
+      const prompt: CompiledPrompt = {
+        systemPrompt,
+        context: `Family members in this space:\n${familyInfo}`,
+        history: [],
+        userMessage: "Please generate a warm family biography that summarizes our family's story so far.",
+        metadata: {
+          model: process.env.NARRATION_LLM_MODEL || RELEASE_CANDIDATE_MODEL_POLICY.primaryModel,
+          temperature: 0.7,
+        },
+      };
+
+      const response = await llmGateway.generateResponse(prompt);
+      
+      logger.info({ familyspaceId, model: response.metadata.model }, '[generate-bio] bio generated');
+
+      return reply.code(200).send({
+        success: true,
+        data: { bio: response.content },
+      });
+    } catch (error) {
+      logger.error({ familyspaceId, error }, '[generate-bio] failed');
+      const message = error instanceof Error ? error.message : 'Generation failed';
       return reply.code(502).send({ success: false, error: message });
     }
   });

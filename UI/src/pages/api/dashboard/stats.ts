@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse } from '@/lib/api-helpers'
 import { getAuthUserWithFamilyspace } from '@/lib/auth-helpers'
+import { relationshipService } from '@/services'
 import type { FamilyspaceRole } from '@prisma/client'
 
 const ACTIVITY_WINDOW_DAYS = 14
@@ -62,10 +63,16 @@ export default apiHandler({
       livingPersonWithoutVoice,
       untaggedStoriesCount,
       featuredPersonCandidates,
+      generationsCount,
     ] = await Promise.all([
       prisma.familyspace.findUnique({
         where: { id: familyspaceId },
-        select: { id: true, name: true, planType: true },
+        select: { 
+          id: true, 
+          name: true, 
+          planType: true,
+          avatarAsset: { select: { id: true } }
+        },
       }),
       prisma.person.count({ where: { familyspaceId } }),
       prisma.story.count({ where: { familyspaceId, deletedAt: null } }),
@@ -209,6 +216,7 @@ export default apiHandler({
         orderBy: { id: 'asc' },
         take: 50,
       }),
+      relationshipService.calculateGenerations(familyspaceId),
     ])
 
     const latestStories = latestStoriesRaw.map((s) => ({
@@ -334,6 +342,7 @@ export default apiHandler({
         id: familyspaceId,
         name: familyspace?.name ?? 'Family Vault',
         planType: familyspace?.planType ?? 'FREE',
+        avatarAssetId: familyspace?.avatarAsset?.id ?? null,
       },
       userContext: {
         userId: user.id,
@@ -348,6 +357,7 @@ export default apiHandler({
         draftStories,
         documents: documentsCount,
         members: hasInvitedMemberValue,
+        generations: generationsCount,
       },
       onboardingState: {
         hasFirstPerson: peopleCount > 0,

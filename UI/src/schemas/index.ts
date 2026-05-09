@@ -150,6 +150,20 @@ export const listPeopleQuerySchema = paginationSchema.extend({
 export type ListPeopleQuery = z.infer<typeof listPeopleQuerySchema>
 
 // ============================================
+// Familyspace Schemas
+// ============================================
+
+export const updateFamilyspaceSchema = z.object({
+  name: z.string().min(1).max(200).optional(),
+  slug: z.string().min(1).max(50).optional(),
+  avatarAssetId: uuidSchema.optional().nullable(),
+  isPublic: z.boolean().optional(),
+  allowMemberStories: z.boolean().optional(),
+})
+
+export type UpdateFamilyspaceInput = z.infer<typeof updateFamilyspaceSchema>
+
+// ============================================
 // Voice Schemas
 // ============================================
 

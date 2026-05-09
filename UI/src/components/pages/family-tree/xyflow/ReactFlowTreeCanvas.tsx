@@ -36,11 +36,13 @@ interface ReactFlowTreeCanvasProps {
   people: ApiPersonWithEdges[]
   rootPersonId: string
   selectedPersonId?: string | null
+  userPersonId?: string | null
   isMobile?: boolean
   canvasRef?: React.Ref<ReactFlowTreeCanvasHandle>
   onPersonClick: (person: TreeLayoutPerson) => void
   onAddPerson: () => void
-  onViewArchive: (person: TreeLayoutPerson) => void
+  onViewMemories: (person: TreeLayoutPerson) => void
+  onViewFullProfile?: (personId: string) => void
   onSetRoot?: (id: string) => void
   onLoadMore?: (direction: 'up' | 'down' | 'left' | 'right', personId: string) => void
   onEditRelationships?: (personId: string) => void
@@ -53,11 +55,13 @@ function ReactFlowTreeCanvasInner({
   people,
   rootPersonId,
   selectedPersonId = null,
+  userPersonId = null,
   isMobile = false,
   canvasRef,
   onPersonClick,
   onAddPerson,
-  onViewArchive,
+  onViewMemories,
+  onViewFullProfile,
   onSetRoot,
   onLoadMore,
   onEditRelationships,
@@ -69,8 +73,8 @@ function ReactFlowTreeCanvasInner({
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
 
   // Keep a stable ref to callbacks to avoid re-running layout when parent re-renders
-  const callbacksRef = useRef({ onPersonClick, onAddPerson, onViewArchive, onSetRoot, onLoadMore, onEditRelationships, isMobile })
-  callbacksRef.current = { onPersonClick, onAddPerson, onViewArchive, onSetRoot, onLoadMore, onEditRelationships, isMobile }
+  const callbacksRef = useRef({ onPersonClick, onAddPerson, onViewMemories, onViewFullProfile, onSetRoot, onLoadMore, onEditRelationships, isMobile })
+  callbacksRef.current = { onPersonClick, onAddPerson, onViewMemories, onViewFullProfile, onSetRoot, onLoadMore, onEditRelationships, isMobile }
 
   useEffect(() => {
     if (people.length === 0) {
@@ -84,6 +88,7 @@ function ReactFlowTreeCanvasInner({
       rootPersonId,
       callbacksRef.current,
       selectedPersonId,
+      userPersonId,
     )
 
     setNodes(newNodes)

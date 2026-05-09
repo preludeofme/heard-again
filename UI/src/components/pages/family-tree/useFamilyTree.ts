@@ -259,7 +259,7 @@ export function useFamilyTree(
     touchStart.current = null
   }, [])
 
-  const handleViewArchive = useCallback((person: TreePerson) => {
+  const handleViewMemories = useCallback((person: TreePerson) => {
     setSelectedFamilyMember({
       id: String(person.id),
       firstName: person.name.split(' ')[0],
@@ -267,7 +267,7 @@ export function useFamilyTree(
       displayName: person.name,
       avatarUrl: person.avatar || null,
     })
-    router.push('/archive')
+    router.push('/memories')
   }, [router, setSelectedFamilyMember])
 
   return {
@@ -330,6 +330,6 @@ export function useFamilyTree(
     handleCanvasTouchStart,
     handleCanvasTouchMove,
     handleCanvasTouchEnd,
-    handleViewArchive,
+    handleViewMemories,
   }
 }
