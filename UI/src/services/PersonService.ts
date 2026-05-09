@@ -38,7 +38,9 @@ export class PersonService {
       where.AND = tokens.map(token => ({
         OR: [
           { firstName: { contains: token, mode: 'insensitive' } },
+          { middleName: { contains: token, mode: 'insensitive' } },
           { lastName: { contains: token, mode: 'insensitive' } },
+          { maidenName: { contains: token, mode: 'insensitive' } },
           { displayName: { contains: token, mode: 'insensitive' } },
           { nickname: { contains: token, mode: 'insensitive' } },
         ],
@@ -56,7 +58,7 @@ export class PersonService {
       take: limit,
     })
 
-    return (people as any[]).map(this.mapToListItem)
+    return (people as any[]).map(p => this.mapToListItem(p))
   }
 
   /**
@@ -101,7 +103,7 @@ export class PersonService {
       id: person.id,
       firstName: person.firstName,
       lastName: person.lastName,
-      displayName: person.displayName || `${person.firstName}${person.lastName ? ' ' + person.lastName : ''}`,
+      displayName: person.displayName || this.computeDisplayName(person),
       personType: person.personType as PersonType,
       createdAt: person.createdAt,
     }
@@ -138,7 +140,7 @@ export class PersonService {
       id: person.id,
       firstName: person.firstName,
       lastName: person.lastName,
-      displayName: person.displayName || `${person.firstName}${person.lastName ? ' ' + person.lastName : ''}`,
+      displayName: person.displayName || this.computeDisplayName(person),
       personType: person.personType as PersonType,
       createdAt: person.createdAt,
     }
@@ -250,7 +252,7 @@ export class PersonService {
 
     return {
       ...person,
-      displayName: person.displayName || `${person.firstName}${person.lastName ? ' ' + person.lastName : ''}`,
+      displayName: person.displayName || this.computeDisplayName(person),
       avatarUrl: (person as any).avatarAsset ? `/api/assets/serve/${(person as any).avatarAsset.id}` : null,
       relationships,
       counts: (person as any)._count,
@@ -272,7 +274,7 @@ export class PersonService {
       id: person.id,
       firstName: person.firstName,
       lastName: person.lastName,
-      displayName: person.displayName || `${person.firstName}${person.lastName ? ' ' + person.lastName : ''}`,
+      displayName: person.displayName || this.computeDisplayName(person),
       nickname: person.nickname ?? null,
       personType: person.personType as PersonType,
       birthDate: person.birthDate ?? null,
@@ -288,5 +290,18 @@ export class PersonService {
       },
       createdAt: person.createdAt,
     }
+  }
+
+  /**
+   * Helper to compute a display name from name parts
+   */
+  private computeDisplayName(person: any): string {
+    const parts = [
+      person.firstName,
+      person.middleName,
+      person.lastName
+    ].filter(Boolean)
+    
+    return parts.join(' ') || 'Unnamed person'
   }
 }

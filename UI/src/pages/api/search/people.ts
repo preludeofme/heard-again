@@ -20,7 +20,9 @@ export default apiHandler({
       where.AND = tokens.map(token => ({
         OR: [
           { firstName: { contains: token, mode: 'insensitive' } },
+          { middleName: { contains: token, mode: 'insensitive' } },
           { lastName: { contains: token, mode: 'insensitive' } },
+          { maidenName: { contains: token, mode: 'insensitive' } },
           { displayName: { contains: token, mode: 'insensitive' } },
           { nickname: { contains: token, mode: 'insensitive' } },
           { bio: { contains: token, mode: 'insensitive' } },

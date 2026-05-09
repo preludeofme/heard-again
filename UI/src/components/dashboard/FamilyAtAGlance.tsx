@@ -18,6 +18,7 @@ export function FamilyAtAGlance({ members, totalPeople }: FamilyAtAGlanceProps) 
     setSelectedFamilyMember({
       id: member.id,
       firstName: member.firstName,
+      middleName: (member as any).middleName,
       lastName: member.lastName,
       displayName: member.displayName,
       avatarUrl: member.avatarAssetId ? `/api/assets/serve/${member.avatarAssetId}` : null,

@@ -132,7 +132,9 @@ export class SearchService {
         AND: tokens.map(token => ({
           OR: [
             { firstName: { contains: token, mode: 'insensitive' } },
+            { middleName: { contains: token, mode: 'insensitive' } },
             { lastName: { contains: token, mode: 'insensitive' } },
+            { maidenName: { contains: token, mode: 'insensitive' } },
             { displayName: { contains: token, mode: 'insensitive' } },
             { nickname: { contains: token, mode: 'insensitive' } },
             { bio: { contains: token, mode: 'insensitive' } },
@@ -142,6 +144,7 @@ export class SearchService {
       select: {
         id: true,
         firstName: true,
+        middleName: true,
         lastName: true,
         displayName: true,
         personType: true,
@@ -202,7 +205,9 @@ export class SearchService {
           AND: tokens.map(token => ({
             OR: [
               { firstName: { contains: token, mode: 'insensitive' } },
+              { middleName: { contains: token, mode: 'insensitive' } },
               { lastName: { contains: token, mode: 'insensitive' } },
+              { maidenName: { contains: token, mode: 'insensitive' } },
               { displayName: { contains: token, mode: 'insensitive' } },
               { nickname: { contains: token, mode: 'insensitive' } },
             ],
@@ -211,6 +216,7 @@ export class SearchService {
         select: {
           id: true,
           firstName: true,
+          middleName: true,
           lastName: true,
           displayName: true,
           personType: true,
@@ -258,7 +264,7 @@ export class SearchService {
     ])
 
     const personSuggestions: SearchSuggestion[] = people.map((person) => {
-      const fullName = `${person.firstName || ''} ${person.lastName || ''}`.trim()
+      const fullName = [person.firstName, person.middleName, person.lastName].filter(Boolean).join(' ')
       const label = person.displayName || fullName || 'Unnamed person'
 
       return {

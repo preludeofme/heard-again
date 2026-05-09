@@ -196,7 +196,7 @@ export function FamilyMemberSelect({
         />
       )}
       renderOption={(props, option) => (
-        <Box component="li" {...props} key={option.id} sx={{ ...props.sx, py: '8px !important' }}>
+        <Box component="li" {...props} key={option.id} sx={{ py: '8px !important' }}>
           <Avatar
             src={option.avatar}
             sx={{ width: 32, height: 32, mr: 1.5, flexShrink: 0, bgcolor: 'rgba(22, 51, 74, 0.08)', color: 'primary.main', fontSize: '0.875rem' }}

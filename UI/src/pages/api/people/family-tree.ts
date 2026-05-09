@@ -56,6 +56,7 @@ export default apiHandler({
         select: {
           id: true,
           firstName: true,
+          middleName: true,
           lastName: true,
           displayName: true,
           nickname: true,

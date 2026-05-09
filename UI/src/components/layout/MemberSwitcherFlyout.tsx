@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { useRouter } from 'next/router'
 import {
   Popover,
   Box,
@@ -15,6 +16,7 @@ import { useSelectedFamilyMember, SelectedFamilyMember } from '@/contexts/Select
 interface PersonOption {
   id: string
   firstName: string
+  middleName?: string | null
   lastName?: string | null
   displayName?: string | null
   avatarUrl?: string | null
@@ -22,7 +24,7 @@ interface PersonOption {
 
 function memberLabel(p: PersonOption | SelectedFamilyMember): string {
   if (p.displayName) return p.displayName
-  return `${p.firstName}${p.lastName ? ` ${p.lastName}` : ''}`
+  return [p.firstName, (p as any).middleName, p.lastName].filter(Boolean).join(' ') || 'Unnamed'
 }
 
 interface MemberRowProps {
@@ -97,6 +99,7 @@ interface MemberSwitcherFlyoutProps {
 }
 
 export function MemberSwitcherFlyout({ anchorEl, onClose }: MemberSwitcherFlyoutProps) {
+  const router = useRouter()
   const { selectedFamilyMember, recentlyViewedMembers, setSelectedFamilyMember, clearSelectedFamilyMember } =
     useSelectedFamilyMember()
 
@@ -139,9 +142,15 @@ export function MemberSwitcherFlyout({ anchorEl, onClose }: MemberSwitcherFlyout
         displayName: (member as PersonOption).displayName,
         avatarUrl: (member as PersonOption).avatarUrl,
       })
+      
       onClose()
+
+      // Auto-navigate to profile, unless on family-tree
+      if (router.pathname !== '/family-tree') {
+        router.push(`/profile/${member.id}`)
+      }
     },
-    [setSelectedFamilyMember, onClose],
+    [setSelectedFamilyMember, onClose, router],
   )
 
   const handleClear = useCallback(() => {

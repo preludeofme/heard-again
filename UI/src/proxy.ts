@@ -33,7 +33,7 @@ function addCorsHeaders(response: NextResponse, request: NextRequest): NextRespo
   return response
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
   
   // Handle CORS preflight requests

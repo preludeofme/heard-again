@@ -79,7 +79,7 @@ export function DocumentsPage({ documents, onUploadSuccess, onDelete, onLink, on
     setDeleteTarget(doc)
   }
 
-  const handleTypeClick = (e: React.MouseEvent, doc: DocumentArtifact) => {
+  const handleTypeClick = (e: React.MouseEvent<HTMLElement>, doc: DocumentArtifact) => {
     e.stopPropagation()
     setTypeTarget(doc)
     setTypeMenuAnchor(e.currentTarget)

@@ -53,20 +53,34 @@ export default function PersonProfilePage() {
   const router = useRouter()
   const { id } = router.query
   const personId = typeof id === 'string' ? id : ''
-  const { selectedFamilyMember } = useSelectedFamilyMember()
-
-  // When the active member changes via the header switcher, navigate to their profile
-  useEffect(() => {
-    if (selectedFamilyMember && selectedFamilyMember.id !== personId && personId) {
-      router.push(`/profile/${selectedFamilyMember.id}`)
-    }
-  }, [selectedFamilyMember?.id, personId, router])
+  const { selectedFamilyMember, setSelectedFamilyMember } = useSelectedFamilyMember()
 
   const [person, setPerson] = useState<PersonDetails | null>(null)
   const [stories, setStories] = useState<Story[]>([])
   const [documents, setDocuments] = useState<DocItem[]>([])
   const [docTotal, setDocTotal] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
+
+  // 1. URL -> State Sync: When a profile is loaded, update the global selection
+  useEffect(() => {
+    if (person && selectedFamilyMember?.id !== person.id) {
+      setSelectedFamilyMember({
+        id: person.id,
+        firstName: person.firstName,
+        lastName: person.lastName,
+        displayName: person.displayName,
+        avatarUrl: person.avatarUrl,
+      })
+    }
+  }, [person, selectedFamilyMember?.id, setSelectedFamilyMember])
+
+  // 2. State -> URL Sync: When the active member changes via the header switcher, navigate to their profile.
+  // We only trigger this when selectedFamilyMember changes to avoid fighting direct URL navigation.
+  useEffect(() => {
+    if (selectedFamilyMember && selectedFamilyMember.id !== personId && personId) {
+      router.push(`/profile/${selectedFamilyMember.id}`)
+    }
+  }, [selectedFamilyMember?.id, router]) // Removed personId from dependencies
 
   const timelineRef = useRef<HTMLDivElement>(null)
   const [isDragging, setIsDragging] = useState(false)

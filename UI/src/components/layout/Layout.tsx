@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react'
+import { ReactNode, useState, useEffect } from 'react'
 import React from 'react'
 import { useRouter } from 'next/router'
 import { useSession, signOut } from 'next-auth/react'
@@ -47,12 +47,11 @@ interface LayoutProps {
 
 const bottomNavRoutes = ['/memories', '/contribute', '/family-tree', '/favorites', 'more']
 const navItems = [
-  { label: 'Living Legacy', href: '/archive' },
+  { label: 'Family Legacy', href: '/memories' },
   { label: 'Contribute', href: '/contribute' },
-  { label: 'Family', href: '/family-tree' },
+  { label: 'Family Tree', href: '/family-tree' },
 ]
 
-const bottomNavRoutes = ['/archive', '/contribute', '/family-tree', '/favorites', 'more']
 const moreMenuRoutes = [
   { label: 'Voice Memories', href: '/memories?lens=voices', icon: <StoriesIcon /> },
   { label: 'Keepsakes', href: '/memories?lens=keepsakes', icon: <DocumentsIcon /> },
@@ -124,7 +123,19 @@ function UserMenu() {
 }
 
 export function Layout({ children }: LayoutProps) {
-  const router = useRouter()
+  const [isMounted, setIsMounted] = useState(false)
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
+  let router: any = null
+  try {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    router = useRouter()
+  } catch (e) {
+    // Router not mounted (common during some build phases)
+  }
+  
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const { selectedFamilyMember } = useSelectedFamilyMember()
@@ -132,34 +143,35 @@ export function Layout({ children }: LayoutProps) {
   const [speedDialOpen, setSpeedDialOpen] = useState(false)
 
   const dynamicNavItems = [
-    { label: 'Story', href: '/memories' },
+    { label: 'Family Legacy', href: '/memories' },
     { label: 'Contribute', href: '/contribute' },
-    { label: 'Family', href: '/family-tree' },
+    { label: 'Family Tree', href: '/family-tree' },
   ]
 
-  if (selectedFamilyMember) {
-    // Add Profile link next to Story
+  if (isMounted && selectedFamilyMember) {
+    // Add Profile link next to Family Legacy
     dynamicNavItems.splice(1, 0, {
       label: 'Profile',
       href: `/profile/${selectedFamilyMember.id}`
     })
   }
 
-  const currentPath = router.pathname
-  const currentLens = typeof router.query.lens === 'string' ? router.query.lens : null
+  const currentPath = router?.pathname || ''
+  const currentLens = router?.query?.lens || null
 
   const handleMoreOpen = (event: React.MouseEvent<HTMLElement>) => setMoreMenuAnchor(event.currentTarget)
   const handleMoreClose = () => setMoreMenuAnchor(null)
-  const handleMoreNavigate = (path: string) => { handleMoreClose(); router.push(path) }
+  const handleMoreNavigate = (path: string) => { handleMoreClose(); router?.push(path) }
 
   const handleAction = (action: string) => {
     setSpeedDialOpen(false)
-    if (action === 'story') router.push('/contribute')
-    else if (action === 'document') router.push('/memories?lens=keepsakes')
-    else if (action === 'person') router.push('/family-tree?add=1')
+    if (action === 'story') router?.push('/contribute')
+    else if (action === 'document') router?.push('/memories?lens=keepsakes')
+    else if (action === 'person') router?.push('/family-tree?add=1')
   }
 
   const getMobileNavValue = () => {
+    if (!router) return 0
     const fullPath = currentLens ? `${currentPath}?lens=${currentLens}` : currentPath
     const exactIdx = bottomNavRoutes.indexOf(fullPath)
     if (exactIdx >= 0) return exactIdx
@@ -176,6 +188,7 @@ export function Layout({ children }: LayoutProps) {
   }
 
   const isNavActive = (href: string) => {
+    if (!router) return false
     const [itemPath] = href.split('?')
     if (itemPath === '/memories') {
       return currentPath === '/memories' || currentPath === '/'
@@ -341,7 +354,7 @@ export function Layout({ children }: LayoutProps) {
           >
             <BottomNavigationAction label="Legacy" icon={<HomeIcon />} />
             <BottomNavigationAction label="Contribute" icon={<AddIcon />} />
-            <BottomNavigationAction label="Family" icon={<FamilyTreeIcon />} />
+            <BottomNavigationAction label="Tree" icon={<FamilyTreeIcon />} />
             <BottomNavigationAction label="Favorites" icon={<FavoriteIcon />} />
             <BottomNavigationAction label="More" icon={<MoreIcon />} onClick={handleMoreOpen} />
           </BottomNavigation>

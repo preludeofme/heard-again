@@ -2,6 +2,7 @@ import React from 'react'
 import { Box, Typography, Avatar } from '@mui/material'
 import Link from 'next/link'
 import { ProfileColors } from './ProfileConstants'
+import { useSelectedFamilyMember } from '@/contexts/SelectedFamilyMemberContext'
 
 interface Relationship {
   id: string
@@ -28,9 +29,20 @@ export function MiniFamilyTree({
   totalPeople = 0,
   recentPeople = [],
 }: MiniFamilyTreeProps) {
+  const { setSelectedFamilyMember } = useSelectedFamilyMember()
   const spouse = relationships?.find(r => r.type === 'SPOUSE') ?? null
   const parents = relationships?.filter(r => r.type === 'PARENT') ?? []
   const children = relationships?.filter(r => r.type === 'CHILD') ?? []
+
+  const handleSelect = (member: { id: string; firstName: string; lastName?: string | null; avatarUrl?: string | null }) => {
+    setSelectedFamilyMember({
+      id: member.id,
+      firstName: member.firstName,
+      lastName: member.lastName,
+      displayName: null,
+      avatarUrl: member.avatarUrl,
+    })
+  }
 
   if (isGlobal) {
     return (
@@ -52,7 +64,13 @@ export function MiniFamilyTree({
         <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 2 }}>
             {recentPeople.slice(0, 6).map(person => (
-              <Box key={person.id} component={Link} href={`/profile/${person.id}`} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75, textDecoration: 'none' }}>
+              <Box
+                key={person.id}
+                component={Link}
+                href={`/profile/${person.id}`}
+                onClick={() => handleSelect(person)}
+                sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75, textDecoration: 'none' }}
+              >
                 <Avatar 
                   src={person.avatarUrl || undefined}
                   sx={{ width: 50, height: 50, bgcolor: '#adcae6', border: `2px solid ${ProfileColors.primaryContainer}`, transition: 'transform 0.2s', '&:hover': { transform: 'scale(1.06)' } }}
@@ -101,7 +119,12 @@ export function MiniFamilyTree({
           <>
             <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
               {spouse && (
-                <Box component={Link} href={`/profile/${spouse.person.id}`} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75, textDecoration: 'none' }}>
+                <Box
+                  component={Link}
+                  href={`/profile/${spouse.person.id}`}
+                  onClick={() => handleSelect(spouse.person)}
+                  sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75, textDecoration: 'none' }}
+                >
                   <Avatar sx={{ width: 54, height: 54, bgcolor: '#adcae6', border: `2px solid ${ProfileColors.primaryContainer}`, transition: 'transform 0.2s', '&:hover': { transform: 'scale(1.06)' } }}>
                     {spouse.person.firstName[0]}
                   </Avatar>
@@ -111,7 +134,13 @@ export function MiniFamilyTree({
                 </Box>
               )}
               {parents.slice(0, 2).map(r => (
-                <Box key={r.id} component={Link} href={`/profile/${r.person.id}`} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75, textDecoration: 'none' }}>
+                <Box
+                  key={r.id}
+                  component={Link}
+                  href={`/profile/${r.person.id}`}
+                  onClick={() => handleSelect(r.person)}
+                  sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75, textDecoration: 'none' }}
+                >
                   <Avatar sx={{ width: 54, height: 54, bgcolor: '#adcae6', border: `2px solid ${ProfileColors.primaryContainer}`, transition: 'transform 0.2s', '&:hover': { transform: 'scale(1.06)' } }}>
                     {r.person.firstName[0]}
                   </Avatar>
@@ -160,7 +189,13 @@ export function MiniFamilyTree({
             <Box sx={{ width: 1, height: 28, bgcolor: `${ProfileColors.outlineVariant}35` }} />
             <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
               {children.slice(0, 3).map(r => (
-                <Box key={r.id} component={Link} href={`/profile/${r.person.id}`} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75, textDecoration: 'none' }}>
+                <Box
+                  key={r.id}
+                  component={Link}
+                  href={`/profile/${r.person.id}`}
+                  onClick={() => handleSelect(r.person)}
+                  sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75, textDecoration: 'none' }}
+                >
                   <Avatar sx={{ width: 42, height: 42, bgcolor: '#d3e6e9', transition: 'transform 0.2s', '&:hover': { transform: 'scale(1.06)' } }}>
                     {r.person.firstName[0]}
                   </Avatar>
