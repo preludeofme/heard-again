@@ -46,6 +46,13 @@ interface LayoutProps {
 }
 
 const bottomNavRoutes = ['/memories', '/contribute', '/family-tree', '/favorites', 'more']
+const navItems = [
+  { label: 'Living Legacy', href: '/archive' },
+  { label: 'Contribute', href: '/contribute' },
+  { label: 'Family', href: '/family-tree' },
+]
+
+const bottomNavRoutes = ['/archive', '/contribute', '/family-tree', '/favorites', 'more']
 const moreMenuRoutes = [
   { label: 'Voice Memories', href: '/memories?lens=voices', icon: <StoriesIcon /> },
   { label: 'Keepsakes', href: '/memories?lens=keepsakes', icon: <DocumentsIcon /> },
@@ -132,9 +139,9 @@ export function Layout({ children }: LayoutProps) {
 
   if (selectedFamilyMember) {
     // Add Profile link next to Story
-    dynamicNavItems.splice(1, 0, { 
-      label: 'Profile', 
-      href: `/profile/${selectedFamilyMember.id}` 
+    dynamicNavItems.splice(1, 0, {
+      label: 'Profile',
+      href: `/profile/${selectedFamilyMember.id}`
     })
   }
 
@@ -230,7 +237,7 @@ export function Layout({ children }: LayoutProps) {
                       fontWeight: active ? 600 : 400,
                       color: active ? ProfileColors.primary : ProfileColors.onSurfaceVariant,
                       textDecoration: 'none',
-                      px: 2,
+                      px: { xs: 1.5, lg: 2 },
                       py: 1,
                       borderRadius: '999px',
                       backgroundColor: active ? ProfileColors.surfaceContainerLowest : 'transparent',
@@ -292,7 +299,7 @@ export function Layout({ children }: LayoutProps) {
           >
             <SpeedDialAction
               icon={<PostAddIcon />}
-              tooltipTitle="Add Story"
+              tooltipTitle="Add a Memory"
               onClick={() => handleAction('story')}
             />
             <SpeedDialAction
@@ -332,7 +339,7 @@ export function Layout({ children }: LayoutProps) {
               },
             }}
           >
-            <BottomNavigationAction label="Story" icon={<HomeIcon />} />
+            <BottomNavigationAction label="Legacy" icon={<HomeIcon />} />
             <BottomNavigationAction label="Contribute" icon={<AddIcon />} />
             <BottomNavigationAction label="Family" icon={<FamilyTreeIcon />} />
             <BottomNavigationAction label="Favorites" icon={<FavoriteIcon />} />

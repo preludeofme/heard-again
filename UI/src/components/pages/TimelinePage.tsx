@@ -298,7 +298,7 @@ export function TimelinePageComponent({ events, isLoading, hasMore, onLoadMore, 
               mb: 1
             }}
           >
-            The Lifespan
+            The Timeline
           </Typography>
           <Typography
             variant="h2"
@@ -316,14 +316,14 @@ export function TimelinePageComponent({ events, isLoading, hasMore, onLoadMore, 
           <Typography variant="body1" sx={{ color: ProfileColors.onSurfaceVariant, mt: 2, maxWidth: 500, fontFamily: 'var(--font-newsreader), serif', fontSize: '1.1rem' }}>
             {selectedFamilyMember
               ? `Exploring the milestones and memories of ${getPersonDisplayName(selectedFamilyMember)}.`
-              : 'Walking through the collective memories of your family history.'}
+              : 'See your family’s stories, milestones, voices, and keepsakes come together over time.'}
           </Typography>
         </Box>
         
       </Box>
 
       {/* Simplified, Tactile Explore Bar */}
-      <Box 
+      {events.length > 0 && <Box 
         sx={{ 
           mb: 8, 
           display: 'flex', 
@@ -410,25 +410,31 @@ export function TimelinePageComponent({ events, isLoading, hasMore, onLoadMore, 
             <HorizontalIcon sx={{ fontSize: 20 }} />
           </ToggleButton>
         </ToggleButtonGroup>
-      </Box>
+      </Box>}
 
       {/* Journey Content */}
       {filteredEvents.length === 0 ? (
         <Box sx={{ py: 12, textAlign: 'center', backgroundColor: ProfileColors.surfaceContainerLow, borderRadius: 8, border: `2px dashed ${ProfileColors.outlineVariant}30` }}>
           <TimelineIcon sx={{ fontSize: 64, color: ProfileColors.outlineVariant, mb: 2, opacity: 0.5 }} />
           <Typography variant="h5" className="serif-font" sx={{ color: ProfileColors.primary, mb: 1 }}>
-            {selectedFamilyMember
-              ? `${selectedFamilyMember.displayName || selectedFamilyMember.firstName}'s story is waiting to be written.`
-              : 'Your family\'s story starts here.'}
+            Every legacy starts with one memory.
           </Typography>
-          <Typography variant="body2" sx={{ color: ProfileColors.onSurfaceVariant, mb: 4 }}>
-            {selectedFamilyMember
-              ? 'Add the first chapter — a birth, a milestone, a memory.'
-              : 'Add a milestone to begin the life journey for any family member.'}
+          <Typography variant="body2" sx={{ color: ProfileColors.onSurfaceVariant, mb: 3, maxWidth: 640, mx: 'auto' }}>
+            Add a story, voice memory, keepsake, milestone, or family member to begin building your family’s timeline.
           </Typography>
-          <Button variant="outlined" onClick={handleOpenAddDialog} sx={{ borderRadius: '999px', borderColor: ProfileColors.primary, color: ProfileColors.primary }}>
-            Add a Life Moment
-          </Button>
+          <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1.5, flexWrap: 'wrap', mb: 3 }}>
+            <Button variant="contained" onClick={() => window.location.assign('/contribute')} sx={{ borderRadius: '999px', textTransform: 'none' }}>Add a Memory</Button>
+            <Button variant="outlined" component={Link} href="/family-tree?add=1" sx={{ borderRadius: '999px', borderColor: ProfileColors.primary, color: ProfileColors.primary, textTransform: 'none' }}>
+              Add a Family Member
+            </Button>
+          </Box>
+          <Typography sx={{ fontWeight: 600, color: ProfileColors.primary, mb: 1 }}>Need a place to start?</Typography>
+          <Box component="ul" sx={{ listStyle: 'none', p: 0, m: 0, color: ProfileColors.onSurfaceVariant, display: 'grid', gap: 0.8 }}>
+            <li>What is a story your family always tells?</li>
+            <li>Who is someone you wish future generations could know better?</li>
+            <li>Do you have an old voicemail, cassette, video, or recording worth saving?</li>
+            <li>What photo deserves a story behind it?</li>
+          </Box>
         </Box>
       ) : viewMode === 'vertical' ? (
         <Box sx={{ maxWidth: 900, mx: 'auto' }}>

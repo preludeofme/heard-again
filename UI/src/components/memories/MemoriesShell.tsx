@@ -181,7 +181,7 @@ export function MemoriesShell({ lens, onLensChange, children }: MemoriesShellPro
     : `${familyspaceName}`
   const subtitle = selectedPerson
     ? 'Memories, voices, and keepsakes preserved across generations.'
-    : 'Preserving memories across generations.'
+    : 'A private place for the voices, stories, photos, and memories your family never wants to lose.'
 
   const stats = dashboard.stats
   const memoryCounts: Array<{ label: string; value: number; icon?: ReactNode }> = [
@@ -290,7 +290,7 @@ export function MemoriesShell({ lens, onLensChange, children }: MemoriesShellPro
                   mb: 1,
                 }}
               >
-                The Living Story
+                Your Living Legacy
               </Typography>
               <Typography
                 component="h1"
@@ -477,6 +477,33 @@ export function MemoriesShell({ lens, onLensChange, children }: MemoriesShellPro
               </Box>
             ))}
           </Box>
+          ) : (
+          <Box sx={{ mt: { xs: 4, md: 6 }, p: { xs: 3, md: 4 }, borderRadius: 5, backgroundColor: ProfileColors.surfaceContainerLowest, border: `1px solid ${ProfileColors.outlineVariant}26` }}>
+            <Typography sx={{ fontFamily: 'var(--font-newsreader), serif', fontSize: { xs: '1.6rem', md: '2rem' }, color: ProfileColors.primary, mb: 1 }}>
+              Start your Living Legacy
+            </Typography>
+            <Typography sx={{ fontFamily: 'var(--font-newsreader), serif', color: ProfileColors.onSurfaceVariant, mb: 3 }}>
+              Begin with one person, one story, one photo, or one voice memory. You do not need to build everything today.
+            </Typography>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' }, gap: 2 }}>
+              {[
+                { title: 'Add a Family Member', desc: 'Start with someone your family wants to remember.', href: '/family-tree?add=1' },
+                { title: 'Write a Story', desc: 'Capture a memory, tradition, saying, or moment.', href: '/contribute' },
+                { title: 'Record a Voice Memory', desc: 'Save a spoken story or upload an old recording.', href: '/archive?lens=voices' },
+                { title: 'Upload a Keepsake', desc: 'Add a photo, letter, recipe, document, or meaningful item.', href: '/archive?lens=keepsakes' },
+              ].map((item) => (
+                <Card key={item.title} variant="outlined" sx={{ borderRadius: 3, borderColor: `${ProfileColors.outlineVariant}33` }}>
+                  <CardActionArea component={Link} href={item.href} sx={{ height: '100%' }}>
+                    <CardContent>
+                      <Typography sx={{ fontWeight: 600, color: ProfileColors.primary, mb: 0.5 }}>{item.title}</Typography>
+                      <Typography sx={{ color: ProfileColors.onSurfaceVariant, fontSize: '0.9rem' }}>{item.desc}</Typography>
+                    </CardContent>
+                  </CardActionArea>
+                </Card>
+              ))}
+            </Box>
+          </Box>
+          )}
         </Box>
       </Box>
 
