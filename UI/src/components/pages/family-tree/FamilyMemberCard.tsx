@@ -13,6 +13,7 @@ import {
   PersonAddOutlined as PersonAdd,
   PeopleAltOutlined as PeopleIcon,
   AccountTreeOutlined as TreeIcon,
+  PhotoCamera,
 } from '@mui/icons-material'
 
 import { TreeNodeLevel, TreePerson } from './types'
@@ -30,7 +31,8 @@ interface FamilyMemberCardProps {
   isMobile: boolean
   onPersonClick: (person: PersonArg) => void
   onAddPerson: () => void
-  onViewArchive: (person: PersonArg) => void
+  onViewMemories: (person: PersonArg) => void
+  onViewFullProfile?: (personId: string) => void
   onToggleSiblings?: () => void
   onSetRoot?: (id: string) => void
   onEditRelationships?: (personId: string) => void
@@ -48,7 +50,8 @@ export function FamilyMemberCard({
   isMobile,
   onPersonClick,
   onAddPerson,
-  onViewArchive,
+  onViewMemories,
+  onViewFullProfile,
   onToggleSiblings: _onToggleSiblings,
   onSetRoot,
   onEditRelationships,
@@ -79,8 +82,9 @@ export function FamilyMemberCard({
 
   const isParentLevel = level === 'parent'
 
-  // Color logic
-  let cardBgColor = levelColors[levelIndex % 3]
+  // Color logic - use a positive-only modulo to handle negative generations
+  const colorIndex = ((levelIndex % 3) + 3) % 3
+  let cardBgColor = levelColors[colorIndex]
   if (isSelf) cardBgColor = selfCardColor
   if (isSelected) cardBgColor = selectedColor
 
@@ -109,15 +113,38 @@ export function FamilyMemberCard({
           '&:hover': { transform: 'translateY(-4px)', boxShadow: '0 12px 30px rgba(0,0,0,0.2)' },
         }}
       >
-        <Avatar
-          src={person.avatar}
-          sx={{
-            width: isParentLevel ? 64 : 52,
-            height: isParentLevel ? 64 : 52,
-            flexShrink: 0,
-            border: '2px solid rgba(255,255,255,0.4)',
-          }}
-        />
+        <Box sx={{ position: 'relative' }}>
+          <Avatar
+            src={person.avatar}
+            sx={{
+              width: isParentLevel ? 64 : 52,
+              height: isParentLevel ? 64 : 52,
+              flexShrink: 0,
+              border: '2px solid rgba(255,255,255,0.4)',
+            }}
+          />
+          <IconButton
+            size="small"
+            className="nodrag"
+            onClick={(e) => { e.stopPropagation(); onPersonClick(person) }}
+            sx={{
+              position: 'absolute',
+              bottom: -4,
+              right: -4,
+              width: 24,
+              height: 24,
+              bgcolor: 'white',
+              color: 'primary.main',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+              border: '1px solid rgba(0,0,0,0.05)',
+              '&:hover': { bgcolor: '#f5f5f0', color: 'primary.dark' },
+              zIndex: 10,
+            }}
+            title="Update Photo"
+          >
+            <PhotoCamera sx={{ fontSize: 14 }} />
+          </IconButton>
+        </Box>
 
         <Box sx={{ textAlign: 'center', width: '100%', px: 1 }}>
           <Typography
@@ -150,6 +177,31 @@ export function FamilyMemberCard({
               {lifeSpan}
             </Typography>
           )}
+          {person.relationship && (
+            <Typography 
+              variant="caption" 
+              onClick={(e) => { e.stopPropagation(); onViewFullProfile?.(String(person.id)) }}
+              sx={{ 
+                color: 'rgba(255,255,255,0.95)', 
+                fontSize: '0.7rem',
+                display: 'block',
+                mt: 0.5,
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                cursor: 'pointer',
+                backgroundColor: 'rgba(255,255,255,0.15)',
+                px: 1,
+                py: 0.25,
+                borderRadius: 1,
+                width: 'fit-content',
+                mx: 'auto',
+                '&:hover': { backgroundColor: 'rgba(255,255,255,0.25)', textDecoration: 'underline' }
+              }}
+            >
+              {person.relationship}
+            </Typography>
+          )}
         </Box>
         
         <Box
@@ -166,7 +218,7 @@ export function FamilyMemberCard({
             <IconButton
               size="small"
               className="nodrag"
-              onClick={(e) => { e.stopPropagation(); onViewArchive(person) }}
+              onClick={(e) => { e.stopPropagation(); onViewMemories(person) }}
               sx={{ color: 'rgba(255,255,255,0.85)', '&:hover': { bgcolor: 'rgba(255,255,255,0.15)', color: 'white' } }}
             >
               <AutoStories sx={{ fontSize: 18 }} />
@@ -348,7 +400,7 @@ export function FamilyMemberCard({
               className="nodrag"
               variant="text"
               startIcon={<AutoStories />}
-              onClick={(e) => { e.stopPropagation(); onViewArchive(person) }}
+              onClick={(e) => { e.stopPropagation(); onViewMemories(person) }}
               sx={{ flex: 2, color: 'white', bgcolor: 'rgba(255,255,255,0.1)', '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' }, justifyContent: 'center', py: 1, borderRadius: 2 }}
             >
               Open Story
@@ -398,7 +450,7 @@ export function FamilyMemberCard({
             size="small"
             className="nodrag"
             title="Stories"
-            onClick={(e) => { e.stopPropagation(); onViewArchive(person) }}
+            onClick={(e) => { e.stopPropagation(); onViewMemories(person) }}
             sx={{ flex: 1, borderRadius: 1.5, color: 'rgba(255,255,255,0.7)', '&:hover': { bgcolor: 'rgba(255,255,255,0.1)', color: 'white' } }}
           >
             <AutoStories sx={{ fontSize: 15 }} />

@@ -11,12 +11,14 @@ export interface DashboardStats {
   draftStories: number
   documents: number
   members: number
+  generations: number
 }
 
 export interface DashboardFamilyspace {
   id: string
   name: string
   planType: string
+  avatarAssetId: string | null
 }
 
 export interface DashboardUserContext {
@@ -139,6 +141,7 @@ const EMPTY_STATS: DashboardStats = {
   draftStories: 0,
   documents: 0,
   members: 0,
+  generations: 0,
 }
 
 const EMPTY_ONBOARDING: OnboardingState = {

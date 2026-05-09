@@ -167,7 +167,7 @@ export const mockMemoryWall: MemoryWallItem[] = [
   },
   {
     id: 'wall-4',
-    type: 'archive-stats',
+    type: 'memories-stats',
     title: 'The Living Story',
     description: 'A growing collection of memories, stories, and artifacts.',
     stats: {

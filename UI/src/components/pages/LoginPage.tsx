@@ -34,8 +34,8 @@ export function LoginPage() {
     password: '',
   })
 
-  // Get callback URL from query params, default to the unified archive home
-  const callbackUrl = (router.query.callbackUrl as string) || '/archive'
+  // Get callback URL from query params, default to the unified memories home
+  const callbackUrl = (router.query.callbackUrl as string) || '/memories'
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -278,65 +278,33 @@ export function LoginPage() {
                 )}
 
                 {/* Social Logins */}
-                <Grid container spacing={2} sx={{ mb: 4 }}>
-                  <Grid size={{ xs: 12, md: 6 }}>
-                    <Button
-                      fullWidth
-                      variant="outlined"
-                      onClick={handleGoogleSignIn}
-                      disabled={isLoading}
-                      sx={{
-                        py: 1.5,
-                        borderColor: 'rgba(208, 227, 230, 0.5)',
-                        color: 'text.primary',
-                        '&:hover': {
-                          bgcolor: 'rgba(208, 227, 230, 0.3)',
-                          borderColor: 'rgba(208, 227, 230, 0.8)',
-                        },
-                      }}
-                      startIcon={
-                        <Box
-                          component="img"
-                          src="https://www.google.com/favicon.ico"
-                          alt="Google"
-                          sx={{ width: 20, height: 20 }}
-                        />
-                      }
-                    >
-                      Sign in with Google
-                    </Button>
-                  </Grid>
-                  <Grid size={{ xs: 12, md: 6 }}>
-                    <Button
-                      fullWidth
-                      variant="outlined"
-                      disabled={isLoading}
-                      sx={{
-                        py: 1.5,
-                        borderColor: 'rgba(208, 227, 230, 0.5)',
-                        color: 'text.primary',
-                        '&:hover': {
-                          bgcolor: 'rgba(208, 227, 230, 0.3)',
-                          borderColor: 'rgba(208, 227, 230, 0.8)',
-                        },
-                      }}
-                      startIcon={
-                        <Typography
-                          component="span"
-                          sx={{
-                            fontFamily: '"Material Symbols Outlined", sans-serif',
-                            fontVariationSettings: "'FILL' 1, 'wght' 400",
-                            fontSize: 20,
-                          }}
-                        >
-                          apple
-                        </Typography>
-                      }
-                    >
-                      Sign in with Apple
-                    </Button>
-                  </Grid>
-                </Grid>
+                <Box sx={{ mb: 4 }}>
+                  <Button
+                    fullWidth
+                    variant="outlined"
+                    onClick={handleGoogleSignIn}
+                    disabled={isLoading}
+                    sx={{
+                      py: 1.5,
+                      borderColor: 'rgba(208, 227, 230, 0.5)',
+                      color: 'text.primary',
+                      '&:hover': {
+                        bgcolor: 'rgba(208, 227, 230, 0.3)',
+                        borderColor: 'rgba(208, 227, 230, 0.8)',
+                      },
+                    }}
+                    startIcon={
+                      <Box
+                        component="img"
+                        src="https://www.google.com/favicon.ico"
+                        alt="Google"
+                        sx={{ width: 20, height: 20 }}
+                      />
+                    }
+                  >
+                    Sign in with Google
+                  </Button>
+                </Box>
 
                 <Divider sx={{ my: 4 }}>
                   <Typography

@@ -50,6 +50,7 @@ import {
 } from '@mui/icons-material'
 import { useSelectedFamilyMember } from '@/contexts/SelectedFamilyMemberContext'
 import { ProfileColors } from '@/components/profile/ProfileConstants'
+import { extractFirstImage, stripHtml } from '@/lib/html-utils'
 import Link from 'next/link'
 
 interface TimelineEvent {
@@ -520,22 +521,46 @@ export function TimelinePageComponent({ events, isLoading, hasMore, onLoadMore, 
                             </Typography>
 
                             {event.description && (
-                              <Typography 
-                                variant="body2" 
-                                sx={{ 
-                                  color: ProfileColors.onSurfaceVariant, 
-                                  mb: 3, 
-                                  lineHeight: 1.7,
-                                  fontFamily: 'var(--font-newsreader), serif',
-                                  fontSize: '1rem',
-                                  display: '-webkit-box',
-                                  WebkitLineClamp: 3,
-                                  WebkitBoxOrient: 'vertical',
-                                  overflow: 'hidden'
-                                }}
-                              >
-                                {event.description}
-                              </Typography>
+                              <>
+                                <Typography 
+                                  variant="body2" 
+                                  sx={{ 
+                                    color: ProfileColors.onSurfaceVariant, 
+                                    mb: event.type === 'story' && extractFirstImage(event.description) ? 1.5 : 3, 
+                                    lineHeight: 1.7,
+                                    fontFamily: 'var(--font-newsreader), serif',
+                                    fontSize: '1rem',
+                                    display: '-webkit-box',
+                                    WebkitLineClamp: 3,
+                                    WebkitBoxOrient: 'vertical',
+                                    overflow: 'hidden'
+                                  }}
+                                >
+                                  {event.type === 'story' ? stripHtml(event.description) : event.description}
+                                </Typography>
+                                
+                                {/* Inline image for stories if no side image is present */}
+                                {event.type === 'story' && !event.metadata?.imageAssetId && (() => {
+                                  const firstImg = extractFirstImage(event.description)
+                                  if (firstImg) {
+                                    return (
+                                      <Box 
+                                        sx={{ 
+                                          width: '100%', 
+                                          height: 120, 
+                                          borderRadius: 2, 
+                                          overflow: 'hidden', 
+                                          mb: 3,
+                                          border: '1px solid rgba(0,0,0,0.05)'
+                                        }}
+                                      >
+                                        <Box component="img" src={firstImg} sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                      </Box>
+                                    )
+                                  }
+                                  return null
+                                })()}
+                              </>
                             )}
 
                             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

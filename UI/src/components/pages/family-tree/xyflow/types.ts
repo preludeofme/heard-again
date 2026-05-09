@@ -55,7 +55,8 @@ export interface PersonNodeData {
   isMobile: boolean
   onPersonClick: (person: TreeLayoutPerson) => void
   onAddPerson: () => void
-  onViewArchive: (person: TreeLayoutPerson) => void
+  onViewMemories: (person: TreeLayoutPerson) => void
+  onViewFullProfile?: (personId: string) => void
   onSetRoot?: (id: string) => void
   onEditRelationships?: (personId: string) => void
   onLoadMore?: (direction: 'up' | 'down' | 'left' | 'right', personId: string) => void

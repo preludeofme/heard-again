@@ -71,6 +71,7 @@ model Familyspace {
   name                   String
   slug                   String                @unique
   ownerId                String
+  bio                    String?               @db.Text
   planType               PlanType              @default(FREE)
   deploymentMode         DeploymentMode        @default(LOCAL)
   billingCustomerId      String?
@@ -83,6 +84,8 @@ model Familyspace {
   isPublic               Boolean               @default(false)
   allowMemberStories     Boolean               @default(true)
   deletionVotes          Json?                 @default("{}")
+  avatarAssetId          String?
+  avatarAsset            Asset?                @relation("FamilyspaceAvatar", fields: [avatarAssetId], references: [id])
   createdAt              DateTime              @default(now())
   updatedAt              DateTime              @updatedAt
   assets                 Asset[]
@@ -545,6 +548,7 @@ model Asset {
   exportOutputs            ExportJob[]          @relation("ExportOutputAsset")
   importSources            ImportJob[]          @relation("ImportSourceAsset")
   personAvatarFor          Person[]             @relation("PersonAvatar")
+  familyspaceAvatarFor     Familyspace[]        @relation("FamilyspaceAvatar")
   generatedAudioForStories Story[]              @relation("StoryGeneratedAudio")
   storyAssets              StoryAsset[]
   voiceGenerationOutputs   VoiceGenerationJob[] @relation("VoiceGenerationOutputAsset")
@@ -1208,6 +1212,8 @@ enum DocumentType {
   HANDWRITTEN
   CERTIFICATE
   RECORDING
+  AUDIO
+  VIDEO
   OTHER
 }
 

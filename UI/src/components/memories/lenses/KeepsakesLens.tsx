@@ -31,6 +31,7 @@ export function KeepsakesLens() {
       onUploadSuccess={controller.refreshDocuments}
       onDelete={controller.deleteDocument}
       onLink={controller.linkDocument}
+      onTypeUpdate={controller.refreshDocuments}
       personId={selectedSubjectId}
     />
   )

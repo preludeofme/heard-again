@@ -10,6 +10,7 @@ import {
 } from '@mui/icons-material'
 import { format } from 'date-fns'
 import { fetchWithCSRFAndJSON, fetchWithCSRF } from '@/lib/api-client'
+import { FamilyMemberSelect } from '@/components/search'
 
 interface VoiceProfile {
   id: string
@@ -67,6 +68,7 @@ interface PersonModalProps {
   onSave?: (person: PersonData) => void
   onDelete?: (personId: string) => void
   onViewFullProfile?: (personId: string) => void
+  onPersonClick?: (id: string) => void
 }
 
 const PERSON_TYPES = [
@@ -88,7 +90,7 @@ const RELATIONSHIP_KINDS = [
   { value: 'STEP', label: 'Step' },
 ]
 
-export function PersonModal({ open, personId, initialTab = 'overview', onClose, onSave, onDelete, onViewFullProfile }: PersonModalProps) {
+export function PersonModal({ open, personId, initialTab = 'overview', onClose, onSave, onDelete, onViewFullProfile, onPersonClick }: PersonModalProps) {
   const [person, setPerson] = useState<PersonData | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -102,6 +104,7 @@ export function PersonModal({ open, personId, initialTab = 'overview', onClose, 
   const [marriageDate, setMarriageDate] = useState('')
   const [marriagePlace, setMarriagePlace] = useState('')
   const [isMutatingRelationship, setIsMutatingRelationship] = useState(false)
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
 
   // Avatar state
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null)
@@ -280,13 +283,17 @@ export function PersonModal({ open, personId, initialTab = 'overview', onClose, 
   }
 
   const handleDelete = async () => {
-    if (!personId || !confirm('Are you sure you want to delete this person? This cannot be undone.')) return
+    if (!personId) return
+    setIsSaving(true)
     try {
       await fetchWithCSRF(`/api/people/${personId}`, { method: 'DELETE' })
       onDelete?.(personId)
       onClose()
     } catch {
       setError('Failed to delete person')
+    } finally {
+      setIsSaving(false)
+      setIsDeleteConfirmOpen(false)
     }
   }
 
@@ -613,28 +620,15 @@ export function PersonModal({ open, personId, initialTab = 'overview', onClose, 
         {/* Relationships Tab */}
         {activeTab === 1 && (
           <Box>
-            <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
-              <TextField
-                select
-                size="small"
+            <Box sx={{ display: 'flex', gap: 1, mb: 2, alignItems: 'flex-start' }}>
+              <FamilyMemberSelect
+                value={relationshipTargetId || null}
+                onChange={(id) => setRelationshipTargetId(id || '')}
                 label="Related Person"
-                value={relationshipTargetId}
-                onChange={(e) => {
-                  const newValue = e.target.value
-                  // Only set the value if it's empty or exists in availablePeople
-                  if (newValue === '' || availablePeople.some(p => p.id === newValue)) {
-                    setRelationshipTargetId(newValue)
-                  }
-                }}
+                size="small"
+                excludeIds={person ? [person.id] : []}
                 sx={{ minWidth: 220 }}
-              >
-                <MenuItem value="">Select person</MenuItem>
-                {availablePeople.map((p) => (
-                  <MenuItem key={p.id} value={p.id}>
-                    {p.firstName} {p.lastName || ''}
-                  </MenuItem>
-                ))}
-              </TextField>
+              />
               <TextField
                 select
                 size="small"
@@ -715,9 +709,25 @@ export function PersonModal({ open, personId, initialTab = 'overview', onClose, 
               <Grid container spacing={2}>
                 {person.relationships.map((rel) => (
                   <Grid key={rel.id} size={{ xs: 12, sm: 6 }}>
-                    <Card variant="outlined" sx={{ borderRadius: 2 }}>
+                    <Card 
+                      variant="outlined" 
+                      sx={{ 
+                        borderRadius: 2, 
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        '&:hover': { 
+                          borderColor: 'primary.main', 
+                          bgcolor: 'rgba(22, 51, 74, 0.04)',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
+                        } 
+                      }}
+                      onClick={() => onPersonClick?.(rel.person.id)}
+                    >
                       <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 2, py: 2, '&:last-child': { pb: 2 } }}>
-                        <Avatar sx={{ width: 40, height: 40 }}>
+                        <Avatar 
+                          src={rel.person.avatarAssetId ? `/api/assets/serve/${rel.person.avatarAssetId}` : undefined}
+                          sx={{ width: 40, height: 40 }}
+                        >
                           {rel.person.firstName[0]}
                         </Avatar>
                         <Box sx={{ flex: 1 }}>
@@ -728,14 +738,24 @@ export function PersonModal({ open, personId, initialTab = 'overview', onClose, 
                             {rel.type} • {rel.direction === 'outgoing' ? 'To' : 'From'}
                           </Typography>
                         </Box>
-                        <IconButton
-                          size="small"
-                          color="error"
-                          onClick={() => handleDeleteRelationship(rel.id)}
-                          disabled={isMutatingRelationship}
-                        >
-                          <Delete fontSize="small" />
-                        </IconButton>
+                        <Box sx={{ display: 'flex', gap: 0.5 }}>
+                          <IconButton
+                            size="small"
+                            onClick={(e) => { e.stopPropagation(); onPersonClick?.(rel.person.id) }}
+                            title="Open Profile"
+                          >
+                            <OpenInNew fontSize="small" />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={(e) => { e.stopPropagation(); handleDeleteRelationship(rel.id) }}
+                            disabled={isMutatingRelationship}
+                            title="Remove Relationship"
+                          >
+                            <Delete fontSize="small" />
+                          </IconButton>
+                        </Box>
                       </CardContent>
                     </Card>
                   </Grid>
@@ -800,7 +820,7 @@ export function PersonModal({ open, personId, initialTab = 'overview', onClose, 
             <Button
               startIcon={<Delete />}
               color="error"
-              onClick={handleDelete}
+              onClick={() => setIsDeleteConfirmOpen(true)}
               sx={{ textTransform: 'none' }}
             >
               Delete
@@ -843,6 +863,38 @@ export function PersonModal({ open, personId, initialTab = 'overview', onClose, 
           )}
         </Box>
       </DialogActions>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog 
+        open={isDeleteConfirmOpen} 
+        onClose={() => setIsDeleteConfirmOpen(false)}
+        PaperProps={{ sx: { borderRadius: 3, p: 1 } }}
+      >
+        <DialogTitle sx={{ fontFamily: 'var(--font-newsreader), serif', color: 'primary.main' }}>
+          Delete Family Member?
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary">
+            Are you sure you want to delete <strong>{person?.firstName} {person?.lastName}</strong>? 
+            This will permanently remove their records, relationships, and any associated data. 
+            This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 3 }}>
+          <Button onClick={() => setIsDeleteConfirmOpen(false)} sx={{ textTransform: 'none' }}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleDelete} 
+            color="error" 
+            variant="contained" 
+            disabled={isSaving}
+            sx={{ textTransform: 'none', borderRadius: 2, px: 3 }}
+          >
+            {isSaving ? 'Deleting...' : 'Delete Permanently'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Dialog>
   )
 }

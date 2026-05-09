@@ -71,7 +71,7 @@ export function NarrativeTimeline({
           </Typography>
           <Box
             component={Link}
-            href={isGlobal ? '/archive?lens=stories' : personId ? `/stories/contribute?subjectId=${personId}` : '/stories/contribute'}
+            href={isGlobal ? '/memories?lens=stories' : personId ? `/stories/contribute?subjectId=${personId}` : '/stories/contribute'}
             sx={{ display: 'inline-block', mt: 2, color: ProfileColors.primary, textDecoration: 'none', fontFamily: 'var(--font-manrope), sans-serif', fontWeight: 600, fontSize: '0.9rem', borderBottom: `2px solid ${ProfileColors.primary}35`, pb: 0.25 }}
           >
             Begin the narrative →

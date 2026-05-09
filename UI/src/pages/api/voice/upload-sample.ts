@@ -164,7 +164,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         storageType: 'LOCAL',
         storagePath: ttsData.filePath,
         assetType: 'AUDIO',
-        isAISynthesized: true, // Hide from Document Archive
+        isAISynthesized: true, // Hide from Document Memories
         durationSeconds: ttsData.duration,
         transcript: ttsData.transcript,
         processingStatus: 'COMPLETED',

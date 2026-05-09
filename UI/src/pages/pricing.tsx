@@ -225,7 +225,6 @@ export default function PricingPage() {
                         />
                       )}
 
-                      {/* Plan Header */}
                       <Box sx={{ mb: 3 }}>
                         <Typography variant="overline" sx={{ color: '#999', letterSpacing: 1 }}>
                           {plan.planType}
@@ -241,6 +240,11 @@ export default function PricingPage() {
                             /{billingCycle === 'monthly' ? 'mo' : 'yr'}
                           </Typography>
                         </Box>
+                        {plan.planType === 'CLOUD' && (
+                          <Typography variant="caption" sx={{ color: '#999', display: 'block', mt: 1 }}>
+                            Includes {plan.entitlements.generationMinutesIncluded === 999999 ? 'unlimited voice generation' : `${plan.entitlements.generationMinutesIncluded} minutes of voice generation`}
+                          </Typography>
+                        )}
                       </Box>
 
                       <Divider sx={{ my: 2, opacity: 0.3 }} />
@@ -273,9 +277,11 @@ export default function PricingPage() {
                         />
 
                         <Box sx={{ mt: 2 }}>
-                          <Typography variant="body2" sx={{ color: '#546669' }}>
-                            • {plan.entitlements.generationMinutesIncluded} voice generation min/mo
-                          </Typography>
+                          {plan.entitlements.generationMinutesIncluded !== 0 && (
+                            <Typography variant="body2" sx={{ color: '#546669' }}>
+                              • {plan.entitlements.generationMinutesIncluded === 999999 ? 'Unlimited' : plan.entitlements.generationMinutesIncluded} voice generation {plan.entitlements.generationMinutesIncluded === 999999 ? '' : 'min/mo'}
+                            </Typography>
+                          )}
                           <Typography variant="body2" sx={{ color: '#546669' }}>
                             • {plan.entitlements.memberQuota} family members
                           </Typography>

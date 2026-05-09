@@ -240,7 +240,7 @@ export function MemberSwitcherFlyout({ anchorEl, onClose }: MemberSwitcherFlyout
         ) : (
           /* Default view: currently selected + recent + all */
           <>
-            {selectedFamilyMember && (
+            {selectedFamilyMember ? (
               <>
                 <Typography
                   variant="caption"
@@ -253,21 +253,74 @@ export function MemberSwitcherFlyout({ anchorEl, onClose }: MemberSwitcherFlyout
                   isSelected
                   onSelect={handleSelect}
                 />
-                <Box sx={{ px: 2, py: 0.5 }}>
-                  <ButtonBase
-                    onClick={handleClear}
+                <ButtonBase
+                  onClick={handleClear}
+                  sx={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1.5,
+                    px: 2,
+                    py: 1.25,
+                    borderRadius: 2,
+                    textAlign: 'left',
+                    color: 'text.secondary',
+                    '&:hover': { backgroundColor: 'rgba(22, 51, 74, 0.05)', color: '#16334a' },
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  <Avatar
                     sx={{
-                      fontSize: '0.75rem',
-                      color: 'text.secondary',
-                      textDecoration: 'underline',
-                      '&:hover': { color: 'text.primary' },
+                      width: 32,
+                      height: 32,
+                      fontSize: 13,
+                      bgcolor: '#d0e3e6',
+                      color: '#16334a',
+                      flexShrink: 0,
                     }}
                   >
-                    View everyone's story
-                  </ButtonBase>
-                </Box>
+                    <SearchIcon sx={{ fontSize: 16 }} />
+                  </Avatar>
+                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                    View Everyone's Story
+                  </Typography>
+                </ButtonBase>
                 {recentToShow.length > 0 && <Divider sx={{ my: 1 }} />}
               </>
+            ) : (
+              <Box sx={{ px: 1, pb: 1 }}>
+                <ButtonBase
+                  disabled
+                  sx={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1.5,
+                    px: 2,
+                    py: 1.25,
+                    borderRadius: 2,
+                    textAlign: 'left',
+                    backgroundColor: 'rgba(22, 51, 74, 0.08)',
+                  }}
+                >
+                  <Avatar
+                    sx={{
+                      width: 32,
+                      height: 32,
+                      fontSize: 13,
+                      bgcolor: '#16334a',
+                      color: '#fff',
+                      flexShrink: 0,
+                    }}
+                  >
+                    <SearchIcon sx={{ fontSize: 16 }} />
+                  </Avatar>
+                  <Typography variant="body2" sx={{ fontWeight: 600, color: '#16334a' }}>
+                    Everyone's Story
+                  </Typography>
+                </ButtonBase>
+                <Divider sx={{ mt: 1 }} />
+              </Box>
             )}
 
             {recentToShow.length > 0 && (

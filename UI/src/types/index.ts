@@ -25,7 +25,7 @@ export interface VoiceCloneStatus {
 export interface DocumentArtifact {
   id: string
   title: string
-  type: 'PDF' | 'Letter' | 'Photo' | 'Handwritten'
+  type: 'PDF' | 'Letter' | 'Photo' | 'Handwritten' | 'Audio' | 'Video'
   mimeType?: string
   uploadedAt: Date
   thumbnailUrl?: string
@@ -59,7 +59,7 @@ export interface ConversationMessage {
 
 export interface MemoryWallItem {
   id: string
-  type: 'quote' | 'audio-memory' | 'short-quote' | 'archive-stats'
+  type: 'quote' | 'audio-memory' | 'short-quote' | 'memories-stats'
   storyId?: string
   content?: string
   author?: string

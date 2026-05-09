@@ -1,6 +1,25 @@
 import { useMemo, useEffect, useRef, useState, useCallback, ReactNode } from 'react'
 import { useRouter } from 'next/router'
-import { Box, Typography, Avatar, Chip, Button, ToggleButton, ToggleButtonGroup, Skeleton, useMediaQuery, useTheme, TextField } from '@mui/material'
+import {
+  Box,
+  Typography,
+  Avatar,
+  Chip,
+  Button,
+  ToggleButton,
+  ToggleButtonGroup,
+  Skeleton,
+  useMediaQuery,
+  useTheme,
+  TextField,
+  IconButton,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
+  CircularProgress,
+  Divider,
+} from '@mui/material'
 import Autocomplete from '@mui/material/Autocomplete'
 import {
   Timeline as JourneyIcon,
@@ -9,15 +28,23 @@ import {
   GraphicEq as VoicesIcon,
   AddCircleOutline as ContributeIcon,
   ArrowForward as ArrowForwardIcon,
+  PhotoCamera as CameraIcon,
+  Event as EventIcon,
+  Flag as MilestoneIcon,
+  FileUpload as UploadIcon,
+  Mic as VoiceIcon,
+  People as PeopleIcon,
+  AccountTree as GenerationsIcon,
 } from '@mui/icons-material'
 import Link from 'next/link'
 import { ProfileColors } from '@/components/profile/ProfileConstants'
 import { useSelectedFamilyMember } from '@/contexts/SelectedFamilyMemberContext'
 import { useDashboardController } from '@/controllers/useDashboardController'
+import { fetchWithCSRF, fetchWithCSRFAndFormData } from '@/lib/api-client'
 
-export type ArchiveLens = 'journey' | 'stories' | 'keepsakes' | 'voices'
+export type MemoriesLens = 'journey' | 'stories' | 'keepsakes' | 'voices'
 
-const VALID_LENSES: readonly ArchiveLens[] = ['journey', 'stories', 'keepsakes', 'voices']
+const VALID_LENSES: readonly MemoriesLens[] = ['journey', 'stories', 'keepsakes', 'voices']
 
 interface PersonOption {
   id: string
@@ -38,9 +65,9 @@ function formatLifespan(birthDate: string | null | undefined, deathDate: string 
   return null
 }
 
-interface ArchiveShellProps {
-  lens: ArchiveLens
-  onLensChange: (lens: ArchiveLens) => void
+interface MemoriesShellProps {
+  lens: MemoriesLens
+  onLensChange: (lens: MemoriesLens) => void
   children: ReactNode
 }
 
@@ -48,24 +75,29 @@ const personDisplayName = (person: PersonOption): string => {
   return person.displayName || `${person.firstName}${person.lastName ? ` ${person.lastName}` : ''}`
 }
 
-const LENS_OPTIONS: Array<{ value: ArchiveLens; label: string; icon: ReactNode }> = [
+const LENS_OPTIONS: Array<{ value: MemoriesLens; label: string; icon: ReactNode }> = [
   { value: 'journey', label: 'Life Journey', icon: <JourneyIcon /> },
   { value: 'stories', label: 'Stories', icon: <StoriesIcon /> },
   { value: 'keepsakes', label: 'Keepsakes', icon: <KeepsakesIcon /> },
   { value: 'voices', label: 'Voices', icon: <VoicesIcon /> },
 ]
 
-export function isArchiveLens(value: unknown): value is ArchiveLens {
-  return typeof value === 'string' && VALID_LENSES.includes(value as ArchiveLens)
+export function isMemoriesLens(value: unknown): value is MemoriesLens {
+  return typeof value === 'string' && VALID_LENSES.includes(value as MemoriesLens)
 }
 
-export function ArchiveShell({ lens, onLensChange, children }: ArchiveShellProps) {
+export function MemoriesShell({ lens, onLensChange, children }: MemoriesShellProps) {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const router = useRouter()
   const { selectedFamilyMember, setSelectedFamilyMember, clearSelectedFamilyMember } = useSelectedFamilyMember()
   const dashboard = useDashboardController()
   const [people, setPeople] = useState<PersonOption[]>([])
+  const [isUploading, setIsUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const [addMenuAnchor, setAddMenuAnchor] = useState<null | HTMLElement>(null)
+  const isAddMenuOpen = Boolean(addMenuAnchor)
 
   useEffect(() => {
     let active = true
@@ -115,8 +147,36 @@ export function ArchiveShell({ lens, onLensChange, children }: ArchiveShellProps
     }
   }, [people, router.query.personId, handlePersonChange])
 
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !dashboard.familyspace?.id) return
+
+    setIsUploading(true)
+    const formData = new FormData()
+    formData.append('file', file)
+
+    try {
+      const uploadRes = await fetchWithCSRFAndFormData('/api/assets/upload', formData)
+      const uploadData = await uploadRes.json()
+
+      if (uploadData.success) {
+        const assetId = uploadData.data.id
+        await fetchWithCSRF(`/api/familyspaces/${dashboard.familyspace.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ avatarAssetId: assetId }),
+        })
+        dashboard.refresh()
+      }
+    } catch (err) {
+      console.error('Failed to upload family avatar', err)
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
   const familyspaceName = dashboard.familyspace?.name ?? 'Family Story'
-  const archiveTitle = selectedPerson
+  const memoryTitle = selectedPerson
     ? `${personDisplayName(selectedPerson)}'s Story`
     : `${familyspaceName}`
   const subtitle = selectedPerson
@@ -124,20 +184,25 @@ export function ArchiveShell({ lens, onLensChange, children }: ArchiveShellProps
     : 'Preserving memories across generations.'
 
   const stats = dashboard.stats
-  const archiveCounts: Array<{ label: string; value: number }> = [
+  const memoryCounts: Array<{ label: string; value: number; icon?: ReactNode }> = [
+    { label: 'Family Members', value: stats.people, icon: <PeopleIcon sx={{ fontSize: 18 }} /> },
+    { label: 'Generations', value: stats.generations, icon: <GenerationsIcon sx={{ fontSize: 18 }} /> },
     { label: 'Stories', value: stats.stories },
     { label: 'Voice Memories', value: stats.voiceProfiles },
     { label: 'Keepsakes', value: stats.documents },
-    { label: 'Contributors', value: stats.members },
   ]
 
   const initials = selectedPerson
     ? (selectedPerson.firstName?.[0] || '?').toUpperCase()
     : familyspaceName.slice(0, 1).toUpperCase()
 
+  const familyAvatarUrl = dashboard.familyspace?.avatarAssetId
+    ? `/api/assets/${dashboard.familyspace.avatarAssetId}/download`
+    : null
+
   return (
     <Box sx={{ minHeight: '100vh', backgroundColor: ProfileColors.surface }}>
-      {/* Archive Hero */}
+      {/* Memories Hero */}
       <Box
         component="section"
         sx={{
@@ -160,12 +225,16 @@ export function ArchiveShell({ lens, onLensChange, children }: ArchiveShellProps
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0,
+                position: 'relative',
                 overflow: 'hidden',
+                '&:hover .avatar-upload-overlay': {
+                  opacity: 1,
+                },
               }}
             >
-              {selectedPerson?.avatarUrl ? (
+              {(selectedPerson?.avatarUrl || familyAvatarUrl) ? (
                 <Avatar
-                  src={selectedPerson.avatarUrl}
+                  src={selectedPerson?.avatarUrl || familyAvatarUrl || undefined}
                   variant="square"
                   sx={{ width: '100%', height: '100%', '& img': { objectFit: 'cover' } }}
                 />
@@ -174,6 +243,38 @@ export function ArchiveShell({ lens, onLensChange, children }: ArchiveShellProps
                   {initials}
                 </Typography>
               )}
+
+              {/* Upload Overlay (only for family view) */}
+              {!selectedPerson && (
+                <Box
+                  className="avatar-upload-overlay"
+                  sx={{
+                    position: 'absolute',
+                    inset: 0,
+                    bgcolor: 'rgba(0,0,0,0.4)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    opacity: 0,
+                    transition: 'opacity 0.2s',
+                    cursor: 'pointer',
+                  }}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {isUploading ? (
+                    <CircularProgress size={24} sx={{ color: '#fff' }} />
+                  ) : (
+                    <CameraIcon sx={{ color: '#fff', fontSize: 32 }} />
+                  )}
+                </Box>
+              )}
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleAvatarUpload}
+                accept="image/*"
+                style={{ display: 'none' }}
+              />
             </Box>
 
             {/* Title block */}
@@ -202,7 +303,7 @@ export function ArchiveShell({ lens, onLensChange, children }: ArchiveShellProps
                   lineHeight: 1.05,
                 }}
               >
-                {dashboard.isLoading ? <Skeleton width="60%" /> : archiveTitle}
+                {dashboard.isLoading ? <Skeleton width="60%" /> : memoryTitle}
               </Typography>
               {selectedPerson && (() => {
                 const lifespan = formatLifespan(selectedPerson.birthDate, selectedPerson.deathDate)
@@ -233,49 +334,106 @@ export function ArchiveShell({ lens, onLensChange, children }: ArchiveShellProps
               </Typography>
             </Box>
 
-            {/* Family member lens selector + quiet Add Memory action */}
+            {/* Quick Actions / Add Menu (Family View) or Add Memory (Person View) */}
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: { md: 280 } }}>
-              <Autocomplete
-                size="small"
-                options={people}
-                getOptionLabel={personDisplayName}
-                value={selectedPerson}
-                onChange={(_, newValue) => handlePersonChange(newValue?.id ?? '')}
-                isOptionEqualToValue={(option, value) => option.id === value.id}
-                sx={{ minWidth: 260, bgcolor: ProfileColors.surfaceContainerLowest, borderRadius: 2 }}
-                renderInput={(params) => (
-                  <TextField {...params} label="Whose story?" placeholder="Everyone" />
-                )}
-                noOptionsText="No family members yet"
-                clearText="View everyone's story"
-              />
-              <Button
-                component={Link}
-                href="/contribute"
-                variant="outlined"
-                size="medium"
-                startIcon={<ContributeIcon />}
-                sx={{
-                  borderColor: ProfileColors.outlineVariant,
-                  color: ProfileColors.primary,
-                  fontWeight: 600,
-                  borderRadius: '999px',
-                  py: 1,
-                  px: 2.5,
-                  textTransform: 'none',
-                  fontSize: '0.9rem',
-                  '&:hover': {
-                    borderColor: ProfileColors.primary,
-                    backgroundColor: ProfileColors.surfaceContainerLow,
-                  },
-                }}
-              >
-                + Add a Memory
-              </Button>
+              {selectedPerson ? (
+                <>
+                  <Autocomplete
+                    size="small"
+                    options={people}
+                    getOptionLabel={personDisplayName}
+                    value={selectedPerson}
+                    onChange={(_, newValue) => handlePersonChange(newValue?.id ?? '')}
+                    isOptionEqualToValue={(option, value) => option.id === value.id}
+                    sx={{ minWidth: 260, bgcolor: ProfileColors.surfaceContainerLowest, borderRadius: 2 }}
+                    renderInput={(params) => (
+                      <TextField {...params} label="Whose story?" placeholder="Everyone" />
+                    )}
+                    noOptionsText="No family members yet"
+                    clearText="View everyone's story"
+                  />
+                  <Button
+                    component={Link}
+                    href="/contribute"
+                    variant="outlined"
+                    size="medium"
+                    startIcon={<ContributeIcon />}
+                    sx={{
+                      borderColor: ProfileColors.outlineVariant,
+                      color: ProfileColors.primary,
+                      fontWeight: 600,
+                      borderRadius: '999px',
+                      py: 1,
+                      px: 2.5,
+                      textTransform: 'none',
+                      fontSize: '0.9rem',
+                      '&:hover': {
+                        borderColor: ProfileColors.primary,
+                        backgroundColor: ProfileColors.surfaceContainerLow,
+                      },
+                    }}
+                  >
+                    + Add a Memory
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    variant="contained"
+                    size="large"
+                    onClick={(e) => setAddMenuAnchor(e.currentTarget)}
+                    startIcon={<ContributeIcon />}
+                    sx={{
+                      backgroundColor: ProfileColors.primary,
+                      color: '#fff',
+                      fontWeight: 700,
+                      borderRadius: '12px',
+                      py: 1.5,
+                      px: 3,
+                      textTransform: 'none',
+                      fontSize: '1rem',
+                      boxShadow: '0 4px 12px rgba(22, 51, 74, 0.15)',
+                    }}
+                  >
+                    Add to Family Story
+                  </Button>
+                  <Menu
+                    anchorEl={addMenuAnchor}
+                    open={isAddMenuOpen}
+                    onClose={() => setAddMenuAnchor(null)}
+                    PaperProps={{
+                      sx: {
+                        borderRadius: 3,
+                        mt: 1,
+                        minWidth: 220,
+                        boxShadow: '0 8px 32px rgba(22, 51, 74, 0.12)',
+                      },
+                    }}
+                  >
+                    <MenuItem component={Link} href="/contribute" onClick={() => setAddMenuAnchor(null)}>
+                      <ListItemIcon><StoriesIcon fontSize="small" /></ListItemIcon>
+                      <ListItemText primary="New Story" secondary="Record a memory or life event" />
+                    </MenuItem>
+                    <MenuItem component={Link} href="/memories?lens=keepsakes#upload" onClick={() => setAddMenuAnchor(null)}>
+                      <ListItemIcon><UploadIcon fontSize="small" /></ListItemIcon>
+                      <ListItemText primary="Upload Keepsake" secondary="Photos, videos, or documents" />
+                    </MenuItem>
+                    <MenuItem component={Link} href="/voice-lab" onClick={() => setAddMenuAnchor(null)}>
+                      <ListItemIcon><VoiceIcon fontSize="small" /></ListItemIcon>
+                      <ListItemText primary="Voice Clone" secondary="Preserve a family voice" />
+                    </MenuItem>
+                    <Divider />
+                    <MenuItem component={Link} href="/family-tree" onClick={() => setAddMenuAnchor(null)}>
+                      <ListItemIcon><MilestoneIcon fontSize="small" /></ListItemIcon>
+                      <ListItemText primary="Life Event" secondary="Add birth, marriage, or milestone" />
+                    </MenuItem>
+                  </Menu>
+                </>
+              )}
             </Box>
           </Box>
 
-          {/* Archive stats row */}
+          {/* Memories stats row */}
           <Box
             sx={{
               mt: { xs: 4, md: 6 },
@@ -284,19 +442,21 @@ export function ArchiveShell({ lens, onLensChange, children }: ArchiveShellProps
               gap: { xs: 2, md: 3 },
             }}
           >
-            {archiveCounts.map((stat) => (
+            {memoryCounts.map((stat) => (
               <Box key={stat.label}>
-                <Typography
-                  sx={{
-                    fontFamily: 'var(--font-newsreader), serif',
-                    fontSize: { xs: '2rem', md: '2.5rem' },
-                    fontWeight: 700,
-                    color: ProfileColors.primary,
-                    lineHeight: 1.1,
-                  }}
-                >
-                  {dashboard.isLoading ? <Skeleton width={48} /> : stat.value}
-                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5 }}>
+                  <Typography
+                    sx={{
+                      fontFamily: 'var(--font-newsreader), serif',
+                      fontSize: { xs: '2rem', md: '2.5rem' },
+                      fontWeight: 700,
+                      color: ProfileColors.primary,
+                      lineHeight: 1.1,
+                    }}
+                  >
+                    {dashboard.isLoading ? <Skeleton width={48} /> : stat.value}
+                  </Typography>
+                </Box>
                 <Typography
                   sx={{
                     fontFamily: 'var(--font-manrope), sans-serif',
@@ -306,8 +466,12 @@ export function ArchiveShell({ lens, onLensChange, children }: ArchiveShellProps
                     textTransform: 'uppercase',
                     color: ProfileColors.onSurfaceVariant,
                     mt: 0.5,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 0.5
                   }}
                 >
+                  {stat.icon}
                   {stat.label}
                 </Typography>
               </Box>
@@ -319,7 +483,7 @@ export function ArchiveShell({ lens, onLensChange, children }: ArchiveShellProps
       {/* Lens switcher */}
       <Box
         component="nav"
-        aria-label="Archive view switcher"
+        aria-label="Memories view switcher"
         sx={{
           position: 'sticky',
           top: 0,
@@ -335,9 +499,9 @@ export function ArchiveShell({ lens, onLensChange, children }: ArchiveShellProps
             value={lens}
             exclusive
             onChange={(_, value) => {
-              if (value && isArchiveLens(value)) onLensChange(value)
+              if (value && isMemoriesLens(value)) onLensChange(value)
             }}
-            aria-label="Archive lens"
+            aria-label="Memories lens"
             sx={{
               gap: 1,
               backgroundColor: ProfileColors.surfaceContainerLow,

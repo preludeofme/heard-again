@@ -2,7 +2,7 @@ import {
   Box, Typography, Card, CardContent, Button, Grid, Chip, 
   IconButton, Dialog, DialogTitle, DialogContent, DialogContentText, 
   DialogActions, Tooltip, CircularProgress, useTheme, useMediaQuery,
-  Paper
+  Paper, Menu, MenuItem, ListItemIcon, ListItemText
 } from '@mui/material'
 import { 
   CloudUpload as UploadIcon, 
@@ -13,7 +13,10 @@ import {
   PhotoLibraryOutlined as PhotoIcon,
   DescriptionOutlined as DocumentIcon,
   HistoryEduOutlined as LetterIcon,
-  FolderOpenOutlined as FolderIcon
+  FolderOpenOutlined as FolderIcon,
+  AudioFileOutlined as AudioIcon,
+  VideoLibraryOutlined as VideoIcon,
+  EditOutlined as EditIcon,
 } from '@mui/icons-material'
 import { DocumentArtifact } from '@/types'
 import { useState } from 'react'
@@ -21,18 +24,20 @@ import { EmptyState } from '@/components/feedback/UIStates'
 import { FileUpload } from '@/components/upload/FileUpload'
 import { DocumentViewer, DocumentThumbnail } from '@/components/viewers/DocumentViewer'
 import { ProfileColors } from '@/components/profile/ProfileConstants'
+import { fetchWithCSRF } from '@/lib/api-client'
 
 interface DocumentsPageProps {
   documents: DocumentArtifact[]
   onUploadSuccess?: () => void
   onDelete?: (id: string) => Promise<void>
   onLink?: (assetId: string) => Promise<void>
+  onTypeUpdate?: () => void
   personId?: string
 }
 
-type FilterType = 'All' | 'Photo' | 'Letter' | 'Handwritten' | 'Document' | 'Other'
+type FilterType = 'All' | 'Photo' | 'Letter' | 'Handwritten' | 'Document' | 'Audio' | 'Video' | 'Other'
 
-export function DocumentsPage({ documents, onUploadSuccess, onDelete, onLink, personId }: DocumentsPageProps) {
+export function DocumentsPage({ documents, onUploadSuccess, onDelete, onLink, onTypeUpdate, personId }: DocumentsPageProps) {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const [selectedFilter, setSelectedFilter] = useState<FilterType>('All')
@@ -41,6 +46,9 @@ export function DocumentsPage({ documents, onUploadSuccess, onDelete, onLink, pe
   const [deleteTarget, setDeleteTarget] = useState<DocumentArtifact | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
   const [linkingId, setLinkingId] = useState<string | null>(null)
+
+  const [typeMenuAnchor, setTypeMenuAnchor] = useState<null | HTMLElement>(null)
+  const [typeTarget, setTypeTarget] = useState<DocumentArtifact | null>(null)
 
   const filteredDocuments = documents.filter(doc => {
     if (selectedFilter === 'All') return true
@@ -69,6 +77,32 @@ export function DocumentsPage({ documents, onUploadSuccess, onDelete, onLink, pe
   const handleDeleteClick = (e: React.MouseEvent, doc: DocumentArtifact) => {
     e.stopPropagation()
     setDeleteTarget(doc)
+  }
+
+  const handleTypeClick = (e: React.MouseEvent, doc: DocumentArtifact) => {
+    e.stopPropagation()
+    setTypeTarget(doc)
+    setTypeMenuAnchor(e.currentTarget)
+  }
+
+  const handleTypeUpdate = async (newType: string) => {
+    if (!typeTarget) return
+    setTypeMenuAnchor(null)
+    
+    try {
+      const res = await fetchWithCSRF(`/api/assets/${typeTarget.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ documentType: newType.toUpperCase() }),
+      })
+      if (res.ok) {
+        onTypeUpdate?.()
+      }
+    } catch (err) {
+      console.error('Failed to update keepsake type', err)
+    } finally {
+      setTypeTarget(null)
+    }
   }
 
   const handleDeleteConfirm = async () => {
@@ -103,6 +137,18 @@ export function DocumentsPage({ documents, onUploadSuccess, onDelete, onLink, pe
     { label: 'Letters', value: 'Letter', icon: <LetterIcon sx={{ fontSize: 18 }} /> },
     { label: 'Handwritten', value: 'Handwritten', icon: <LetterIcon sx={{ fontSize: 18 }} /> },
     { label: 'Papers', value: 'Document', icon: <DocumentIcon sx={{ fontSize: 18 }} /> },
+    { label: 'Audio', value: 'Audio', icon: <AudioIcon sx={{ fontSize: 18 }} /> },
+    { label: 'Video', value: 'Video', icon: <VideoIcon sx={{ fontSize: 18 }} /> },
+  ]
+
+  const typeOptions = [
+    { label: 'Photo', value: 'PHOTO', icon: <PhotoIcon fontSize="small" /> },
+    { label: 'Letter', value: 'LETTER', icon: <LetterIcon fontSize="small" /> },
+    { label: 'Handwritten', value: 'HANDWRITTEN', icon: <LetterIcon fontSize="small" /> },
+    { label: 'Document/PDF', value: 'PDF', icon: <DocumentIcon fontSize="small" /> },
+    { label: 'Audio Recording', value: 'AUDIO', icon: <AudioIcon fontSize="small" /> },
+    { label: 'Video', value: 'VIDEO', icon: <VideoIcon fontSize="small" /> },
+    { label: 'Certificate', value: 'CERTIFICATE', icon: <DocumentIcon fontSize="small" /> },
   ]
 
   return (
@@ -145,8 +191,8 @@ export function DocumentsPage({ documents, onUploadSuccess, onDelete, onLink, pe
           <FileUpload
             onUploadSuccess={handleUploadSuccess}
             onUploadError={handleUploadError}
-            accept="image/*,application/pdf,.doc,.docx,.txt,.csv,.rtf"
-            maxSize={50 * 1024 * 1024}
+            accept="image/*,application/pdf,audio/*,video/*"
+            maxSize={100 * 1024 * 1024}
             personId={personId}
           >
             <Button
@@ -229,8 +275,8 @@ export function DocumentsPage({ documents, onUploadSuccess, onDelete, onLink, pe
                 <FileUpload
                   onUploadSuccess={handleUploadSuccess}
                   onUploadError={handleUploadError}
-                  accept="image/*,application/pdf,.doc,.docx,.txt,.csv,.rtf"
-                  maxSize={50 * 1024 * 1024}
+                  accept="image/*,application/pdf,audio/*,video/*"
+                  maxSize={100 * 1024 * 1024}
                   personId={personId}
                 >
                   <Button variant="outlined" sx={{ borderRadius: '999px', borderColor: ProfileColors.primary, color: ProfileColors.primary }}>
@@ -311,6 +357,19 @@ export function DocumentsPage({ documents, onUploadSuccess, onDelete, onLink, pe
                     gap: 1
                   }}
                 >
+                  <Tooltip title="Change Type">
+                    <IconButton
+                      size="small"
+                      onClick={(e) => handleTypeClick(e, doc)}
+                      sx={{
+                        backgroundColor: 'rgba(255,255,255,0.9)',
+                        '&:hover': { backgroundColor: '#f0f4f8', color: ProfileColors.primary },
+                        boxShadow: 1
+                      }}
+                    >
+                      <EditIcon sx={{ fontSize: 14 }} />
+                    </IconButton>
+                  </Tooltip>
                   {personId && doc.linkedToPerson === false && (
                     <Tooltip title="Link to this person">
                       <IconButton
@@ -364,7 +423,10 @@ export function DocumentsPage({ documents, onUploadSuccess, onDelete, onLink, pe
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                       {doc.type === 'Photo' && <PhotoIcon sx={{ fontSize: 14, color: ProfileColors.onSurfaceVariant }} />}
                       {doc.type === 'Letter' && <LetterIcon sx={{ fontSize: 14, color: ProfileColors.onSurfaceVariant }} />}
+                      {doc.type === 'Handwritten' && <LetterIcon sx={{ fontSize: 14, color: ProfileColors.onSurfaceVariant }} />}
                       {doc.type === 'PDF' && <DocumentIcon sx={{ fontSize: 14, color: ProfileColors.onSurfaceVariant }} />}
+                      {doc.type === 'Audio' && <AudioIcon sx={{ fontSize: 14, color: ProfileColors.onSurfaceVariant }} />}
+                      {doc.type === 'Video' && <VideoIcon sx={{ fontSize: 14, color: ProfileColors.onSurfaceVariant }} />}
                       <Typography
                         variant="caption"
                         sx={{
@@ -411,6 +473,28 @@ export function DocumentsPage({ documents, onUploadSuccess, onDelete, onLink, pe
           ))}
         </Grid>
       </Box>
+
+      {/* Type Selection Menu */}
+      <Menu
+        anchorEl={typeMenuAnchor}
+        open={Boolean(typeMenuAnchor)}
+        onClose={() => setTypeMenuAnchor(null)}
+        PaperProps={{ sx: { borderRadius: 3, mt: 1, boxShadow: '0 8px 32px rgba(0,0,0,0.1)' } }}
+      >
+        <Typography variant="caption" sx={{ px: 2, py: 1, display: 'block', color: 'text.secondary', fontWeight: 600, textTransform: 'uppercase' }}>
+          Change Keepsake Type
+        </Typography>
+        {typeOptions.map((opt) => (
+          <MenuItem 
+            key={opt.value} 
+            onClick={() => handleTypeUpdate(opt.value)}
+            selected={typeTarget?.type.toUpperCase() === opt.value || (typeTarget?.type === 'PDF' && opt.value === 'PDF')}
+          >
+            <ListItemIcon>{opt.icon}</ListItemIcon>
+            <ListItemText primary={opt.label} />
+          </MenuItem>
+        ))}
+      </Menu>
       
       {/* Delete Confirmation Dialog */}
       <Dialog 

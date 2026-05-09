@@ -78,6 +78,7 @@ export const authOptions: NextAuthOptions = {
         token.displayName = (user as any).displayName || (user as any).name || null
         token.avatarUrl = (user as any).avatarUrl || (user as any).image || null
         token.defaultFamilyspaceId = (user as any).defaultFamilyspaceId || null
+        token.linkedPersonId = (user as any).linkedPersonId || null
       }
 
       // Self-heal: if defaultFamilyspaceId is missing (stale token, post-DB-reset, etc.)
@@ -118,16 +119,17 @@ export const authOptions: NextAuthOptions = {
         session.user.displayName = (token.displayName as string) || null
         session.user.avatarUrl = (token.avatarUrl as string) || null
         session.user.defaultFamilyspaceId = (token.defaultFamilyspaceId as string) || null
+        session.user.linkedPersonId = (token.linkedPersonId as string) || null
         session.user.role = (token.role as string) || 'VIEWER'
       }
       return session
     },
     async redirect({ url, baseUrl }) {
-      // Send to the unified archive home by default; middleware will redirect to /onboarding if needed
-      if (url === baseUrl || url === `${baseUrl}/`) return `${baseUrl}/archive`
+      // Send to the unified memories home by default; middleware will redirect to /onboarding if needed
+      if (url === baseUrl || url === `${baseUrl}/`) return `${baseUrl}/memories`
       if (url.startsWith('/')) return `${baseUrl}${url}`
       else if (new URL(url).origin === baseUrl) return url
-      return `${baseUrl}/archive`
+      return `${baseUrl}/memories`
     },
   },
   events: {

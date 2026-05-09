@@ -123,12 +123,13 @@ if [ ! -f "$ROOT_DIR/.env" ]; then
         cp "$ROOT_DIR/.env.example" "$ROOT_DIR/.env"
     else
         echo "  Creating root .env with defaults..."
+        NEXTAUTH_SECRET_GEN=$(openssl rand -hex 32 2>/dev/null || head -c 64 /dev/urandom | xxd -p | tr -d '\n' | head -c 64)
         cat > "$ROOT_DIR/.env" << EOF
 # Database
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/heard_again
 
 # Authentication
-NEXTAUTH_SECRET=change-this-in-production
+NEXTAUTH_SECRET=$NEXTAUTH_SECRET_GEN
 NEXTAUTH_URL=http://localhost:4777
 
 # Services
@@ -155,9 +156,10 @@ if [ ! -f "$UI_DIR/.env" ]; then
         cp "$UI_DIR/.env.example" "$UI_DIR/.env"
     else
         echo "  Creating UI .env with defaults..."
+        NEXTAUTH_SECRET_GEN=$(openssl rand -hex 32 2>/dev/null || head -c 64 /dev/urandom | xxd -p | tr -d '\n' | head -c 64)
         cat > "$UI_DIR/.env" << EOF
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/heard_again
-NEXTAUTH_SECRET=change-this-in-production
+NEXTAUTH_SECRET=$NEXTAUTH_SECRET_GEN
 NEXTAUTH_URL=http://localhost:4777
 TTS_SERVICE_URL=http://localhost:8100
 CHAT_SYSTEM_URL=http://localhost:3001

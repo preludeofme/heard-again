@@ -25,13 +25,13 @@ interface Action {
 const ALL_ACTIONS: Action[] = [
   { key: 'story', label: 'Share a Memory', icon: <AutoStoriesRounded />, href: '/contribute' },
   { key: 'person', label: 'Add to Family', icon: <PersonAddAlt1Rounded />, href: '/family-tree' },
-  { key: 'upload', label: 'Add Keepsake', icon: <CloudUploadRounded />, href: '/archive?lens=keepsakes' },
-  { key: 'voice', label: 'Voice Memories', icon: <GraphicEqRounded />, href: '/archive?lens=voices' },
+  { key: 'upload', label: 'Add Keepsake', icon: <CloudUploadRounded />, href: '/memories?lens=keepsakes' },
+  { key: 'voice', label: 'Voice Memories', icon: <GraphicEqRounded />, href: '/memories?lens=voices' },
   { key: 'tree', label: 'Family Tree', icon: <AccountTreeRounded />, href: '/family-tree' },
 ]
 
 const VIEWER_ACTIONS: Action[] = [
-  { key: 'story', label: 'Read Stories', icon: <AutoStoriesRounded />, href: '/archive?lens=stories' },
+  { key: 'story', label: 'Read Stories', icon: <AutoStoriesRounded />, href: '/memories?lens=stories' },
   { key: 'tree', label: 'Family Tree', icon: <AccountTreeRounded />, href: '/family-tree' },
 ]
 

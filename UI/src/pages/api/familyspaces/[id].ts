@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
 import { getAuthUser, requireFamilyspaceRole } from '@/lib/auth-helpers'
 import { validate, rules } from '@/lib/validation'
+import { updateFamilyspaceSchema } from '@/schemas'
 
 export default apiHandler({
   // GET /api/familyspaces/[id] - Get familyspace details
@@ -20,6 +21,7 @@ export default apiHandler({
         subscription: {
           include: { plan: true },
         },
+        avatarAsset: { select: { id: true } },
         _count: {
           select: {
             members: true,
@@ -27,6 +29,7 @@ export default apiHandler({
             stories: true,
             voiceProfiles: true,
             assets: true,
+            documents: true,
           },
         },
       },
@@ -47,6 +50,7 @@ export default apiHandler({
       isPublic: familyspace.isPublic,
       allowMemberStories: familyspace.allowMemberStories,
       deletionVotes: familyspace.deletionVotes,
+      avatarAssetId: familyspace.avatarAsset?.id ?? null,
       owner: familyspace.owner,
       subscription: familyspace.subscription
         ? {
@@ -61,43 +65,31 @@ export default apiHandler({
   },
 
   // PUT /api/familyspaces/[id] - Update familyspace
-  PUT: async (req, res) => {
-    const user = await getAuthUser(req, res)
-    const familyspaceId = req.query.id as string
+  PUT: {
+    schema: updateFamilyspaceSchema,
+    handler: async (req, res) => {
+      const user = await getAuthUser(req, res)
+      const familyspaceId = req.query.id as string
 
-    await requireFamilyspaceRole(user.id, familyspaceId, 'ADMIN')
+      await requireFamilyspaceRole(user.id, familyspaceId, 'ADMIN')
 
-    const { valid, errors } = validate(req.body, {
-      name: [rules.string, rules.minLength(2), rules.maxLength(100)],
-      isPublic: [rules.boolean],
-      allowMemberStories: [rules.boolean],
-    })
+      const familyspace = await prisma.familyspace.update({
+        where: { id: familyspaceId },
+        data: req.body,
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          planType: true,
+          isPublic: true,
+          allowMemberStories: true,
+          avatarAssetId: true,
+          updatedAt: true,
+        },
+      })
 
-    if (!valid) {
-      throw Errors.badRequest('Validation failed', errors)
-    }
-
-    const { name, isPublic, allowMemberStories } = req.body
-    const updateData: any = {}
-    if (name !== undefined) updateData.name = name
-    if (isPublic !== undefined) updateData.isPublic = isPublic
-    if (allowMemberStories !== undefined) updateData.allowMemberStories = allowMemberStories
-
-    const familyspace = await prisma.familyspace.update({
-      where: { id: familyspaceId },
-      data: updateData,
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        planType: true,
-        isPublic: true,
-        allowMemberStories: true,
-        updatedAt: true,
-      },
-    })
-
-    return successResponse(res, familyspace)
+      return successResponse(res, familyspace)
+    },
   },
 
   // DELETE /api/familyspaces/[id] - Delete familyspace

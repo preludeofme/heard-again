@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react'
+import { useRouter } from 'next/router'
 
 export interface SelectedFamilyMember {
   id: string
@@ -18,6 +19,21 @@ interface SelectedFamilyMemberContextValue {
 const STORAGE_KEY = 'heard-again:selected-member'
 const RECENT_KEY = 'heard-again:recent-members'
 const MAX_RECENT = 8
+
+// Pages that should maintain the personId in the URL
+const PERSON_AWARE_PAGES = [
+  '/memories',
+  '/contribute',
+  '/family-tree',
+  '/favorites',
+  '/voice-lab',
+  '/chat',
+  '/collections',
+  '/documents',
+  '/stories',
+  '/timeline',
+  '/profile',
+]
 
 function readStorage<T>(key: string): T | null {
   if (typeof window === 'undefined') return null
@@ -58,17 +74,85 @@ function addToRecent(
 const SelectedFamilyMemberContext = createContext<SelectedFamilyMemberContextValue | undefined>(undefined)
 
 export function SelectedFamilyMemberProvider({ children }: { children: ReactNode }) {
+  const router = useRouter()
   const [selectedFamilyMember, setSelectedFamilyMemberState] = useState<SelectedFamilyMember | null>(null)
   const [recentlyViewedMembers, setRecentlyViewedMembers] = useState<SelectedFamilyMember[]>([])
+  const [isInitialized, setIsInitialized] = useState(false)
 
-  // Hydrate from localStorage once on client mount
+  // 1. Initial hydration from localStorage and URL
   useEffect(() => {
-    const persisted = readStorage<SelectedFamilyMember>(STORAGE_KEY)
-    if (persisted) setSelectedFamilyMemberState(persisted)
+    const hydrate = async () => {
+      const recent = readStorage<SelectedFamilyMember[]>(RECENT_KEY)
+      if (recent) setRecentlyViewedMembers(recent)
 
-    const recent = readStorage<SelectedFamilyMember[]>(RECENT_KEY)
-    if (recent) setRecentlyViewedMembers(recent)
-  }, [])
+      // URL takes precedence over localStorage
+      const { personId } = router.query
+      if (personId && typeof personId === 'string') {
+        try {
+          const response = await fetch(`/api/people/${personId}`)
+          const data = await response.json()
+          if (data.success) {
+            setSelectedFamilyMemberState(data.data)
+            writeStorage(STORAGE_KEY, data.data)
+          }
+        } catch (e) {
+          console.error('Failed to fetch person from URL personId', e)
+        }
+      } else {
+        const persisted = readStorage<SelectedFamilyMember>(STORAGE_KEY)
+        if (persisted) setSelectedFamilyMemberState(persisted)
+      }
+      setIsInitialized(true)
+    }
+
+    if (router.isReady) {
+      hydrate()
+    }
+  }, [router.isReady]) // Only run once when router is ready
+
+  // 2. Sync State -> URL
+  useEffect(() => {
+    if (!isInitialized || !router.isReady) return
+
+    const isAwarePage = PERSON_AWARE_PAGES.some(path => router.pathname.startsWith(path))
+    if (!isAwarePage) return
+
+    const urlPersonId = router.query.personId as string
+    const statePersonId = selectedFamilyMember?.id
+
+    if (statePersonId && urlPersonId !== statePersonId) {
+      // Add personId to URL
+      const newQuery = { ...router.query, personId: statePersonId }
+      router.replace({ pathname: router.pathname, query: newQuery }, undefined, { shallow: true })
+    } else if (!statePersonId && urlPersonId) {
+      // Remove personId from URL
+      const { personId, ...restQuery } = router.query
+      router.replace({ pathname: router.pathname, query: restQuery }, undefined, { shallow: true })
+    }
+  }, [selectedFamilyMember?.id, router.pathname, isInitialized, router.isReady])
+
+  // 3. Sync URL -> State (for manual URL changes or back/forward)
+  useEffect(() => {
+    if (!isInitialized || !router.isReady) return
+
+    const urlPersonId = router.query.personId as string
+    const statePersonId = selectedFamilyMember?.id
+
+    if (urlPersonId && urlPersonId !== statePersonId) {
+      fetch(`/api/people/${urlPersonId}`)
+        .then(r => r.json())
+        .then(data => {
+          if (data.success) {
+            setSelectedFamilyMemberState(data.data)
+            writeStorage(STORAGE_KEY, data.data)
+          }
+        })
+        .catch(e => console.error('Failed to sync URL personId to state', e))
+    } else if (!urlPersonId && statePersonId) {
+      setSelectedFamilyMemberState(null)
+      removeStorage(STORAGE_KEY)
+    }
+  }, [router.query.personId])
 
   const setSelectedFamilyMember = useCallback((person: SelectedFamilyMember | null) => {
     setSelectedFamilyMemberState(person)
@@ -87,7 +171,6 @@ export function SelectedFamilyMemberProvider({ children }: { children: ReactNode
   const clearSelectedFamilyMember = useCallback(() => {
     setSelectedFamilyMemberState(null)
     removeStorage(STORAGE_KEY)
-    // Keep recently viewed — clearing context is just "unscope", not "forget"
   }, [])
 
   const value: SelectedFamilyMemberContextValue = {

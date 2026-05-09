@@ -170,7 +170,7 @@ export default function ExportPage() {
               Export Tools
             </Typography>
             <Typography variant="body2" sx={{ color: '#546669', mb: 4 }}>
-              Export your archive data and track export job progress.
+              Export your memories data and track export job progress.
             </Typography>
 
             {error && (

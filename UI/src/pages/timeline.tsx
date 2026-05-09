@@ -3,7 +3,7 @@ import { useRouter } from 'next/router'
 
 /**
  * Legacy Timeline Page
- * Redirects to the unified Archive Shell with the 'journey' lens active.
+ * Redirects to the unified Memories Shell with the 'journey' lens active.
  */
 export default function TimelineRedirect() {
   const router = useRouter()
@@ -11,7 +11,7 @@ export default function TimelineRedirect() {
   useEffect(() => {
     if (router.isReady) {
       router.replace({
-        pathname: '/archive',
+        pathname: '/memories',
         query: { ...router.query, lens: 'journey' },
       })
     }

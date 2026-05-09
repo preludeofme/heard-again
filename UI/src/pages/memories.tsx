@@ -2,20 +2,20 @@ import Head from 'next/head'
 import { useEffect, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/router'
 import { Layout } from '@/components/layout/Layout'
-import { ArchiveShell, isArchiveLens, type ArchiveLens } from '@/components/archive/ArchiveShell'
-import { LifeJourneyLens } from '@/components/archive/lenses/LifeJourneyLens'
-import { StoriesLens } from '@/components/archive/lenses/StoriesLens'
-import { KeepsakesLens } from '@/components/archive/lenses/KeepsakesLens'
-import { VoicesLens } from '@/components/archive/lenses/VoicesLens'
+import { MemoriesShell, isMemoriesLens, type MemoriesLens } from '@/components/memories/MemoriesShell'
+import { LifeJourneyLens } from '@/components/memories/lenses/LifeJourneyLens'
+import { StoriesLens } from '@/components/memories/lenses/StoriesLens'
+import { KeepsakesLens } from '@/components/memories/lenses/KeepsakesLens'
+import { VoicesLens } from '@/components/memories/lenses/VoicesLens'
 
-const DEFAULT_LENS: ArchiveLens = 'journey'
+const DEFAULT_LENS: MemoriesLens = 'journey'
 
-export default function ArchivePage() {
+export default function MemoriesPage() {
   const router = useRouter()
 
-  const lens: ArchiveLens = useMemo(() => {
+  const lens: MemoriesLens = useMemo(() => {
     const fromQuery = router.query.lens
-    if (typeof fromQuery === 'string' && isArchiveLens(fromQuery)) {
+    if (typeof fromQuery === 'string' && isMemoriesLens(fromQuery)) {
       return fromQuery
     }
     return DEFAULT_LENS
@@ -24,7 +24,7 @@ export default function ArchivePage() {
   // Normalize URL — if no lens query, push the default so deep links and reloads stay in sync.
   useEffect(() => {
     if (!router.isReady) return
-    if (typeof router.query.lens !== 'string' || !isArchiveLens(router.query.lens)) {
+    if (typeof router.query.lens !== 'string' || !isMemoriesLens(router.query.lens)) {
       router.replace(
         { pathname: router.pathname, query: { ...router.query, lens: DEFAULT_LENS } },
         undefined,
@@ -33,7 +33,7 @@ export default function ArchivePage() {
     }
   }, [router])
 
-  const handleLensChange = useCallback((next: ArchiveLens) => {
+  const handleLensChange = useCallback((next: MemoriesLens) => {
     router.replace(
       { pathname: router.pathname, query: { ...router.query, lens: next } },
       undefined,
@@ -44,16 +44,16 @@ export default function ArchivePage() {
   return (
     <>
       <Head>
-        <title>The Living Archive | Heard Again</title>
-        <meta name="description" content="A unified family archive — life journey, stories, voices, and keepsakes." />
+        <title>The Living Memories | Heard Again</title>
+        <meta name="description" content="A unified family memories — life journey, stories, voices, and keepsakes." />
       </Head>
       <Layout>
-        <ArchiveShell lens={lens} onLensChange={handleLensChange}>
+        <MemoriesShell lens={lens} onLensChange={handleLensChange}>
           {lens === 'journey' && <LifeJourneyLens />}
           {lens === 'stories' && <StoriesLens />}
           {lens === 'keepsakes' && <KeepsakesLens />}
           {lens === 'voices' && <VoicesLens />}
-        </ArchiveShell>
+        </MemoriesShell>
       </Layout>
     </>
   )

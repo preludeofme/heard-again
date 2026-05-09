@@ -1,6 +1,7 @@
 import type { Node, Edge } from '@xyflow/react'
 import type { TreePerson } from '../types'
 import type { ApiPersonWithEdges, TreeLayoutPerson, PersonNodeData, TreeNodeLevel } from './types'
+import { getRelationshipDescriptor } from '@/lib/relationship-utils'
 
 // ─── Layout constants ────────────────────────────────────────────────────────
 
@@ -68,7 +69,8 @@ interface FamilyUnit {
 interface LayoutCallbacks {
   onPersonClick: (person: TreeLayoutPerson) => void
   onAddPerson: () => void
-  onViewArchive: (person: TreeLayoutPerson) => void
+  onViewMemories: (person: TreeLayoutPerson) => void
+  onViewFullProfile?: (personId: string) => void
   onSetRoot?: (id: string) => void
   onLoadMore?: (direction: 'up' | 'down' | 'left' | 'right', personId: string) => void
   onEditRelationships?: (personId: string) => void
@@ -301,6 +303,7 @@ export function buildFamilyTreeLayout(
   rootPersonId: string,
   callbacks: LayoutCallbacks,
   selectedPersonId: string | null = null,
+  userPersonId: string | null = null,
 ): LayoutResult {
   if (people.length === 0) return { nodes: [], edges: [] }
 
@@ -593,6 +596,7 @@ export function buildFamilyTreeLayout(
       selected: isSelf || personId === selectedPersonId,
       width,
       height,
+      relationship: getRelationshipDescriptor(personId, userPersonId, people)
     }
 
     const nodeData: PersonNodeData = {
@@ -604,7 +608,8 @@ export function buildFamilyTreeLayout(
       isMobile: callbacks.isMobile,
       onPersonClick: callbacks.onPersonClick,
       onAddPerson: callbacks.onAddPerson,
-      onViewArchive: callbacks.onViewArchive,
+      onViewMemories: callbacks.onViewMemories,
+      onViewFullProfile: callbacks.onViewFullProfile,
       onSetRoot: callbacks.onSetRoot,
       onEditRelationships: callbacks.onEditRelationships,
       onLoadMore: callbacks.onLoadMore,

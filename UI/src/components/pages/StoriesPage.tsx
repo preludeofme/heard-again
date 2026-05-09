@@ -10,14 +10,11 @@ import { useState } from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
 import { ProfileColors } from '@/components/profile/ProfileConstants'
+import { extractFirstImage, stripHtml } from '@/lib/html-utils'
 
-function stripHtml(html: string) {
-  if (typeof window === 'undefined') return html
-  const doc = new DOMParser().parseFromString(html, 'text/html')
-  return doc.body.textContent || ''
-}
 
-interface StoriesPageProps {
+interface SearchableFamilyMember {
+
   stories: StoryContribution[]
   selectedFamilyMember?: {
     id: string
@@ -90,7 +87,7 @@ export function StoriesPage({ stories, selectedFamilyMember, isLens = false }: S
                 </Typography>
                 <Typography
                   component={Link}
-                  href="/archive?lens=stories"
+                  href="/memories?lens=stories"
                   sx={{
                     fontFamily: 'var(--font-manrope), sans-serif',
                     fontSize: '0.8rem',
@@ -175,8 +172,31 @@ export function StoriesPage({ stories, selectedFamilyMember, isLens = false }: S
                       justifyContent: 'center',
                     }}
                   >
+                    {/* Background image from story content if available */}
+                    {(() => {
+                      const firstImg = extractFirstImage(featuredStory.content)
+                      if (firstImg) {
+                        return (
+                          <Box 
+                            component="img" 
+                            src={firstImg} 
+                            sx={{ 
+                              position: 'absolute', 
+                              inset: 0, 
+                              width: '100%', 
+                              height: '100%', 
+                              objectFit: 'cover',
+                              opacity: 0.9,
+                              filter: 'brightness(0.95)'
+                            }} 
+                          />
+                        )
+                      }
+                      return null
+                    })()}
+
                     {/* Decorative initial — curated feel when no photo is available */}
-                    {!featuredStory.authorAvatarUrl && (
+                    {!featuredStory.authorAvatarUrl && !extractFirstImage(featuredStory.content) && (
                       <Typography
                         aria-hidden="true"
                         sx={{
@@ -193,11 +213,11 @@ export function StoriesPage({ stories, selectedFamilyMember, isLens = false }: S
                         {featuredStory.authorName?.[0]?.toUpperCase() ?? '?'}
                       </Typography>
                     )}
-                    {featuredStory.authorAvatarUrl && (
+                    {featuredStory.authorAvatarUrl && !extractFirstImage(featuredStory.content) && (
                       <Box component="img" src={featuredStory.authorAvatarUrl} sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.8 }} />
                     )}
-                    <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, p: 4, background: 'linear-gradient(transparent, rgba(22,51,74,0.65))', color: '#fff' }}>
-                      <Typography variant="caption" sx={{ textTransform: 'uppercase', letterSpacing: 2, fontWeight: 700, mb: 1, display: 'block', opacity: 0.85 }}>Featured Memory</Typography>
+                    <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, p: 4, background: 'linear-gradient(transparent, rgba(22,51,74,0.75))', color: '#fff' }}>
+                      <Typography variant="caption" sx={{ textTransform: 'uppercase', letterSpacing: 2, fontWeight: 700, mb: 1, display: 'block', opacity: 0.9 }}>Featured Memory</Typography>
                       <Typography variant="h4" className="serif-font" sx={{ fontWeight: 700 }}>{featuredStory.authorName}</Typography>
                     </Box>
                   </Box>
@@ -213,24 +233,34 @@ export function StoriesPage({ stories, selectedFamilyMember, isLens = false }: S
               </Grid>
             )}
 
-            {otherStories.map((story) => (
-              <Grid key={story.id} size={{ xs: 12, md: 6, lg: 4 }}>
-                <Card onClick={() => router.push(`/stories/${story.id}`)} sx={{ borderRadius: 5, p: 4, height: '100%', backgroundColor: story.type === 'audio' ? ProfileColors.surfaceContainerLow : ProfileColors.surfaceContainerLowest, border: `1px solid ${ProfileColors.outlineVariant}15`, transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', cursor: 'pointer', display: 'flex', flexDirection: 'column', '&:hover': { transform: 'translateY(-12px)', boxShadow: '0 20px 60px rgba(0,0,0,0.06)' } }}>
-                  <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                      <Avatar src={story.authorAvatarUrl} sx={{ width: 32, height: 32, border: `1px solid ${ProfileColors.outlineVariant}30` }} />
-                      <Typography sx={{ fontWeight: 700, fontSize: '0.85rem', color: ProfileColors.primary }}>{story.authorName}</Typography>
+            {otherStories.map((story) => {
+              const firstImg = extractFirstImage(story.content)
+              return (
+                <Grid key={story.id} size={{ xs: 12, md: 6, lg: 4 }}>
+                  <Card onClick={() => router.push(`/stories/${story.id}`)} sx={{ borderRadius: 5, p: 0, height: '100%', backgroundColor: story.type === 'audio' ? ProfileColors.surfaceContainerLow : ProfileColors.surfaceContainerLowest, border: `1px solid ${ProfileColors.outlineVariant}15`, transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', cursor: 'pointer', display: 'flex', flexDirection: 'column', '&:hover': { transform: 'translateY(-12px)', boxShadow: '0 20px 60px rgba(0,0,0,0.06)' } }}>
+                    {firstImg && (
+                      <Box sx={{ width: '100%', height: 180, overflow: 'hidden', borderTopLeftRadius: 20, borderTopRightRadius: 20 }}>
+                        <Box component="img" src={firstImg} sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      </Box>
+                    )}
+                    <Box sx={{ p: 4, flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+                      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                          <Avatar src={story.authorAvatarUrl} sx={{ width: 32, height: 32, border: `1px solid ${ProfileColors.outlineVariant}30` }} />
+                          <Typography sx={{ fontWeight: 700, fontSize: '0.85rem', color: ProfileColors.primary }}>{story.authorName}</Typography>
+                        </Box>
+                        {story.type === 'audio' && <AudioIcon sx={{ fontSize: 20, color: ProfileColors.primary, opacity: 0.7 }} />}
+                      </Box>
+                      <Typography variant="h5" className="serif-font" sx={{ color: ProfileColors.primary, mb: 2, fontWeight: 700, lineHeight: 1.3 }}>{(story as any).title || 'A Memory Shared'}</Typography>
+                      <Typography variant="body2" sx={{ color: ProfileColors.onSurfaceVariant, lineHeight: 1.7, fontSize: '1rem', fontFamily: 'var(--font-newsreader), serif', mb: 3, flexGrow: 1, display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{story.type === 'audio' ? story.content : stripHtml(story.content)}</Typography>
+                      <Box sx={{ pt: 2, borderTop: `1px solid ${ProfileColors.outlineVariant}10`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Typography variant="caption" sx={{ color: ProfileColors.onSurfaceVariant, opacity: 0.6 }}>{formatDistanceToNow(new Date(story.createdAt), { addSuffix: true })}</Typography>
+                      </Box>
                     </Box>
-                    {story.type === 'audio' && <AudioIcon sx={{ fontSize: 20, color: ProfileColors.primary, opacity: 0.7 }} />}
-                  </Box>
-                  <Typography variant="h5" className="serif-font" sx={{ color: ProfileColors.primary, mb: 2, fontWeight: 700, lineHeight: 1.3 }}>{(story as any).title || 'A Memory Shared'}</Typography>
-                  <Typography variant="body2" sx={{ color: ProfileColors.onSurfaceVariant, lineHeight: 1.7, fontSize: '1rem', fontFamily: 'var(--font-newsreader), serif', mb: 3, flexGrow: 1, display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{story.type === 'audio' ? story.content : stripHtml(story.content)}</Typography>
-                  <Box sx={{ pt: 2, borderTop: `1px solid ${ProfileColors.outlineVariant}10`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography variant="caption" sx={{ color: ProfileColors.onSurfaceVariant, opacity: 0.6 }}>{formatDistanceToNow(new Date(story.createdAt), { addSuffix: true })}</Typography>
-                  </Box>
-                </Card>
-              </Grid>
-            ))}
+                  </Card>
+                </Grid>
+              )
+            })}
           </Grid>
         )}
       </Box>
