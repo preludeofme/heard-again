@@ -41,6 +41,6 @@
     "node_modules",
     "Chat",
     "../prisma",
-    "debug-tree.ts"
+    "scripts/dev-only"
   ]
 }

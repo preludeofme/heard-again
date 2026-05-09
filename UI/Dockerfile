@@ -1,5 +1,5 @@
 # Multi-stage build for production
-FROM node:18-alpine AS base
+FROM node:22-alpine AS base
 
 # Install dependencies only when needed
 FROM base AS deps
@@ -21,11 +21,13 @@ COPY UI/ .
 # Copy shared prisma schema from root
 COPY prisma/ ./prisma/
 
-# Generate Prisma client
-RUN npx prisma generate
+# Generate Prisma client (clean up multi-generator paths for container)
+RUN sed -i '/generator client_ui/,/}/d' prisma/schema.prisma && \
+    sed -i '/generator client_chat/,/}/d' prisma/schema.prisma && \
+    npx prisma generate --schema=./prisma/schema.prisma
 
 # Build the application
-RUN npm run build
+RUN DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy" npm run build
 
 # Production image, copy all the files and run next
 FROM base AS runner

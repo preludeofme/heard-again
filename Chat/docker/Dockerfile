@@ -1,4 +1,4 @@
-FROM node:18-alpine AS builder
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
@@ -16,7 +16,7 @@ RUN npx prisma generate
 RUN npm run build
 
 # Production stage
-FROM node:18-alpine AS runtime
+FROM node:22-alpine AS runtime
 
 # Install required system packages
 RUN apk add --no-cache \
@@ -47,6 +47,7 @@ RUN npm ci --only=production
 # Copy compiled output and config
 COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
 COPY --from=builder --chown=nodejs:nodejs /app/package.json ./package.json
+COPY --from=builder --chown=nodejs:nodejs /app/tsconfig.json ./tsconfig.json
 COPY --from=builder --chown=nodejs:nodejs /app/prisma ./prisma
 
 # Prisma client is generated into node_modules — regenerate against production node_modules

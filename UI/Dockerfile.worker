@@ -1,4 +1,4 @@
-FROM node:18-alpine AS deps
+FROM node:22-alpine AS deps
 
 RUN apk add --no-cache libc6-compat curl
 
@@ -8,7 +8,7 @@ COPY UI/package.json UI/package-lock.json* ./
 RUN npm ci
 
 # Runtime stage — workers run TypeScript directly via tsx + tsconfig-paths
-FROM node:18-alpine AS runtime
+FROM node:22-alpine AS runtime
 
 RUN apk add --no-cache libc6-compat curl
 
@@ -27,7 +27,9 @@ COPY --chown=nextjs:nodejs UI/tsconfig.json ./tsconfig.json
 
 # Copy shared Prisma schema and generate client
 COPY prisma/ ./prisma/
-RUN npx prisma generate --schema ./prisma/schema.prisma
+RUN sed -i '/generator client_ui/,/}/d' prisma/schema.prisma && \
+    sed -i '/generator client_chat/,/}/d' prisma/schema.prisma && \
+    npx prisma generate --schema ./prisma/schema.prisma
 
 COPY --from=deps /app/node_modules/.prisma ./node_modules/.prisma
 

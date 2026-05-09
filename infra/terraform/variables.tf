@@ -84,3 +84,15 @@ variable "cdn_domain" {
   type        = string
   default     = ""
 }
+
+variable "google_client_id" {
+  description = "Google OAuth 2.0 Client ID for NextAuth"
+  type        = string
+  sensitive   = true
+}
+
+variable "google_client_secret" {
+  description = "Google OAuth 2.0 Client Secret for NextAuth"
+  type        = string
+  sensitive   = true
+}

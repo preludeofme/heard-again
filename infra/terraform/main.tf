@@ -12,9 +12,6 @@ terraform {
     }
   }
 
-  # Partial backend config — bucket and prefix are supplied at init time:
-  #   terraform init -backend-config=backends/prod.gcs.tfvars
-  # Bootstrap: create the GCS bucket out-of-band before first init.
   backend "gcs" {}
 }
 
@@ -106,13 +103,42 @@ resource "google_service_networking_connection" "private_vpc_connection" {
 
 # VPC Connector for Cloud Run → private resources
 resource "google_vpc_access_connector" "connector" {
-  name          = "${local.prefix}-connector"
-  region        = var.region
-  ip_cidr_range = "10.3.0.0/28"
-  network       = google_compute_network.vpc.name
-  min_instances = 2
-  max_instances = 10
-  machine_type  = "e2-micro"
+  name           = "${var.app_name}-${var.environment}-conn"
+  region         = var.region
+  ip_cidr_range  = "10.3.0.0/28"
+  network        = google_compute_network.vpc.name
+  min_instances  = 2
+  max_instances  = 10
+  machine_type   = "e2-micro"
+  max_throughput = 1000
+}
+
+# Static internal IP for TTS internal load balancer (GKE → Cloud Run reachable via VPC)
+resource "google_compute_address" "tts_internal_ip" {
+  name         = "${local.prefix}-tts-ip"
+  subnetwork   = google_compute_subnetwork.primary.id
+  address_type = "INTERNAL"
+  address      = "10.0.15.200"
+  region       = var.region
+  depends_on   = [google_compute_subnetwork.primary]
+}
+
+resource "google_compute_address" "ollama_internal_ip" {
+  name         = "${local.prefix}-ollama-ip"
+  subnetwork   = google_compute_subnetwork.primary.id
+  address_type = "INTERNAL"
+  address      = "10.0.15.201"
+  region       = var.region
+  depends_on   = [google_compute_subnetwork.primary]
+}
+
+resource "google_compute_address" "chroma_internal_ip" {
+  name         = "${local.prefix}-chroma-ip"
+  subnetwork   = google_compute_subnetwork.primary.id
+  address_type = "INTERNAL"
+  address      = "10.0.15.202"
+  region       = var.region
+  depends_on   = [google_compute_subnetwork.primary]
 }
 
 # ─── Artifact Registry ───────────────────────────────────────────────────────
@@ -214,7 +240,7 @@ resource "google_storage_bucket" "uploads" {
   }
 
   cors {
-    origin          = ["*"]
+    origin          = ["https://heardagain.com"]
     method          = ["GET", "PUT", "POST"]
     response_header = ["Content-Type", "Authorization"]
     max_age_seconds = 3600
@@ -317,6 +343,13 @@ resource "google_project_iam_member" "worker_cloudsql" {
   member  = "serviceAccount:${google_service_account.worker.email}"
 }
 
+# TTS: Artifact Registry reader (needed for GKE node image pulls)
+resource "google_project_iam_member" "tts_artifact_reader" {
+  project = var.project_id
+  role    = "roles/artifactregistry.reader"
+  member  = "serviceAccount:${google_service_account.tts.email}"
+}
+
 # TTS: tts-models (admin), generated-audio (admin)
 resource "google_storage_bucket_iam_member" "tts_models_admin" {
   bucket = google_storage_bucket.tts_models.name
@@ -334,11 +367,14 @@ resource "google_storage_bucket_iam_member" "tts_audio_admin" {
 
 locals {
   secrets = {
-    "postgres-password"   = var.postgres_password
-    "chroma-credentials"  = var.chroma_credentials
-    "nextauth-secret"     = var.nextauth_secret
-    "chat-service-secret" = var.chat_service_secret
-    "tts-service-token"   = var.tts_service_token
+    "postgres-password"    = var.postgres_password
+    "database-url"         = "postgresql://postgres:${urlencode(var.postgres_password)}@localhost:5432/heard_again"
+    "chroma-credentials"   = var.chroma_credentials
+    "nextauth-secret"      = var.nextauth_secret
+    "chat-service-secret"  = var.chat_service_secret
+    "tts-service-token"    = var.tts_service_token
+    "google-client-id"     = var.google_client_id
+    "google-client-secret" = var.google_client_secret
   }
 }
 
@@ -362,21 +398,21 @@ resource "google_secret_manager_secret_version" "secret_values" {
 
 # Grant each service account access to only the secrets it needs
 resource "google_secret_manager_secret_iam_member" "ui_secrets" {
-  for_each  = toset(["postgres-password", "nextauth-secret", "chat-service-secret", "tts-service-token"])
+  for_each  = toset(["database-url", "nextauth-secret", "chat-service-secret", "tts-service-token", "google-client-id", "google-client-secret"])
   secret_id = google_secret_manager_secret.secrets[each.value].id
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.ui.email}"
 }
 
 resource "google_secret_manager_secret_iam_member" "chat_secrets" {
-  for_each  = toset(["postgres-password", "chat-service-secret", "chroma-credentials"])
+  for_each  = toset(["database-url", "chat-service-secret", "chroma-credentials"])
   secret_id = google_secret_manager_secret.secrets[each.value].id
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.chat.email}"
 }
 
 resource "google_secret_manager_secret_iam_member" "worker_secrets" {
-  for_each  = toset(["postgres-password", "tts-service-token"])
+  for_each  = toset(["database-url", "tts-service-token"])
   secret_id = google_secret_manager_secret.secrets[each.value].id
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.worker.email}"
@@ -417,24 +453,27 @@ resource "google_container_cluster" "gpu_cluster" {
     }
   }
 
+  deletion_protection = false
+
   depends_on = [google_project_service.apis]
 }
 
 resource "google_container_node_pool" "gpu_nodes" {
-  provider   = google-beta
-  name       = "gpu-pool"
-  cluster    = google_container_cluster.gpu_cluster.name
-  location   = var.zone
-  node_count = var.gke_gpu_node_count
+  provider       = google-beta
+  name           = "gpu-pool"
+  cluster        = google_container_cluster.gpu_cluster.name
+  location       = var.zone
+  node_locations = ["us-central1-b"]
 
   node_config {
-    machine_type = "n1-standard-8"
+    machine_type = "g2-standard-8"
     disk_size_gb = 200
     disk_type    = "pd-ssd"
     image_type   = "COS_CONTAINERD"
+    preemptible  = true
 
     guest_accelerator {
-      type  = "nvidia-tesla-t4"
+      type  = "nvidia-l4"
       count = 1
       gpu_driver_installation_config {
         gpu_driver_version = "DEFAULT"
@@ -458,8 +497,9 @@ resource "google_container_node_pool" "gpu_nodes" {
   }
 
   autoscaling {
-    min_node_count = 0
-    max_node_count = 2
+    total_min_node_count = 0
+    total_max_node_count = var.gke_gpu_node_count
+    location_policy      = "ANY"
   }
 
   management {
@@ -530,7 +570,7 @@ resource "google_cloud_run_v2_service" "ui" {
         name = "DATABASE_URL"
         value_source {
           secret_key_ref {
-            secret  = google_secret_manager_secret.secrets["postgres-password"].secret_id
+            secret  = google_secret_manager_secret.secrets["database-url"].secret_id
             version = "latest"
           }
         }
@@ -562,6 +602,32 @@ resource "google_cloud_run_v2_service" "ui" {
           }
         }
       }
+      env {
+        name  = "REDIS_URL"
+        value = "rediss://:${google_redis_instance.cache.auth_string}@${google_redis_instance.cache.host}:${google_redis_instance.cache.port}"
+      }
+      env {
+        name  = "TTS_SERVICE_URL"
+        value = "http://${google_compute_address.tts_internal_ip.address}:4779"
+      }
+      env {
+        name = "GOOGLE_CLIENT_ID"
+        value_source {
+          secret_key_ref {
+            secret  = google_secret_manager_secret.secrets["google-client-id"].secret_id
+            version = "latest"
+          }
+        }
+      }
+      env {
+        name = "GOOGLE_CLIENT_SECRET"
+        value_source {
+          secret_key_ref {
+            secret  = google_secret_manager_secret.secrets["google-client-secret"].secret_id
+            version = "latest"
+          }
+        }
+      }
 
       startup_probe {
         http_get {
@@ -586,106 +652,7 @@ resource "google_cloud_run_v2_service" "ui" {
     # Cloud SQL Auth Proxy sidecar
     containers {
       image = "gcr.io/cloud-sql-connectors/cloud-sql-proxy:2"
-      args  = ["--structured-logs", "--port=5432", "${var.project_id}:${var.region}:${google_sql_database_instance.postgres.name}"]
-
-      resources {
-        limits = {
-          cpu    = "0.5"
-          memory = "256Mi"
-        }
-      }
-    }
-  }
-
-  depends_on = [google_project_service.apis]
-}
-
-resource "google_cloud_run_v2_service" "chat" {
-  name     = "${local.prefix}-chat"
-  location = var.region
-
-  template {
-    service_account = google_service_account.chat.email
-
-    scaling {
-      min_instance_count = 1
-      max_instance_count = 10
-    }
-
-    vpc_access {
-      connector = google_vpc_access_connector.connector.id
-      egress    = "PRIVATE_RANGES_ONLY"
-    }
-
-    containers {
-      image = "${var.region}-docker.pkg.dev/${var.project_id}/${local.prefix}/chat:latest"
-
-      resources {
-        limits = {
-          cpu    = "2"
-          memory = "2Gi"
-        }
-        cpu_idle = true
-      }
-
-      ports {
-        container_port = 4778
-      }
-
-      env {
-        name  = "NODE_ENV"
-        value = "production"
-      }
-      env {
-        name  = "PORT"
-        value = "4778"
-      }
-      env {
-        name  = "REDIS_URL"
-        value = "rediss://:${google_redis_instance.cache.auth_string}@${google_redis_instance.cache.host}:${google_redis_instance.cache.port}"
-      }
-      env {
-        name = "CHAT_SERVICE_SECRET"
-        value_source {
-          secret_key_ref {
-            secret  = google_secret_manager_secret.secrets["chat-service-secret"].secret_id
-            version = "latest"
-          }
-        }
-      }
-      env {
-        name = "CHROMA_CREDENTIALS"
-        value_source {
-          secret_key_ref {
-            secret  = google_secret_manager_secret.secrets["chroma-credentials"].secret_id
-            version = "latest"
-          }
-        }
-      }
-
-      startup_probe {
-        http_get {
-          path = "/api/health"
-          port = 4778
-        }
-        initial_delay_seconds = 10
-        period_seconds        = 5
-        failure_threshold     = 10
-      }
-
-      liveness_probe {
-        http_get {
-          path = "/api/health"
-          port = 4778
-        }
-        period_seconds    = 30
-        failure_threshold = 3
-      }
-    }
-
-    containers {
-      image = "gcr.io/cloud-sql-connectors/cloud-sql-proxy:2"
-      args  = ["--structured-logs", "--port=5432", "${var.project_id}:${var.region}:${google_sql_database_instance.postgres.name}"]
+      args  = ["--structured-logs", "--port=5432", "--private-ip", "${var.project_id}:${var.region}:${google_sql_database_instance.postgres.name}"]
 
       resources {
         limits = {
@@ -751,30 +718,6 @@ resource "google_monitoring_alert_policy" "ui_error_rate" {
   depends_on            = [google_project_service.apis]
 }
 
-# Cloud Run Chat: 5xx error rate > 5% over 5 minutes
-resource "google_monitoring_alert_policy" "chat_error_rate" {
-  display_name = "${local.prefix} Chat 5xx Error Rate"
-  combiner     = "OR"
-
-  conditions {
-    display_name = "5xx rate > 5%"
-    condition_threshold {
-      filter          = "resource.type=\"cloud_run_revision\" AND resource.labels.service_name=\"${google_cloud_run_v2_service.chat.name}\" AND metric.type=\"run.googleapis.com/request_count\" AND metric.labels.response_code_class=\"5xx\""
-      comparison      = "COMPARISON_GT"
-      threshold_value = 0.05
-      duration        = "300s"
-      aggregations {
-        alignment_period     = "60s"
-        per_series_aligner   = "ALIGN_RATE"
-        cross_series_reducer = "REDUCE_SUM"
-        group_by_fields      = ["resource.labels.service_name"]
-      }
-    }
-  }
-
-  notification_channels = local.alert_channels
-  depends_on            = [google_project_service.apis]
-}
 
 # Cloud Run UI: p95 request latency > 5 seconds
 resource "google_monitoring_alert_policy" "ui_latency" {

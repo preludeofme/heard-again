@@ -41,6 +41,7 @@
     "pdf-parse": "^1.1.1",
     "redis": "^4.6.0",
     "typescript": "^5.0.0",
+    "tsconfig-paths": "^3.15.0",
     "uuid": "^9.0.0",
     "winston": "^3.10.0",
     "zod": "^3.22.0"
@@ -54,7 +55,6 @@
     "prisma": "^6.6.0",
     "ts-jest": "^29.1.0",
     "ts-node": "^10.9.0",
-    "tsconfig-paths": "^3.15.0",
     "tsx": "^4.21.0"
   },
   "engines": {

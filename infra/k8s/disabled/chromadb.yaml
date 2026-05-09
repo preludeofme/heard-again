@@ -3,13 +3,16 @@ kind: Service
 metadata:
   name: chromadb
   namespace: heard-again
+  annotations:
+    cloud.google.com/load-balancer-type: "Internal"
 spec:
   selector:
     app: chromadb
   ports:
     - port: 8000
       targetPort: 8000
-  type: ClusterIP
+  type: LoadBalancer
+  loadBalancerIP: "10.0.15.202"
 ---
 apiVersion: apps/v1
 kind: StatefulSet
@@ -27,6 +30,11 @@ spec:
       labels:
         app: chromadb
     spec:
+      tolerations:
+        - key: "nvidia.com/gpu"
+          operator: "Equal"
+          value: "present"
+          effect: "NoSchedule"
       containers:
         - name: chromadb
           image: chromadb/chroma:latest
@@ -62,14 +70,14 @@ spec:
               memory: "4Gi"
           livenessProbe:
             httpGet:
-              path: /api/v1/heartbeat
+              path: /api/v2/heartbeat
               port: 8000
             initialDelaySeconds: 10
             periodSeconds: 30
             failureThreshold: 5
           readinessProbe:
             httpGet:
-              path: /api/v1/heartbeat
+              path: /api/v2/heartbeat
               port: 8000
             initialDelaySeconds: 5
             periodSeconds: 10

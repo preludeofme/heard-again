@@ -867,7 +867,7 @@ class SynthesizeRequest(BaseModel):
     consentToken: Optional[str] = None
 
 from app.rate_limiter import RateLimitMiddleware, rate_limiter
-...
+
 @app.post("/api/tts/synthesize")
 async def synthesize_speech(
     request: Request, # Add Request object to access state
@@ -885,8 +885,6 @@ async def synthesize_speech(
         )
 
     # DEBUG: Confirm we entered the function
-...
-
     logger.info(f"DEBUG: ENTER synthesize_speech - auth_familyspace={auth_data.get('familyspace_id')}, req_familyspace={req.familyspaceId}, profile={req.profileId}")
     user_context = get_user_context(auth_data)
     

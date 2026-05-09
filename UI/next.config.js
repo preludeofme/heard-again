@@ -1,12 +1,9 @@
 /** @type {import('next').NextConfig} */
-const path = require('path')
 const isDev = process.env.NODE_ENV === 'development'
 
 const nextConfig = {
   reactStrictMode: true,
-  // instrumentationHook is enabled by default in Next.js 15+ — the experimental
-  // flag was removed. Just keep src/instrumentation.ts at the source root.
-  outputFileTracingRoot: path.join(__dirname, '..'),
+  output: 'standalone',
   // Add empty Turbopack config to avoid webpack conflict
   turbopack: {},
   allowedDevOrigins: ['100.75.138.91', 'trubuck-design-ai-beast.stern-mulley.ts.net', 'localhost', '127.0.0.1'],

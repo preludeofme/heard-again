@@ -59,3 +59,11 @@ UI/test-layout*.ts
 **/.env
 **/.env.*
 **/.env*
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.backup
+tfplan*
+.terraform.lock.hcl
+*.tfvars

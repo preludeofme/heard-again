@@ -1,0 +1,55 @@
+# Cloud Build source archive exclusions
+# Extends .gitignore — items here are excluded from `gcloud builds submit`
+
+.gcloudignore
+.git
+.gitignore
+
+# Node modules — installed in each Dockerfile
+node_modules/
+UI/node_modules/
+Chat/node_modules/
+
+# Next.js build output — rebuilt in Docker
+.next/
+UI/.next/
+
+# Python artifacts
+venv/
+__pycache__/
+*.pyc
+*.pyo
+TTS/data/
+TTS/__pycache__/
+TTS/app/__pycache__/
+
+# Dev-only scripts — excluded from source control and production builds
+UI/scripts/dev-only/
+
+# Local dev artifacts
+logs/
+uploads/
+output/
+generated/
+data/
+Chat/temp-ingestion/
+UI/quarantine/
+
+# Test/coverage artifacts
+coverage/
+playwright-report/
+test-results/
+
+# Terraform state and plans — never needed in build
+infra/terraform/.terraform/
+infra/terraform/tfplan
+infra/terraform/tfplan_v2
+infra/terraform/tfplan_v3
+infra/terraform/.terraform.lock.hcl
+
+# Eval results
+Chat/evals/results/
+
+# IDE
+.idea/
+.vscode/

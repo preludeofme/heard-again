@@ -3,11 +3,6 @@ output "ui_url" {
   value       = google_cloud_run_v2_service.ui.uri
 }
 
-output "chat_url" {
-  description = "Cloud Run URL for the Chat service"
-  value       = google_cloud_run_v2_service.chat.uri
-}
-
 output "db_connection_name" {
   description = "Cloud SQL instance connection name for Cloud SQL Auth Proxy"
   value       = google_sql_database_instance.postgres.connection_name
@@ -83,4 +78,9 @@ output "audio_cdn_ip" {
 output "alert_notification_channel" {
   description = "Cloud Monitoring notification channel ID for alerts"
   value       = var.alert_notification_email != "" ? google_monitoring_notification_channel.email[0].id : ""
+}
+
+output "tts_internal_ip" {
+  description = "Static internal IP reserved for the TTS GKE internal load balancer"
+  value       = google_compute_address.tts_internal_ip.address
 }

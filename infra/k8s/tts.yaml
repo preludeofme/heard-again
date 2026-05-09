@@ -3,13 +3,16 @@ kind: Service
 metadata:
   name: tts
   namespace: heard-again
+  annotations:
+    cloud.google.com/load-balancer-type: "Internal"
 spec:
   selector:
     app: tts
   ports:
     - port: 4779
       targetPort: 4779
-  type: ClusterIP
+  type: LoadBalancer
+  loadBalancerIP: "10.0.15.200"
   # Session affinity routes a given client to the same pod for the duration of
   # an upload→train sequence. Voice profiles are GCS-backed (cross-pod), but
   # reference audio used during training is still local-to-pod.
@@ -61,8 +64,13 @@ spec:
             - -c
             - |
               if [ ! -f /app/models/.downloaded ]; then
-                echo "Downloading TTS models from GCS..."
-                gsutil -m cp -r gs://${GCS_TTS_MODELS_BUCKET}/models/. /app/models/ && touch /app/models/.downloaded
+                echo "Syncing TTS models from GCS..."
+                if gsutil -m rsync -r gs://${GCS_TTS_MODELS_BUCKET}/models/ /app/models/ 2>&1; then
+                  touch /app/models/.downloaded
+                  echo "Models synced from GCS."
+                else
+                  echo "GCS sync failed or bucket empty — models will be fetched from HuggingFace at runtime."
+                fi
               else
                 echo "Models already present, skipping download"
               fi
@@ -103,6 +111,8 @@ spec:
                 configMapKeyRef:
                   name: heard-again-config
                   key: tts-models-bucket
+            - name: HF_HOME
+              value: "/app/models"
           volumeMounts:
             - name: tts-models
               mountPath: /app/models
