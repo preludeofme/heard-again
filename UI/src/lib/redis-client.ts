@@ -7,7 +7,7 @@ export const redis = new Redis(REDIS_URL, {
     const delay = Math.min(times * 50, 2000)
     return delay
   },
-  maxRetriesPerRequest: 3,
+  maxRetriesPerRequest: null,
 })
 
 export async function rateLimitCheck(

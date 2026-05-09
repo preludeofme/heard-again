@@ -269,26 +269,41 @@ echo ""
 # Setup environment files
 echo -e "${YELLOW}Setting up environment files...${NC}"
 
-# Main app .env check
+# 1. Main root .env check
 if [ ! -f "$MAIN_APP_DIR/.env" ]; then
     if [ -f "$MAIN_APP_DIR/.env.example" ]; then
-        echo "  Creating main app .env from example..."
+        echo "  Creating main root .env from example..."
         cp "$MAIN_APP_DIR/.env.example" "$MAIN_APP_DIR/.env"
     fi
 fi
 
-# TTS .env bootstrap — pull shared secrets from UI .env if TTS .env is missing
-if [ ! -f "$TTS_SERVICE_DIR/.env" ] && [ -f "$UI_DIR/.env" ]; then
-    echo "  Bootstrapping TTS .env from UI .env..."
-    {
-        echo "# Auto-generated from UI/.env — update as needed"
-        echo "QWEN_TTS_VENV=$HOME/qwen3-tts/venv"
-        _SECRET=$(grep '^NEXTAUTH_SECRET=' "$UI_DIR/.env" | cut -d'=' -f2-)
-        [ -n "$_SECRET" ] && echo "NEXTAUTH_SECRET=$_SECRET"
-        _TOKEN=$(grep '^TTS_SERVICE_TOKEN=' "$UI_DIR/.env" | cut -d'=' -f2-)
-        [ -n "$_TOKEN" ] && echo "TTS_SERVICE_TOKEN=$_TOKEN"
-    } > "$TTS_SERVICE_DIR/.env"
-    echo -e "  ${GREEN}✓ TTS .env created${NC}"
+# 2. Sync UI/.env from root .env if root exists (Next.js needs it in UI/ dir)
+if [ -f "$MAIN_APP_DIR/.env" ] && [ ! -f "$UI_DIR/.env" ]; then
+    echo "  Creating UI .env from root .env..."
+    cp "$MAIN_APP_DIR/.env" "$UI_DIR/.env"
+fi
+
+# 3. TTS .env bootstrap/sync — pull shared secrets from root .env
+if [ -f "$MAIN_APP_DIR/.env" ]; then
+    # Ensure TTS/.env exists
+    if [ ! -f "$TTS_SERVICE_DIR/.env" ]; then
+        echo "  Creating TTS .env..."
+        echo "# Auto-generated from root .env — update as needed" > "$TTS_SERVICE_DIR/.env"
+        echo "QWEN_TTS_VENV=$HOME/qwen3-tts/venv" >> "$TTS_SERVICE_DIR/.env"
+    fi
+
+    # Sync specific secrets if missing
+    _SECRET=$(grep '^NEXTAUTH_SECRET=' "$MAIN_APP_DIR/.env" | cut -d'=' -f2-)
+    if [ -n "$_SECRET" ] && ! grep -q '^NEXTAUTH_SECRET=' "$TTS_SERVICE_DIR/.env"; then
+        echo "  Syncing NEXTAUTH_SECRET to TTS .env..."
+        echo "NEXTAUTH_SECRET=$_SECRET" >> "$TTS_SERVICE_DIR/.env"
+    fi
+
+    _TOKEN=$(grep '^TTS_SERVICE_TOKEN=' "$MAIN_APP_DIR/.env" | cut -d'=' -f2-)
+    if [ -n "$_TOKEN" ] && ! grep -q '^TTS_SERVICE_TOKEN=' "$TTS_SERVICE_DIR/.env"; then
+        echo "  Syncing TTS_SERVICE_TOKEN to TTS .env..."
+        echo "TTS_SERVICE_TOKEN=$_TOKEN" >> "$TTS_SERVICE_DIR/.env"
+    fi
 fi
 
 echo -e "  ${GREEN}✓ Environment files ready${NC}"
