@@ -45,7 +45,7 @@ interface LayoutProps {
 }
 
 const navItems = [
-  { label: 'Story', href: '/archive' },
+  { label: 'Living Legacy', href: '/archive' },
   { label: 'Contribute', href: '/contribute' },
   { label: 'Family', href: '/family-tree' },
 ]
@@ -220,7 +220,7 @@ export function Layout({ children }: LayoutProps) {
                       fontWeight: active ? 600 : 400,
                       color: active ? ProfileColors.primary : ProfileColors.onSurfaceVariant,
                       textDecoration: 'none',
-                      px: 2,
+                      px: { xs: 1.5, lg: 2 },
                       py: 1,
                       borderRadius: '999px',
                       backgroundColor: active ? ProfileColors.surfaceContainerLowest : 'transparent',
@@ -282,7 +282,7 @@ export function Layout({ children }: LayoutProps) {
           >
             <SpeedDialAction
               icon={<PostAddIcon />}
-              tooltipTitle="Add Story"
+              tooltipTitle="Add a Memory"
               onClick={() => handleAction('story')}
             />
             <SpeedDialAction
@@ -322,7 +322,7 @@ export function Layout({ children }: LayoutProps) {
               },
             }}
           >
-            <BottomNavigationAction label="Story" icon={<HomeIcon />} />
+            <BottomNavigationAction label="Legacy" icon={<HomeIcon />} />
             <BottomNavigationAction label="Contribute" icon={<AddIcon />} />
             <BottomNavigationAction label="Family" icon={<FamilyTreeIcon />} />
             <BottomNavigationAction label="Favorites" icon={<FavoriteIcon />} />

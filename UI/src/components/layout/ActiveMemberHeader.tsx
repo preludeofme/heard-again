@@ -63,7 +63,7 @@ export function ActiveMemberHeader({ compact = true }: ActiveMemberHeaderProps) 
               variant="caption"
               sx={{ fontWeight: 600, color: '#546669', textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.7rem' }}
             >
-              Everyone's Story
+              Whole Family
             </Typography>
           )}
           <ArrowDownIcon sx={{ fontSize: 14, color: selectedFamilyMember ? 'rgba(255,255,255,0.7)' : '#546669' }} />
@@ -129,7 +129,7 @@ export function ActiveMemberHeader({ compact = true }: ActiveMemberHeaderProps) 
               textOverflow: 'ellipsis',
             }}
           >
-            {displayName ?? "Everyone's Story"}
+            {displayName ?? "Whole Family"}
           </Typography>
         </Box>
         <ArrowDownIcon sx={{ fontSize: 16, color: '#546669', flexShrink: 0 }} />

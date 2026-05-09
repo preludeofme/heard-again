@@ -1,6 +1,6 @@
 import { useMemo, useEffect, useRef, useState, useCallback, ReactNode } from 'react'
 import { useRouter } from 'next/router'
-import { Box, Typography, Avatar, Chip, Button, ToggleButton, ToggleButtonGroup, Skeleton, useMediaQuery, useTheme, TextField } from '@mui/material'
+import { Box, Typography, Avatar, Chip, Button, ToggleButton, ToggleButtonGroup, Skeleton, useMediaQuery, useTheme, TextField, Card, CardActionArea, CardContent } from '@mui/material'
 import Autocomplete from '@mui/material/Autocomplete'
 import {
   Timeline as JourneyIcon,
@@ -115,13 +115,13 @@ export function ArchiveShell({ lens, onLensChange, children }: ArchiveShellProps
     }
   }, [people, router.query.personId, handlePersonChange])
 
-  const familyspaceName = dashboard.familyspace?.name ?? 'Family Story'
+  const familyspaceName = dashboard.familyspace?.name ?? 'Living Legacy'
   const archiveTitle = selectedPerson
-    ? `${personDisplayName(selectedPerson)}'s Story`
+    ? `${personDisplayName(selectedPerson)}'s Stories`
     : `${familyspaceName}`
   const subtitle = selectedPerson
     ? 'Memories, voices, and keepsakes preserved across generations.'
-    : 'Preserving memories across generations.'
+    : 'A private place for the voices, stories, photos, and memories your family never wants to lose.'
 
   const stats = dashboard.stats
   const archiveCounts: Array<{ label: string; value: number }> = [
@@ -131,9 +131,19 @@ export function ArchiveShell({ lens, onLensChange, children }: ArchiveShellProps
     { label: 'Contributors', value: stats.members },
   ]
 
+  const hasAnyArchiveContent = archiveCounts.some((stat) => stat.value > 0)
+  const familyInitials = familyspaceName
+    .replace(/^the\s+/i, '')
+    .replace(/\bfamily\b/i, '')
+    .split(/[\s-]+/)
+    .filter(Boolean)
+    .map((part) => part[0]?.toUpperCase())
+    .join('')
+    .slice(0, 2) || 'L'
+
   const initials = selectedPerson
     ? (selectedPerson.firstName?.[0] || '?').toUpperCase()
-    : familyspaceName.slice(0, 1).toUpperCase()
+    : familyInitials
 
   return (
     <Box sx={{ minHeight: '100vh', backgroundColor: ProfileColors.surface }}>
@@ -189,7 +199,7 @@ export function ArchiveShell({ lens, onLensChange, children }: ArchiveShellProps
                   mb: 1,
                 }}
               >
-                The Living Story
+                Your Living Legacy
               </Typography>
               <Typography
                 component="h1"
@@ -250,11 +260,11 @@ export function ArchiveShell({ lens, onLensChange, children }: ArchiveShellProps
                 clearText="View everyone's story"
               />
               <Button
-                component={Link}
-                href="/contribute"
                 variant="outlined"
                 size="medium"
                 startIcon={<ContributeIcon />}
+                aria-label="Add a memory"
+                onClick={() => router.push('/contribute')}
                 sx={{
                   borderColor: ProfileColors.outlineVariant,
                   color: ProfileColors.primary,
@@ -270,12 +280,13 @@ export function ArchiveShell({ lens, onLensChange, children }: ArchiveShellProps
                   },
                 }}
               >
-                + Add a Memory
+                Add a Memory
               </Button>
             </Box>
           </Box>
 
           {/* Archive stats row */}
+          {hasAnyArchiveContent ? (
           <Box
             sx={{
               mt: { xs: 4, md: 6 },
@@ -313,6 +324,33 @@ export function ArchiveShell({ lens, onLensChange, children }: ArchiveShellProps
               </Box>
             ))}
           </Box>
+          ) : (
+            <Box sx={{ mt: { xs: 4, md: 6 }, p: { xs: 3, md: 4 }, borderRadius: 5, backgroundColor: ProfileColors.surfaceContainerLowest, border: `1px solid ${ProfileColors.outlineVariant}26` }}>
+              <Typography sx={{ fontFamily: 'var(--font-newsreader), serif', fontSize: { xs: '1.6rem', md: '2rem' }, color: ProfileColors.primary, mb: 1 }}>
+                Start your Living Legacy
+              </Typography>
+              <Typography sx={{ fontFamily: 'var(--font-newsreader), serif', color: ProfileColors.onSurfaceVariant, mb: 3 }}>
+                Begin with one person, one story, one photo, or one voice memory. You do not need to build everything today.
+              </Typography>
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' }, gap: 2 }}>
+                {[
+                  { title: 'Add a Family Member', desc: 'Start with someone your family wants to remember.', href: '/family-tree?add=1' },
+                  { title: 'Write a Story', desc: 'Capture a memory, tradition, saying, or moment.', href: '/contribute' },
+                  { title: 'Record a Voice Memory', desc: 'Save a spoken story or upload an old recording.', href: '/archive?lens=voices' },
+                  { title: 'Upload a Keepsake', desc: 'Add a photo, letter, recipe, document, or meaningful item.', href: '/archive?lens=keepsakes' },
+                ].map((item) => (
+                  <Card key={item.title} variant="outlined" sx={{ borderRadius: 3, borderColor: `${ProfileColors.outlineVariant}33` }}>
+                    <CardActionArea component={Link} href={item.href} sx={{ height: '100%' }}>
+                      <CardContent>
+                        <Typography sx={{ fontWeight: 600, color: ProfileColors.primary, mb: 0.5 }}>{item.title}</Typography>
+                        <Typography sx={{ color: ProfileColors.onSurfaceVariant, fontSize: '0.9rem' }}>{item.desc}</Typography>
+                      </CardContent>
+                    </CardActionArea>
+                  </Card>
+                ))}
+              </Box>
+            </Box>
+          )}
         </Box>
       </Box>
 
