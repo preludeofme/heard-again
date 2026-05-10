@@ -1,4 +1,4 @@
-import { PrismaClient, Prisma } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
@@ -6,12 +6,12 @@ const globalForPrisma = globalThis as unknown as {
 
 // Use emit:'stdout' in development so Prisma writes logs directly without $on
 // listeners — avoids listener accumulation across hot-reload cycles.
-const devLogConfig: Prisma.LogDefinition[] = [
+const devLogConfig = [
   { level: 'error', emit: 'stdout' },
   { level: 'warn', emit: 'stdout' },
-];
+] as const;
 
-const prismaOptions: Prisma.PrismaClientOptions = {
+const prismaOptions: ConstructorParameters<typeof PrismaClient>[0] = {
   log: process.env.NODE_ENV === 'development' ? devLogConfig : [{ level: 'error', emit: 'stdout' }],
 };
 
@@ -24,10 +24,13 @@ if (process.env.NODE_ENV === 'production') {
   };
 }
 
-export const prisma = globalForPrisma.prisma ?? new PrismaClient(prismaOptions);
+const prisma =
+  globalForPrisma.prisma ??
+  new PrismaClient(prismaOptions);
 
 if (process.env.NODE_ENV !== 'production') {
   globalForPrisma.prisma = prisma;
 }
 
+export { prisma };
 export default prisma;
