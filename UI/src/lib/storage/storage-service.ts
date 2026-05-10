@@ -153,7 +153,7 @@ export function getStorageService(): StorageService {
     const gcsProjectId = process.env.GOOGLE_CLOUD_PROJECT ?? process.env.GCP_PROJECT_ID
     const gcsKeyFilename = process.env.GOOGLE_APPLICATION_CREDENTIALS ?? process.env.GCP_KEY_FILENAME
 
-    const rawMode = process.env.STORAGE_MODE ?? 'local'
+    const rawMode = process.env.STORAGE_MODE ?? 'r2'
     const mode = rawMode as StorageConfig['mode']
 
     const config: StorageConfig = {
@@ -169,14 +169,14 @@ export function getStorageService(): StorageService {
             projectId: gcsProjectId,
           }
         : undefined,
-      s3: process.env.S3_BUCKET
+      s3: (process.env.R2_BUCKET_NAME ?? process.env.S3_BUCKET)
         ? {
-            bucket: process.env.S3_BUCKET,
-            region: process.env.S3_REGION ?? 'us-east-1',
-            accessKey: process.env.S3_ACCESS_KEY ?? '',
-            secretKey: process.env.S3_SECRET_KEY ?? '',
-            endpoint: process.env.S3_ENDPOINT,
-            publicUrlBase: process.env.S3_PUBLIC_URL_BASE,
+            bucket: process.env.R2_BUCKET_NAME ?? process.env.S3_BUCKET ?? '',
+            region: process.env.R2_REGION ?? process.env.S3_REGION ?? 'auto',
+            accessKey: process.env.R2_ACCESS_KEY_ID ?? process.env.S3_ACCESS_KEY ?? '',
+            secretKey: process.env.R2_SECRET_ACCESS_KEY ?? process.env.S3_SECRET_KEY ?? '',
+            endpoint: process.env.R2_ENDPOINT ?? process.env.S3_ENDPOINT,
+            publicUrlBase: process.env.R2_PUBLIC_URL_BASE ?? process.env.S3_PUBLIC_URL_BASE,
           }
         : undefined,
     }
