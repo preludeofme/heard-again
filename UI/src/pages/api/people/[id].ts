@@ -26,6 +26,7 @@ export default apiHandler({
       return successResponse(res, {
         id: result.id,
         firstName: result.firstName,
+        middleName: result.middleName,
         lastName: result.lastName,
         displayName: result.displayName,
         avatarUrl: result.avatarUrl,

@@ -40,9 +40,11 @@
   ],
   "devDependencies": {
     "@playwright/test": "^1.59.1",
+    "@types/archiver": "^7.0.0",
     "prisma": "^6.19.2"
   },
   "dependencies": {
-    "@prisma/client": "^6.19.2"
+    "@prisma/client": "^6.19.2",
+    "archiver": "^8.0.0"
   }
 }

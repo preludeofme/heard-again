@@ -153,6 +153,7 @@ async function getTimelineEvents(req: NextApiRequest, res: NextApiResponse, fami
         storyDate: true,
         storyDatePrecision: true,
         excerpt: true,
+        content: true,
         subjectId: true,
         subject: {
           select: {
@@ -360,7 +361,7 @@ async function getTimelineEvents(req: NextApiRequest, res: NextApiResponse, fami
         date: story.storyDate,
         datePrecision: story.storyDatePrecision,
         title: story.title,
-        description: story.excerpt ?? undefined,
+        description: story.content ?? story.excerpt ?? undefined,
         people,
         metadata: { 
           imageAssetId: story.assets[0]?.asset.id 

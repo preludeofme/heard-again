@@ -19,7 +19,7 @@ interface SearchResults {
     subject?: { id: string; firstName: string; lastName?: string }
   }>
   people: Array<{
-    id: string; firstName: string; lastName?: string; displayName?: string;
+    id: string; firstName: string; middleName?: string; lastName?: string; displayName?: string;
     personType: string; isDeceased: boolean; avatarAssetId?: string
   }>
   assets: Array<{
@@ -120,8 +120,8 @@ export default function SearchPage() {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
   }, [query, doSearch])
 
-  const personName = (p: { firstName: string; lastName?: string; displayName?: string }) =>
-    p.displayName || `${p.firstName}${p.lastName ? ' ' + p.lastName : ''}`
+  const personName = (p: { firstName: string; middleName?: string; lastName?: string; displayName?: string }) =>
+    p.displayName || [p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ') || 'Unnamed person'
 
   const filteredStories = (results?.stories || [])
     .filter((story) => storyTypeFilter === 'all' || story.storyType === storyTypeFilter)

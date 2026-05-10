@@ -52,6 +52,7 @@ interface StoryApiResponse {
   } | null
   excerpt?: string
   title?: string
+  content: string
   createdAt: string
   hasAudio?: boolean
   audioUrl?: string
@@ -68,7 +69,7 @@ function mapStoryToContribution(s: StoryApiResponse): StoryContribution {
     authorName: creatorName,
     authorRole: 'Family',
     authorAvatarUrl: s.subject?.avatarUrl || s.createdBy?.avatarUrl || '',
-    content: s.excerpt || s.title || '',
+    content: s.content || s.excerpt || s.title || '',
     createdAt: new Date(s.createdAt),
     type: s.hasAudio ? 'audio' : 'text',
     audioUrl: s.audioUrl,

@@ -19,6 +19,9 @@ import {
   ListItemText,
   CircularProgress,
   Divider,
+  Card,
+  CardActionArea,
+  CardContent,
 } from '@mui/material'
 import Autocomplete from '@mui/material/Autocomplete'
 import {
@@ -93,6 +96,7 @@ export function MemoriesShell({ lens, onLensChange, children }: MemoriesShellPro
   const { selectedFamilyMember, setSelectedFamilyMember, clearSelectedFamilyMember } = useSelectedFamilyMember()
   const dashboard = useDashboardController()
   const [people, setPeople] = useState<PersonOption[]>([])
+  const [isPeopleLoading, setIsPeopleLoading] = useState(true)
   const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -102,6 +106,7 @@ export function MemoriesShell({ lens, onLensChange, children }: MemoriesShellPro
   useEffect(() => {
     let active = true
     const loadPeople = async () => {
+      setIsPeopleLoading(true)
       try {
         const res = await fetch('/api/people', { credentials: 'include' })
         const data = await res.json()
@@ -109,11 +114,16 @@ export function MemoriesShell({ lens, onLensChange, children }: MemoriesShellPro
         if (data.success) setPeople(data.data || [])
       } catch {
         if (active) setPeople([])
+      } finally {
+        if (active) setIsPeopleLoading(false)
       }
     }
     loadPeople()
     return () => { active = false }
   }, [])
+
+  const isLoading = dashboard.isLoading || isPeopleLoading
+  const hasError = dashboard.hasError
 
   const selectedPerson = useMemo(() => {
     if (!selectedFamilyMember?.id) return null
@@ -173,6 +183,59 @@ export function MemoriesShell({ lens, onLensChange, children }: MemoriesShellPro
     } finally {
       setIsUploading(false)
     }
+  }
+
+  // Show error state if data fetching fails
+  if (hasError && !isLoading) {
+    return (
+      <Box 
+        sx={{ 
+          display: 'flex', 
+          flexDirection: 'column',
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          minHeight: '80vh',
+          backgroundColor: ProfileColors.surface,
+          px: 3,
+          textAlign: 'center'
+        }}
+      >
+        <Typography variant="h5" sx={{ color: ProfileColors.primary, mb: 2, fontFamily: 'var(--font-newsreader)', fontStyle: 'italic' }}>
+          We encountered a slight delay...
+        </Typography>
+        <Typography variant="body1" sx={{ color: ProfileColors.onSurfaceVariant, mb: 4, maxWidth: 500 }}>
+          {dashboard.errorMessage || "We're having trouble loading your family memories right now. Please try again in a moment."}
+        </Typography>
+        <Button 
+          variant="contained" 
+          onClick={() => dashboard.refresh()}
+          sx={{ borderRadius: '999px', bgcolor: ProfileColors.primary, px: 4 }}
+        >
+          Try Again
+        </Button>
+      </Box>
+    )
+  }
+
+  // Show a full-page spinner for the initial load of the entire shell
+  if (isLoading) {
+    return (
+      <Box 
+        sx={{ 
+          display: 'flex', 
+          flexDirection: 'column',
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          minHeight: '80vh',
+          backgroundColor: ProfileColors.surface 
+        }}
+      >
+        <CircularProgress size={60} thickness={4} sx={{ color: ProfileColors.primary }} />
+        <Typography variant="h6" sx={{ mt: 3, color: ProfileColors.primary, fontFamily: 'var(--font-newsreader)', fontStyle: 'italic' }}>
+          Preparing your family legacy...
+        </Typography>
+      </Box>
+    )
   }
 
   const familyspaceName = dashboard.familyspace?.name ?? 'Family Story'
@@ -434,6 +497,7 @@ export function MemoriesShell({ lens, onLensChange, children }: MemoriesShellPro
           </Box>
 
           {/* Memories stats row */}
+          {stats.people > 0 || stats.stories > 0 || stats.voiceProfiles > 0 || stats.documents > 0 ? (
           <Box
             sx={{
               mt: { xs: 4, md: 6 },
@@ -487,16 +551,19 @@ export function MemoriesShell({ lens, onLensChange, children }: MemoriesShellPro
             </Typography>
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' }, gap: 2 }}>
               {[
-                { title: 'Add a Family Member', desc: 'Start with someone your family wants to remember.', href: '/family-tree?add=1' },
-                { title: 'Write a Story', desc: 'Capture a memory, tradition, saying, or moment.', href: '/contribute' },
-                { title: 'Record a Voice Memory', desc: 'Save a spoken story or upload an old recording.', href: '/archive?lens=voices' },
-                { title: 'Upload a Keepsake', desc: 'Add a photo, letter, recipe, document, or meaningful item.', href: '/archive?lens=keepsakes' },
+                { title: 'Add a Family Member', desc: 'Start with someone your family wants to remember.', href: '/family-tree?add=1', icon: <GenerationsIcon /> },
+                { title: 'Write a Story', desc: 'Capture a memory, tradition, saying, or moment.', href: '/contribute', icon: <StoriesIcon /> },
+                { title: 'Record a Voice Memory', desc: 'Save a spoken story or upload an old recording.', href: '/memories?lens=voices', icon: <VoiceIcon /> },
+                { title: 'Upload a Keepsake', desc: 'Add a photo, letter, recipe, document, or meaningful item.', href: '/memories?lens=keepsakes', icon: <UploadIcon /> },
               ].map((item) => (
                 <Card key={item.title} variant="outlined" sx={{ borderRadius: 3, borderColor: `${ProfileColors.outlineVariant}33` }}>
                   <CardActionArea component={Link} href={item.href} sx={{ height: '100%' }}>
-                    <CardContent>
-                      <Typography sx={{ fontWeight: 600, color: ProfileColors.primary, mb: 0.5 }}>{item.title}</Typography>
-                      <Typography sx={{ color: ProfileColors.onSurfaceVariant, fontSize: '0.9rem' }}>{item.desc}</Typography>
+                    <CardContent sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+                      <Box sx={{ color: ProfileColors.primary, mt: 0.5 }}>{item.icon}</Box>
+                      <Box>
+                        <Typography sx={{ fontWeight: 600, color: ProfileColors.primary, mb: 0.5 }}>{item.title}</Typography>
+                        <Typography sx={{ color: ProfileColors.onSurfaceVariant, fontSize: '0.9rem' }}>{item.desc}</Typography>
+                      </Box>
                     </CardContent>
                   </CardActionArea>
                 </Card>

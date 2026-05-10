@@ -300,6 +300,7 @@ export class StoryService {
     return {
       id: story.id,
       title: story.title,
+      content: story.content,
       excerpt: story.excerpt || '',
       storyType: story.storyType as StoryType,
       status: story.status as StoryStatus,

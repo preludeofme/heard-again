@@ -48,6 +48,7 @@ export default function ExportPage() {
   const [isRequestingJson, setIsRequestingJson] = useState(false)
   const [isRequestingPdf, setIsRequestingPdf] = useState(false)
   const [isRequestingGedcom, setIsRequestingGedcom] = useState(false)
+  const [isRequestingZip, setIsRequestingZip] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
 
@@ -139,6 +140,28 @@ export default function ExportPage() {
     }
   }
 
+  const requestZipExport = async () => {
+    setIsRequestingZip(true)
+    setError(null)
+    setSuccess(null)
+
+    try {
+      const response = await fetchWithCSRF('/api/export/zip', { method: 'POST', credentials: 'include' })
+      const data = await response.json()
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to request Full ZIP export')
+      }
+
+      setSuccess('Full ZIP export created successfully.')
+      await loadJobs()
+    } catch (err: any) {
+      setError(err.message || 'Failed to request Full ZIP export')
+    } finally {
+      setIsRequestingZip(false)
+    }
+  }
+
   const downloadExport = async (jobId: string) => {
     setError(null)
 
@@ -216,6 +239,16 @@ export default function ExportPage() {
                     disabled={isRequestingGedcom}
                   >
                     {isRequestingGedcom ? 'Creating GEDCOM Export...' : 'Export GEDCOM'}
+                  </Button>
+
+                  <Button
+                    variant="outlined"
+                    startIcon={<Download />}
+                    onClick={requestZipExport}
+                    disabled={isRequestingZip}
+                    color="secondary"
+                  >
+                    {isRequestingZip ? 'Creating Full Export...' : 'Full Export (ZIP)'}
                   </Button>
                 </Stack>
               </CardContent>

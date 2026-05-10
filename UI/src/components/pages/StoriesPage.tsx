@@ -13,8 +13,7 @@ import { ProfileColors } from '@/components/profile/ProfileConstants'
 import { extractFirstImage, stripHtml } from '@/lib/html-utils'
 
 
-interface SearchableFamilyMember {
-
+interface StoriesPageProps {
   stories: StoryContribution[]
   selectedFamilyMember?: {
     id: string

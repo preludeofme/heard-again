@@ -4,6 +4,7 @@ import { useRouter } from 'next/router'
 export interface SelectedFamilyMember {
   id: string
   firstName: string
+  middleName?: string | null
   lastName?: string | null
   displayName?: string | null
   avatarUrl?: string | null
@@ -75,16 +76,21 @@ const SelectedFamilyMemberContext = createContext<SelectedFamilyMemberContextVal
 
 export function SelectedFamilyMemberProvider({ children }: { children: ReactNode }) {
   const router = useRouter()
-  const [selectedFamilyMember, setSelectedFamilyMemberState] = useState<SelectedFamilyMember | null>(null)
-  const [recentlyViewedMembers, setRecentlyViewedMembers] = useState<SelectedFamilyMember[]>([])
+  
+  // Eager hydration from localStorage for instantaneous UI
+  const [selectedFamilyMember, setSelectedFamilyMemberState] = useState<SelectedFamilyMember | null>(() => {
+    return readStorage<SelectedFamilyMember>(STORAGE_KEY)
+  })
+  
+  const [recentlyViewedMembers, setRecentlyViewedMembers] = useState<SelectedFamilyMember[]>(() => {
+    return readStorage<SelectedFamilyMember[]>(RECENT_KEY) || []
+  })
+  
   const [isInitialized, setIsInitialized] = useState(false)
 
-  // 1. Initial hydration from localStorage and URL
+  // 1. URL and async hydration
   useEffect(() => {
     const hydrate = async () => {
-      const recent = readStorage<SelectedFamilyMember[]>(RECENT_KEY)
-      if (recent) setRecentlyViewedMembers(recent)
-
       // URL takes precedence over localStorage
       const { personId } = router.query
       if (personId && typeof personId === 'string') {
@@ -98,9 +104,6 @@ export function SelectedFamilyMemberProvider({ children }: { children: ReactNode
         } catch (e) {
           console.error('Failed to fetch person from URL personId', e)
         }
-      } else {
-        const persisted = readStorage<SelectedFamilyMember>(STORAGE_KEY)
-        if (persisted) setSelectedFamilyMemberState(persisted)
       }
       setIsInitialized(true)
     }
@@ -108,7 +111,7 @@ export function SelectedFamilyMemberProvider({ children }: { children: ReactNode
     if (router.isReady) {
       hydrate()
     }
-  }, [router.isReady]) // Only run once when router is ready
+  }, [router.isReady])
 
   // 2. Sync State -> URL
   useEffect(() => {
@@ -149,6 +152,10 @@ export function SelectedFamilyMemberProvider({ children }: { children: ReactNode
         })
         .catch(e => console.error('Failed to sync URL personId to state', e))
     } else if (!urlPersonId && statePersonId) {
+      // If we're on a profile page and the ID is removed from URL, we should probably keep the state
+      // unless it's a deliberate clear. For now, maintain existing logic but be careful.
+      if (router.pathname.startsWith('/profile/')) return 
+      
       setSelectedFamilyMemberState(null)
       removeStorage(STORAGE_KEY)
     }

@@ -78,6 +78,7 @@ export interface StoryCreator {
 export interface StoryListItem {
   id: string
   title: string
+  content: string
   excerpt: string
   storyType: StoryType
   status: StoryStatus

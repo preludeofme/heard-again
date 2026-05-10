@@ -1,12 +1,12 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react'
 import { Box, Typography, Button, Alert, CircularProgress } from '@mui/material'
-import { withRouter, NextRouter } from 'next/router'
+import { NextRouter, useRouter } from 'next/router'
 import { isSessionExpiredError, redirectToLogin } from '@/lib/session-handler'
 
 interface Props {
   children: ReactNode
   fallback?: ReactNode
-  router: NextRouter
+  router: NextRouter | null
 }
 
 interface State {
@@ -15,7 +15,7 @@ interface State {
   isRedirecting: boolean
 }
 
-class ErrorBoundaryInner extends Component<Props, State> {
+export class ErrorBoundaryInner extends Component<Props, State> {
   private redirectTimeoutRef: NodeJS.Timeout | null = null
 
   constructor(props: Props) {
@@ -133,8 +133,8 @@ class ErrorBoundaryInner extends Component<Props, State> {
             {isSessionError ? (
               <Button
                 variant="contained"
-                onClick={() => this.props.router.push('/login')}
-                disabled={this.state.isRedirecting}
+                onClick={() => this.props.router?.push('/login')}
+                disabled={this.state.isRedirecting || !this.props.router}
               >
                 Go to Login
               </Button>
@@ -163,18 +163,24 @@ class ErrorBoundaryInner extends Component<Props, State> {
   }
 }
 
-const ErrorBoundaryWithRouter = withRouter(ErrorBoundaryInner as any)
-
 interface SessionErrorBoundaryProps {
   children: ReactNode
   fallback?: ReactNode
 }
 
 export default function SessionErrorBoundaryWrapper({ children, fallback }: SessionErrorBoundaryProps) {
-  const Boundary = ErrorBoundaryWithRouter as any
+  let router: NextRouter | null = null
+  try {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    router = useRouter()
+  } catch (e) {
+    // During prerendering or if not in router context, useRouter might throw
+    console.warn('SessionErrorBoundaryWrapper: Router not available')
+  }
+
   return (
-    <Boundary fallback={fallback}>
+    <ErrorBoundaryInner router={router} fallback={fallback}>
       {children}
-    </Boundary>
+    </ErrorBoundaryInner>
   )
 }

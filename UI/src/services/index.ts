@@ -16,6 +16,7 @@ import { RelationshipService } from './RelationshipService'
 import { SearchService } from './SearchService'
 import { VoiceService } from './VoiceService'
 import { ImageProcessingService } from './ImageProcessingService'
+import { GedcomExportService } from './GedcomExportService'
 
 // Singleton instances for server-side usage
 export const storyService = new StoryService(storyRepository)
@@ -23,6 +24,7 @@ export const personService = new PersonService(personRepository)
 export const voiceService = new VoiceService(voiceProfileRepository, voiceConsentRepository, assetRepository)
 export const searchService = new SearchService(prisma)
 export const relationshipService = new RelationshipService(prisma)
+export const gedcomExportService = new GedcomExportService(prisma)
 export const storageService = new StorageService({
   type: 'LOCAL',
   basePath: process.cwd(),
@@ -37,6 +39,7 @@ export { RelationshipService } from './RelationshipService'
 export { SearchService } from './SearchService'
 export { VoiceService } from './VoiceService'
 export { ImageProcessingService } from './ImageProcessingService'
+export { GedcomExportService } from './GedcomExportService'
 
 // Factory for creating fresh instances with custom dependencies
 export function createServices(client = prisma) {

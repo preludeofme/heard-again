@@ -126,11 +126,11 @@ export default function FamilyspaceSettingsPage() {
   const [isExporting, setIsExporting] = useState(false)
 
   const { data: familyspace, isLoading, refresh } = useApi<FamilyspaceDetails>({
-    url: id ? `/api/familyspaces/${id}` : '',
+    url: (id && id !== 'undefined') ? `/api/familyspaces/${id}` : '',
   })
 
   const { data: members, isLoading: loadingMembers, refresh: refreshMembers } = useApi<Member[]>({
-    url: id && tabValue === 1 ? `/api/familyspaces/${id}/members` : '',
+    url: (id && id !== 'undefined') && tabValue === 1 ? `/api/familyspaces/${id}/members` : '',
   })
 
   const isOwner = familyspace?.owner.id === session?.user?.id
@@ -148,6 +148,7 @@ export default function FamilyspaceSettingsPage() {
   }
 
   const handleSave = async (dataOverride?: any) => {
+    if (!id || id === 'undefined') return
     setIsSaving(true)
     setError(null)
 
@@ -180,6 +181,7 @@ export default function FamilyspaceSettingsPage() {
   }
 
   const handleDelete = async () => {
+    if (!id || id === 'undefined') return
     setIsDeleting(true)
     setError(null)
 
@@ -225,7 +227,7 @@ export default function FamilyspaceSettingsPage() {
   }
 
   const handleInvite = async () => {
-    if (!inviteEmail.trim()) return
+    if (!inviteEmail.trim() || !id || id === 'undefined') return
     setIsInviting(true)
     try {
       const token = await getCSRFToken()
@@ -296,6 +298,7 @@ export default function FamilyspaceSettingsPage() {
   }
 
   const handleExportData = async () => {
+    if (!id || id === 'undefined') return
     setIsExporting(true)
     try {
       const response = await fetch(`/api/familyspaces/${id}/export`, {
@@ -307,7 +310,7 @@ export default function FamilyspaceSettingsPage() {
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `${familyspace?.slug || 'familyspace'}-export-${new Date().toISOString().split('T')[0]}.json`
+      a.download = `${familyspace?.slug || 'familyspace'}-export-${new Date().toISOString().split('T')[0]}.zip`
       document.body.appendChild(a)
       a.click()
       a.remove()
