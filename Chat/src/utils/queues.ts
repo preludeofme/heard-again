@@ -2,14 +2,23 @@ import { Queue, Worker, ConnectionOptions } from 'bullmq'
 import Redis from 'ioredis'
 
 // Redis connection configuration
-const redisConfig: ConnectionOptions = {
-  host: process.env.REDIS_HOST || 'localhost',
-  port: parseInt(process.env.REDIS_PORT || '6379'),
-  password: process.env.REDIS_PASSWORD,
+const redisUrl = process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL
+
+const redisConfig: ConnectionOptions = redisUrl
+  ? {
+      url: redisUrl,
+      maxRetriesPerRequest: null,
+      enableReadyCheck: false,
+      lazyConnect: true,
+    }
+  : {
+      host: process.env.REDIS_HOST || 'localhost',
+      port: parseInt(process.env.REDIS_PORT || '6379'),
+      password: process.env.REDIS_PASSWORD,
   maxRetriesPerRequest: null,
   enableReadyCheck: false,
   lazyConnect: true,
-}
+    }
 
 // Create Redis connection
 export const redisConnection = new Redis(redisConfig)
