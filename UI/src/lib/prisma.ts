@@ -6,7 +6,7 @@ const globalForPrisma = globalThis as unknown as {
 
 // Use emit:'stdout' in development so Prisma writes logs directly without $on
 // listeners — avoids listener accumulation across hot-reload cycles.
-const devLogConfig: Array<{ level: Prisma.LogLevel; emit: 'stdout' }> = [
+const devLogConfig: Prisma.LogDefinition[] = [
   { level: 'error', emit: 'stdout' },
   { level: 'warn', emit: 'stdout' },
 ];

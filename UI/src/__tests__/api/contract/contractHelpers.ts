@@ -95,7 +95,9 @@ export async function assertContract(
   spec: ContractRouteSpec,
   hooks: {
     /** Configure auth helpers / Prisma to return "no session" for the unauth case */
-    setUnauthenticated: () => void
+    setUnauthenticated: () => void;
+    /** Configure auth helpers to return a valid session */
+    setAuthenticated: () => void;
   }
 ): Promise<void> {
   const stateChangingMethods = spec.supportedMethods.filter((m) => !SAFE_METHODS.has(m))

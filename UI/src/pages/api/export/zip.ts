@@ -90,7 +90,7 @@ export default apiHandler({
     const archive = new ZipArchive({ zlib: { level: 9 } })
     const chunks: Buffer[] = []
     
-    archive.on('data', (chunk) => chunks.push(chunk))
+    archive.on('data', (chunk: Buffer) => chunks.push(chunk))
     
     const finalizePromise = new Promise<Buffer>((resolve, reject) => {
       archive.on('end', () => resolve(Buffer.concat(chunks)))

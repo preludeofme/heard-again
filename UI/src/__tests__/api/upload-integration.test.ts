@@ -188,7 +188,7 @@ describe('Upload Integration — Upload → Malware Scan → Asset', () => {
     mockValidateFile.mockResolvedValueOnce({
       isValid: false,
       error: 'Magic bytes mismatch',
-      securityRisk: 'high',
+      securityRisk: 'unknown',
     })
 
     await uploadHandler(req, res)

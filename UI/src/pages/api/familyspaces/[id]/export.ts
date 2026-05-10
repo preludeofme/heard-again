@@ -96,7 +96,7 @@ export default apiHandler({
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
 
     // Listen for archive errors
-    archive.on('error', (err) => {
+    archive.on('error', (err: any) => {
       logger.error('ZIP export archive error:', err)
       // Note: Header might already be sent, so we can't send a normal error response
       res.end()
