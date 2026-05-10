@@ -32,6 +32,7 @@ interface PersonDetails {
 interface Story {
   id: string
   title: string
+  content: string
   excerpt?: string | null
   storyDate?: string | null
 }

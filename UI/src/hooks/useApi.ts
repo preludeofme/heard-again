@@ -68,10 +68,10 @@ export function useApi<T = unknown>({
   const refresh = useCallback(() => execute(), [execute])
 
   useEffect(() => {
-    if (method === 'GET') {
+    if (method === 'GET' && url) {
       execute()
     }
-  }, [execute, method])
+  }, [execute, method, url])
 
   return { data, isLoading, error, execute, refresh }
 }

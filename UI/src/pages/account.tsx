@@ -4,6 +4,7 @@ import { fetchWithCSRF } from '@/lib/api-client'
 import { useRouter } from 'next/router'
 import {
   Alert,
+  Avatar,
   Box,
   Button,
   Card,
@@ -22,6 +23,7 @@ import {
   LinearProgress,
   List,
   ListItem,
+  ListItemAvatar,
   ListItemButton,
   ListItemIcon,
   ListItemText,
@@ -124,7 +126,13 @@ export default function AccountPage() {
 
   // User data
   const [user, setUser] = useState<User | null>(null)
-  const [familyspaceRole, setFamilyspaceRole] = useState<string>('MEMBER')
+  const [familyspaceRole, setFamilyspaceRole] = useState<string>('VIEWER')
+
+  // Familyspace data
+  const [familyspace, setFamilyspace] = useState<any | null>(null)
+  const [members, setMembers] = useState<any[]>([])
+  const [isEditingFamilyspace, setIsEditingFamilyspace] = useState(false)
+  const [editFamilyspaceName, setEditFamilyspaceName] = useState('')
 
   // Subscription data
   const [subscription, setSubscription] = useState<Subscription | null>(null)
@@ -173,10 +181,28 @@ export default function AccountPage() {
       // Get instance/tunnel status
       const instanceRes = await fetch('/api/instance/status', { credentials: 'include' })
       const instanceData = await instanceRes.json()
+      let currentFamilyspaceId = ''
       if (instanceData.success) {
         setInstance(instanceData.data.instance || null)
         setTunnelStatus(instanceData.data.tunnel || null)
         setFamilyspaceRole(instanceData.data.familyspaceRole || 'MEMBER')
+        currentFamilyspaceId = instanceData.data.familyspaceId
+      }
+
+      // Get familyspace details
+      if (currentFamilyspaceId) {
+        const fsRes = await fetch(`/api/familyspaces/${currentFamilyspaceId}`, { credentials: 'include' })
+        const fsData = await fsRes.json()
+        if (fsData.success) {
+          setFamilyspace(fsData.data)
+          setEditFamilyspaceName(fsData.data.name)
+        }
+
+        const membersRes = await fetch(`/api/familyspaces/${currentFamilyspaceId}/members`, { credentials: 'include' })
+        const membersData = await membersRes.json()
+        if (membersData.success) {
+          setMembers(membersData.data)
+        }
       }
     } catch (err: any) {
       setError(err.message || 'Failed to load account data')
@@ -234,6 +260,25 @@ export default function AccountPage() {
     }
   }
 
+  const handleSaveFamilyspace = async () => {
+    if (!editFamilyspaceName.trim() || !familyspace) return
+    try {
+      const res = await fetchWithCSRF(`/api/familyspaces/${familyspace.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ name: editFamilyspaceName.trim() }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to update familyspace')
+      setSuccess('Familyspace updated successfully')
+      setIsEditingFamilyspace(false)
+      await loadData()
+    } catch (err: any) {
+      setError(err.message)
+    }
+  }
+
   const formatBytes = (bytes: number): string => {
     if (bytes === 0) return '0 B'
     const k = 1024
@@ -284,8 +329,9 @@ export default function AccountPage() {
             >
               <Tab icon={<Person />} label="Profile" />
               <Tab icon={<SecurityIcon />} label="Security" />
+              <Tab icon={<Group />} label="Familyspace" />
               <Tab icon={<CreditCard />} label="Subscription" />
-              <Tab icon={<Cloud />} label="Instance & Tunnel" />
+              {/* <Tab icon={<Cloud />} label="Instance & Tunnel" /> */}
             </Tabs>
           </Box>
 
@@ -342,8 +388,94 @@ export default function AccountPage() {
             <SecuritySettings />
           </TabPanel>
 
-          {/* Subscription Tab */}
+          {/* Familyspace Tab */}
           <TabPanel value={activeTab} index={2}>
+            <Stack spacing={3}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" sx={{ mb: 3 }}>
+                    Familyspace Details
+                  </Typography>
+                  <Box sx={{ mb: 3 }}>
+                    <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 1 }}>
+                      Familyspace Name
+                    </Typography>
+                    {isEditingFamilyspace ? (
+                      <Stack direction="row" spacing={1}>
+                        <TextField
+                          fullWidth
+                          size="small"
+                          value={editFamilyspaceName}
+                          onChange={(e) => setEditFamilyspaceName(e.target.value)}
+                          autoFocus
+                        />
+                        <Button variant="contained" size="small" onClick={handleSaveFamilyspace}>
+                          Save
+                        </Button>
+                        <Button variant="outlined" size="small" onClick={() => setIsEditingFamilyspace(false)}>
+                          Cancel
+                        </Button>
+                      </Stack>
+                    ) : (
+                      <Stack direction="row" spacing={2} alignItems="center">
+                        <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                          {familyspace?.name || 'Loading...'}
+                        </Typography>
+                        {(familyspaceRole === 'OWNER' || familyspaceRole === 'ADMIN') && (
+                          <Button size="small" onClick={() => setIsEditingFamilyspace(true)}>
+                            Edit
+                          </Button>
+                        )}
+                      </Stack>
+                    )}
+                  </Box>
+                  <Box>
+                    <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 1 }}>
+                      Slug
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                      {familyspace?.slug || '...'}
+                    </Typography>
+                  </Box>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" sx={{ mb: 2 }}>
+                    Members
+                  </Typography>
+                  <List>
+                    {members.map((member) => (
+                      <ListItem key={member.id}>
+                        <ListItemAvatar>
+                          <Avatar src={member.avatarUrl || undefined}>
+                            {member.displayName?.[0] || member.email[0]}
+                          </Avatar>
+                        </ListItemAvatar>
+                        <ListItemText
+                          primary={member.displayName || member.email}
+                          secondary={member.role}
+                        />
+                        {member.role === 'OWNER' && <Chip size="small" label="Owner" />}
+                      </ListItem>
+                    ))}
+                  </List>
+                  <Button 
+                    variant="outlined" 
+                    fullWidth 
+                    sx={{ mt: 2 }}
+                    onClick={() => router.push(`/familyspaces/${familyspace?.id}/settings`)}
+                  >
+                    Manage All Settings & Invitations
+                  </Button>
+                </CardContent>
+              </Card>
+            </Stack>
+          </TabPanel>
+
+          {/* Subscription Tab */}
+          <TabPanel value={activeTab} index={3}>
             <Stack spacing={3}>
               {/* Current Plan */}
               <Card>
@@ -495,191 +627,14 @@ export default function AccountPage() {
           </TabPanel>
 
           {/* Instance & Tunnel Tab */}
+          {/* 
           <TabPanel value={activeTab} index={3}>
             <Stack spacing={3}>
-              {/* Instance Status */}
-              <Card>
-                <CardContent>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                    <Typography variant="h6">Instance Status</Typography>
-                    <Button
-                      startIcon={<Refresh />}
-                      size="small"
-                      onClick={loadData}
-                    >
-                      Refresh
-                    </Button>
-                  </Box>
-
-                  {instance ? (
-                    <Grid container spacing={2}>
-                      <Grid size={{ xs: 6, md: 3 }}>
-                        <Paper sx={{ p: 2, textAlign: 'center' }}>
-                          <Typography variant="body2" color="text.secondary">
-                            Type
-                          </Typography>
-                          <Typography variant="h6">{instance.type}</Typography>
-                        </Paper>
-                      </Grid>
-                      <Grid size={{ xs: 6, md: 3 }}>
-                        <Paper sx={{ p: 2, textAlign: 'center' }}>
-                          <Typography variant="body2" color="text.secondary">
-                            Status
-                          </Typography>
-                          <Chip
-                            size="small"
-                            label={instance.status}
-                            color={instance.status === 'ACTIVE' ? 'success' : 'default'}
-                          />
-                        </Paper>
-                      </Grid>
-                      <Grid size={{ xs: 6, md: 3 }}>
-                        <Paper sx={{ p: 2, textAlign: 'center' }}>
-                          <Typography variant="body2" color="text.secondary">
-                            Compute
-                          </Typography>
-                          <Typography variant="h6">{instance.computeMode}</Typography>
-                        </Paper>
-                      </Grid>
-                      <Grid size={{ xs: 6, md: 3 }}>
-                        <Paper sx={{ p: 2, textAlign: 'center' }}>
-                          <Typography variant="body2" color="text.secondary">
-                            Data
-                          </Typography>
-                          <Typography variant="h6">{instance.dataMode}</Typography>
-                        </Paper>
-                      </Grid>
-                    </Grid>
-                  ) : (
-                    <Alert severity="info">
-                      No instance registered. Register an instance to enable cloud features.
-                    </Alert>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Tunnel Status */}
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" sx={{ mb: 3 }}>
-                    Cloudflare Tunnel
-                  </Typography>
-
-                  {tunnelStatus?.enabled ? (
-                    <>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-                        <Chip
-                          label={tunnelStatus.connectionStatus}
-                          color={
-                            tunnelStatus.connectionStatus === 'connected'
-                              ? 'success'
-                              : tunnelStatus.connectionStatus === 'error'
-                              ? 'error'
-                              : 'warning'
-                          }
-                        />
-                        {tunnelStatus.tokenExpired && (
-                          <Chip label="Token Expired" color="error" />
-                        )}
-                        {tunnelStatus.lastHeartbeatMinutes !== null && (
-                          <Typography variant="body2" color="text.secondary">
-                            Last heartbeat: {tunnelStatus.lastHeartbeatMinutes}m ago
-                          </Typography>
-                        )}
-                      </Box>
-
-                      {tunnelStatus.publicUrl && (
-                        <Alert severity="success" sx={{ mb: 3 }}>
-                          <Typography variant="body2">
-                            <strong>Public URL:</strong>{' '}
-                            <a href={tunnelStatus.publicUrl} target="_blank" rel="noopener noreferrer">
-                              {tunnelStatus.publicUrl}
-                            </a>
-                          </Typography>
-                        </Alert>
-                      )}
-
-                      <Stack direction="row" spacing={2} flexWrap="wrap" gap={1}>
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          onClick={() => handleTunnelAction('regenerate')}
-                        >
-                          Regenerate Subdomain
-                        </Button>
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          onClick={() => handleTunnelAction('rotate-token')}
-                        >
-                          Rotate Token
-                        </Button>
-                        <Button
-                          variant="outlined"
-                          color="error"
-                          size="small"
-                          onClick={() => handleTunnelAction('disable')}
-                        >
-                          Disable Tunnel
-                        </Button>
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          onClick={() => router.push('/tunnel-setup')}
-                        >
-                          Setup Guide
-                        </Button>
-                      </Stack>
-                    </>
-                  ) : (
-                    <>
-                      <Alert severity="info" sx={{ mb: 3 }}>
-                        Tunnel is not enabled. Enable it to access your instance from anywhere.
-                      </Alert>
-                      <Button
-                        variant="contained"
-                        startIcon={<Cloud />}
-                        onClick={() => handleTunnelAction('enable')}
-                      >
-                        Enable Tunnel
-                      </Button>
-                    </>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Quick Actions */}
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" sx={{ mb: 2 }}>
-                    Quick Actions
-                  </Typography>
-                  <List>
-                    <ListItemButton onClick={() => router.push('/setup-guide')}>
-                      <ListItemIcon>
-                        <Computer />
-                      </ListItemIcon>
-                      <ListItemText
-                        primary="Self-Hosting Guide"
-                        secondary="Learn how to set up your own instance"
-                      />
-                      <ArrowForward />
-                    </ListItemButton>
-                    <ListItemButton onClick={() => router.push('/tunnel-setup')}>
-                      <ListItemIcon>
-                        <Cloud />
-                      </ListItemIcon>
-                      <ListItemText
-                        primary="Tunnel Setup"
-                        secondary="Configure Cloudflare tunnel access"
-                      />
-                      <ArrowForward />
-                    </ListItemButton>
-                  </List>
-                </CardContent>
+...
               </Card>
             </Stack>
           </TabPanel>
+          */}
 
           {/* Cancel Dialog */}
           <Dialog open={isCancelDialogOpen} onClose={() => setIsCancelDialogOpen(false)}>

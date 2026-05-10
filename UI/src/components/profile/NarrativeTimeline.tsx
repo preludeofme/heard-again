@@ -3,10 +3,12 @@ import { Box, Typography } from '@mui/material'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { ProfileColors } from './ProfileConstants'
+import { extractFirstImage } from '@/lib/html-utils'
 
 interface Story {
   id: string
   title: string
+  content: string
   excerpt?: string | null
   storyDate?: string | null
 }
@@ -106,6 +108,7 @@ export function NarrativeTimeline({
           >
             {sortedStories.map(story => {
               const year = toYear(story.storyDate)
+              const firstImg = extractFirstImage(story.content)
               return (
                 <Box
                   key={story.id}
@@ -126,6 +129,20 @@ export function NarrativeTimeline({
                       pointerEvents: 'none',
                     }}
                   >
+                    {firstImg && (
+                      <Box 
+                        component="img" 
+                        src={firstImg} 
+                        sx={{ 
+                          position: 'absolute', 
+                          inset: 0, 
+                          width: '100%', 
+                          height: '100%', 
+                          objectFit: 'cover',
+                          opacity: 0.9
+                        }} 
+                      />
+                    )}
                     {year && (
                       <Typography
                         sx={{

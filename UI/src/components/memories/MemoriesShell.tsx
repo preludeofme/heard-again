@@ -96,6 +96,7 @@ export function MemoriesShell({ lens, onLensChange, children }: MemoriesShellPro
   const { selectedFamilyMember, setSelectedFamilyMember, clearSelectedFamilyMember } = useSelectedFamilyMember()
   const dashboard = useDashboardController()
   const [people, setPeople] = useState<PersonOption[]>([])
+  const [isPeopleLoading, setIsPeopleLoading] = useState(true)
   const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -105,6 +106,7 @@ export function MemoriesShell({ lens, onLensChange, children }: MemoriesShellPro
   useEffect(() => {
     let active = true
     const loadPeople = async () => {
+      setIsPeopleLoading(true)
       try {
         const res = await fetch('/api/people', { credentials: 'include' })
         const data = await res.json()
@@ -112,11 +114,16 @@ export function MemoriesShell({ lens, onLensChange, children }: MemoriesShellPro
         if (data.success) setPeople(data.data || [])
       } catch {
         if (active) setPeople([])
+      } finally {
+        if (active) setIsPeopleLoading(false)
       }
     }
     loadPeople()
     return () => { active = false }
   }, [])
+
+  const isLoading = dashboard.isLoading || isPeopleLoading
+  const hasError = dashboard.hasError
 
   const selectedPerson = useMemo(() => {
     if (!selectedFamilyMember?.id) return null
@@ -176,6 +183,59 @@ export function MemoriesShell({ lens, onLensChange, children }: MemoriesShellPro
     } finally {
       setIsUploading(false)
     }
+  }
+
+  // Show error state if data fetching fails
+  if (hasError && !isLoading) {
+    return (
+      <Box 
+        sx={{ 
+          display: 'flex', 
+          flexDirection: 'column',
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          minHeight: '80vh',
+          backgroundColor: ProfileColors.surface,
+          px: 3,
+          textAlign: 'center'
+        }}
+      >
+        <Typography variant="h5" sx={{ color: ProfileColors.primary, mb: 2, fontFamily: 'var(--font-newsreader)', fontStyle: 'italic' }}>
+          We encountered a slight delay...
+        </Typography>
+        <Typography variant="body1" sx={{ color: ProfileColors.onSurfaceVariant, mb: 4, maxWidth: 500 }}>
+          {dashboard.errorMessage || "We're having trouble loading your family memories right now. Please try again in a moment."}
+        </Typography>
+        <Button 
+          variant="contained" 
+          onClick={() => dashboard.refresh()}
+          sx={{ borderRadius: '999px', bgcolor: ProfileColors.primary, px: 4 }}
+        >
+          Try Again
+        </Button>
+      </Box>
+    )
+  }
+
+  // Show a full-page spinner for the initial load of the entire shell
+  if (isLoading) {
+    return (
+      <Box 
+        sx={{ 
+          display: 'flex', 
+          flexDirection: 'column',
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          minHeight: '80vh',
+          backgroundColor: ProfileColors.surface 
+        }}
+      >
+        <CircularProgress size={60} thickness={4} sx={{ color: ProfileColors.primary }} />
+        <Typography variant="h6" sx={{ mt: 3, color: ProfileColors.primary, fontFamily: 'var(--font-newsreader)', fontStyle: 'italic' }}>
+          Preparing your family legacy...
+        </Typography>
+      </Box>
+    )
   }
 
   const familyspaceName = dashboard.familyspace?.name ?? 'Family Story'

@@ -8,13 +8,23 @@ export default apiHandler({
     const user = await getAuthUserWithFamilyspace(req, res)
     await requireFamilyspaceRole(user.id, user.familyspaceId, 'VIEWER')
 
-    const instance = await prisma.instance.findFirst({
-      where: { familyspaceId: user.familyspaceId },
-    })
+    const [instance, membership] = await Promise.all([
+      prisma.instance.findFirst({
+        where: { familyspaceId: user.familyspaceId },
+      }),
+      prisma.membership.findUnique({
+        where: {
+          familyspaceId_userId: { familyspaceId: user.familyspaceId, userId: user.id },
+        },
+        select: { role: true },
+      }),
+    ])
 
     if (!instance) {
       return successResponse(res, {
         registered: false,
+        familyspaceId: user.familyspaceId,
+        familyspaceRole: membership?.role || 'VIEWER',
         message: 'No instance registered for this familyspace',
       })
     }
@@ -43,6 +53,8 @@ export default apiHandler({
 
     return successResponse(res, {
       registered: true,
+      familyspaceId: user.familyspaceId,
+      familyspaceRole: membership?.role || 'VIEWER',
       instance: {
         id: instance.id,
         type: instance.type,
