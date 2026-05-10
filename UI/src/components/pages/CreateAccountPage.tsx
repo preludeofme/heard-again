@@ -76,7 +76,7 @@ export function CreateAccountPage() {
   }
 
   const handleGoogleSignUp = () => {
-    signIn('google', { callbackUrl: '/memories' })
+    signIn('google', { callbackUrl: '/legacy' })
   }
 
   return (

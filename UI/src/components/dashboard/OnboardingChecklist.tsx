@@ -24,8 +24,8 @@ export function OnboardingChecklist({ state, role, familyspaceId }: OnboardingCh
   const steps: Step[] = [
     { key: 'hasFirstPerson', label: 'Who are you preserving this for?', hint: 'Start the story with a person\'s name.', href: '/family-tree', done: state.hasFirstPerson },
     { key: 'hasFirstStory', label: 'Share the first memory', hint: 'One moment — written or spoken.', href: '/contribute', done: state.hasFirstStory },
-    { key: 'hasFirstDocument', label: 'Add a keepsake', hint: 'A photo, a letter, or any artifact worth preserving.', href: '/memories?lens=keepsakes', done: state.hasFirstDocument },
-    { key: 'hasFirstVoice', label: 'Preserve their voice', hint: 'Upload a recording to create a voice that lasts.', href: '/memories?lens=voices', done: state.hasFirstVoice },
+    { key: 'hasFirstDocument', label: 'Add a keepsake', hint: 'A photo, a letter, or any artifact worth preserving.', href: '/legacy?lens=keepsakes', done: state.hasFirstDocument },
+    { key: 'hasFirstVoice', label: 'Preserve their voice', hint: 'Upload a recording to create a voice that lasts.', href: '/legacy?lens=voices', done: state.hasFirstVoice },
   ]
 
   if ((role === 'OWNER' || role === 'ADMIN') && familyspaceId) {

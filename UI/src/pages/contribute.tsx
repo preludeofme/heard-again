@@ -59,7 +59,7 @@ export default function ContributePage() {
       description: 'Speak from the heart. Capture a story, message, or favorite phrase in their own voice.',
       icon: <MicIcon sx={{ fontSize: 32 }} />,
       accent: ProfileColors.secondaryContainer,
-      href: '/memories?lens=voices',
+      href: '/legacy?lens=voices',
     },
     {
       key: 'keepsake',
@@ -67,7 +67,7 @@ export default function ContributePage() {
       description: 'Add letters, recipes, photos, certificates, or handwritten notes to the story.',
       icon: <UploadIcon sx={{ fontSize: 32 }} />,
       accent: ProfileColors.surfaceContainerHigh,
-      href: '/memories?lens=keepsakes',
+      href: '/legacy?lens=keepsakes',
     },
     {
       key: 'invite',
@@ -285,7 +285,7 @@ export default function ContributePage() {
                 </Typography>
                 <Button
                   component={Link}
-                  href="/memories"
+                  href="/legacy"
                   variant="text"
                   endIcon={<ArrowForwardIcon />}
                   sx={{

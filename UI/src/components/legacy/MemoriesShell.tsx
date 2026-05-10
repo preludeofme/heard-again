@@ -477,7 +477,7 @@ export function MemoriesShell({ lens, onLensChange, children }: MemoriesShellPro
                       <ListItemIcon><StoriesIcon fontSize="small" /></ListItemIcon>
                       <ListItemText primary="New Story" secondary="Record a memory or life event" />
                     </MenuItem>
-                    <MenuItem component={Link} href="/memories?lens=keepsakes#upload" onClick={() => setAddMenuAnchor(null)}>
+                    <MenuItem component={Link} href="/legacy?lens=keepsakes#upload" onClick={() => setAddMenuAnchor(null)}>
                       <ListItemIcon><UploadIcon fontSize="small" /></ListItemIcon>
                       <ListItemText primary="Upload Keepsake" secondary="Photos, videos, or documents" />
                     </MenuItem>
@@ -553,8 +553,8 @@ export function MemoriesShell({ lens, onLensChange, children }: MemoriesShellPro
               {[
                 { title: 'Add a Family Member', desc: 'Start with someone your family wants to remember.', href: '/family-tree?add=1', icon: <GenerationsIcon /> },
                 { title: 'Write a Story', desc: 'Capture a memory, tradition, saying, or moment.', href: '/contribute', icon: <StoriesIcon /> },
-                { title: 'Record a Voice Memory', desc: 'Save a spoken story or upload an old recording.', href: '/memories?lens=voices', icon: <VoiceIcon /> },
-                { title: 'Upload a Keepsake', desc: 'Add a photo, letter, recipe, document, or meaningful item.', href: '/memories?lens=keepsakes', icon: <UploadIcon /> },
+                { title: 'Record a Voice Memory', desc: 'Save a spoken story or upload an old recording.', href: '/legacy?lens=voices', icon: <VoiceIcon /> },
+                { title: 'Upload a Keepsake', desc: 'Add a photo, letter, recipe, document, or meaningful item.', href: '/legacy?lens=keepsakes', icon: <UploadIcon /> },
               ].map((item) => (
                 <Card key={item.title} variant="outlined" sx={{ borderRadius: 3, borderColor: `${ProfileColors.outlineVariant}33` }}>
                   <CardActionArea component={Link} href={item.href} sx={{ height: '100%' }}>

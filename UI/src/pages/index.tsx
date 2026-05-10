@@ -10,7 +10,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
   if (session) {
     return {
       redirect: {
-        destination: '/memories',
+        destination: '/legacy',
         permanent: false,
       },
     }

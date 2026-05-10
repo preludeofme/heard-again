@@ -125,7 +125,7 @@ export default function FavoritesPage() {
                 <Button
                   variant="contained"
                   endIcon={<ArrowForward />}
-                  onClick={() => router.push('/memories?lens=stories')}
+                  onClick={() => router.push('/legacy?lens=stories')}
                   sx={{ borderRadius: 2 }}
                 >
                   Browse Stories

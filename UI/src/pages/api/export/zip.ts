@@ -3,7 +3,8 @@ import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
 import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 import { getStorageService } from '@/lib/storage/storage-service'
 import { gedcomExportService } from '@/services'
-import archiver from 'archiver'
+// @ts-ignore
+import { ZipArchive } from 'archiver'
 import { Buffer } from 'buffer'
 
 export default apiHandler({
@@ -86,7 +87,7 @@ export default apiHandler({
 
     // 3. Collect ZIP in memory (Warning: might consume too much memory for huge exports)
     const storageService = getStorageService()
-    const archive = archiver('zip', { zlib: { level: 9 } })
+    const archive = new ZipArchive({ zlib: { level: 9 } })
     const chunks: Buffer[] = []
     
     archive.on('data', (chunk) => chunks.push(chunk))

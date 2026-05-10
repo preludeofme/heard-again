@@ -11,7 +11,7 @@ export default function StoriesRedirect() {
   useEffect(() => {
     if (router.isReady) {
       router.replace({
-        pathname: '/memories',
+        pathname: '/legacy',
         query: { ...router.query, lens: 'stories' },
       })
     }

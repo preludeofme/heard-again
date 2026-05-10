@@ -126,10 +126,10 @@ export const authOptions: NextAuthOptions = {
     },
     async redirect({ url, baseUrl }) {
       // Send to the unified memories home by default; middleware will redirect to /onboarding if needed
-      if (url === baseUrl || url === `${baseUrl}/`) return `${baseUrl}/memories`
+      if (url === baseUrl || url === `${baseUrl}/`) return `${baseUrl}/legacy`
       if (url.startsWith('/')) return `${baseUrl}${url}`
       else if (new URL(url).origin === baseUrl) return url
-      return `${baseUrl}/memories`
+      return `${baseUrl}/legacy`
     },
   },
   events: {

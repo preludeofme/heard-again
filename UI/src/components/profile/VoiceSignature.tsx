@@ -249,7 +249,7 @@ export function VoiceSignature({
           <Box sx={{ textAlign: 'center' }}>
             <Box
               component={Link}
-              href={`/memories?lens=voices&personId=${personId}&create=true`}
+              href={`/legacy?lens=voices&personId=${personId}&create=true`}
               sx={{ fontFamily: 'var(--font-manrope), sans-serif', fontSize: '0.85rem', color: ProfileColors.onSurfaceVariant, textDecoration: 'none', borderBottom: `1px solid ${ProfileColors.outlineVariant}`, pb: 0.25, '&:hover': { color: ProfileColors.primary } }}
             >
               + Create Voice Profile in Voice Lab

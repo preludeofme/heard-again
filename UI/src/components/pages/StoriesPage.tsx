@@ -86,7 +86,7 @@ export function StoriesPage({ stories, selectedFamilyMember, isLens = false }: S
                 </Typography>
                 <Typography
                   component={Link}
-                  href="/memories?lens=stories"
+                  href="/legacy?lens=stories"
                   sx={{
                     fontFamily: 'var(--font-manrope), sans-serif',
                     fontSize: '0.8rem',

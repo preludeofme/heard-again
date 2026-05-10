@@ -35,7 +35,7 @@ export function LoginPage() {
   })
 
   // Get callback URL from query params, default to the unified memories home
-  const callbackUrl = (router.query.callbackUrl as string) || '/memories'
+  const callbackUrl = (router.query.callbackUrl as string) || '/legacy'
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

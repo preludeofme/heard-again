@@ -192,7 +192,7 @@ export default function PublicContributePage() {
 
           <Button 
             variant="outlined" 
-            onClick={() => router.push('/memories?lens=stories')} 
+            onClick={() => router.push('/legacy?lens=stories')} 
             sx={{ borderRadius: 2, color: '#16334a', borderColor: '#16334a' }}
           >
             Browse all Memories

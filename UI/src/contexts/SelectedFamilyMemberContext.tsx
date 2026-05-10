@@ -23,7 +23,7 @@ const MAX_RECENT = 8
 
 // Pages that should maintain the personId in the URL
 const PERSON_AWARE_PAGES = [
-  '/memories',
+  '/legacy',
   '/contribute',
   '/family-tree',
   '/favorites',

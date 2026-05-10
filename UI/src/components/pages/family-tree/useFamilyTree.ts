@@ -267,7 +267,7 @@ export function useFamilyTree(
       displayName: person.name,
       avatarUrl: person.avatar || null,
     })
-    router.push('/memories')
+    router.push('/legacy')
   }, [router, setSelectedFamilyMember])
 
   return {

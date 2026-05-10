@@ -43,7 +43,7 @@ export function RecentStoriesFeed({ stories }: RecentStoriesFeedProps) {
           Latest stories
         </Typography>
         <Box
-          onClick={() => router.push('/memories?lens=stories')}
+          onClick={() => router.push('/legacy?lens=stories')}
           sx={{
             display: 'inline-flex',
             alignItems: 'center',

@@ -17,7 +17,7 @@ export default function VoiceLabRedirect() {
   useEffect(() => {
     if (router?.isReady) {
       router.replace({
-        pathname: '/memories',
+        pathname: '/legacy',
         query: { ...router.query, lens: 'voices' },
       })
     }

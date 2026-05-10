@@ -17,7 +17,7 @@ export default function TimelineRedirect() {
   useEffect(() => {
     if (router?.isReady) {
       router.replace({
-        pathname: '/memories',
+        pathname: '/legacy',
         query: { ...router.query, lens: 'journey' },
       })
     }

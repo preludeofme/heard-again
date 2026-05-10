@@ -3,7 +3,8 @@ import { apiHandler, Errors } from '@/lib/api-helpers'
 import { getAuthUser, requireFamilyspaceRole } from '@/lib/auth-helpers'
 import { gedcomExportService } from '@/services'
 import { getStorageService } from '@/lib/storage/storage-service'
-import archiver from 'archiver'
+// @ts-ignore
+import { ZipArchive } from 'archiver'
 import { logger } from '@/lib/logger'
 
 export default apiHandler({
@@ -85,7 +86,7 @@ export default apiHandler({
     const gedcomString = await gedcomExportService.generateGedcom(familyspaceId)
 
     // 3. Prepare ZIP Archive
-    const archive = archiver('zip', {
+    const archive = new ZipArchive({
       zlib: { level: 9 } // Maximum compression
     })
 

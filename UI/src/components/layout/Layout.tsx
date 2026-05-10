@@ -45,16 +45,16 @@ interface LayoutProps {
   children: ReactNode
 }
 
-const bottomNavRoutes = ['/memories', '/contribute', '/family-tree', '/favorites', 'more']
+const bottomNavRoutes = ['/legacy', '/contribute', '/family-tree', '/favorites', 'more']
 const navItems = [
-  { label: 'Family Legacy', href: '/memories' },
+  { label: 'Family Legacy', href: '/legacy' },
   { label: 'Contribute', href: '/contribute' },
   { label: 'Family Tree', href: '/family-tree' },
 ]
 
 const moreMenuRoutes = [
-  { label: 'Voice Memories', href: '/memories?lens=voices', icon: <StoriesIcon /> },
-  { label: 'Keepsakes', href: '/memories?lens=keepsakes', icon: <DocumentsIcon /> },
+  { label: 'Voice Memories', href: '/legacy?lens=voices', icon: <StoriesIcon /> },
+  { label: 'Keepsakes', href: '/legacy?lens=keepsakes', icon: <DocumentsIcon /> },
   { label: 'Account', href: '/account', icon: <SettingsIcon /> },
 ]
 
@@ -143,7 +143,7 @@ export function Layout({ children }: LayoutProps) {
   const [speedDialOpen, setSpeedDialOpen] = useState(false)
 
   const dynamicNavItems = [
-    { label: 'Family Legacy', href: '/memories' },
+    { label: 'Family Legacy', href: '/legacy' },
     { label: 'Contribute', href: '/contribute' },
     { label: 'Family Tree', href: '/family-tree' },
   ]
@@ -166,7 +166,7 @@ export function Layout({ children }: LayoutProps) {
   const handleAction = (action: string) => {
     setSpeedDialOpen(false)
     if (action === 'story') router?.push('/contribute')
-    else if (action === 'document') router?.push('/memories?lens=keepsakes')
+    else if (action === 'document') router?.push('/legacy?lens=keepsakes')
     else if (action === 'person') router?.push('/family-tree?add=1')
   }
 
@@ -190,8 +190,8 @@ export function Layout({ children }: LayoutProps) {
   const isNavActive = (href: string) => {
     if (!router) return false
     const [itemPath] = href.split('?')
-    if (itemPath === '/memories') {
-      return currentPath === '/memories' || currentPath === '/'
+    if (itemPath === '/legacy') {
+      return currentPath === '/legacy' || currentPath === '/'
     }
     return currentPath === itemPath || currentPath.startsWith(itemPath + '/')
   }
@@ -219,7 +219,7 @@ export function Layout({ children }: LayoutProps) {
           {/* Brand */}
           <Typography
             component={Link}
-            href="/memories"
+            href="/legacy"
             sx={{
               fontFamily: 'var(--font-newsreader), serif',
               fontSize: { xs: '1.3rem', md: '1.5rem' },
