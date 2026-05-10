@@ -4,29 +4,30 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-// Use emit:'stdout' in development so Prisma writes logs directly without $on
-// listeners — avoids listener accumulation across hot-reload cycles.
-type PrismaClientOptions = ConstructorParameters<typeof PrismaClient>[0];
-
-const devLogConfig: NonNullable<PrismaClientOptions['log']> = [
-  { level: 'error', emit: 'stdout' },
+// Use explicit log levels to avoid namespace resolution issues
+const devLogConfig: NonNullable<Prisma.PrismaClientOptions['log']> = [
+   { level: 'error', emit: 'stdout' },
   { level: 'warn', emit: 'stdout' },
 ];
 
-const prismaOptions: PrismaClientOptions = {
-  log: process.env.NODE_ENV === 'development' ? devLogConfig : [{ level: 'error', emit: 'stdout' }],
+// Initialize Prisma with a configuration that doesn't rely on explicitly naming the options type
+const getPrismaClient = () => {
+  const options: any = {
+    log: process.env.NODE_ENV === 'development' ? devLogConfig : [{ level: 'error', emit: 'stdout' }],
+  };
+
+  if (process.env.NODE_ENV === 'production') {
+    options.datasources = {
+      db: {
+        url: process.env.DATABASE_URL,
+      },
+    };
+  }
+
+  return new PrismaClient(options);
 };
 
-// Add connection pooling for production
-if (process.env.NODE_ENV === 'production') {
-  prismaOptions.datasources = {
-    db: {
-      url: process.env.DATABASE_URL,
-    },
-  };
-}
-
-export const prisma = globalForPrisma.prisma ?? new PrismaClient(prismaOptions);
+export const prisma = globalForPrisma.prisma ?? getPrismaClient();
 
 if (process.env.NODE_ENV !== 'production') {
   globalForPrisma.prisma = prisma;
