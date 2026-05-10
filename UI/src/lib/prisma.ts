@@ -11,7 +11,7 @@ const devLogConfig = [
   { level: 'warn', emit: 'stdout' },
 ] as const;
 
-const prismaOptions = {
+const prismaOptions: ConstructorParameters<typeof PrismaClient>[0] = {
   log: process.env.NODE_ENV === 'development' ? devLogConfig : [{ level: 'error', emit: 'stdout' }],
 };
 
@@ -25,7 +25,7 @@ if (process.env.NODE_ENV === 'production') {
 
 const prisma =
   globalForPrisma.prisma ??
-  new PrismaClient(prismaOptions as ConstructorParameters<typeof PrismaClient>[0]);
+  new PrismaClient(prismaOptions);
 
 if (process.env.NODE_ENV !== 'production') {
   globalForPrisma.prisma = prisma;
