@@ -7,7 +7,7 @@
 - Existing GCP-compatible paths remain as fallback to avoid breaking dev environments.
 
 ## 1) Provider readiness checklist
-- [ ] Vercel project created and linked to this GitHub repo (root directory: `UI/`).
+- [x] Vercel project created and linked to this GitHub repo (root directory: `UI/`).
 - [ ] Neon project/database created.
 - [ ] Cloudflare R2 bucket created.
 - [ ] Upstash Redis database created.
