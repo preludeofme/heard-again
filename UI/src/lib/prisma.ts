@@ -5,8 +5,8 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 // Use explicit log levels to avoid namespace resolution issues
-const devLogConfig: Prisma.LogDefinition[] = [
-  { level: 'error', emit: 'stdout' },
+const devLogConfig: NonNullable<Prisma.PrismaClientOptions['log']> = [
+   { level: 'error', emit: 'stdout' },
   { level: 'warn', emit: 'stdout' },
 ];
 
