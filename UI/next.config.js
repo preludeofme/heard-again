@@ -4,8 +4,10 @@ const isDev = process.env.NODE_ENV === 'development'
 const nextConfig = {
   reactStrictMode: true,
   output: 'standalone',
-  // Add empty Turbopack config to avoid webpack conflict
-  turbopack: {},
+  // Pin Turbopack root to this UI workspace so Next.js doesn't infer the monorepo/user home root
+  turbopack: {
+    root: __dirname,
+  },
   allowedDevOrigins: ['100.75.138.91', 'trubuck-design-ai-beast.stern-mulley.ts.net', 'localhost', '127.0.0.1'],
   images: {
     remotePatterns: [
