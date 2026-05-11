@@ -373,3 +373,17 @@ For issues and questions, refer to:
 - `docs/` directory for detailed specifications
 - `DEVELOPMENT_SETUP.md` for detailed setup instructions
 - Individual component READMEs for service-specific documentation
+
+
+## Workspace Commands (Next.js app in `UI/`)
+
+This repository is configured as an npm workspace monorepo (`UI`, `Chat`). When running Next.js commands, prefer workspace-aware invocations from the repo root:
+
+```bash
+npm --workspace UI run dev
+npm --workspace UI run lint
+npm --workspace UI run build
+```
+
+You can still run commands from inside `UI/`, but avoid passing `.` to `next lint` (use `next lint`), because dot-based invocations can trigger incorrect root resolution in multi-lockfile environments.
+

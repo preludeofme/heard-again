@@ -6,13 +6,13 @@
   "scripts": {
     "dev": "./Scripts/start-dev.sh --live",
     "dev_worktree": "./Scripts/start-dev-worktree.sh --live",
-    "build": "cd UI && npm run build && cd ../Chat && npm run build",
-    "type-check": "cd UI && npx tsc --noEmit && cd ../Chat && npm run type-check",
-    "start": "cd UI && npm run start",
-    "test": "cd UI && npm test",
-    "test:watch": "cd UI && npm run test:watch",
-    "test:coverage": "cd UI && npm run test:coverage",
-    "lint": "cd UI && npm run lint",
+    "build": "npm --workspace UI run build && npm --workspace Chat run build",
+    "type-check": "npm --workspace UI run typecheck && npm --workspace Chat run type-check",
+    "start": "npm --workspace UI run start",
+    "test": "npm --workspace UI run test",
+    "test:watch": "npm --workspace UI run test:watch",
+    "test:coverage": "npm --workspace UI run test:coverage",
+    "lint": "npm --workspace UI run lint",
     "start:tts": "cd TTS && ./start.sh",
     "start:voice": "docker compose -f docker-compose.voice.yml up -d",
     "stop:voice": "docker compose -f docker-compose.voice.yml down",
@@ -20,24 +20,20 @@
     "sonar:start": "docker compose -f docker-compose.sonarqube.yml up -d",
     "sonar:stop": "docker compose -f docker-compose.sonarqube.yml down",
     "sonar:logs": "docker logs sonarqube",
-    "db:generate": "cd UI && npm run db:generate",
-    "db:migrate": "cd UI && npm run db:migrate",
-    "db:push": "cd UI && npm run db:push",
-    "db:studio": "cd UI && npm run db:studio",
-    "db:seed": "cd UI && npm run db:seed",
+    "db:generate": "npm --workspace UI run db:generate",
+    "db:migrate": "npm --workspace UI run db:migrate",
+    "db:push": "npm --workspace UI run db:push",
+    "db:studio": "npm --workspace UI run db:studio",
+    "db:seed": "npm --workspace UI run db:seed",
     "db:reset-family": "node scripts/reset-family.js",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "docker:build": "docker compose build",
-    "install:all": "npm install && cd UI && npm install && cd ../Chat && npm install",
+    "install:all": "npm install --workspaces",
     "e2e:test": "playwright test",
     "e2e:test:ui": "playwright test --ui",
     "verify": "./Scripts/ci-verify.sh"
   },
-  "familyspaces": [
-    "UI",
-    "Chat"
-  ],
   "devDependencies": {
     "@playwright/test": "^1.59.1",
     "@types/archiver": "^7.0.0",
@@ -46,5 +42,9 @@
   "dependencies": {
     "@prisma/client": "^6.19.2",
     "archiver": "^8.0.0"
-  }
+  },
+  "workspaces": [
+    "UI",
+    "Chat"
+  ]
 }
