@@ -11,7 +11,7 @@
     "start:tts": "cd ../TTS && ./start.sh",
     "start:voice": "docker compose -f docker-compose.voice.yml up -d",
     "stop:voice": "docker compose -f docker-compose.voice.yml down",
-    "lint": "next lint .",
+    "lint": "next lint",
     "test": "jest",
     "typecheck": "tsc --noEmit",
     "ci:check": "npm run db:generate && npm run typecheck && npm run lint && npm run build",
