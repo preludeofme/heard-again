@@ -8,9 +8,9 @@
 
 ## 1) Provider readiness checklist
 - [x] Vercel project created and linked to this GitHub repo (root directory: `UI/`).
-- [ ] Neon project/database created.
-- [ ] Cloudflare R2 bucket created.
-- [ ] Upstash Redis database created.
+- [x] Neon project/database created.
+- [x] Cloudflare R2 bucket created.
+- [x] Upstash Redis database created.
 - [ ] RunPod Serverless endpoint created (Qwen3-TTS).
 - [ ] Resend account/API key ready.
 
