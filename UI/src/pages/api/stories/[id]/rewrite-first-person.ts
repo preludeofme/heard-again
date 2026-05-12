@@ -2,11 +2,7 @@ import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
 import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 import { logger } from '@/lib/logger'
-
-const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434'
-const NARRATION_LLM_MODEL = process.env.NARRATION_LLM_MODEL || 'llama3.1:8b'
-const NARRATION_MAX_TOKENS = Number(process.env.NARRATION_MAX_TOKENS || 2000)
-const NARRATION_TEMPERATURE = Number(process.env.NARRATION_TEMPERATURE || 0.3)
+import { rewriteWithFallback } from '@/lib/narration-llm-client'
 
 export default apiHandler({
   POST: async (req, res) => {
@@ -63,43 +59,27 @@ export default apiHandler({
       formatPersonName(userRecord?.linkedPerson) || req.body?.narratorName || undefined
 
     const subject = subjectName || 'the subject of this story'
+    const qualityOverride = req.body?.quality === 'high'
 
     try {
-      logger.info('[rewrite] calling Ollama', { storyId, model: NARRATION_LLM_MODEL, url: OLLAMA_URL })
+      logger.info('[rewrite] calling LLM', { storyId, qualityOverride })
 
-      const ollamaRes = await fetch(`${OLLAMA_URL}/api/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: NARRATION_LLM_MODEL,
-          stream: false,
-          options: {
-            temperature: NARRATION_TEMPERATURE,
-            num_predict: NARRATION_MAX_TOKENS,
-            top_p: 0.9,
-            repeat_penalty: 1.1,
-          },
-          messages: [
-            { role: 'system', content: buildSystemPrompt(subject, speakerName) },
-            { role: 'user', content: buildUserMessage(cleanSource, subject, speakerName, narratorName) },
-          ],
-        }),
-      })
+      const llmResult = await rewriteWithFallback(
+        [
+          { role: 'system', content: buildSystemPrompt(subject, speakerName) },
+          { role: 'user', content: buildUserMessage(cleanSource, subject, speakerName, narratorName) },
+        ],
+        cleanSource,
+        { qualityOverride }
+      )
 
-      if (!ollamaRes.ok) {
-        const errText = await ollamaRes.text().catch(() => '')
-        logger.error('[rewrite] Ollama returned error', { status: ollamaRes.status, errText, storyId })
-        await prisma.story.update({
-          where: { id: storyId },
-          data: { narrationStatus: 'FAILED', narrationUpdatedAt: new Date() },
-        })
-        return res.status(502).json({ success: false, error: 'Rewrite model unavailable' })
+      if (llmResult.usedFallback) {
+        logger.info('[rewrite] used fallback model', { storyId, reason: llmResult.fallbackReason, model: llmResult.model })
       }
 
-      const ollamaData = await ollamaRes.json()
-      const rawContent: string = ollamaData?.message?.content || ''
+      const rawContent = llmResult.content
       const rewrittenContent = cleanRewrite(rawContent)
-      const model: string = ollamaData?.model || NARRATION_LLM_MODEL
+      const model = llmResult.model
 
       if (!rewrittenContent) {
         logger.error('[rewrite] empty content from model', { storyId, model, rawLength: rawContent.length })
