@@ -69,6 +69,10 @@ const handler = async (req: NextApiRequest, res: NextApiResponse): Promise<void>
     const jobStatus = await provider.checkUploadJob(runpodJobId)
 
     if (jobStatus.status === 'complete' && jobStatus.result) {
+      const existingMeta = typeof asset.metadata === 'object' && asset.metadata !== null
+        ? (asset.metadata as Record<string, unknown>)
+        : {}
+
       await prisma.asset.update({
         where: { id: assetId },
         data: {
@@ -76,6 +80,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse): Promise<void>
           transcript: jobStatus.result.transcript,
           durationSeconds: jobStatus.result.duration,
           storagePath: jobStatus.result.filePath,
+          metadata: { ...existingMeta, ttsFileId: jobStatus.result.fileId },
         },
       })
 

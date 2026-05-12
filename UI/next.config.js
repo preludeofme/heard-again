@@ -3,6 +3,17 @@ const isDev = process.env.NODE_ENV === 'development'
 
 const nextConfig = {
   reactStrictMode: true,
+  // Keep heavy server-only packages out of the serverless function bundle.
+  // They are loaded from node_modules at runtime, keeping each function under 250 MB.
+  serverExternalPackages: [
+    '@aws-sdk/client-s3',
+    '@aws-sdk/s3-request-presigner',
+    '@aws-sdk/lib-storage',
+    '@smithy/util-stream',
+    'bullmq',
+    'ioredis',
+    'sharp',
+  ],
   // @types/react v18/v19 dual-version conflicts from MUI internals; type-check runs in CI separately
   typescript: { ignoreBuildErrors: true },
   // standalone output is only for self-hosted Docker; Vercel manages its own output format
