@@ -32,6 +32,15 @@ const handler = async (req: NextApiRequest, res: NextApiResponse): Promise<void>
       return
     }
 
+    // Idempotent: if already processing, return the existing jobId so the client can poll
+    if (asset.processingStatus === 'PROCESSING') {
+      const meta = typeof asset.metadata === 'object' && asset.metadata !== null
+        ? (asset.metadata as Record<string, unknown>)
+        : {}
+      res.status(200).json({ runpodJobId: meta.runpodJobId ?? '' })
+      return
+    }
+
     if (asset.processingStatus !== 'PENDING') {
       res.status(409).json({ error: `Asset is already in ${asset.processingStatus} state` })
       return

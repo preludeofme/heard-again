@@ -113,55 +113,117 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
     try {
       const csrfToken = await fetchToken()
 
-      // Step 1: Request presigned PUT URL — tiny JSON request, no body size limit issues
-      const requestRes = await fetch('/api/voice/request-upload', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken },
-        credentials: 'include',
-        body: JSON.stringify({ filename: file.name, mimeType: file.type, fileSize: file.size }),
-      })
+      // Step 1: Request presigned PUT URL — retried on transient network changes
+      let assetId: string
+      let uploadUrl: string
+      {
+        const MAX_RETRIES = 3
+        let lastError: Error = new Error('Upload URL request failed')
+        let success = false
 
-      if (!requestRes.ok) {
-        const err = await requestRes.json().catch(() => ({})) as { error?: string }
-        throw new Error(err.error ?? 'Failed to request upload URL')
+        for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+          if (attempt > 0) {
+            await new Promise<void>(resolve => setTimeout(resolve, 1000 * attempt))
+          }
+          try {
+            const res = await fetch('/api/voice/request-upload', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken },
+              credentials: 'include',
+              body: JSON.stringify({ filename: file.name, mimeType: file.type, fileSize: file.size }),
+            })
+            if (!res.ok) {
+              const err = await res.json().catch(() => ({})) as { error?: string }
+              throw new Error(err.error ?? 'Failed to request upload URL')
+            }
+            const data = await res.json() as { assetId: string; uploadUrl: string }
+            assetId = data.assetId
+            uploadUrl = data.uploadUrl
+            success = true
+            break
+          } catch (err) {
+            lastError = err instanceof Error ? err : new Error(String(err))
+          }
+        }
+
+        if (!success) throw lastError
       }
-
-      const { assetId, uploadUrl } = await requestRes.json() as { assetId: string; uploadUrl: string }
 
       // Step 2: PUT directly to R2 — bypasses Vercel entirely, no 4.5MB limit
       enqueueSnackbar('Uploading audio…', { variant: 'info' })
-      const r2Res = await fetch(uploadUrl, {
-        method: 'PUT',
-        headers: { 'Content-Type': file.type },
-        body: file,
-      })
+      {
+        const MAX_RETRIES = 3
+        let lastError: Error = new Error('R2 upload failed')
+        let success = false
 
-      if (!r2Res.ok) {
-        throw new Error('Failed to upload audio to storage')
+        for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+          if (attempt > 0) {
+            await new Promise<void>(resolve => setTimeout(resolve, 1000 * attempt))
+          }
+          try {
+            const res = await fetch(uploadUrl!, {
+              method: 'PUT',
+              headers: { 'Content-Type': file.type },
+              body: file,
+            })
+            if (!res.ok) throw new Error(`Storage upload failed (${res.status})`)
+            success = true
+            break
+          } catch (err) {
+            lastError = err instanceof Error ? err : new Error(String(err))
+          }
+        }
+
+        if (!success) throw lastError
       }
 
       // Step 3: Kick off RunPod transcription job
-      const processRes = await fetch('/api/voice/process-upload', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken },
-        credentials: 'include',
-        body: JSON.stringify({ assetId }),
-      })
+      let runpodJobId: string
+      {
+        const MAX_RETRIES = 3
+        let lastError: Error = new Error('Failed to start transcription')
+        let success = false
 
-      if (!processRes.ok) {
-        const err = await processRes.json().catch(() => ({})) as { error?: string }
-        throw new Error(err.error ?? 'Failed to start transcription')
+        for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+          if (attempt > 0) {
+            await new Promise<void>(resolve => setTimeout(resolve, 1000 * attempt))
+          }
+          try {
+            const res = await fetch('/api/voice/process-upload', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken },
+              credentials: 'include',
+              body: JSON.stringify({ assetId: assetId! }),
+            })
+            if (!res.ok) {
+              const err = await res.json().catch(() => ({})) as { error?: string }
+              // 409 means already processing — recover the jobId from the asset
+              if (res.status === 409) {
+                success = true
+                runpodJobId = ''
+                break
+              }
+              throw new Error(err.error ?? 'Failed to start transcription')
+            }
+            const data = await res.json() as { runpodJobId: string }
+            runpodJobId = data.runpodJobId
+            success = true
+            break
+          } catch (err) {
+            lastError = err instanceof Error ? err : new Error(String(err))
+          }
+        }
+
+        if (!success) throw lastError
       }
-
-      const { runpodJobId } = await processRes.json() as { runpodJobId: string }
 
       // Step 4: Poll until RunPod transcription completes
       enqueueSnackbar('File uploaded — transcribing audio…', { variant: 'info' })
-      await pollUploadStatus(assetId, runpodJobId)
+      await pollUploadStatus(assetId!, runpodJobId!)
 
       setState(prev => ({
         ...prev,
-        trainingSamples: [...prev.trainingSamples, { file, fileId: assetId }],
+        trainingSamples: [...prev.trainingSamples, { file, fileId: assetId! }],
         isUploading: false,
       }))
 
