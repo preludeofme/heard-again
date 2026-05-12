@@ -143,12 +143,15 @@ def _handle_synthesize_batch(req: SynthesizeBatchInput) -> dict[str, Any]:
             last_secs = round(time.time() - t_sent, 2)
             sentence_paths.append(out_path)
 
-            runpod.serverless.progress({
-                "type": "progress",
-                "sentencesDone": i + 1,
-                "sentencesTotal": total,
-                "lastSentenceSeconds": last_secs,
-            })
+            try:
+                runpod.serverless.progress({
+                    "type": "progress",
+                    "sentencesDone": i + 1,
+                    "sentencesTotal": total,
+                    "lastSentenceSeconds": last_secs,
+                })
+            except AttributeError:
+                pass  # SDK version doesn't expose serverless.progress; client falls back to polling
 
         combined_path = job_dir / f"combined.{DEFAULT_AUDIO_FORMAT}"
         all_audio: list[Any] = []
