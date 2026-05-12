@@ -187,7 +187,7 @@ export const productionSecurityConfig: SecurityHeadersConfig = {
       'style-src': ["'self'"], // No unsafe-inline in production
       'img-src': ["'self'", 'data:', 'https:'],
       'font-src': ["'self'", 'data:'],
-      'connect-src': ["'self'"], // Only same-origin in production
+      'connect-src': ["'self'", 'https://*.r2.cloudflarestorage.com'],
       'frame-ancestors': ["'none'"],
       'base-uri': ["'self'"],
       'form-action': ["'self'"],
