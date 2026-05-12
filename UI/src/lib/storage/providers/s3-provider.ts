@@ -110,14 +110,7 @@ export class S3StorageProvider implements StorageProvider {
     if (this.publicUrlBase) {
       return `${this.publicUrlBase}/${storagePath}`
     }
-
-    // For AWS S3, construct the standard URL
-    if (!this.publicUrlBase) {
-      return `https://${this.bucket}.s3.${this.region}.amazonaws.com/${storagePath}`
-    }
-
-    // For custom endpoints (like R2), construct the URL
-    return `${storagePath}`
+    return this.getPresignedDownloadUrl(storagePath)
   }
 
   async getFile(storagePath: string): Promise<Buffer> {

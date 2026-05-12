@@ -11,7 +11,7 @@
 - [x] Neon project/database created.
 - [x] Cloudflare R2 bucket created.
 - [x] Upstash Redis database created.
-- [ ] RunPod Serverless endpoint created (Qwen3-TTS).
+- [x] RunPod Serverless endpoint created (Qwen3-TTS).
 - [ ] Resend account/API key ready.
 
 ## 2) Manual secrets/env mapping
