@@ -93,11 +93,11 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       })
     }
 
-    // 2.5 Register with Audio Processing Service (Chat Service)
+    // 2.5 Register with Audio Processing Service (Chat Service) — skip if not configured
     let audioProcessingId: string | undefined = undefined
-    const chatServiceUrl = process.env.CHAT_SERVICE_URL || 'http://localhost:4778'
-    
-    try {
+    const chatServiceUrl = process.env.CHAT_SERVICE_URL
+
+    if (chatServiceUrl && !chatServiceUrl.includes('localhost') && !chatServiceUrl.includes('127.0.0.1')) try {
       const registerResponse = await fetch(`${chatServiceUrl}/api/audio/uploads`, {
         method: 'POST',
         headers: {
