@@ -724,3 +724,6 @@ export default function FamilyMergePage() {
     </>
   )
 }
+
+
+export async function getServerSideProps() { return { props: {} } }

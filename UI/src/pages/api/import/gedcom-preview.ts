@@ -16,7 +16,7 @@ export const config = {
   },
 }
 
-const IMPORT_DIR = path.join(process.cwd(), 'imports')
+const IMPORT_DIR = path.join('/tmp', 'heard-again-imports')
 
 const ALLOWED_GEDCOM_MIME_TYPES = [
   'text/plain',

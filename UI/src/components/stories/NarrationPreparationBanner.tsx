@@ -1,4 +1,3 @@
-'use client'
 
 import { Box, Typography, Button, CircularProgress, Alert } from '@mui/material'
 import { AutoFixHigh as MagicIcon, Refresh as RefreshIcon, Warning as StaleIcon } from '@mui/icons-material'

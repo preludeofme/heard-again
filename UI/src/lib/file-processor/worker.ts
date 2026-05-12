@@ -21,7 +21,11 @@ export async function processFileInSandbox(
   job: ProcessingJob
 ): Promise<ProcessingResult> {
   const startTime = Date.now()
-  
+
+  if (process.env.VERCEL === '1') {
+    return { success: false, error: 'Sandbox processing unavailable on Vercel', processingTime: Date.now() - startTime }
+  }
+
   return new Promise((resolve) => {
     // Use restricted child process for sandboxing
     const scriptPath = path.join(__dirname, 'sandbox-script.js')

@@ -404,3 +404,6 @@ export default function PublicContributePage() {
     </Layout>
   )
 }
+
+
+export async function getServerSideProps() { return { props: {} } }

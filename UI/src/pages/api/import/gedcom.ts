@@ -16,7 +16,7 @@ export const config = {
   },
 }
 
-const IMPORT_DIR = path.join(process.cwd(), 'imports')
+const IMPORT_DIR = path.join('/tmp', 'heard-again-imports')
 
 // Allowed MIME types for GEDCOM files
 const ALLOWED_GEDCOM_MIME_TYPES = [
@@ -46,6 +46,7 @@ async function importGedcom(req: NextApiRequest, res: NextApiResponse) {
     })
 
     if (!asset) return errorResponse(res, 'Asset not found', 404)
+    if (!importQueue) return errorResponse(res, 'Import queue unavailable in this environment', 503)
 
     const importJob = await prisma.importJob.create({
       data: {
@@ -152,6 +153,7 @@ async function importGedcom(req: NextApiRequest, res: NextApiResponse) {
   })
 
   // Enqueue the background job
+  if (!importQueue) return errorResponse(res, 'Import queue unavailable in this environment', 503)
   await importQueue.add(`gedcom-import-${importJob.id}`, {
     familyspaceId: user.familyspaceId,
     userId: user.id,

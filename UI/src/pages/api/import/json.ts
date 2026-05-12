@@ -15,7 +15,7 @@ export const config = {
   },
 }
 
-const IMPORT_DIR = path.join(process.cwd(), 'imports')
+const IMPORT_DIR = path.join('/tmp', 'heard-again-imports')
 
 // Allowed MIME types for JSON import
 const ALLOWED_JSON_MIME_TYPES = [

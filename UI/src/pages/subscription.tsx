@@ -513,3 +513,6 @@ function FeatureListItem({
     </ListItem>
   )
 }
+
+
+export async function getServerSideProps() { return { props: {} } }

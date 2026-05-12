@@ -45,7 +45,7 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse) {
 
     // We need to parse form first to get fields (like personId/subjectId)
     // But formidable needs a path. We'll use a generic temp dir for unauthenticated uploads.
-    const baseTempDir = path.join(process.cwd(), 'temp-uploads')
+    const baseTempDir = path.join('/tmp', 'heard-again-uploads')
     const sessionTempDir = user ? user.familyspaceId : 'public-' + uuidv4()
     tempDir = path.join(baseTempDir, sessionTempDir)
     await fs.promises.mkdir(tempDir, { recursive: true })

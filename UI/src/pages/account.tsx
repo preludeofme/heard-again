@@ -682,3 +682,6 @@ export default function AccountPage() {
     </>
   )
 }
+
+
+export async function getServerSideProps() { return { props: {} } }

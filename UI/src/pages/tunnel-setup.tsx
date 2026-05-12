@@ -650,3 +650,6 @@ export default function TunnelSetup() {
     </>
   )
 }
+
+
+export async function getServerSideProps() { return { props: {} } }

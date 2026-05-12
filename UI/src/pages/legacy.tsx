@@ -58,3 +58,6 @@ export default function MemoriesPage() {
     </>
   )
 }
+
+
+export async function getServerSideProps() { return { props: {} } }

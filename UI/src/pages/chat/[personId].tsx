@@ -310,3 +310,5 @@ export default function ChatPage() {
     </Layout>
   )
 }
+
+export async function getServerSideProps() { return { props: {} } }

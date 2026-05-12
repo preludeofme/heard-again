@@ -19,3 +19,6 @@ export default function StoriesRedirect() {
 
   return null
 }
+
+
+export async function getServerSideProps() { return { props: {} } }

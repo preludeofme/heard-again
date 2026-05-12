@@ -398,3 +398,6 @@ export default function PrivacyPage() {
     </>
   )
 }
+
+
+export async function getServerSideProps() { return { props: {} } }

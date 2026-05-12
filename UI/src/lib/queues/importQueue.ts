@@ -1,21 +1,25 @@
 import { Queue, Worker, Job } from 'bullmq'
-import { redis } from '../redis-client'
+import { getRedisConnection } from '../redis-client'
 import { gedcomImportService } from '@/server/services/gedcom/GedcomImportService'
 import { logger } from '../logger'
 
 const QUEUE_NAME = 'import-queue'
 
-export const importQueue = new Queue(QUEUE_NAME, {
-  connection: redis,
-  defaultJobOptions: {
-    attempts: 3,
-    backoff: {
-      type: 'exponential',
-      delay: 5000,
-    },
-    removeOnComplete: true,
-  },
-})
+const connection = getRedisConnection()
+
+export const importQueue = connection
+  ? new Queue(QUEUE_NAME, {
+      connection,
+      defaultJobOptions: {
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 5000,
+        },
+        removeOnComplete: true,
+      },
+    })
+  : null
 
 export interface ImportJobData {
   familyspaceId: string
@@ -33,6 +37,12 @@ export interface ImportJobData {
 }
 
 export function startImportWorker() {
+  const conn = getRedisConnection()
+  if (!conn) {
+    logger.warn('[importQueue] Redis not configured — import worker disabled')
+    return null
+  }
+
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job<ImportJobData>) => {
@@ -46,12 +56,13 @@ export function startImportWorker() {
           throw new Error(`Unsupported import type: ${importType}`)
         }
         logger.info(`Import job ${job.id} completed successfully`)
-      } catch (error: any) {
-        logger.error(`Import job ${job.id} failed: ${error.message}`)
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : String(error)
+        logger.error(`Import job ${job.id} failed: ${message}`)
         throw error
       }
     },
-    { connection: redis }
+    { connection: conn }
   )
 
   worker.on('failed', (job, err) => {

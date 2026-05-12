@@ -67,3 +67,4 @@ UI/test-layout*.ts
 tfplan*
 .terraform.lock.hcl
 *.tfvars
+.vercel

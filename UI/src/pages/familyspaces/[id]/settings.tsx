@@ -562,3 +562,5 @@ export default function FamilyspaceSettingsPage() {
     </Layout>
   )
 }
+
+export async function getServerSideProps() { return { props: {} } }

@@ -473,3 +473,6 @@ export default function ResetPasswordPage() {
     </Box>
   )
 }
+
+
+export async function getServerSideProps() { return { props: {} } }

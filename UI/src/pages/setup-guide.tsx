@@ -248,3 +248,6 @@ export default function SelfHostingTutorial() {
     </>
   )
 }
+
+
+export async function getServerSideProps() { return { props: {} } }

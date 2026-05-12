@@ -324,3 +324,6 @@ export default function OnboardingPage() {
     </Box>
   )
 }
+
+
+export async function getServerSideProps() { return { props: {} } }

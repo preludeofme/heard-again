@@ -676,3 +676,6 @@ function CodeBlock({ children }: { children: ReactNode }) {
     </Paper>
   )
 }
+
+
+export async function getServerSideProps() { return { props: {} } }

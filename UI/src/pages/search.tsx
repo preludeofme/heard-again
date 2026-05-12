@@ -491,3 +491,6 @@ export default function SearchPage() {
     </>
   )
 }
+
+
+export async function getServerSideProps() { return { props: {} } }

@@ -265,3 +265,6 @@ export default function TermsOfLegacyPage() {
     </Box>
   )
 }
+
+
+export async function getServerSideProps() { return { props: {} } }

@@ -47,6 +47,10 @@ export class AudioOptimizer {
       let outputMimeType = mimeType
       let optimizationMethod = 'none'
 
+      if (process.env.VERCEL === '1') {
+        return { optimizedFile: file, originalSize, optimizedSize: originalSize, compressionRatio: 1, mimeType, optimizationMethod: 'skipped' }
+      }
+
       if (TRANSCODE_TO_MP3.has(mimeType)) {
         optimizedBuffer = await this.convertToMp3(file, quality)
         outputMimeType = 'audio/mpeg'

@@ -19,10 +19,15 @@ export interface NarrationRenderJobProgress {
   message?: string
 }
 
-const REDIS_URL = process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL || 'redis://localhost:6379'
+const REDIS_URL = process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL
+
+export function isQueueAvailable(): boolean {
+  return !!REDIS_URL
+}
 
 let sharedConnection: IORedis | null = null
 export function getQueueConnection(): IORedis {
+  if (!REDIS_URL) throw new Error('Redis is not configured — narration queue unavailable')
   if (!sharedConnection) {
     sharedConnection = new IORedis(REDIS_URL, {
       maxRetriesPerRequest: null,
@@ -66,6 +71,7 @@ export async function enqueueNarrationRender(
   data: NarrationRenderJobData,
   options: JobsOptions = {}
 ): Promise<string> {
+  if (!isQueueAvailable()) throw new Error('Narration queue is not available in this environment')
   const queue = getNarrationQueue()
   const jobId = narrationDedupeKey(data.storyId, data.voiceProfileId)
 

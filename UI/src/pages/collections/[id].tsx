@@ -450,3 +450,7 @@ export default function CollectionDetailPage() {
     </>
   )
 }
+
+export async function getServerSideProps() {
+  return { props: {} }
+}

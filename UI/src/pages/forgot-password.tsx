@@ -300,3 +300,6 @@ export default function ForgotPasswordPage() {
     </Box>
   )
 }
+
+
+export async function getServerSideProps() { return { props: {} } }

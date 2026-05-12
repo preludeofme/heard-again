@@ -25,3 +25,6 @@ export default function TimelineRedirect() {
 
   return null
 }
+
+
+export async function getServerSideProps() { return { props: {} } }

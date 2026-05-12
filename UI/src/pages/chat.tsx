@@ -185,3 +185,6 @@ export default function ChatListPage() {
     </Layout>
   )
 }
+
+
+export async function getServerSideProps() { return { props: {} } }

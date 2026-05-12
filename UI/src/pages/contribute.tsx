@@ -306,3 +306,6 @@ export default function ContributePage() {
     </>
   )
 }
+
+
+export async function getServerSideProps() { return { props: {} } }

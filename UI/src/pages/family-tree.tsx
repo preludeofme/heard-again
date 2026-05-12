@@ -641,3 +641,6 @@ export default function FamilyTree() {
     </>
   )
 }
+
+
+export async function getServerSideProps() { return { props: {} } }

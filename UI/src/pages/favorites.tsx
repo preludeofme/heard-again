@@ -277,3 +277,6 @@ export default function FavoritesPage() {
     </>
   )
 }
+
+
+export async function getServerSideProps() { return { props: {} } }

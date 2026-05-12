@@ -434,3 +434,5 @@ export default function StoryEditPage() {
     </>
   )
 }
+
+export async function getServerSideProps() { return { props: {} } }

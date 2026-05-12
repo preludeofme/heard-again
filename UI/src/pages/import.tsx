@@ -244,3 +244,6 @@ export default function ImportPage() {
     </>
   )
 }
+
+
+export async function getServerSideProps() { return { props: {} } }

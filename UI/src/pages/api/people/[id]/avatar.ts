@@ -44,7 +44,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Use a temp directory for formidable — cleaned up after upload
-    const tempDir = path.join(process.cwd(), 'temp-uploads', 'avatars', user.familyspaceId)
+    const tempDir = path.join('/tmp', 'heard-again-uploads', 'avatars', user.familyspaceId)
     fs.mkdirSync(tempDir, { recursive: true })
 
     const form = formidable({

@@ -507,3 +507,6 @@ export default function PrivacyPolicyPage() {
     </Box>
   )
 }
+
+
+export async function getServerSideProps() { return { props: {} } }

@@ -374,3 +374,6 @@ function FeatureRow({ icon, label, included }: { icon: React.ReactNode; label: s
     </Box>
   )
 }
+
+
+export async function getServerSideProps() { return { props: {} } }
