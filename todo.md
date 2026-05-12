@@ -1,13 +1,9 @@
-[x] move search in family tree to inside the toolbar
-[x] Redesign family tree nodes
-    [x] Single compact design with icons
-    [x] Basic info display (Name, Birth, Death)
-    [x] Larger node size for readability
-    [x] Color-coded hierarchy (Selected, Self, 3-level repeating palette)
-[x] Full-screen mobile family tree experience
-    [x] Edge-to-edge canvas (removed padding/border-radius)
-    [x] Compact mobile toolbar with search overlay
-    [x] Corrected height calculations (100dvh)
-[x] Increase token expiration to 1 day
-[x] Fix story filtering in family tree node modal
-[x] Fix NEXTAUTH_SECRET initialization error in CSRF security layer
+[ ] email sign up csrf
+[ ] Need to add a +Add to the family tree nodes so the user can add a new family member from that node 
+[ ] need toggle for using the narration version of the story or the original for the voice generation. That way someone can choose to generate/listen to each one if they want
+[ ] Look into vercel's malware scanner if there is one as alternative to CLAMAV
+
+
+
+
+
