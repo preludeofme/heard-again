@@ -37,6 +37,12 @@ export type SynthesisEvent = SynthesisProgressEvent | SynthesisCompleteEvent | S
 export interface UploadReferenceJob {
   jobId: string
   status: 'processing' | 'complete' | 'failed'
+  /** Raw RunPod status — distinguishes IN_QUEUE (cold start) from IN_PROGRESS (running) */
+  runpodStatus?: string
+  /** Milliseconds the job spent waiting in queue before a worker picked it up */
+  delayTime?: number
+  /** Milliseconds the job has been actively executing on a worker */
+  executionTime?: number
   result?: UploadReferenceResult
   error?: string
 }

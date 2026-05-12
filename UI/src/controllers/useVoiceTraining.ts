@@ -153,6 +153,9 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
           complete?: boolean
           failed?: boolean
           status?: string
+          runpodStatus?: string
+          delayTime?: number
+          executionTime?: number
           data?: Record<string, unknown>
           error?: string
         }
@@ -161,6 +164,13 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
 
         if (status.complete) return status.data ?? { assetId }
         if (status.failed) throw new Error(status.error ?? 'Transcription failed')
+
+        if (status.runpodStatus === 'IN_QUEUE') {
+          enqueueSnackbar('Waiting for a transcription worker…', { variant: 'info', key: 'upload-progress', preventDuplicate: true })
+        } else if (status.runpodStatus === 'IN_PROGRESS') {
+          const elapsed = status.executionTime ? ` (${Math.round(status.executionTime / 1000)}s)` : ''
+          enqueueSnackbar(`Transcribing audio${elapsed}…`, { variant: 'info', key: 'upload-progress', preventDuplicate: true })
+        }
       } catch (err) {
         if (err instanceof TypeError) {
           // Network failure — navigator.onLine check on next iteration will handle it

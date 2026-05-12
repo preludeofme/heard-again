@@ -24,6 +24,8 @@ interface RunPodJobResponse {
   status: RunPodStatus
   output?: unknown
   error?: string
+  delayTime?: number
+  executionTime?: number
 }
 
 export class RunPodTTSProvider implements TTSProvider {
@@ -171,15 +173,33 @@ export class RunPodTTSProvider implements TTSProvider {
     const job = (await res.json()) as RunPodJobResponse
 
     switch (job.status) {
-      case 'COMPLETED':
+      case 'COMPLETED': {
+        const output = job.output as Record<string, unknown> | null | undefined
+        logger.info('[RunPodTTSProvider] checkUploadJob COMPLETED output:', JSON.stringify(output))
+        const filePath = (output?.filePath ?? output?.file_path) as string | undefined
+        const fileId = (output?.fileId ?? output?.file_id) as string | undefined
+        const fileName = (output?.fileName ?? output?.file_name) as string | undefined
+        const duration = (output?.duration ?? output?.durationSeconds) as number | undefined
+        const transcript = (output?.transcript ?? null) as string | null
+
+        if (!filePath) {
+          logger.error('[RunPodTTSProvider] COMPLETED job missing filePath — treating as failed', JSON.stringify(output))
+          return { jobId, status: 'failed', error: 'Job completed but returned no file path' }
+        }
+
         return {
           jobId,
           status: 'complete',
           result: {
-            ...(job.output as Omit<UploadReferenceResult, 'storageType'>),
+            fileId: fileId ?? jobId,
+            filePath,
+            fileName: fileName ?? '',
+            duration: duration ?? 0,
+            transcript,
             storageType: 'CLOUDFLARE_R2',
           },
         }
+      }
       case 'FAILED':
         return { jobId, status: 'failed', error: job.error ?? 'unknown error' }
       case 'CANCELLED':
@@ -187,7 +207,13 @@ export class RunPodTTSProvider implements TTSProvider {
       case 'TIMED_OUT':
         return { jobId, status: 'failed', error: 'TTS_JOB_TIMEOUT: job timed out on RunPod' }
       default:
-        return { jobId, status: 'processing' }
+        return {
+          jobId,
+          status: 'processing',
+          runpodStatus: job.status,
+          delayTime: job.delayTime,
+          executionTime: job.executionTime,
+        }
     }
   }
 

@@ -99,7 +99,12 @@ const handler = async (req: NextApiRequest, res: NextApiResponse): Promise<void>
       return
     }
 
-    res.status(200).json({ status: 'processing' })
+    res.status(200).json({
+      status: 'processing',
+      runpodStatus: jobStatus.runpodStatus,
+      delayTime: jobStatus.delayTime,
+      executionTime: jobStatus.executionTime,
+    })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Status check failed'
     logger.error('[API] upload-status error:', message)
