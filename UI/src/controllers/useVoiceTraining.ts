@@ -43,6 +43,26 @@ interface VoiceTrainingActions {
   resetTraining: () => void
 }
 
+// Waits until navigator.onLine is true, or rejects after timeoutMs.
+function waitForOnline(timeoutMs = 60_000): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (typeof navigator === 'undefined' || navigator.onLine) {
+      resolve()
+      return
+    }
+    const timer = setTimeout(() => {
+      window.removeEventListener('online', handleOnline)
+      reject(new Error('OFFLINE_TIMEOUT'))
+    }, timeoutMs)
+
+    const handleOnline = () => {
+      clearTimeout(timer)
+      resolve()
+    }
+    window.addEventListener('online', handleOnline, { once: true })
+  })
+}
+
 export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
   const [state, setState] = useState<VoiceTrainingState>({
     trainingSamples: [],
@@ -56,7 +76,7 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
     estimatedStartTime: null,
   })
 
-  const { enqueueSnackbar } = useSnackbar()
+  const { enqueueSnackbar, closeSnackbar } = useSnackbar()
   const { fetchToken } = useCSRF()
 
   const resetTraining = useCallback(() => {
@@ -80,32 +100,72 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
   ): Promise<Record<string, unknown>> => {
     const POLL_INTERVAL_MS = 3000
     const TIMEOUT_MS = 10 * 60 * 1000
+    const OFFLINE_KEY = 'upload-offline-warn'
     const deadline = Date.now() + TIMEOUT_MS
+    let offlineWarningActive = false
 
     while (Date.now() < deadline) {
-      await new Promise<void>(resolve => setTimeout(resolve, POLL_INTERVAL_MS))
+      // Pause while offline; wait up to the remaining deadline or 60s, whichever is less
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        if (!offlineWarningActive) {
+          enqueueSnackbar('Connection lost — will resume when back online', {
+            variant: 'warning',
+            persist: true,
+            key: OFFLINE_KEY,
+          })
+          offlineWarningActive = true
+        }
 
-      const response = await fetch(
-        `/api/voice/upload-status?assetId=${encodeURIComponent(assetId)}&runpodJobId=${encodeURIComponent(runpodJobId)}`,
-        { credentials: 'include' }
-      )
+        const remaining = deadline - Date.now()
+        const outcome = await waitForOnline(Math.min(remaining, 60_000))
+          .then(() => 'online' as const)
+          .catch(() => 'timeout' as const)
 
-      if (!response.ok) throw new Error('Status check failed')
+        closeSnackbar(OFFLINE_KEY)
+        offlineWarningActive = false
 
-      const status = await response.json() as {
-        complete?: boolean
-        failed?: boolean
-        status?: string
-        data?: Record<string, unknown>
-        error?: string
+        if (outcome === 'timeout') {
+          throw new Error(
+            'Connection lost. Please tap "Retry" to check if your audio was processed.'
+          )
+        }
+        enqueueSnackbar('Back online — resuming…', { variant: 'info' })
       }
 
-      if (status.complete) return status.data ?? { assetId }
-      if (status.failed) throw new Error(status.error ?? 'Transcription failed')
+      await new Promise<void>(resolve => setTimeout(resolve, POLL_INTERVAL_MS))
+
+      try {
+        const response = await fetch(
+          `/api/voice/upload-status?assetId=${encodeURIComponent(assetId)}&runpodJobId=${encodeURIComponent(runpodJobId)}`,
+          { credentials: 'include' }
+        )
+
+        if (!response.ok) {
+          // Treat non-OK as transient (5xx, etc.) — keep polling
+          continue
+        }
+
+        const status = await response.json() as {
+          complete?: boolean
+          failed?: boolean
+          status?: string
+          data?: Record<string, unknown>
+          error?: string
+        }
+
+        if (status.complete) return status.data ?? { assetId }
+        if (status.failed) throw new Error(status.error ?? 'Transcription failed')
+      } catch (err) {
+        if (err instanceof TypeError) {
+          // Network failure — navigator.onLine check on next iteration will handle it
+          continue
+        }
+        throw err
+      }
     }
 
     throw new Error('Voice sample transcription timed out')
-  }, [])
+  }, [enqueueSnackbar, closeSnackbar])
 
   const uploadTrainingSample = useCallback(async (file: File, _personId?: string) => {
     setState(prev => ({ ...prev, isUploading: true }))
@@ -113,17 +173,18 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
     try {
       const csrfToken = await fetchToken()
 
-      // Step 1: Request presigned PUT URL — retried on transient network changes
-      let assetId: string
-      let uploadUrl: string
+      // Step 1: Request presigned PUT URL
+      let assetId!: string
+      let uploadUrl!: string
       {
-        const MAX_RETRIES = 3
+        const MAX_RETRIES = 4
         let lastError: Error = new Error('Upload URL request failed')
-        let success = false
 
         for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
           if (attempt > 0) {
-            await new Promise<void>(resolve => setTimeout(resolve, 1000 * attempt))
+            // Wait for connectivity before retrying
+            await waitForOnline(30_000).catch(() => {})
+            await new Promise<void>(resolve => setTimeout(resolve, 500))
           }
           try {
             const res = await fetch('/api/voice/request-upload', {
@@ -133,104 +194,93 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
               body: JSON.stringify({ filename: file.name, mimeType: file.type, fileSize: file.size }),
             })
             if (!res.ok) {
-              const err = await res.json().catch(() => ({})) as { error?: string }
-              throw new Error(err.error ?? 'Failed to request upload URL')
+              const body = await res.json().catch(() => ({})) as { error?: string }
+              throw new Error(body.error ?? 'Failed to request upload URL')
             }
             const data = await res.json() as { assetId: string; uploadUrl: string }
             assetId = data.assetId
             uploadUrl = data.uploadUrl
-            success = true
             break
           } catch (err) {
             lastError = err instanceof Error ? err : new Error(String(err))
+            if (attempt === MAX_RETRIES - 1) throw lastError
           }
         }
-
-        if (!success) throw lastError
       }
 
-      // Step 2: PUT directly to R2 — bypasses Vercel entirely, no 4.5MB limit
+      // Step 2: PUT directly to R2 — no Vercel body size limit
       enqueueSnackbar('Uploading audio…', { variant: 'info' })
       {
-        const MAX_RETRIES = 3
-        let lastError: Error = new Error('R2 upload failed')
-        let success = false
+        const MAX_RETRIES = 4
+        let lastError: Error = new Error('Storage upload failed')
 
         for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
           if (attempt > 0) {
-            await new Promise<void>(resolve => setTimeout(resolve, 1000 * attempt))
+            await waitForOnline(30_000).catch(() => {})
+            await new Promise<void>(resolve => setTimeout(resolve, 500))
           }
           try {
-            const res = await fetch(uploadUrl!, {
+            const res = await fetch(uploadUrl, {
               method: 'PUT',
               headers: { 'Content-Type': file.type },
               body: file,
             })
             if (!res.ok) throw new Error(`Storage upload failed (${res.status})`)
-            success = true
             break
           } catch (err) {
             lastError = err instanceof Error ? err : new Error(String(err))
+            if (attempt === MAX_RETRIES - 1) throw lastError
           }
         }
-
-        if (!success) throw lastError
       }
 
       // Step 3: Kick off RunPod transcription job
-      let runpodJobId: string
+      let runpodJobId!: string
       {
-        const MAX_RETRIES = 3
+        const MAX_RETRIES = 4
         let lastError: Error = new Error('Failed to start transcription')
-        let success = false
 
         for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
           if (attempt > 0) {
-            await new Promise<void>(resolve => setTimeout(resolve, 1000 * attempt))
+            await waitForOnline(30_000).catch(() => {})
+            await new Promise<void>(resolve => setTimeout(resolve, 500))
           }
           try {
             const res = await fetch('/api/voice/process-upload', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken },
               credentials: 'include',
-              body: JSON.stringify({ assetId: assetId! }),
+              body: JSON.stringify({ assetId }),
             })
             if (!res.ok) {
-              const err = await res.json().catch(() => ({})) as { error?: string }
-              // 409 means already processing — recover the jobId from the asset
-              if (res.status === 409) {
-                success = true
-                runpodJobId = ''
-                break
-              }
-              throw new Error(err.error ?? 'Failed to start transcription')
+              const body = await res.json().catch(() => ({})) as { error?: string }
+              throw new Error(body.error ?? 'Failed to start transcription')
             }
             const data = await res.json() as { runpodJobId: string }
             runpodJobId = data.runpodJobId
-            success = true
             break
           } catch (err) {
             lastError = err instanceof Error ? err : new Error(String(err))
+            if (attempt === MAX_RETRIES - 1) throw lastError
           }
         }
-
-        if (!success) throw lastError
       }
 
-      // Step 4: Poll until RunPod transcription completes
+      // Step 4: Poll until RunPod transcription completes (resilient to drops)
       enqueueSnackbar('File uploaded — transcribing audio…', { variant: 'info' })
-      await pollUploadStatus(assetId!, runpodJobId!)
+      await pollUploadStatus(assetId, runpodJobId)
 
       setState(prev => ({
         ...prev,
-        trainingSamples: [...prev.trainingSamples, { file, fileId: assetId! }],
+        trainingSamples: [...prev.trainingSamples, { file, fileId: assetId }],
         isUploading: false,
       }))
 
       enqueueSnackbar('Sample uploaded successfully', { variant: 'success' })
     } catch (error) {
       setState(prev => ({ ...prev, isUploading: false }))
-      enqueueSnackbar('Failed to upload sample', { variant: 'error' })
+      const message = error instanceof Error ? error.message : 'Failed to upload sample'
+      enqueueSnackbar(message, { variant: 'error' })
       throw error
     }
   }, [enqueueSnackbar, fetchToken, pollUploadStatus])
@@ -275,7 +325,7 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
 
       const response = await fetch('/api/voice/train', {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'x-csrf-token': csrfToken
         },
@@ -356,7 +406,7 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
       enqueueSnackbar('Failed to cancel training job')
       throw error
     }
-  }, [enqueueSnackbar])
+  }, [enqueueSnackbar, fetchToken])
 
   const preprocessSamples = useCallback(async (options: {
     noiseReduction: boolean
@@ -374,7 +424,7 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
       const csrfToken = await fetchToken()
       const response = await fetch('/api/voice/preprocess', {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'x-csrf-token': csrfToken
         },
@@ -411,7 +461,7 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
       const csrfToken = await fetchToken()
       const response = await fetch('/api/voice/asr', {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'x-csrf-token': csrfToken
         },
@@ -451,7 +501,7 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
       const csrfToken = await fetchToken()
       const response = await fetch('/api/voice/design-and-clone', {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'x-csrf-token': csrfToken
         },
