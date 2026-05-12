@@ -3,6 +3,7 @@ import { getStorageService } from '@/lib/storage/storage-service'
 import type {
   TTSProvider,
   UploadReferenceResult,
+  UploadReferenceJob,
   SynthesisProgressEvent,
   SynthesisCompleteEvent,
   SynthesisEvent,
@@ -128,6 +129,52 @@ export class RunPodTTSProvider implements TTSProvider {
     return {
       ...(completed.output as Omit<UploadReferenceResult, 'storageType'>),
       storageType: 'CLOUDFLARE_R2',
+    }
+  }
+
+  async submitUploadReference(
+    audioBuffer: Buffer,
+    filename: string,
+    mimeType: string,
+    familyspaceId: string
+  ): Promise<{ jobId: string }> {
+    const audioInput = await this.buildAudioInput(audioBuffer, filename, mimeType, familyspaceId)
+    const job = await this.submitJob(
+      { action: 'upload_reference', familyspaceId, ...audioInput },
+      false  // async /run endpoint
+    )
+    return { jobId: job.id }
+  }
+
+  async checkUploadJob(jobId: string): Promise<UploadReferenceJob> {
+    const res = await fetch(
+      `${RUNPOD_BASE}/${RUNPOD_TTS_ENDPOINT_ID}/status/${jobId}`,
+      { headers: this.authHeaders() }
+    )
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '')
+      throw new Error(`RunPod status check failed (${res.status}): ${errText}`)
+    }
+    const job = (await res.json()) as RunPodJobResponse
+
+    switch (job.status) {
+      case 'COMPLETED':
+        return {
+          jobId,
+          status: 'complete',
+          result: {
+            ...(job.output as Omit<UploadReferenceResult, 'storageType'>),
+            storageType: 'CLOUDFLARE_R2',
+          },
+        }
+      case 'FAILED':
+        return { jobId, status: 'failed', error: job.error ?? 'unknown error' }
+      case 'CANCELLED':
+        return { jobId, status: 'failed', error: 'Job was cancelled' }
+      case 'TIMED_OUT':
+        return { jobId, status: 'failed', error: 'TTS_JOB_TIMEOUT: job timed out on RunPod' }
+      default:
+        return { jobId, status: 'processing' }
     }
   }
 

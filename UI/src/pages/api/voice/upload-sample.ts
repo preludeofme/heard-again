@@ -128,47 +128,68 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
     // 3. Forward to TTS service via provider
     const provider = getTTSProvider()
-    const ttsData = await provider.uploadReference(
-      fileBuffer,
-      audioFile.originalFilename ?? 'audio.wav',
-      audioFile.mimetype ?? 'audio/wav',
-      user.familyspaceId
-    )
+    const originalFilename = audioFile.originalFilename ?? 'audio.wav'
+    const mimeType = audioFile.mimetype ?? 'audio/wav'
 
-    // Create Asset record in database with transcript and audioProcessingId
+    // RunPod async path: submit job immediately, return jobId for client polling
+    if (provider.submitUploadReference) {
+      const { jobId } = await provider.submitUploadReference(
+        fileBuffer,
+        originalFilename,
+        mimeType,
+        user.familyspaceId
+      )
+
+      const asset = await prisma.asset.create({
+        data: {
+          familyspaceId: user.familyspaceId,
+          filename: originalFilename,
+          originalName: originalFilename,
+          mimeType,
+          sizeBytes: BigInt(fileBuffer.length),
+          storageType: 'CLOUDFLARE_R2',
+          storagePath: '',  // filled in by upload-status when RunPod completes
+          assetType: 'AUDIO',
+          isAISynthesized: true,
+          processingStatus: 'PROCESSING',
+          uploadedById: user.id,
+          metadata: { runpodJobId: jobId, audioProcessingId },
+        },
+      })
+
+      return res.status(200).json({
+        success: true,
+        data: { assetId: asset.id, runpodJobId: jobId, status: 'processing' },
+        pipeline: { uploaded: true, transcribed: false, stored: false },
+      })
+    }
+
+    // REST provider sync path
+    const ttsData = await provider.uploadReference(fileBuffer, originalFilename, mimeType, user.familyspaceId)
+
     const asset = await prisma.asset.create({
       data: {
         familyspaceId: user.familyspaceId,
         filename: `${ttsData.fileId}.wav`,
-        originalName: ttsData.fileName || audioFile.originalFilename || 'audio.wav',
+        originalName: ttsData.fileName || originalFilename,
         mimeType: 'audio/wav',
         sizeBytes: BigInt(fileBuffer.length),
         storageType: ttsData.storageType,
         storagePath: ttsData.filePath,
         assetType: 'AUDIO',
-        isAISynthesized: true, // Hide from Document Memories
+        isAISynthesized: true,
         durationSeconds: ttsData.duration,
         transcript: ttsData.transcript,
         processingStatus: 'COMPLETED',
         uploadedById: user.id,
-        metadata: {
-          ttsFileId: ttsData.fileId,
-          audioProcessingId, // Link to the processing job
-        },
+        metadata: { ttsFileId: ttsData.fileId, audioProcessingId },
       },
     })
 
     return res.status(200).json({
       success: true,
-      data: {
-        ...ttsData,
-        assetId: asset.id,
-      },
-      pipeline: {
-        uploaded: true,
-        transcribed: !!ttsData.transcript,
-        stored: true,
-      },
+      data: { ...ttsData, assetId: asset.id },
+      pipeline: { uploaded: true, transcribed: !!ttsData.transcript, stored: true },
     })
   } catch (error: any) {
     logger.error('[API] Upload sample error:', error.message)

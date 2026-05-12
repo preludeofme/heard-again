@@ -34,7 +34,24 @@ export interface SynthesisErrorEvent {
 
 export type SynthesisEvent = SynthesisProgressEvent | SynthesisCompleteEvent | SynthesisErrorEvent
 
+export interface UploadReferenceJob {
+  jobId: string
+  status: 'processing' | 'complete' | 'failed'
+  result?: UploadReferenceResult
+  error?: string
+}
+
 export interface TTSProvider {
+  /** Async variant: submit job immediately, poll via checkUploadJob. Optional — RunPod only. */
+  submitUploadReference?(
+    audioBuffer: Buffer,
+    filename: string,
+    mimeType: string,
+    familyspaceId: string
+  ): Promise<{ jobId: string }>
+
+  checkUploadJob?(jobId: string): Promise<UploadReferenceJob>
+
   uploadReference(
     audioBuffer: Buffer,
     filename: string,

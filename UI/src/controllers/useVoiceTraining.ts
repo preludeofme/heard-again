@@ -74,6 +74,39 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
     }))
   }, [])
 
+  const pollUploadStatus = useCallback(async (
+    assetId: string,
+    runpodJobId: string
+  ): Promise<Record<string, unknown>> => {
+    const POLL_INTERVAL_MS = 3000
+    const TIMEOUT_MS = 10 * 60 * 1000
+    const deadline = Date.now() + TIMEOUT_MS
+
+    while (Date.now() < deadline) {
+      await new Promise<void>(resolve => setTimeout(resolve, POLL_INTERVAL_MS))
+
+      const response = await fetch(
+        `/api/voice/upload-status?assetId=${encodeURIComponent(assetId)}&runpodJobId=${encodeURIComponent(runpodJobId)}`,
+        { credentials: 'include' }
+      )
+
+      if (!response.ok) throw new Error('Status check failed')
+
+      const status = await response.json() as {
+        complete?: boolean
+        failed?: boolean
+        status?: string
+        data?: Record<string, unknown>
+        error?: string
+      }
+
+      if (status.complete) return status.data ?? { assetId }
+      if (status.failed) throw new Error(status.error ?? 'Transcription failed')
+    }
+
+    throw new Error('Voice sample transcription timed out')
+  }, [])
+
   const uploadTrainingSample = useCallback(async (file: File, personId?: string) => {
     setState(prev => ({ ...prev, isUploading: true }))
 
@@ -99,11 +132,21 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
       }
 
       const result = await response.json()
-      const uploadData = result.data || result
+      const uploadData = (result.data || result) as {
+        assetId?: string
+        runpodJobId?: string
+        status?: string
+      }
+
+      // RunPod async: poll until transcription completes
+      if (uploadData.status === 'processing' && uploadData.runpodJobId && uploadData.assetId) {
+        enqueueSnackbar('File uploaded — transcribing audio…', { variant: 'info' })
+        await pollUploadStatus(uploadData.assetId, uploadData.runpodJobId)
+      }
 
       const newSample: TrainingSample = {
         file,
-        fileId: uploadData.assetId,
+        fileId: uploadData.assetId ?? '',
       }
 
       setState(prev => ({
@@ -118,7 +161,7 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
       enqueueSnackbar('Failed to upload sample', { variant: 'error' })
       throw error
     }
-  }, [enqueueSnackbar, fetchToken])
+  }, [enqueueSnackbar, fetchToken, pollUploadStatus])
 
   const removeTrainingSample = useCallback((index: number) => {
     setState(prev => ({

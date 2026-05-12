@@ -122,8 +122,7 @@ export class StorageService {
     const extension = originalName.split('.').pop() || ''
     const baseName = originalName.split('.').slice(0, -1).join('.')
     
-    const filename = `${baseName}-${timestamp}-${random}.${extension}`
-    return folder ? `${folder}/${filename}` : filename
+    return `${baseName}-${timestamp}-${random}.${extension}`
   }
 
   private resolveAssetType(mimeType: string): string {
