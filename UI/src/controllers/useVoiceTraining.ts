@@ -107,51 +107,61 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
     throw new Error('Voice sample transcription timed out')
   }, [])
 
-  const uploadTrainingSample = useCallback(async (file: File, personId?: string) => {
+  const uploadTrainingSample = useCallback(async (file: File, _personId?: string) => {
     setState(prev => ({ ...prev, isUploading: true }))
 
     try {
       const csrfToken = await fetchToken()
-      const formData = new FormData()
-      formData.append('audio', file)
-      if (personId) {
-        formData.append('personId', personId)
-      }
 
-      const response = await fetch('/api/voice/upload-sample', {
+      // Step 1: Request presigned PUT URL — tiny JSON request, no body size limit issues
+      const requestRes = await fetch('/api/voice/request-upload', {
         method: 'POST',
-        headers: {
-          'x-csrf-token': csrfToken
-        },
+        headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken },
         credentials: 'include',
-        body: formData,
+        body: JSON.stringify({ filename: file.name, mimeType: file.type, fileSize: file.size }),
       })
 
-      if (!response.ok) {
-        throw new Error('Upload failed')
+      if (!requestRes.ok) {
+        const err = await requestRes.json().catch(() => ({})) as { error?: string }
+        throw new Error(err.error ?? 'Failed to request upload URL')
       }
 
-      const result = await response.json()
-      const uploadData = (result.data || result) as {
-        assetId?: string
-        runpodJobId?: string
-        status?: string
+      const { assetId, uploadUrl } = await requestRes.json() as { assetId: string; uploadUrl: string }
+
+      // Step 2: PUT directly to R2 — bypasses Vercel entirely, no 4.5MB limit
+      enqueueSnackbar('Uploading audio…', { variant: 'info' })
+      const r2Res = await fetch(uploadUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': file.type },
+        body: file,
+      })
+
+      if (!r2Res.ok) {
+        throw new Error('Failed to upload audio to storage')
       }
 
-      // RunPod async: poll until transcription completes
-      if (uploadData.status === 'processing' && uploadData.runpodJobId && uploadData.assetId) {
-        enqueueSnackbar('File uploaded — transcribing audio…', { variant: 'info' })
-        await pollUploadStatus(uploadData.assetId, uploadData.runpodJobId)
+      // Step 3: Kick off RunPod transcription job
+      const processRes = await fetch('/api/voice/process-upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken },
+        credentials: 'include',
+        body: JSON.stringify({ assetId }),
+      })
+
+      if (!processRes.ok) {
+        const err = await processRes.json().catch(() => ({})) as { error?: string }
+        throw new Error(err.error ?? 'Failed to start transcription')
       }
 
-      const newSample: TrainingSample = {
-        file,
-        fileId: uploadData.assetId ?? '',
-      }
+      const { runpodJobId } = await processRes.json() as { runpodJobId: string }
+
+      // Step 4: Poll until RunPod transcription completes
+      enqueueSnackbar('File uploaded — transcribing audio…', { variant: 'info' })
+      await pollUploadStatus(assetId, runpodJobId)
 
       setState(prev => ({
         ...prev,
-        trainingSamples: [...prev.trainingSamples, newSample],
+        trainingSamples: [...prev.trainingSamples, { file, fileId: assetId }],
         isUploading: false,
       }))
 

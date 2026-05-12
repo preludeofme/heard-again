@@ -50,6 +50,14 @@ export interface TTSProvider {
     familyspaceId: string
   ): Promise<{ jobId: string }>
 
+  /** URL variant: file already in R2; submit RunPod job with a presigned GET URL. Optional — RunPod only. */
+  submitUploadReferenceFromUrl?(
+    audioUrl: string,
+    filename: string,
+    mimeType: string,
+    familyspaceId: string
+  ): Promise<{ jobId: string }>
+
   checkUploadJob?(jobId: string): Promise<UploadReferenceJob>
 
   uploadReference(

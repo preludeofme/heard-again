@@ -132,6 +132,19 @@ export class RunPodTTSProvider implements TTSProvider {
     }
   }
 
+  async submitUploadReferenceFromUrl(
+    audioUrl: string,
+    filename: string,
+    mimeType: string,
+    familyspaceId: string
+  ): Promise<{ jobId: string }> {
+    const job = await this.submitJob(
+      { action: 'upload_reference', familyspaceId, audioUrl, mimeType, filename },
+      false
+    )
+    return { jobId: job.id }
+  }
+
   async submitUploadReference(
     audioBuffer: Buffer,
     filename: string,
