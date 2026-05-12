@@ -117,7 +117,7 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
         }
 
         const remaining = deadline - Date.now()
-        const outcome = await waitForOnline(Math.min(remaining, 60_000))
+        const outcome = await waitForOnline(remaining)
           .then(() => 'online' as const)
           .catch(() => 'timeout' as const)
 
@@ -125,11 +125,9 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
         offlineWarningActive = false
 
         if (outcome === 'timeout') {
-          throw new Error(
-            'Connection lost. Please tap "Retry" to check if your audio was processed.'
-          )
+          throw new Error('Upload timed out. Please try uploading your audio sample again.')
         }
-        enqueueSnackbar('Back online — resuming…', { variant: 'info' })
+        // Dismiss of the persistent warning is sufficient feedback — no extra toast needed
       }
 
       await new Promise<void>(resolve => setTimeout(resolve, POLL_INTERVAL_MS))
