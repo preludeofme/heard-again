@@ -6,6 +6,7 @@ import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-h
 import { validateFileContent } from '@/lib/security/file-validator'
 import { scanAndQuarantineFile } from '@/lib/security/malware-scanner'
 import fs from 'fs/promises'
+import os from 'os'
 import path from 'path'
 import formidable from 'formidable'
 import { v4 as uuidv4 } from 'uuid'
@@ -42,7 +43,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     await requireFamilyspaceRole(user.id, user.familyspaceId, 'EDITOR')
 
     // Create secure temporary upload directory
-    tempDir = path.join(process.cwd(), 'temp-uploads', 'voice-samples', user.familyspaceId)
+    tempDir = path.join(os.tmpdir(), 'voice-samples', user.familyspaceId)
     await fs.mkdir(tempDir, { recursive: true })
 
     const form = formidable({
