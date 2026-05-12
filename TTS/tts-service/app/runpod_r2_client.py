@@ -36,3 +36,11 @@ class R2Client:
             output_key,
             ExtraArgs={"ContentType": content_type or "application/octet-stream"},
         )
+
+    def download_file_bytes(self, object_key: str) -> bytes:
+        response = self.client.get_object(Bucket=self.bucket_name, Key=object_key)
+        return response["Body"].read()
+
+    def get_object_size(self, object_key: str) -> int:
+        response = self.client.head_object(Bucket=self.bucket_name, Key=object_key)
+        return response["ContentLength"]

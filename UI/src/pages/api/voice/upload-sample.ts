@@ -1,6 +1,6 @@
 import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { TTS_SERVICE_URL } from '@/lib/tts-client'
+import { getTTSProvider } from '@/lib/tts'
 import { prisma } from '@/lib/prisma'
 import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 import { validateFileContent } from '@/lib/security/file-validator'
@@ -10,10 +10,6 @@ import os from 'os'
 import path from 'path'
 import formidable from 'formidable'
 import { v4 as uuidv4 } from 'uuid'
-const TTS_SERVICE_TOKEN = process.env.TTS_SERVICE_TOKEN
-if (!TTS_SERVICE_TOKEN) {
-  throw new Error('TTS_SERVICE_TOKEN environment variable is required for the voice upload pipeline')
-}
 
 /**
  * POST /api/voice/upload-sample
@@ -131,28 +127,14 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       // Non-blocking
     }
 
-    // 3. Forward to TTS service
-    const formData = new FormData()
-    const blob = new Blob([fileBuffer], { type: audioFile.mimetype || 'audio/wav' })
-    formData.append('audio', blob, audioFile.originalFilename || 'audio.wav')
-
-    const response = await fetch(`${TTS_SERVICE_URL}/api/tts/upload-reference`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${TTS_SERVICE_TOKEN}`,
-        'X-Familyspace-Id': user.familyspaceId
-      },
-      body: formData,
-      signal: AbortSignal.timeout(30_000),
-    })
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      logger.error('[API] TTS service upload failed:', { status: response.status, error: errorText })
-      return res.status(response.status).json({ success: false, error: errorText })
-    }
-
-    const ttsData = await response.json()
+    // 3. Forward to TTS service via provider
+    const provider = getTTSProvider()
+    const ttsData = await provider.uploadReference(
+      fileBuffer,
+      audioFile.originalFilename ?? 'audio.wav',
+      audioFile.mimetype ?? 'audio/wav',
+      user.familyspaceId
+    )
 
     // Create Asset record in database with transcript and audioProcessingId
     const asset = await prisma.asset.create({
@@ -162,7 +144,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         originalName: ttsData.fileName || audioFile.originalFilename || 'audio.wav',
         mimeType: 'audio/wav',
         sizeBytes: BigInt(fileBuffer.length),
-        storageType: 'LOCAL',
+        storageType: ttsData.storageType,
         storagePath: ttsData.filePath,
         assetType: 'AUDIO',
         isAISynthesized: true, // Hide from Document Memories
