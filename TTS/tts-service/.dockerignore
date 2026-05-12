@@ -1,0 +1,16 @@
+.git
+node_modules
+.next
+dist
+build
+__pycache__
+*.pyc
+.env
+.env.*
+*.log
+generated
+reference_audio
+voice_profiles
+models
+.cache
+.DS_Store
