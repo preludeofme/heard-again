@@ -101,8 +101,10 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
     const POLL_INTERVAL_MS = 3000
     const TIMEOUT_MS = 10 * 60 * 1000
     const OFFLINE_KEY = 'upload-offline-warn'
+    const MAX_CONSECUTIVE_ERRORS = 5
     const deadline = Date.now() + TIMEOUT_MS
     let offlineWarningActive = false
+    let consecutiveErrors = 0
 
     while (Date.now() < deadline) {
       // Pause while offline; wait up to the remaining deadline or 60s, whichever is less
@@ -139,7 +141,11 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
         )
 
         if (!response.ok) {
-          // Treat non-OK as transient (5xx, etc.) — keep polling
+          consecutiveErrors++
+          if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+            const body = await response.json().catch(() => ({})) as { error?: string }
+            throw new Error(body.error ?? `Status check failed (${response.status}) after ${MAX_CONSECUTIVE_ERRORS} attempts`)
+          }
           continue
         }
 
@@ -150,6 +156,8 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
           data?: Record<string, unknown>
           error?: string
         }
+
+        consecutiveErrors = 0
 
         if (status.complete) return status.data ?? { assetId }
         if (status.failed) throw new Error(status.error ?? 'Transcription failed')

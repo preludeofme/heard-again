@@ -22,6 +22,8 @@ const handler = async (req: NextApiRequest, res: NextApiResponse): Promise<void>
     return
   }
 
+  res.setHeader('Cache-Control', 'no-store')
+
   const asset = await prisma.asset.findFirst({
     where: { id: assetId, familyspaceId: user.familyspaceId },
     select: {
