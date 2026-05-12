@@ -1,7 +1,7 @@
 import { Worker, Job } from 'bullmq'
 import { logger } from '@/lib/logger'
 import { prisma } from '@/lib/prisma'
-import { storageService } from '@/services/StorageService'
+import { getStorageService } from '@/lib/storage/storage-service'
 import { getTTSProvider } from '@/lib/tts'
 import {
   NARRATION_QUEUE,
@@ -94,10 +94,11 @@ async function persistAsset(params: {
 
   const extension = audioExtensionFor(mimeType)
 
-  const storedFile = await storageService.saveAudio(familyspaceId, audioId, audioBuffer, {
-    mimeType,
-    extension,
+  const libStorage = getStorageService()
+  const uploadResult = await libStorage.uploadFile(audioBuffer, `${audioId}.${extension}`, mimeType, {
+    folder: `generated-audio/${familyspaceId}`,
   })
+  const storageType = libStorage.getMode() === 'local' ? 'LOCAL' : 'CLOUDFLARE_R2'
 
   const asset = await prisma.asset.create({
     data: {
@@ -106,8 +107,8 @@ async function persistAsset(params: {
       originalName: `${audioId}.${extension}`,
       mimeType,
       sizeBytes: BigInt(audioBuffer.byteLength),
-      storageType: 'LOCAL',
-      storagePath: storedFile.path,
+      storageType,
+      storagePath: uploadResult.storagePath,
       assetType: 'GENERATED_AUDIO',
       processingStatus: 'COMPLETED',
       uploadedById: userId,
@@ -140,7 +141,7 @@ async function deleteAssetById(assetId: string): Promise<void> {
   })
 
   try {
-    await storageService.deleteFile(asset.storagePath)
+    await getStorageService().deleteFile(asset.storagePath)
   } catch (err) {
     logger.warn('[narrationWorker] storage delete failed (non-fatal):', { assetId, err })
   }

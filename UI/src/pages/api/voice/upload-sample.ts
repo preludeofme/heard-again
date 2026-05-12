@@ -123,8 +123,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         logger.warn('[API] Failed to register voice sample for audio processing:', registerResponse.status)
       }
     } catch (err) {
-      logger.error('[API] Audio processing registration error:', err)
-      // Non-blocking
+      logger.warn('[API] Audio processing registration (non-blocking):', err)
     }
 
     // 3. Forward to TTS service via provider
