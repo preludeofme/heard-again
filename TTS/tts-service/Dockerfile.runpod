@@ -28,7 +28,10 @@ COPY requirements.txt .
 
 RUN pip install --upgrade pip setuptools wheel \
     && pip install -r requirements.txt \
-    && pip install runpod boto3 requests
+    && pip install runpod boto3 requests \
+    && git clone --depth 1 https://github.com/QwenLM/Qwen3-TTS.git /tmp/qwen3-tts \
+    && pip install /tmp/qwen3-tts \
+    && rm -rf /tmp/qwen3-tts
 
 COPY app/ ./app/
 
