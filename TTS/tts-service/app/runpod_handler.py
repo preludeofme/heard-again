@@ -14,7 +14,7 @@ import soundfile as sf
 from pydantic import ValidationError
 
 from app.runpod_callback_client import post_callback
-from app.runpod_config import DEFAULT_AUDIO_FORMAT, TEMP_DIR, ensure_runtime_dirs
+from app.runpod_config import DEFAULT_AUDIO_FORMAT, TEMP_DIR, TTS_STUB_MODE, ensure_runtime_dirs
 from app.runpod_r2_client import R2Client
 from app.runpod_schemas import (
     DownloadAudioInput,
@@ -305,4 +305,15 @@ def handler(event: dict[str, Any]) -> dict[str, Any]:
 
 
 if __name__ == "__main__":
+    # Pre-load the TTS model before accepting jobs so cold-start latency is
+    # paid once at worker startup rather than during the first job's execution.
+    if not TTS_STUB_MODE:
+        logger.info("Pre-warming TTS model before accepting jobs...")
+        from app.runpod_tts_service import _get_model
+        try:
+            _get_model()
+            logger.info("TTS model pre-warm complete.")
+        except Exception as exc:
+            logger.error("TTS model pre-warm failed: %s — worker will still start, model loads on first job", exc)
+
     runpod.serverless.start({"handler": handler})
