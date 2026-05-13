@@ -305,15 +305,25 @@ def handler(event: dict[str, Any]) -> dict[str, Any]:
 
 
 if __name__ == "__main__":
-    # Pre-load the TTS model before accepting jobs so cold-start latency is
-    # paid once at worker startup rather than during the first job's execution.
+    # Pre-warm: run a short end-to-end inference so library incompatibilities
+    # (e.g. transformers breaking the speech_tokenizer feature-extractor probe)
+    # surface immediately rather than failing silently on the first real job.
     if not TTS_STUB_MODE:
-        logger.info("Pre-warming TTS model before accepting jobs...")
-        from app.runpod_tts_service import _get_model
+        import os
+        logger.info("Pre-warming TTS model with test inference...")
+        from app.runpod_tts_service import generate_tts_audio
+        _prewarm_path = "/tmp/tts_prewarm_test.wav"
         try:
-            _get_model()
-            logger.info("TTS model pre-warm complete.")
+            generate_tts_audio("Hello.", _prewarm_path)
+            if os.path.exists(_prewarm_path):
+                os.unlink(_prewarm_path)
+            logger.info("TTS pre-warm complete — model and inference pipeline verified.")
         except Exception as exc:
-            logger.error("TTS model pre-warm failed: %s — worker will still start, model loads on first job", exc)
+            logger.error(
+                "TTS pre-warm FAILED: %s\n"
+                "Worker will still start but the first job will likely fail with the same error. "
+                "Check transformers version compatibility with qwen_tts.",
+                exc,
+            )
 
     runpod.serverless.start({"handler": handler})

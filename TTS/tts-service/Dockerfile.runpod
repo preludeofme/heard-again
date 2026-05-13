@@ -30,8 +30,11 @@ RUN pip install --upgrade pip setuptools wheel \
     && pip install -r requirements.txt \
     && pip install runpod boto3 requests \
     && git clone --depth 1 https://github.com/QwenLM/Qwen3-TTS.git /tmp/qwen3-tts \
+    && echo "=== qwen3-tts pinned commit: $(git -C /tmp/qwen3-tts rev-parse HEAD) ===" \
     && pip install /tmp/qwen3-tts \
     && rm -rf /tmp/qwen3-tts
+# NOTE: qwen_tts is installed from latest main. Once a known-good commit is confirmed,
+# pin it with: git -C /tmp/qwen3-tts checkout <COMMIT_HASH> before pip install.
 
 COPY app/ ./app/
 
