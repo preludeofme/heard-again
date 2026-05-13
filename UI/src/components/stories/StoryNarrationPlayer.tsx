@@ -133,7 +133,9 @@ export function StoryNarrationPlayer({
           setJobId(null)
           setState('ready')
           onSaved?.(next)
-        } else if (payload.status === 'failed') {
+        } else if (payload.status === 'failed' || (payload.errorMessage && payload.status !== 'completed')) {
+          // Check errorMessage regardless of status — when a job is retried by BullMQ,
+          // the previous attempt's errorMessage can be set while status still shows synthesizing.
           stopPolling()
           setState('error')
           setError(payload.errorMessage || 'Synthesis failed')

@@ -234,7 +234,7 @@ async function handleNarrationRender(job: Job<NarrationRenderJobData>, token?: s
 
   await prisma.voiceGenerationJob.update({
     where: { id: voiceGenerationJobId },
-    data: { status: 'PROCESSING', startedAt: new Date() },
+    data: { status: 'PROCESSING', startedAt: new Date(), errorMessage: null },
   })
 
   await updateProgress({ phase: 'synthesizing' })
