@@ -1,15 +1,28 @@
 import logging
 import os
+import shutil
 from pathlib import Path
 
 import numpy as np
 import soundfile as sf
 import torch
 
-from app.runpod_config import MODEL_ID, TTS_STUB_MODE
+from app.runpod_config import HF_HOME, MODEL_ID, TTS_STUB_MODE
 
 logger = logging.getLogger(__name__)
 _model = None
+
+
+def _model_cache_dir() -> Path:
+    slug = "models--" + MODEL_ID.replace("/", "--")
+    return HF_HOME / slug
+
+
+def _clear_model_cache() -> None:
+    cache_dir = _model_cache_dir()
+    if cache_dir.exists():
+        logger.warning("Clearing corrupt model cache at %s", cache_dir)
+        shutil.rmtree(cache_dir, ignore_errors=True)
 
 
 def _get_model():
@@ -27,8 +40,23 @@ def _get_model():
 
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
     logger.info("Loading Qwen model '%s' on %s", MODEL_ID, device)
-    _model = Qwen3TTSModel.from_pretrained(MODEL_ID, device_map=device, dtype=torch.bfloat16)
-    return _model
+
+    for attempt in range(2):
+        try:
+            _model = Qwen3TTSModel.from_pretrained(MODEL_ID, device_map=device, dtype=torch.bfloat16)
+            return _model
+        except Exception as exc:
+            msg = str(exc)
+            is_corruption = (
+                "preprocessor_config.json" in msg
+                or "is the correct path to a directory" in msg
+                or (isinstance(exc, (FileNotFoundError, OSError)) and str(HF_HOME) in msg)
+            )
+            if is_corruption and attempt == 0:
+                logger.warning("Model cache corrupt (%s) — clearing and retrying download", exc)
+                _clear_model_cache()
+                continue
+            raise
 
 
 def generate_tts_audio(text: str, output_path: str, reference_audio_path: str | None = None, reference_text: str | None = None) -> None:
