@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import shutil
@@ -12,6 +13,22 @@ from app.runpod_config import HF_HOME, MODEL_ID, TTS_STUB_MODE
 logger = logging.getLogger(__name__)
 _model = None
 
+# The exact content of speech_tokenizer/preprocessor_config.json as published in the
+# Qwen/Qwen3-TTS-12Hz-0.6B-Base model repo on HuggingFace.  Older cached snapshots
+# (e.g. 5d83992) were downloaded before this file was added to the repo and fail
+# with "Can't load feature extractor … preprocessor_config.json".  We inject it
+# directly so no 682 MB re-download is required.
+_SPEECH_TOKENIZER_PREPROCESSOR_CONFIG = {
+    "chunk_length_s": None,
+    "feature_extractor_type": "EncodecFeatureExtractor",
+    "feature_size": 1,
+    "overlap": None,
+    "padding_side": "right",
+    "padding_value": 0.0,
+    "return_attention_mask": True,
+    "sampling_rate": 24000,
+}
+
 
 def _model_cache_dir() -> Path:
     slug = "models--" + MODEL_ID.replace("/", "--")
@@ -23,6 +40,23 @@ def _clear_model_cache() -> None:
     if cache_dir.exists():
         logger.warning("Clearing corrupt model cache at %s", cache_dir)
         shutil.rmtree(cache_dir, ignore_errors=True)
+
+
+def _inject_speech_tokenizer_config() -> bool:
+    """Create speech_tokenizer/preprocessor_config.json in every cached snapshot
+    that is missing it.  Returns True if at least one file was written."""
+    snapshots_dir = _model_cache_dir() / "snapshots"
+    if not snapshots_dir.exists():
+        return False
+    injected = False
+    for snapshot in snapshots_dir.iterdir():
+        speech_tok_dir = snapshot / "speech_tokenizer"
+        config_path = speech_tok_dir / "preprocessor_config.json"
+        if speech_tok_dir.is_dir() and not config_path.exists():
+            config_path.write_text(json.dumps(_SPEECH_TOKENIZER_PREPROCESSOR_CONFIG, indent=2))
+            logger.info("Injected missing speech_tokenizer/preprocessor_config.json → %s", config_path)
+            injected = True
+    return injected
 
 
 def _get_model():
@@ -47,15 +81,24 @@ def _get_model():
             return _model
         except Exception as exc:
             msg = str(exc)
-            is_corruption = (
-                "preprocessor_config.json" in msg
-                or "is the correct path to a directory" in msg
+            missing_preprocessor = "preprocessor_config.json" in msg
+            is_other_corruption = (
+                "is the correct path to a directory" in msg
                 or (isinstance(exc, (FileNotFoundError, OSError)) and str(HF_HOME) in msg)
             )
-            if is_corruption and attempt == 0:
-                logger.warning("Model cache corrupt (%s) — clearing and retrying download", exc)
-                _clear_model_cache()
-                continue
+            if attempt == 0:
+                if missing_preprocessor:
+                    # Inject the known-good preprocessor_config.json directly into the
+                    # cached snapshot — avoids a full 682 MB re-download.
+                    if _inject_speech_tokenizer_config():
+                        logger.info("Retrying model load after injecting preprocessor config")
+                        continue
+                    # Nothing to inject (no cached snapshot exists yet) — fall through
+                    # to the full cache-clear path so from_pretrained re-downloads.
+                if missing_preprocessor or is_other_corruption:
+                    logger.warning("Model cache corrupt (%s) — clearing and retrying download", exc)
+                    _clear_model_cache()
+                    continue
             raise
 
 
