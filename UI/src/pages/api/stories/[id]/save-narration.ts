@@ -115,13 +115,25 @@ export default apiHandler({
         select: { id: true },
       })
 
-      const queueJobId = await enqueueNarrationRender({
+      const enqueueResult = await enqueueNarrationRender({
         storyId,
         familyspaceId: user.familyspaceId,
         voiceProfileId: profile.id,
         userId: user.id,
         voiceGenerationJobId: voiceGenerationJob.id,
       })
+
+      if (enqueueResult.deduped) {
+        // An identical render is already active — discard the DB job we just created.
+        await prisma.voiceGenerationJob.delete({ where: { id: voiceGenerationJob.id } }).catch(() => undefined)
+        return successResponse(res, {
+          queued: true,
+          deduped: true,
+          narrationJobId: enqueueResult.existingVoiceGenerationJobId ?? voiceGenerationJob.id,
+          queueJobId: enqueueResult.queueJobId,
+          voiceProfileId: profile.id,
+        })
+      }
 
       await prisma.story.update({
         where: { id: storyId },
@@ -131,7 +143,7 @@ export default apiHandler({
       return successResponse(res, {
         queued: true,
         narrationJobId: voiceGenerationJob.id,
-        queueJobId,
+        queueJobId: enqueueResult.queueJobId,
         voiceProfileId: profile.id,
       })
     } catch (error) {

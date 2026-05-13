@@ -67,10 +67,17 @@ export function narrationDedupeKey(storyId: string, voiceProfileId: string): str
   return `narration:render:${storyId}:${voiceProfileId}`
 }
 
+export interface EnqueueResult {
+  queueJobId: string
+  deduped: boolean
+  /** When deduped, the voiceGenerationJobId of the already-running job. */
+  existingVoiceGenerationJobId?: string
+}
+
 export async function enqueueNarrationRender(
   data: NarrationRenderJobData,
   options: JobsOptions = {}
-): Promise<string> {
+): Promise<EnqueueResult> {
   if (!isQueueAvailable()) throw new Error('Narration queue is not available in this environment')
   const queue = getNarrationQueue()
   const jobId = narrationDedupeKey(data.storyId, data.voiceProfileId)
@@ -79,7 +86,11 @@ export async function enqueueNarrationRender(
   if (existing) {
     const state = await existing.getState()
     if (state === 'active' || state === 'waiting' || state === 'delayed') {
-      return existing.id ?? jobId
+      return {
+        queueJobId: existing.id ?? jobId,
+        deduped: true,
+        existingVoiceGenerationJobId: existing.data.voiceGenerationJobId,
+      }
     }
     await existing.remove().catch(() => undefined)
   }
@@ -88,5 +99,5 @@ export async function enqueueNarrationRender(
     jobId,
     ...options,
   })
-  return job.id ?? jobId
+  return { queueJobId: job.id ?? jobId, deduped: false }
 }

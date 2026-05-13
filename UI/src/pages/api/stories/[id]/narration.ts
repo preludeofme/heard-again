@@ -76,7 +76,7 @@ async function enqueueRenderOnApprove(params: {
     select: { id: true },
   })
 
-  const queueJobId = await enqueueNarrationRender({
+  const enqueueResult = await enqueueNarrationRender({
     storyId,
     familyspaceId,
     voiceProfileId: profile.id,
@@ -84,12 +84,22 @@ async function enqueueRenderOnApprove(params: {
     voiceGenerationJobId: voiceGenerationJob.id,
   })
 
+  if (enqueueResult.deduped) {
+    // An identical render is already active — discard the DB job we just created
+    // to avoid it sitting as QUEUED forever with no matching queue entry.
+    await prisma.voiceGenerationJob.delete({ where: { id: voiceGenerationJob.id } }).catch(() => undefined)
+    return {
+      narrationJobId: enqueueResult.existingVoiceGenerationJobId ?? voiceGenerationJob.id,
+      queueJobId: enqueueResult.queueJobId,
+    }
+  }
+
   await prisma.story.update({
     where: { id: storyId },
     data: { narrationRenderJobId: voiceGenerationJob.id, voiceProfileId: profile.id },
   })
 
-  return { narrationJobId: voiceGenerationJob.id, queueJobId }
+  return { narrationJobId: voiceGenerationJob.id, queueJobId: enqueueResult.queueJobId }
 }
 
 export default apiHandler({

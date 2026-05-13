@@ -17,7 +17,8 @@ export interface SynthesisProgressEvent {
 export interface SynthesisCompleteEvent {
   type: 'complete'
   audioId: string
-  audioUrl: string
+  /** R2 object key where the audio was stored — not an HTTP URL. Use audioId with downloadAudio(). */
+  audioKey: string
   duration: number
   sampleRate: number
   synthesisTime: number

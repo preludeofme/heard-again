@@ -248,6 +248,13 @@ export class RunPodTTSProvider implements TTSProvider {
     jobId: string,
     onProgress: (event: SynthesisProgressEvent) => Promise<void>
   ): Promise<SynthesisCompleteEvent> {
+    // Node 21+ exposes WebSocket globally; Node 18/20 do not.
+    // Throw here so the caller's catch falls back to polling rather than
+    // hitting a ReferenceError mid-Promise construction.
+    if (typeof globalThis.WebSocket === 'undefined') {
+      return Promise.reject(new Error('WebSocket not available in this Node version — using polling fallback'))
+    }
+
     return new Promise((resolve, reject) => {
       const wsUrl = `wss://api.runpod.ai/v2/${RUNPOD_TTS_ENDPOINT_ID}/ws/${jobId}?apiKey=${RUNPOD_API_KEY}`
       const ws = new WebSocket(wsUrl)

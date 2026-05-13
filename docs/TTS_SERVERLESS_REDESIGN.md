@@ -331,6 +331,10 @@ Switching between providers requires only an env var change and redeploy. No dat
 | RunPod Serverless | `runpod_serverless` | (unused) |
 | Self-hosted (Tailscale) | `rest` | Cloudflare Tunnel URL |
 
+### Worker restart required on provider switch
+
+`getTTSProvider()` (`UI/src/lib/tts/index.ts`) caches the provider instance as a module-level singleton for the lifetime of the process. Vercel serverless functions are stateless and pick up the new `TTS_PROVIDER` value on every cold start automatically. However, the **narration worker** (`narrationWorker.ts`) is a long-running BullMQ process — it will not see the new provider until it is restarted. After changing `TTS_PROVIDER` in the environment, restart the narration worker process before routing jobs to the new provider.
+
 ---
 
 ## Files to Create / Modify

@@ -44,9 +44,23 @@ def _download_url(url: str, target_path: Path) -> None:
 
 
 def _split_sentences(text: str) -> list[str]:
-    """Split text into sentences for per-sentence progress reporting."""
-    parts = re.split(r"(?<=[.!?])\s+", text.strip())
-    return [p.strip() for p in parts if p.strip()]
+    """Split text into sentences using nltk (handles abbreviations, initials, etc.)."""
+    try:
+        import nltk
+        # Store punkt data on the RunPod volume so it persists across cold starts.
+        nltk_data_dir = "/runpod-volume/nltk_data"
+        if nltk_data_dir not in nltk.data.path:
+            nltk.data.path.insert(0, nltk_data_dir)
+        try:
+            nltk.data.find("tokenizers/punkt_tab")
+        except LookupError:
+            nltk.download("punkt_tab", download_dir=nltk_data_dir, quiet=True)
+        sentences = nltk.sent_tokenize(text.strip())
+        return [s.strip() for s in sentences if s.strip()]
+    except Exception as exc:
+        logger.warning("nltk sentence splitting failed (%s) — falling back to regex", exc)
+        parts = re.split(r"(?<=[.!?])\s+", text.strip())
+        return [p.strip() for p in parts if p.strip()]
 
 
 def _transcribe(audio_path: Path) -> str | None:
@@ -176,7 +190,7 @@ def _handle_synthesize_batch(req: SynthesizeBatchInput) -> dict[str, Any]:
         mime = "audio/mpeg" if DEFAULT_AUDIO_FORMAT == "mp3" else "audio/wav"
         return SynthesisCompleteEvent(
             audioId=audio_id,
-            audioUrl=audio_id,
+            audioKey=audio_id,
             duration=round(duration, 3),
             sampleRate=sample_rate,
             synthesisTime=synthesis_time,

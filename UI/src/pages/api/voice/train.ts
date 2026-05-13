@@ -73,7 +73,7 @@ async function trainVoiceHandler(req: NextApiRequest, res: NextApiResponse) {
       modelType: 'QWEN3_BASE',
       engineName: 'qwen3',
       engineVersion: language ?? 'English',
-      styleParams: null,
+      styleParams: undefined,
       status: 'READY',
       externalId: ttsFileId,
       sourceAssetId: asset.id,

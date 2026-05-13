@@ -57,7 +57,7 @@ class SynthesizeBatchInput(BaseModel):
 class SynthesisCompleteEvent(BaseModel):
     type: Literal["complete"] = "complete"
     audioId: str
-    audioUrl: str
+    audioKey: str  # R2 object key — not an HTTP URL
     duration: float
     sampleRate: int
     synthesisTime: float

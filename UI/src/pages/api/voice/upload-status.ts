@@ -2,7 +2,8 @@ import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '@/lib/prisma'
 import { getAuthUserWithFamilyspace } from '@/lib/auth-helpers'
-import { RunPodTTSProvider } from '@/lib/tts/runpod-tts-provider'
+import { getTTSProvider } from '@/lib/tts'
+import { getStorageService } from '@/lib/storage/storage-service'
 
 const handler = async (req: NextApiRequest, res: NextApiResponse): Promise<void> => {
   if (req.method !== 'GET') {
@@ -35,6 +36,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse): Promise<void>
       storageType: true,
       filename: true,
       originalName: true,
+      metadata: true,
     },
   })
 
@@ -65,13 +67,19 @@ const handler = async (req: NextApiRequest, res: NextApiResponse): Promise<void>
   }
 
   try {
-    const provider = new RunPodTTSProvider()
+    const provider = getTTSProvider()
+    if (!provider.checkUploadJob) {
+      res.status(400).json({ error: 'Active TTS provider does not support async upload status checks' })
+      return
+    }
     const jobStatus = await provider.checkUploadJob(runpodJobId)
 
     if (jobStatus.status === 'complete' && jobStatus.result) {
       const existingMeta = typeof asset.metadata === 'object' && asset.metadata !== null
         ? (asset.metadata as Record<string, unknown>)
         : {}
+
+      const stagingPath = asset.storagePath
 
       await prisma.asset.update({
         where: { id: assetId },
@@ -83,6 +91,14 @@ const handler = async (req: NextApiRequest, res: NextApiResponse): Promise<void>
           metadata: { ...existingMeta, ttsFileId: jobStatus.result.fileId },
         },
       })
+
+      // Clean up the staging file now that it has been processed and stored
+      // under voice-profiles/ by the RunPod worker.
+      if (stagingPath.startsWith('tts-staging/')) {
+        getStorageService().deleteFile(stagingPath).catch((err: unknown) => {
+          logger.warn('[API] upload-status: staging file cleanup failed (non-fatal)', { stagingPath, err })
+        })
+      }
 
       res.status(200).json({
         complete: true,

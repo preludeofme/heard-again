@@ -161,13 +161,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       select: { id: true },
     })
 
-    const queueJobId = await enqueueNarrationRender({
+    const enqueueResult = await enqueueNarrationRender({
       storyId,
       familyspaceId: user.familyspaceId,
       voiceProfileId: profile.id,
       userId: user.id,
       voiceGenerationJobId: voiceGenerationJob.id,
     })
+
+    if (enqueueResult.deduped) {
+      await prisma.voiceGenerationJob.delete({ where: { id: voiceGenerationJob.id } }).catch(() => undefined)
+      const payload: QueuedNarrationResponse = {
+        success: true,
+        status: 'queued',
+        narrationJobId: enqueueResult.existingVoiceGenerationJobId ?? voiceGenerationJob.id,
+        queueJobId: enqueueResult.queueJobId,
+        voiceProfileId: profile.id,
+      }
+      return res.status(202).json(payload)
+    }
 
     await prisma.story.update({
       where: { id: storyId },
@@ -178,7 +190,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       success: true,
       status: 'queued',
       narrationJobId: voiceGenerationJob.id,
-      queueJobId,
+      queueJobId: enqueueResult.queueJobId,
       voiceProfileId: profile.id,
     }
     return res.status(202).json(payload)

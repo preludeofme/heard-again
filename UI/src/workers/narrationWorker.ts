@@ -61,7 +61,7 @@ async function assertConsent(familyspaceId: string, voiceProfileId: string, pers
     orderBy: { recordedAt: 'desc' },
   })
   if (!consent) {
-    throw new Error('VOICE_CONSENT_REQUIRED')
+    throw new Error('Voice consent is required before generating audio with this profile. Please record consent in Voice Settings.')
   }
 }
 
@@ -94,8 +94,12 @@ async function persistAsset(params: {
 
   const extension = audioExtensionFor(mimeType)
 
+  // audioId from RunPod is the full R2 key (e.g. "generated-audio/fid/uuid.mp3").
+  // Extract just the base filename so uploadFile doesn't double-nest the path.
+  const audioFilename = audioId.split('/').pop() ?? `${audioId}.${extension}`
+
   const libStorage = getStorageService()
-  const uploadResult = await libStorage.uploadFile(audioBuffer, `${audioId}.${extension}`, mimeType, {
+  const uploadResult = await libStorage.uploadFile(audioBuffer, audioFilename, mimeType, {
     folder: `generated-audio/${familyspaceId}`,
   })
   const storageType = libStorage.getMode() === 'local' ? 'LOCAL' : 'CLOUDFLARE_R2'
@@ -103,8 +107,8 @@ async function persistAsset(params: {
   const asset = await prisma.asset.create({
     data: {
       familyspaceId,
-      filename: `${audioId}.${extension}`,
-      originalName: `${audioId}.${extension}`,
+      filename: audioFilename,
+      originalName: audioFilename,
       mimeType,
       sizeBytes: BigInt(audioBuffer.byteLength),
       storageType,
@@ -188,7 +192,9 @@ async function pruneSiblingAssetsForPair(params: {
   }
 }
 
-async function handleNarrationRender(job: Job<NarrationRenderJobData>): Promise<{ assetId: string; audioId: string }> {
+const LOCK_DURATION_MS = 15 * 60 * 1000
+
+async function handleNarrationRender(job: Job<NarrationRenderJobData>, token?: string): Promise<{ assetId: string; audioId: string }> {
   const { storyId, familyspaceId, voiceProfileId, userId, voiceGenerationJobId } = job.data
 
   const updateProgress = async (patch: Partial<NarrationRenderJobProgress>) => {
@@ -201,6 +207,10 @@ async function handleNarrationRender(job: Job<NarrationRenderJobData>): Promise<
       ...patch,
     }
     await job.updateProgress(merged)
+    // Extend the lock so long synthesis jobs don't stall and get retried mid-render.
+    if (token) {
+      await job.extendLock(token, LOCK_DURATION_MS).catch(() => undefined)
+    }
   }
 
   logger.info('[narrationWorker] starting render', { storyId, voiceProfileId, jobId: job.id })
@@ -213,7 +223,11 @@ async function handleNarrationRender(job: Job<NarrationRenderJobData>): Promise<
 
   await assertConsent(familyspaceId, voiceProfileId, profile.personId)
 
-  const text = (story.narratedContent || story.content || '').trim()
+  const text = (
+    story.narrationStatus === 'APPROVED' && story.narratedContent
+      ? story.narratedContent
+      : story.content || ''
+  ).trim()
   if (!text) {
     throw new Error(`Story ${storyId} has no content to narrate`)
   }
@@ -334,7 +348,7 @@ export function startNarrationWorker(): Worker<NarrationRenderJobData> | null {
   workerInstance = new Worker<NarrationRenderJobData>(NARRATION_QUEUE, handleNarrationRender, {
     connection: getQueueConnection(),
     concurrency: WORKER_CONCURRENCY,
-    lockDuration: 5 * 60 * 1000,
+    lockDuration: LOCK_DURATION_MS,
   })
 
   workerInstance.on('failed', async (job, err) => {
