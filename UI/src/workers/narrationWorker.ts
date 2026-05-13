@@ -261,6 +261,17 @@ async function handleNarrationRender(job: Job<NarrationRenderJobData>, token?: s
 
   await updateProgress({ phase: 'saving', sentencesDone: completeEvent.sentenceCount, sentencesTotal: completeEvent.sentenceCount })
 
+  // Synthesis can't be interrupted mid-flight. Check whether the user cancelled
+  // while RunPod was running and discard the result if so.
+  const currentStatus = await prisma.voiceGenerationJob.findUnique({
+    where: { id: voiceGenerationJobId },
+    select: { status: true },
+  })
+  if (currentStatus?.status === 'CANCELLED') {
+    logger.info('[narrationWorker] job was cancelled during synthesis — discarding result', { storyId, voiceGenerationJobId })
+    return { assetId: '', audioId: completeEvent.audioId }
+  }
+
   const audioBuffer = await provider.downloadAudio(completeEvent.audioId, familyspaceId)
   const mimeType = completeEvent.mimeType || NARRATION_DEFAULT_MIME
   const assetId = await persistAsset({

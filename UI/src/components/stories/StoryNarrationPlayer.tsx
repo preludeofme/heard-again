@@ -19,6 +19,7 @@ import {
   SmartToy as AiIcon,
   ErrorOutline as ErrorIcon,
   Delete as DeleteIcon,
+  Cancel as CancelIcon,
 } from '@mui/icons-material'
 import { fetchWithCSRF } from '@/lib/api-client'
 
@@ -270,6 +271,19 @@ export function StoryNarrationPlayer({
     }
   }, [storyId])
 
+  const handleCancel = useCallback(async () => {
+    if (!jobId) return
+    stopPolling()
+    try {
+      await fetchWithCSRF(`/api/narration-jobs/${jobId}`, { method: 'DELETE', credentials: 'include' })
+    } catch {
+      // Best-effort — state resets regardless
+    }
+    setJobId(null)
+    setJobStatus(null)
+    setState(readyNarration ? 'ready' : 'idle')
+  }, [jobId, readyNarration, stopPolling])
+
   const renderProgress = () => {
     if (state !== 'rendering') return null
     const total = jobStatus?.sentencesTotal ?? 0
@@ -283,13 +297,24 @@ export function StoryNarrationPlayer({
     })()
     return (
       <Box sx={{ mt: 1 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
           <Typography variant="caption" sx={{ color: '#546669' }}>
             {label}
           </Typography>
-          <Typography variant="caption" sx={{ fontWeight: 600, color: '#16334a' }}>
-            {Math.round(percent)}%
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="caption" sx={{ fontWeight: 600, color: '#16334a' }}>
+              {Math.round(percent)}%
+            </Typography>
+            <Button
+              size="small"
+              variant="text"
+              startIcon={<CancelIcon sx={{ fontSize: 14 }} />}
+              onClick={handleCancel}
+              sx={{ textTransform: 'none', color: '#546669', fontWeight: 500, minWidth: 0, px: 1, py: 0.25 }}
+            >
+              Cancel
+            </Button>
+          </Box>
         </Box>
         <LinearProgress
           variant={total > 0 ? 'determinate' : 'indeterminate'}

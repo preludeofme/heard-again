@@ -39,9 +39,70 @@ function mapStatus(
   return 'processing'
 }
 
+async function handleCancel(req: NextApiRequest, res: NextApiResponse) {
+  let user
+  try {
+    user = await getAuthUserWithFamilyspace(req, res)
+  } catch {
+    return
+  }
+  await requireFamilyspaceRole(user.id, user.familyspaceId, 'EDITOR')
+
+  const jobId = req.query.id as string
+
+  const dbJob = await prisma.voiceGenerationJob.findFirst({
+    where: { id: jobId, story: { familyspaceId: user.familyspaceId } },
+    select: { id: true, status: true, storyId: true, voiceProfileId: true },
+  })
+
+  if (!dbJob) {
+    return res.status(404).json({ success: false, error: 'Narration job not found' })
+  }
+
+  if (dbJob.status === 'COMPLETED') {
+    return res.status(409).json({ success: false, error: 'Job is already completed' })
+  }
+  if (dbJob.status === 'CANCELLED') {
+    return res.status(200).json({ success: true, cancelled: true })
+  }
+
+  await prisma.$transaction([
+    prisma.voiceGenerationJob.update({
+      where: { id: jobId },
+      data: { status: 'CANCELLED', completedAt: new Date() },
+    }),
+    prisma.story.updateMany({
+      where: { id: dbJob.storyId ?? '', narrationRenderJobId: jobId },
+      data: { narrationRenderJobId: null },
+    }),
+  ])
+
+  // Remove from BullMQ if the job is still waiting — active jobs finish on the
+  // worker but will discard the result once they see CANCELLED in the DB.
+  if (dbJob.storyId && dbJob.voiceProfileId) {
+    try {
+      const queue = getNarrationQueue()
+      const dedupeKey = narrationDedupeKey(dbJob.storyId, dbJob.voiceProfileId)
+      const queueJob = await queue.getJob(dedupeKey)
+      if (queueJob) {
+        const state = await queueJob.getState()
+        if (state === 'waiting' || state === 'delayed') {
+          await queueJob.remove().catch(() => undefined)
+        }
+      }
+    } catch (err) {
+      logger.warn('[narration-jobs] BullMQ removal on cancel failed (non-fatal)', { jobId, err })
+    }
+  }
+
+  return res.status(200).json({ success: true, cancelled: true })
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method === 'DELETE') return handleCancel(req, res)
+
   if (req.method !== 'GET') {
-    res.setHeader('Allow', ['GET'])
+    res.setHeader('Allow', ['GET', 'DELETE'])
     return res.status(405).json({ success: false, error: 'Method not allowed' })
   }
 
