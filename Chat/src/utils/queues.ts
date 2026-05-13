@@ -1,27 +1,26 @@
-import { Queue, Worker, ConnectionOptions } from 'bullmq'
-import Redis from 'ioredis'
+import { Queue, Worker } from 'bullmq'
+import Redis, { type RedisOptions } from 'ioredis'
 
-// Redis connection configuration
 const redisUrl = process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL
 
-const redisConfig: ConnectionOptions = redisUrl
-  ? {
-      url: redisUrl,
-      maxRetriesPerRequest: null,
-      enableReadyCheck: false,
-      lazyConnect: true,
-    }
-  : {
-      host: process.env.REDIS_HOST || 'localhost',
-      port: parseInt(process.env.REDIS_PORT || '6379'),
-      password: process.env.REDIS_PASSWORD,
+const BASE_REDIS_OPTS: RedisOptions = {
   maxRetriesPerRequest: null,
   enableReadyCheck: false,
   lazyConnect: true,
-    }
+}
 
-// Create Redis connection
-export const redisConnection = new Redis(redisConfig)
+// ioredis accepts a URL string in the constructor, not as an object property.
+// BullMQ's connection option accepts an already-constructed Redis instance.
+export const redisConnection = redisUrl
+  ? new Redis(redisUrl, BASE_REDIS_OPTS)
+  : new Redis({
+      ...BASE_REDIS_OPTS,
+      host: process.env.REDIS_HOST || 'localhost',
+      port: parseInt(process.env.REDIS_PORT || '6379'),
+      password: process.env.REDIS_PASSWORD,
+    })
+
+const redisConfig = redisConnection
 
 // Queue names
 export const QUEUE_NAMES = {

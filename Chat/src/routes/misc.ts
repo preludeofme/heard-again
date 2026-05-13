@@ -244,6 +244,7 @@ Rules:
         metadata: {
           model: process.env.NARRATION_LLM_MODEL || RELEASE_CANDIDATE_MODEL_POLICY.primaryModel,
           temperature: 0.7,
+          maxTokens: 1000,
         },
       };
 
