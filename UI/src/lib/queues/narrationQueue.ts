@@ -85,7 +85,10 @@ export async function enqueueNarrationRender(
   const existing = await queue.getJob(jobId)
   if (existing) {
     const state = await existing.getState()
-    if (state === 'active' || state === 'waiting' || state === 'delayed') {
+    // Only dedup truly in-flight jobs. 'delayed' means a retry is pending — the
+    // first attempt already failed, so let the user restart fresh instead of
+    // returning the failed job's ID and showing a cached error immediately.
+    if (state === 'active' || state === 'waiting') {
       return {
         queueJobId: existing.id ?? jobId,
         deduped: true,
