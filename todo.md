@@ -30,7 +30,7 @@
 [ ] Need to add a +Add to the family tree nodes so the user can add a new family member from that node 
 [ ] need toggle for using the narration version of the story or the original for the voice generation. That way someone can choose to generate/listen to each one if they want
 [ ] Look into vercel's malware scanner if there is one as alternative to CLAMAV
-[ ] Add whisper to runpod container 
+[x] Add whisper to runpod container 
 [ ] comments on a story are posted as anonymous instead of tying to the user's profile/identity
 [ ] need to make sure when commenting and posting stories that it's connecting to the person record (family tree) rather than just the user (authenticated user) that way someone can click on the name from a comment and it will take them to the family record/profile 
 

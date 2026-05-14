@@ -91,7 +91,21 @@ def generate_tts_audio(text: str, output_path: str, reference_audio_path: str | 
 
     try:
         if reference_audio_path:
-            clone_prompt = model.create_voice_clone_prompt(ref_audio=reference_audio_path, ref_text=reference_text)
+            if reference_text:
+                # ICL mode: best voice cloning quality — uses both audio and transcript.
+                clone_prompt = model.create_voice_clone_prompt(
+                    ref_audio=reference_audio_path,
+                    ref_text=reference_text,
+                )
+            else:
+                # X-vector only mode: uses speaker embedding from audio alone.
+                # Slightly lower cloning accuracy but works without a transcript.
+                # Profiles uploaded before Whisper was added won't have a transcript.
+                logger.warning("No reference transcript available — using x_vector_only_mode (lower quality)")
+                clone_prompt = model.create_voice_clone_prompt(
+                    ref_audio=reference_audio_path,
+                    x_vector_only_mode=True,
+                )
             wavs, sr = model.inference(text=text, prompt=clone_prompt)
         else:
             wavs, sr = model.inference(text=text)
