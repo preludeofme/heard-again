@@ -1,7 +1,4 @@
-import json
 import logging
-import os
-import shutil
 from pathlib import Path
 
 import numpy as np
@@ -13,50 +10,10 @@ from app.runpod_config import HF_HOME, MODEL_ID, TTS_STUB_MODE
 logger = logging.getLogger(__name__)
 _model = None
 
-# The exact content of speech_tokenizer/preprocessor_config.json as published in the
-# Qwen/Qwen3-TTS-12Hz-0.6B-Base model repo on HuggingFace.  Older cached snapshots
-# (e.g. 5d83992) were downloaded before this file was added to the repo and fail
-# with "Can't load feature extractor … preprocessor_config.json".  We inject it
-# directly so no 682 MB re-download is required.
-_SPEECH_TOKENIZER_PREPROCESSOR_CONFIG = {
-    "chunk_length_s": None,
-    "feature_extractor_type": "EncodecFeatureExtractor",
-    "feature_size": 1,
-    "overlap": None,
-    "padding_side": "right",
-    "padding_value": 0.0,
-    "return_attention_mask": True,
-    "sampling_rate": 24000,
-}
-
 
 def _model_cache_dir() -> Path:
     slug = "models--" + MODEL_ID.replace("/", "--")
     return HF_HOME / slug
-
-
-def _clear_model_cache() -> None:
-    cache_dir = _model_cache_dir()
-    if cache_dir.exists():
-        logger.warning("Clearing corrupt model cache at %s", cache_dir)
-        shutil.rmtree(cache_dir, ignore_errors=True)
-
-
-def _inject_speech_tokenizer_config() -> bool:
-    """Create speech_tokenizer/preprocessor_config.json in every cached snapshot
-    that is missing it.  Returns True if at least one file was written."""
-    snapshots_dir = _model_cache_dir() / "snapshots"
-    if not snapshots_dir.exists():
-        return False
-    injected = False
-    for snapshot in snapshots_dir.iterdir():
-        speech_tok_dir = snapshot / "speech_tokenizer"
-        config_path = speech_tok_dir / "preprocessor_config.json"
-        if speech_tok_dir.is_dir() and not config_path.exists():
-            config_path.write_text(json.dumps(_SPEECH_TOKENIZER_PREPROCESSOR_CONFIG, indent=2))
-            logger.info("Injected missing speech_tokenizer/preprocessor_config.json → %s", config_path)
-            injected = True
-    return injected
 
 
 def _get_model():
@@ -70,45 +27,54 @@ def _get_model():
         _model = "stub"
         return _model
 
+    from huggingface_hub import snapshot_download
     from qwen_tts import Qwen3TTSModel
 
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
-    logger.info("Loading Qwen model '%s' on %s", MODEL_ID, device)
 
-    # Three-phase recovery:
-    #   attempt 0 → try inject preprocessor_config.json (avoids full re-download)
-    #   attempt 1 → snapshot still broken (e.g. missing model weights); clear cache + re-download
-    #   attempt 2 → fresh download; raise on any remaining error
-    for attempt in range(3):
+    # Use snapshot_download instead of from_pretrained(model_id) so that ALL
+    # repo files are synced before loading — including speech_tokenizer/model.safetensors
+    # and speech_tokenizer/preprocessor_config.json which from_pretrained can miss
+    # when the local cache only has a partial download (e.g. old snapshot 5d83992).
+    # snapshot_download compares local files against the Hub manifest and fetches
+    # only what is missing, so it is fast on a complete cache and safe on a partial one.
+    for attempt in range(2):
         try:
-            _model = Qwen3TTSModel.from_pretrained(MODEL_ID, device_map=device, dtype=torch.bfloat16)
+            logger.info("Syncing model files from Hub for '%s' (attempt %d)...", MODEL_ID, attempt + 1)
+            local_dir = snapshot_download(
+                repo_id=MODEL_ID,
+                cache_dir=str(HF_HOME),
+            )
+            logger.info("Loading Qwen model on %s from %s", device, local_dir)
+            _model = Qwen3TTSModel.from_pretrained(local_dir, device_map=device, dtype=torch.bfloat16)
             return _model
         except Exception as exc:
-            msg = str(exc)
-            missing_preprocessor = "preprocessor_config.json" in msg
-            missing_weights = (
-                "no file named pytorch_model.bin" in msg
-                or ("model.safetensors" in msg and "no file named" in msg)
-            )
-            is_incomplete_snapshot = missing_preprocessor or missing_weights or (
-                "is the correct path to a directory" in msg
-                or (isinstance(exc, (FileNotFoundError, OSError)) and str(HF_HOME) in msg)
-            )
-
-            if attempt == 0 and missing_preprocessor:
-                if _inject_speech_tokenizer_config():
-                    logger.info("Retrying model load after injecting preprocessor config")
-                    continue
-                # No cached snapshot yet — fall through to cache-clear below
-
-            if attempt < 2 and is_incomplete_snapshot:
+            if attempt == 0:
                 logger.warning(
-                    "Cached model snapshot is incomplete (%s) — clearing cache and re-downloading",
+                    "Model load failed (%s) — forcing full re-download on next attempt",
                     exc,
                 )
-                _clear_model_cache()
+                # Force re-download by removing the refs pointer so snapshot_download
+                # fetches everything fresh. Safer than rmtree on a network volume.
+                refs_file = HF_HOME / _model_cache_dir().name / "refs" / "main"
+                if refs_file.exists():
+                    try:
+                        refs_file.unlink()
+                        logger.info("Removed stale refs/main pointer to force re-download")
+                    except Exception as ref_exc:
+                        logger.warning("Could not remove refs/main (%s) — trying force_download", ref_exc)
+                        # Last resort: force_download flag bypasses all local caches
+                        try:
+                            local_dir = snapshot_download(
+                                repo_id=MODEL_ID,
+                                cache_dir=str(HF_HOME),
+                                force_download=True,
+                            )
+                            _model = Qwen3TTSModel.from_pretrained(local_dir, device_map=device, dtype=torch.bfloat16)
+                            return _model
+                        except Exception as force_exc:
+                            raise force_exc from exc
                 continue
-
             raise
 
 
