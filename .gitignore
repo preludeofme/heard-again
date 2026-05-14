@@ -4,7 +4,7 @@ logs/
 uploads/
 *.log
 output/
-
+tsconfig.tsbuildinfo
 # Environment files — never commit real env files
 # .env
 # .env.local
@@ -68,3 +68,4 @@ tfplan*
 .terraform.lock.hcl
 *.tfvars
 .vercel
+UI/tsconfig.tsbuildinfo
