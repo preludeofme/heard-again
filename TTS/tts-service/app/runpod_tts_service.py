@@ -115,6 +115,12 @@ def generate_tts_audio(text: str, output_path: str, reference_audio_path: str | 
                 ref_audio=reference_audio_path,
                 x_vector_only_mode=True,
             )
-        sf.write(str(out), wavs[0], sr)
+        # Normalize shape: generate_voice_clone may return (samples,) or (1, samples).
+        # soundfile expects (samples,) for mono or (samples, channels) for multi-channel.
+        wav_data = np.squeeze(wavs[0])
+        if wav_data.ndim == 2 and wav_data.shape[0] < wav_data.shape[1]:
+            wav_data = wav_data.T  # (channels, samples) → (samples, channels)
+        logger.info("Writing audio: shape=%s sr=%d path=%s", wav_data.shape, sr, out)
+        sf.write(str(out), wav_data, sr)
     except Exception as exc:
         raise RuntimeError(f"Qwen TTS generation failed: {exc}") from exc

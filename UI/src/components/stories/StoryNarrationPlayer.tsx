@@ -434,7 +434,7 @@ export function StoryNarrationPlayer({
             <Button
               component="a"
               href={readyNarration.downloadUrl}
-              download={`${title || 'narration'}.mp3`}
+              download={`${title || 'narration'}`}
               startIcon={<DownloadIcon />}
               size="small"
               sx={{ textTransform: 'none', color: '#16334a', fontWeight: 600 }}

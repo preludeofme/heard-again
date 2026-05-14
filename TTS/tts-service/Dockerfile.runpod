@@ -8,7 +8,7 @@ ENV TRANSFORMERS_CACHE=/runpod-volume/models/huggingface
 ENV TORCH_HOME=/runpod-volume/models/torch
 ENV MODEL_CACHE_DIR=/runpod-volume/models
 ENV TEMP_DIR=/tmp/heard-again
-ENV DEFAULT_AUDIO_FORMAT=mp3
+ENV DEFAULT_AUDIO_FORMAT=wav
 
 WORKDIR /app
 
