@@ -2,7 +2,67 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '@/lib/prisma'
 import { getAuthUserWithFamilyspace } from '@/lib/auth-helpers'
 import { logger } from '@/lib/logger'
-import { enqueueNarrationRender } from '@/lib/queues/narrationQueue'
+import {
+  enqueueNarrationRender,
+  getNarrationQueue,
+  narrationDedupeKey,
+  removeNarrationQueueJob,
+} from '@/lib/queues/narrationQueue'
+
+// Jobs stuck in PROCESSING longer than this are considered stale and force-cleared on retry.
+const STALE_PROCESSING_TIMEOUT_MS = 20 * 60 * 1000
+
+/**
+ * If an existing BullMQ job for this (storyId, voiceProfileId) pair maps to a DB job
+ * that is already in a terminal state (FAILED/CANCELLED) or has been PROCESSING for
+ * longer than STALE_PROCESSING_TIMEOUT_MS, remove it from the queue so enqueueNarrationRender
+ * can create a fresh one.
+ */
+async function clearStaleQueueJobIfNeeded(storyId: string, voiceProfileId: string): Promise<void> {
+  const queue = getNarrationQueue()
+  const existing = await queue.getJob(narrationDedupeKey(storyId, voiceProfileId)).catch(() => null)
+  if (!existing) return
+
+  const state = await existing.getState().catch(() => 'unknown')
+  // delayed is already handled by enqueueNarrationRender; focus on active/waiting that map to dead DB jobs.
+  if (state !== 'active' && state !== 'waiting') return
+
+  const dbJob = await prisma.voiceGenerationJob
+    .findUnique({
+      where: { id: existing.data.voiceGenerationJobId },
+      select: { status: true, startedAt: true },
+    })
+    .catch(() => null)
+
+  if (!dbJob) return
+
+  const isTerminal = dbJob.status === 'FAILED' || dbJob.status === 'CANCELLED'
+  const isStale =
+    dbJob.status === 'PROCESSING' &&
+    dbJob.startedAt !== null &&
+    Date.now() - dbJob.startedAt.getTime() > STALE_PROCESSING_TIMEOUT_MS
+
+  if (!isTerminal && !isStale) return
+
+  logger.warn('[narrate] clearing stale queue job before re-enqueue', {
+    storyId,
+    voiceProfileId,
+    bqState: state,
+    dbStatus: dbJob.status,
+    startedAt: dbJob.startedAt,
+  })
+
+  if (isStale) {
+    await prisma.voiceGenerationJob
+      .update({
+        where: { id: existing.data.voiceGenerationJobId },
+        data: { status: 'FAILED', completedAt: new Date(), errorMessage: 'Stale job force-cleared on retry (exceeded 20 min timeout)' },
+      })
+      .catch(() => undefined)
+  }
+
+  await removeNarrationQueueJob(storyId, voiceProfileId)
+}
 
 interface CachedNarrationResponse {
   success: true
@@ -150,6 +210,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
+    await clearStaleQueueJobIfNeeded(storyId, profile.id)
+
     const voiceGenerationJob = await prisma.voiceGenerationJob.create({
       data: {
         voiceProfileId: profile.id,

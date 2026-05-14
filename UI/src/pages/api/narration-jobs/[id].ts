@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '@/lib/prisma'
 import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 import { logger } from '@/lib/logger'
-import { getNarrationQueue, narrationDedupeKey } from '@/lib/queues/narrationQueue'
+import { getNarrationQueue, narrationDedupeKey, removeNarrationQueueJob } from '@/lib/queues/narrationQueue'
 
 interface NarrationJobStatusResponse {
   success: boolean
@@ -77,22 +77,12 @@ async function handleCancel(req: NextApiRequest, res: NextApiResponse) {
     }),
   ])
 
-  // Remove from BullMQ if the job is still waiting — active jobs finish on the
-  // worker but will discard the result once they see CANCELLED in the DB.
+  // Remove from BullMQ unconditionally. Active jobs will finish on the worker
+  // but discard the result once they see CANCELLED in the DB.
   if (dbJob.storyId && dbJob.voiceProfileId) {
-    try {
-      const queue = getNarrationQueue()
-      const dedupeKey = narrationDedupeKey(dbJob.storyId, dbJob.voiceProfileId)
-      const queueJob = await queue.getJob(dedupeKey)
-      if (queueJob) {
-        const state = await queueJob.getState()
-        if (state === 'waiting' || state === 'delayed') {
-          await queueJob.remove().catch(() => undefined)
-        }
-      }
-    } catch (err) {
+    await removeNarrationQueueJob(dbJob.storyId, dbJob.voiceProfileId).catch((err) => {
       logger.warn('[narration-jobs] BullMQ removal on cancel failed (non-fatal)', { jobId, err })
-    }
+    })
   }
 
   return res.status(200).json({ success: true, cancelled: true })

@@ -74,6 +74,22 @@ export interface EnqueueResult {
   existingVoiceGenerationJobId?: string
 }
 
+/**
+ * Remove the BullMQ job for a given (storyId, voiceProfileId) pair regardless of state.
+ * Used by the cancel endpoint and stale-job cleanup to fully evict a stuck job from Redis.
+ */
+export async function removeNarrationQueueJob(
+  storyId: string,
+  voiceProfileId: string
+): Promise<boolean> {
+  const queue = getNarrationQueue()
+  const jobId = narrationDedupeKey(storyId, voiceProfileId)
+  const existing = await queue.getJob(jobId).catch(() => null)
+  if (!existing) return false
+  await existing.remove().catch(() => undefined)
+  return true
+}
+
 export async function enqueueNarrationRender(
   data: NarrationRenderJobData,
   options: JobsOptions = {}
