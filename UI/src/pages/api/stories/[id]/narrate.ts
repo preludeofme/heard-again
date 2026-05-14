@@ -175,12 +175,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         success: true,
         status: 'ready',
         assetId: cachedAsset.id,
-        assetDownloadUrl: `/api/assets/${cachedAsset.id}/download`,
+        assetDownloadUrl: `/api/assets/serve/${cachedAsset.id}`,
         voiceProfileId: profileId,
       }
       return res.status(200).json(payload)
     }
-    return res.redirect(302, `/api/assets/${cachedAsset.id}/download`)
+    return res.redirect(302, `/api/assets/serve/${cachedAsset.id}`)
   }
 
   const profile = await prisma.voiceProfile.findFirst({

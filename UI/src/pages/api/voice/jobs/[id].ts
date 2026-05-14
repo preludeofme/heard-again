@@ -43,7 +43,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         completedAt: job.completedAt,
         errorMessage: job.errorMessage,
         outputAssetId: job.outputAssetId,
-        outputAssetDownloadUrl: job.outputAssetId ? `/api/assets/${job.outputAssetId}/download` : null,
+        outputAssetDownloadUrl: job.outputAssetId ? `/api/assets/serve/${job.outputAssetId}` : null,
       },
     })
   } catch (error: any) {

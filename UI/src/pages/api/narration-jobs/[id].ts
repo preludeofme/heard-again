@@ -163,7 +163,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     sentencesDone,
     sentencesTotal,
     assetId: dbJob.outputAssetId,
-    assetDownloadUrl: dbJob.outputAssetId ? `/api/assets/${dbJob.outputAssetId}/download` : null,
+    assetDownloadUrl: dbJob.outputAssetId ? `/api/assets/serve/${dbJob.outputAssetId}` : null,
     errorMessage: dbJob.errorMessage,
     startedAt: dbJob.startedAt ? dbJob.startedAt.toISOString() : null,
     completedAt: dbJob.completedAt ? dbJob.completedAt.toISOString() : null,

@@ -119,7 +119,7 @@ export default function StoryDetailPage() {
       if (audio?.id && audio?.voiceProfileId) {
         setSavedNarration({
           assetId: audio.id,
-          downloadUrl: `/api/assets/${audio.id}/download`,
+          downloadUrl: `/api/assets/serve/${audio.id}`,
           voiceProfileId: audio.voiceProfileId,
         })
       } else {

@@ -98,7 +98,7 @@ export default apiHandler({
       return successResponse(res, {
         alreadyRendered: true,
         outputAssetId: cachedAsset.id,
-        outputAssetDownloadUrl: `/api/assets/${cachedAsset.id}/download`,
+        outputAssetDownloadUrl: `/api/assets/serve/${cachedAsset.id}`,
         voiceProfileId: profile.id,
       })
     }
