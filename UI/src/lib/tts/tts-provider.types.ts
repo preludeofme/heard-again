@@ -78,6 +78,7 @@ export interface TTSProvider {
     profileName: string,
     text: string,
     familyspaceId: string,
+    referenceText: string | null,
     onProgress: (event: SynthesisProgressEvent) => Promise<void>
   ): Promise<SynthesisCompleteEvent>
 

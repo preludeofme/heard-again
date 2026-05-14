@@ -50,6 +50,7 @@ class SynthesizeBatchInput(BaseModel):
     profileName: str
     text: str
     familyspaceId: str
+    referenceText: Optional[str] = None
     language: str = "English"
     silencePaddingMs: int = 200
 

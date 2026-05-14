@@ -153,6 +153,7 @@ def _handle_synthesize_batch(req: SynthesizeBatchInput) -> dict[str, Any]:
                 text=sentence,
                 output_path=str(out_path),
                 reference_audio_path=str(reference_path) if reference_path else None,
+                reference_text=req.referenceText,
             )
             last_secs = round(time.time() - t_sent, 2)
             sentence_paths.append(out_path)

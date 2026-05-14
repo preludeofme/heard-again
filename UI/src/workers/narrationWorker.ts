@@ -24,7 +24,14 @@ function audioExtensionFor(mimeType: string): string {
 async function fetchVoiceProfile(familyspaceId: string, voiceProfileId: string) {
   const profile = await prisma.voiceProfile.findFirst({
     where: { id: voiceProfileId, familyspaceId, status: 'READY' },
-    select: { id: true, name: true, externalId: true, personId: true },
+    select: {
+      id: true,
+      name: true,
+      externalId: true,
+      personId: true,
+      sourceTranscript: true,
+      sourceAsset: { select: { transcript: true } },
+    },
   })
   if (!profile) {
     throw new Error(`Voice profile ${voiceProfileId} not found or not READY in familyspace ${familyspaceId}`)
@@ -245,10 +252,13 @@ async function handleNarrationRender(job: Job<NarrationRenderJobData>, token?: s
     throw new Error(`Voice profile ${voiceProfileId} has no externalId — was it created before the RunPod migration?`)
   }
 
+  const referenceText = profile.sourceTranscript ?? profile.sourceAsset?.transcript ?? null
+
   const completeEvent = await provider.synthesizeBatch(
     profile.externalId,
     text,
     familyspaceId,
+    referenceText,
     async (event) => {
       await updateProgress({
         phase: 'synthesizing',

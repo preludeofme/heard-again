@@ -221,6 +221,7 @@ export class RunPodTTSProvider implements TTSProvider {
     profileName: string,
     text: string,
     familyspaceId: string,
+    referenceText: string | null,
     onProgress: (event: SynthesisProgressEvent) => Promise<void>
   ): Promise<SynthesisCompleteEvent> {
     const job = await this.submitJob({
@@ -228,6 +229,7 @@ export class RunPodTTSProvider implements TTSProvider {
       profileName,
       text,
       familyspaceId,
+      referenceText: referenceText ?? undefined,
       language: 'English',
       silencePaddingMs: 200,
     })
