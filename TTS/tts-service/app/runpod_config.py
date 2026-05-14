@@ -7,7 +7,7 @@ HF_HOME = Path(os.getenv("HF_HOME", "/runpod-volume/models/huggingface"))
 TRANSFORMERS_CACHE = Path(os.getenv("TRANSFORMERS_CACHE", "/runpod-volume/models/huggingface"))
 TORCH_HOME = Path(os.getenv("TORCH_HOME", "/runpod-volume/models/torch"))
 TEMP_DIR = Path(os.getenv("TEMP_DIR", "/tmp/heard-again"))
-DEFAULT_AUDIO_FORMAT = os.getenv("DEFAULT_AUDIO_FORMAT", "mp3")
+DEFAULT_AUDIO_FORMAT = "wav"  # soundfile cannot write MP3; WAV is always safe
 TTS_CALLBACK_SECRET = os.getenv("TTS_CALLBACK_SECRET", "")
 TTS_STUB_MODE = os.getenv("TTS_STUB_MODE", "false").lower() in {"1", "true", "yes"}
 
