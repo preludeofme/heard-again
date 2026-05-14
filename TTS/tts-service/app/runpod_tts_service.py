@@ -89,26 +89,32 @@ def generate_tts_audio(text: str, output_path: str, reference_audio_path: str | 
         sf.write(str(out), audio, sr)
         return
 
+    if not reference_audio_path:
+        # Base model requires a reference audio for voice cloning.
+        # Write silence as a safe fallback (hit during pre-warm; real jobs always have a profile).
+        logger.warning("No reference audio provided — writing silence (Base model requires ref_audio)")
+        sf.write(str(out), np.zeros(24000, dtype=np.float32), 24000)
+        return
+
     try:
-        if reference_audio_path:
-            if reference_text:
-                # ICL mode: best voice cloning quality — uses both audio and transcript.
-                clone_prompt = model.create_voice_clone_prompt(
-                    ref_audio=reference_audio_path,
-                    ref_text=reference_text,
-                )
-            else:
-                # X-vector only mode: uses speaker embedding from audio alone.
-                # Slightly lower cloning accuracy but works without a transcript.
-                # Profiles uploaded before Whisper was added won't have a transcript.
-                logger.warning("No reference transcript available — using x_vector_only_mode (lower quality)")
-                clone_prompt = model.create_voice_clone_prompt(
-                    ref_audio=reference_audio_path,
-                    x_vector_only_mode=True,
-                )
-            wavs, sr = model.inference(text=text, prompt=clone_prompt)
+        if reference_text:
+            # ICL mode: uses both audio and transcript for best cloning quality.
+            wavs, sr = model.generate_voice_clone(
+                text=text,
+                ref_audio=reference_audio_path,
+                ref_text=reference_text,
+                x_vector_only_mode=False,
+            )
         else:
-            wavs, sr = model.inference(text=text)
+            # X-vector only mode: speaker embedding from audio alone.
+            # Lower cloning accuracy but works without a transcript.
+            # Profiles uploaded before Whisper was added won't have a transcript.
+            logger.warning("No reference transcript available — using x_vector_only_mode (lower quality)")
+            wavs, sr = model.generate_voice_clone(
+                text=text,
+                ref_audio=reference_audio_path,
+                x_vector_only_mode=True,
+            )
         sf.write(str(out), wavs[0], sr)
     except Exception as exc:
         raise RuntimeError(f"Qwen TTS generation failed: {exc}") from exc

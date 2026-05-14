@@ -306,19 +306,15 @@ def handler(event: dict[str, Any]) -> dict[str, Any]:
 
 
 if __name__ == "__main__":
-    # Pre-warm: run a short end-to-end inference so library incompatibilities
-    # (e.g. transformers breaking the speech_tokenizer feature-extractor probe)
-    # surface immediately rather than failing silently on the first real job.
+    # Pre-warm: load and initialise the model so library incompatibilities surface
+    # immediately rather than failing silently on the first real job.
+    # generate_voice_clone requires a reference audio, so we just force model load here.
     if not TTS_STUB_MODE:
-        import os
-        logger.info("Pre-warming TTS model with test inference...")
-        from app.runpod_tts_service import generate_tts_audio
-        _prewarm_path = "/tmp/tts_prewarm_test.wav"
+        logger.info("Pre-warming TTS model (loading weights)...")
+        from app.runpod_tts_service import _get_model
         try:
-            generate_tts_audio("Hello.", _prewarm_path)
-            if os.path.exists(_prewarm_path):
-                os.unlink(_prewarm_path)
-            logger.info("TTS pre-warm complete — model and inference pipeline verified.")
+            _get_model()
+            logger.info("TTS pre-warm complete — model loaded and verified.")
         except Exception as exc:
             logger.error(
                 "TTS pre-warm FAILED: %s\n"
