@@ -75,30 +75,40 @@ def _get_model():
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
     logger.info("Loading Qwen model '%s' on %s", MODEL_ID, device)
 
-    for attempt in range(2):
+    # Three-phase recovery:
+    #   attempt 0 → try inject preprocessor_config.json (avoids full re-download)
+    #   attempt 1 → snapshot still broken (e.g. missing model weights); clear cache + re-download
+    #   attempt 2 → fresh download; raise on any remaining error
+    for attempt in range(3):
         try:
             _model = Qwen3TTSModel.from_pretrained(MODEL_ID, device_map=device, dtype=torch.bfloat16)
             return _model
         except Exception as exc:
             msg = str(exc)
             missing_preprocessor = "preprocessor_config.json" in msg
-            is_other_corruption = (
+            missing_weights = (
+                "no file named pytorch_model.bin" in msg
+                or ("model.safetensors" in msg and "no file named" in msg)
+            )
+            is_incomplete_snapshot = missing_preprocessor or missing_weights or (
                 "is the correct path to a directory" in msg
                 or (isinstance(exc, (FileNotFoundError, OSError)) and str(HF_HOME) in msg)
             )
-            if attempt == 0:
-                if missing_preprocessor:
-                    # Inject the known-good preprocessor_config.json directly into the
-                    # cached snapshot — avoids a full 682 MB re-download.
-                    if _inject_speech_tokenizer_config():
-                        logger.info("Retrying model load after injecting preprocessor config")
-                        continue
-                    # Nothing to inject (no cached snapshot exists yet) — fall through
-                    # to the full cache-clear path so from_pretrained re-downloads.
-                if missing_preprocessor or is_other_corruption:
-                    logger.warning("Model cache corrupt (%s) — clearing and retrying download", exc)
-                    _clear_model_cache()
+
+            if attempt == 0 and missing_preprocessor:
+                if _inject_speech_tokenizer_config():
+                    logger.info("Retrying model load after injecting preprocessor config")
                     continue
+                # No cached snapshot yet — fall through to cache-clear below
+
+            if attempt < 2 and is_incomplete_snapshot:
+                logger.warning(
+                    "Cached model snapshot is incomplete (%s) — clearing cache and re-downloading",
+                    exc,
+                )
+                _clear_model_cache()
+                continue
+
             raise
 
 
