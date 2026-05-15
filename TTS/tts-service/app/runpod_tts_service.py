@@ -86,14 +86,14 @@ def generate_tts_audio(text: str, output_path: str, reference_audio_path: str | 
     if model == "stub":
         sr = 24000
         audio = np.zeros(sr, dtype=np.float32)
-        sf.write(str(out), audio, sr)
+        sf.write(str(out), audio, sr, subtype='PCM_16')
         return
 
     if not reference_audio_path:
         # Base model requires a reference audio for voice cloning.
         # Write silence as a safe fallback (hit during pre-warm; real jobs always have a profile).
         logger.warning("No reference audio provided — writing silence (Base model requires ref_audio)")
-        sf.write(str(out), np.zeros(24000, dtype=np.float32), 24000)
+        sf.write(str(out), np.zeros(24000, dtype=np.float32), 24000, subtype='PCM_16')
         return
 
     try:
@@ -121,6 +121,6 @@ def generate_tts_audio(text: str, output_path: str, reference_audio_path: str | 
         if wav_data.ndim == 2 and wav_data.shape[0] < wav_data.shape[1]:
             wav_data = wav_data.T  # (channels, samples) → (samples, channels)
         logger.info("Writing audio: shape=%s sr=%d path=%s", wav_data.shape, sr, out)
-        sf.write(str(out), wav_data, sr)
+        sf.write(str(out), wav_data, sr, subtype='PCM_16')
     except Exception as exc:
         raise RuntimeError(f"Qwen TTS generation failed: {exc}") from exc

@@ -179,7 +179,7 @@ def _handle_synthesize_batch(req: SynthesizeBatchInput) -> dict[str, Any]:
             all_audio.append(np.zeros(silence_samples, dtype=np.float32))
 
         combined = np.concatenate(all_audio)
-        sf.write(str(combined_path), combined, sample_rate)
+        sf.write(str(combined_path), combined, sample_rate, subtype='PCM_16')
 
         duration = len(combined) / sample_rate
         synthesis_time = round(time.time() - start, 2)
