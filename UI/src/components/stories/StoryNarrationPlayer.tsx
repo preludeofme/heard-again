@@ -22,6 +22,8 @@ import {
   Cancel as CancelIcon,
 } from '@mui/icons-material'
 import { fetchWithCSRF } from '@/lib/api-client'
+import { useRealtimeRun } from '@trigger.dev/react-hooks'
+import type { NarrationTaskProgress } from '@/trigger/narration-task'
 
 interface VoiceProfileOption {
   id: string
@@ -67,6 +69,8 @@ interface NarrateApiResponse {
   assetDownloadUrl?: string
   voiceProfileId?: string
   narrationJobId?: string
+  triggerRunId?: string
+  publicAccessToken?: string
   queueJobId?: string
   error?: string
 }
@@ -100,6 +104,8 @@ export function StoryNarrationPlayer({
     savedNarration && savedNarration.voiceProfileId === initialProfileId ? savedNarration : null,
   )
   const [error, setError] = useState<string | null>(null)
+  const [triggerRunId, setTriggerRunId] = useState<string | null>(null)
+  const [publicAccessToken, setPublicAccessToken] = useState<string | null>(null)
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const stopPolling = useCallback(() => {
@@ -148,14 +154,64 @@ export function StoryNarrationPlayer({
     [onSaved, selectedProfileId, stopPolling],
   )
 
+  const { run: liveRun } = useRealtimeRun(triggerRunId ?? '', {
+    accessToken: publicAccessToken ?? '',
+    enabled: !!triggerRunId && !!publicAccessToken && state === 'rendering',
+  })
+
+  const refetchJobStatus = useCallback(async (): Promise<void> => {
+    if (!jobId) return
+    try {
+      const res = await fetch(`/api/narration-jobs/${jobId}`)
+      if (!res.ok) {
+        setState('error')
+        return
+      }
+      const data = (await res.json()) as NarrationJobApiResponse
+      if (data.status === 'completed' && data.assetId && data.assetDownloadUrl) {
+        const next: SavedNarration = {
+          assetId: data.assetId,
+          downloadUrl: data.assetDownloadUrl,
+          voiceProfileId: selectedProfileId,
+        }
+        setReadyNarration(next)
+        setState('ready')
+        setTriggerRunId(null)
+        setPublicAccessToken(null)
+        onSaved?.(next)
+      } else {
+        setState('error')
+        setError(data.errorMessage || 'Synthesis failed')
+      }
+    } catch {
+      setState('error')
+    }
+  }, [jobId, onSaved, selectedProfileId])
+
   useEffect(() => {
-    if (state !== 'rendering' || !jobId) return undefined
+    if (!liveRun) return
+
+    if (liveRun.status === 'COMPLETED') {
+      void refetchJobStatus()
+    }
+
+    if (liveRun.status === 'FAILED' || liveRun.status === 'CRASHED' || liveRun.status === 'TIMED_OUT') {
+      setState('error')
+      setTriggerRunId(null)
+      setPublicAccessToken(null)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [liveRun?.status])
+
+  // Fallback polling — only used when triggerRunId is absent (e.g. page-load recovery for pre-existing jobs)
+  useEffect(() => {
+    if (state !== 'rendering' || !jobId || triggerRunId) return undefined
     void pollJobStatus(jobId)
     pollIntervalRef.current = setInterval(() => {
       void pollJobStatus(jobId)
     }, POLL_INTERVAL_MS)
     return stopPolling
-  }, [state, jobId, pollJobStatus, stopPolling])
+  }, [state, jobId, triggerRunId, pollJobStatus, stopPolling])
 
   useEffect(() => () => stopPolling(), [stopPolling])
 
@@ -200,6 +256,8 @@ export function StoryNarrationPlayer({
         if (payload.status === 'queued' && payload.narrationJobId) {
           setJobId(payload.narrationJobId)
           setJobStatus(null)
+          if (payload.triggerRunId) setTriggerRunId(payload.triggerRunId)
+          if (payload.publicAccessToken) setPublicAccessToken(payload.publicAccessToken)
           setState('rendering')
           return
         }
@@ -288,13 +346,17 @@ export function StoryNarrationPlayer({
 
   const renderProgress = () => {
     if (state !== 'rendering') return null
-    const total = jobStatus?.sentencesTotal ?? 0
-    const done = jobStatus?.sentencesDone ?? 0
+    const liveProgress = liveRun?.metadata?.progress as NarrationTaskProgress | undefined
+    const currentPhase = liveProgress?.phase ?? jobStatus?.status ?? 'queued'
+    const displaySentencesDone = liveProgress?.sentencesDone ?? jobStatus?.sentencesDone ?? 0
+    const displaySentencesTotal = liveProgress?.sentencesTotal ?? jobStatus?.sentencesTotal ?? 0
+    const total = displaySentencesTotal
+    const done = displaySentencesDone
     const percent = total > 0 ? (done / total) * 100 : 0
     const label = (() => {
-      if (!jobStatus || jobStatus.status === 'queued') return 'Queued…'
-      if (jobStatus.status === 'synthesizing') return `Synthesizing sentences… (${done}/${total})`
-      if (jobStatus.status === 'saving') return 'Finishing up…'
+      if (currentPhase === 'queued') return 'Queued…'
+      if (currentPhase === 'synthesizing') return `Synthesizing sentences… (${done}/${total})`
+      if (currentPhase === 'saving') return 'Finishing up…'
       return 'Preparing narration…'
     })()
     return (

@@ -692,6 +692,7 @@ model VoiceGenerationJob {
   outputAssetId      String?
   errorMessage       String?
   cloudJobId         String?
+  triggerRunId       String?
   computeInstance    String?
   durationSeconds    Float?
   computeTimeSeconds Float?

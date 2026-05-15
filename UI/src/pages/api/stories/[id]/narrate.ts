@@ -2,66 +2,51 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '@/lib/prisma'
 import { getAuthUserWithFamilyspace } from '@/lib/auth-helpers'
 import { logger } from '@/lib/logger'
-import {
-  enqueueNarrationRender,
-  getNarrationQueue,
-  narrationDedupeKey,
-  removeNarrationQueueJob,
-} from '@/lib/queues/narrationQueue'
+import { narrationTask } from '@/trigger/narration-task'
+import { auth, runs } from '@trigger.dev/sdk/v3'
 
-// Jobs stuck in PROCESSING longer than this are considered stale and force-cleared on retry.
-const STALE_PROCESSING_TIMEOUT_MS = 20 * 60 * 1000
+const STALE_PROCESSING_TIMEOUT_MS = 20 * 60 * 1_000
 
-/**
- * If an existing BullMQ job for this (storyId, voiceProfileId) pair maps to a DB job
- * that is already in a terminal state (FAILED/CANCELLED) or has been PROCESSING for
- * longer than STALE_PROCESSING_TIMEOUT_MS, remove it from the queue so enqueueNarrationRender
- * can create a fresh one.
- */
-async function clearStaleQueueJobIfNeeded(storyId: string, voiceProfileId: string): Promise<void> {
-  const queue = getNarrationQueue()
-  const existing = await queue.getJob(narrationDedupeKey(storyId, voiceProfileId)).catch(() => null)
-  if (!existing) return
+async function clearStaleJobIfNeeded(storyId: string, voiceProfileId: string): Promise<void> {
+  const staleJob = await prisma.voiceGenerationJob.findFirst({
+    where: {
+      storyId,
+      voiceProfileId,
+      status: { in: ['QUEUED', 'PROCESSING'] },
+    },
+    select: { id: true, status: true, startedAt: true, triggerRunId: true },
+    orderBy: { createdAt: 'desc' },
+  })
+  if (!staleJob) return
 
-  const state = await existing.getState().catch(() => 'unknown')
-  // delayed is already handled by enqueueNarrationRender; focus on active/waiting that map to dead DB jobs.
-  if (state !== 'active' && state !== 'waiting') return
-
-  const dbJob = await prisma.voiceGenerationJob
-    .findUnique({
-      where: { id: existing.data.voiceGenerationJobId },
-      select: { status: true, startedAt: true },
-    })
-    .catch(() => null)
-
-  if (!dbJob) return
-
-  const isTerminal = dbJob.status === 'FAILED' || dbJob.status === 'CANCELLED'
   const isStale =
-    dbJob.status === 'PROCESSING' &&
-    dbJob.startedAt !== null &&
-    Date.now() - dbJob.startedAt.getTime() > STALE_PROCESSING_TIMEOUT_MS
+    staleJob.status === 'PROCESSING' &&
+    staleJob.startedAt !== null &&
+    Date.now() - staleJob.startedAt.getTime() > STALE_PROCESSING_TIMEOUT_MS
 
-  if (!isTerminal && !isStale) return
+  if (!isStale) return
 
-  logger.warn('[narrate] clearing stale queue job before re-enqueue', {
+  logger.warn('[narrate] cancelling stale Trigger.dev job', {
     storyId,
     voiceProfileId,
-    bqState: state,
-    dbStatus: dbJob.status,
-    startedAt: dbJob.startedAt,
+    jobId: staleJob.id,
+    triggerRunId: staleJob.triggerRunId,
   })
 
-  if (isStale) {
-    await prisma.voiceGenerationJob
-      .update({
-        where: { id: existing.data.voiceGenerationJobId },
-        data: { status: 'FAILED', completedAt: new Date(), errorMessage: 'Stale job force-cleared on retry (exceeded 20 min timeout)' },
-      })
-      .catch(() => undefined)
+  if (staleJob.triggerRunId) {
+    await runs.cancel(staleJob.triggerRunId).catch(() => undefined)
   }
 
-  await removeNarrationQueueJob(storyId, voiceProfileId)
+  await prisma.voiceGenerationJob
+    .update({
+      where: { id: staleJob.id },
+      data: {
+        status: 'FAILED',
+        completedAt: new Date(),
+        errorMessage: 'Stale job force-cleared on retry (exceeded 20 min timeout)',
+      },
+    })
+    .catch(() => undefined)
 }
 
 interface CachedNarrationResponse {
@@ -76,7 +61,8 @@ interface QueuedNarrationResponse {
   success: true
   status: 'queued'
   narrationJobId: string
-  queueJobId: string
+  triggerRunId: string
+  publicAccessToken: string
   voiceProfileId: string
 }
 
@@ -210,54 +196,83 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    await clearStaleQueueJobIfNeeded(storyId, profile.id)
+    await clearStaleJobIfNeeded(storyId, profile.id)
 
     const voiceGenerationJob = await prisma.voiceGenerationJob.create({
       data: {
         voiceProfileId: profile.id,
         storyId,
-        text: text.substring(0, 10000),
+        text: text.substring(0, 10_000),
         status: 'QUEUED',
         styleOverride: { requestedLanguage: 'English', source: 'narrate.enqueue' },
       },
       select: { id: true },
     })
 
-    const enqueueResult = await enqueueNarrationRender({
-      storyId,
-      familyspaceId: user.familyspaceId,
-      voiceProfileId: profile.id,
-      userId: user.id,
-      voiceGenerationJobId: voiceGenerationJob.id,
+    const run = await narrationTask.trigger(
+      {
+        storyId,
+        familyspaceId: user.familyspaceId,
+        voiceProfileId: profile.id,
+        userId: user.id,
+        voiceGenerationJobId: voiceGenerationJob.id,
+      },
+      {
+        idempotencyKey: `narration:render:${storyId}:${profile.id}`,
+        tags: [`story:${storyId}`, `family:${user.familyspaceId}`],
+      }
+    )
+
+    const existingJobForRun = await prisma.voiceGenerationJob.findFirst({
+      where: { triggerRunId: run.id },
+      select: { id: true },
     })
 
-    if (enqueueResult.deduped) {
-      await prisma.voiceGenerationJob.delete({ where: { id: voiceGenerationJob.id } }).catch(() => undefined)
-      const payload: QueuedNarrationResponse = {
+    if (existingJobForRun) {
+      await prisma.voiceGenerationJob
+        .delete({ where: { id: voiceGenerationJob.id } })
+        .catch(() => undefined)
+
+      const publicAccessToken = await auth.createPublicToken({
+        scopes: { read: { runs: [run.id] } },
+        expirationTime: '2h',
+      })
+
+      return res.status(202).json({
         success: true,
         status: 'queued',
-        narrationJobId: enqueueResult.existingVoiceGenerationJobId ?? voiceGenerationJob.id,
-        queueJobId: enqueueResult.queueJobId,
+        narrationJobId: existingJobForRun.id,
+        triggerRunId: run.id,
+        publicAccessToken,
         voiceProfileId: profile.id,
-      }
-      return res.status(202).json(payload)
+      } satisfies QueuedNarrationResponse)
     }
+
+    await prisma.voiceGenerationJob.update({
+      where: { id: voiceGenerationJob.id },
+      data: { triggerRunId: run.id },
+    })
 
     await prisma.story.update({
       where: { id: storyId },
       data: { narrationRenderJobId: voiceGenerationJob.id },
     })
 
-    const payload: QueuedNarrationResponse = {
+    const publicAccessToken = await auth.createPublicToken({
+      scopes: { read: { runs: [run.id] } },
+      expirationTime: '2h',
+    })
+
+    return res.status(202).json({
       success: true,
       status: 'queued',
       narrationJobId: voiceGenerationJob.id,
-      queueJobId: enqueueResult.queueJobId,
+      triggerRunId: run.id,
+      publicAccessToken,
       voiceProfileId: profile.id,
-    }
-    return res.status(202).json(payload)
+    } satisfies QueuedNarrationResponse)
   } catch (error) {
-    logger.error('[narrate] failed to enqueue render', { storyId, error })
+    logger.error('[narrate] failed to trigger render', { storyId, error })
     return res.status(503).json({ success: false, error: 'Failed to queue narration render' })
   }
 }
