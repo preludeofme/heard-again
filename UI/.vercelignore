@@ -1,0 +1,6 @@
+# Large asset directories
+uploads/
+generated/
+
+# Cache
+.next/

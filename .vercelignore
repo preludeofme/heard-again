@@ -1,0 +1,26 @@
+# Large asset directories
+TTS/
+caddy/
+screenshots/
+playwright-report/
+test-results/
+uploads/
+**/generated/
+**/uploads/
+
+# Cross-service code not needed for UI deployment
+Chat/
+infra/
+
+# Cache and logs
+.next/
+.scannerwork/
+.claude/
+.cline/
+.opencode/
+logs/
+*.log
+*.txt
+
+# Git
+.git/
