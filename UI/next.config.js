@@ -10,6 +10,8 @@ const nextConfig = {
     '@aws-sdk/s3-request-presigner',
     '@aws-sdk/lib-storage',
     '@smithy/util-stream',
+    '@trigger.dev/sdk',
+    '@trigger.dev/core',
     'bullmq',
     'ioredis',
     'sharp',
@@ -20,7 +22,7 @@ const nextConfig = {
   ...(process.env.VERCEL !== '1' && { output: 'standalone' }),
   // Locally: pin Turbopack root to prevent monorepo root detection
   // On Vercel: empty config acknowledges Turbopack when a webpack config also exists
-  turbopack: process.env.VERCEL !== '1' ? { root: __dirname } : {},
+  ...(process.env.VERCEL !== '1' && { turbopack: { root: __dirname } }),
   allowedDevOrigins: ['100.75.138.91', 'trubuck-design-ai-beast.stern-mulley.ts.net', 'localhost', '127.0.0.1'],
   images: {
     remotePatterns: [
