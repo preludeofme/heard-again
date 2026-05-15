@@ -43,7 +43,9 @@
   "dependencies": {
     "@prisma/client": "^6.19.2",
     "@trigger.dev/sdk": "^4.4.6",
-    "archiver": "^8.0.0"
+    "archiver": "^8.0.0",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6"
   },
   "workspaces": [
     "UI",
