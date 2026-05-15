@@ -8,9 +8,125 @@ import {
   narrationDedupeKey,
   removeNarrationQueueJob,
 } from '@/lib/queues/narrationQueue'
+import { RunPodTTSProvider } from '@/lib/tts/runpod-tts-provider'
 
-// Jobs stuck in PROCESSING longer than this are considered stale and force-cleared on retry.
 const STALE_PROCESSING_TIMEOUT_MS = 20 * 60 * 1000
+
+async function handleRunPodDirectNarration(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  opts: {
+    user: { id: string; familyspaceId: string }
+    storyId: string
+    profileId: string
+    text: string
+  }
+): Promise<void> {
+  const { user, storyId, profileId, text } = opts
+
+  // Clear stale PROCESSING jobs so they don't block re-submission
+  await prisma.voiceGenerationJob
+    .updateMany({
+      where: {
+        storyId,
+        voiceProfileId: profileId,
+        status: 'PROCESSING',
+        startedAt: { lt: new Date(Date.now() - STALE_PROCESSING_TIMEOUT_MS) },
+      },
+      data: {
+        status: 'FAILED',
+        completedAt: new Date(),
+        errorMessage: 'Stale job force-cleared on retry (exceeded 20 min timeout)',
+      },
+    })
+    .catch(() => undefined)
+
+  // Return existing active job if one is already running
+  const existingJob = await prisma.voiceGenerationJob.findFirst({
+    where: {
+      storyId,
+      voiceProfileId: profileId,
+      status: { in: ['QUEUED', 'PROCESSING'] },
+    },
+    select: { id: true, cloudJobId: true },
+    orderBy: { createdAt: 'desc' },
+  })
+  if (existingJob) {
+    return res.status(202).json({
+      success: true,
+      status: 'queued',
+      narrationJobId: existingJob.id,
+      queueJobId: existingJob.cloudJobId ?? existingJob.id,
+      voiceProfileId: profileId,
+    }) as unknown as void
+  }
+
+  const fullProfile = await prisma.voiceProfile.findFirst({
+    where: { id: profileId, familyspaceId: user.familyspaceId },
+    select: { externalId: true, sourceTranscript: true },
+  })
+  if (!fullProfile?.externalId) {
+    res.status(400).json({
+      success: false,
+      error: 'Voice profile has no externalId — please re-upload the voice sample',
+    })
+    return
+  }
+
+  const voiceGenerationJob = await prisma.voiceGenerationJob.create({
+    data: {
+      voiceProfileId: profileId,
+      storyId,
+      text: text.substring(0, 10000),
+      status: 'PROCESSING',
+      startedAt: new Date(),
+      styleOverride: { requestedLanguage: 'English', source: 'narrate.runpod-direct' },
+    },
+    select: { id: true },
+  })
+
+  try {
+    const tts = new RunPodTTSProvider()
+    const { runpodJobId } = await tts.submitSynthesisJob(
+      fullProfile.externalId,
+      text,
+      user.familyspaceId,
+      fullProfile.sourceTranscript ?? null
+    )
+
+    await prisma.$transaction([
+      prisma.voiceGenerationJob.update({
+        where: { id: voiceGenerationJob.id },
+        data: { cloudJobId: runpodJobId },
+      }),
+      prisma.story.update({
+        where: { id: storyId },
+        data: { narrationRenderJobId: voiceGenerationJob.id },
+      }),
+    ])
+
+    res.status(202).json({
+      success: true,
+      status: 'queued',
+      narrationJobId: voiceGenerationJob.id,
+      queueJobId: runpodJobId,
+      voiceProfileId: profileId,
+    })
+  } catch (error) {
+    await prisma.voiceGenerationJob
+      .update({
+        where: { id: voiceGenerationJob.id },
+        data: {
+          status: 'FAILED',
+          completedAt: new Date(),
+          errorMessage: String(error).slice(0, 1000),
+        },
+      })
+      .catch(() => undefined)
+    logger.error('[narrate] RunPod job submission failed', { storyId, error })
+    res.status(503).json({ success: false, error: 'Failed to submit narration job to RunPod' })
+  }
+}
 
 /**
  * If an existing BullMQ job for this (storyId, voiceProfileId) pair maps to a DB job
@@ -207,6 +323,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         error: 'Voice generation is blocked until explicit consent is recorded',
       })
     }
+  }
+
+  // When using RunPod serverless, bypass BullMQ entirely — submit directly to RunPod
+  // and let the narration-jobs polling endpoint finalize on completion.
+  if (process.env.TTS_PROVIDER === 'runpod_serverless') {
+    return handleRunPodDirectNarration(req, res, {
+      user,
+      storyId,
+      profileId: profile.id,
+      text: text.trim(),
+    })
   }
 
   try {
