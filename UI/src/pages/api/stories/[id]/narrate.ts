@@ -175,27 +175,46 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         Date.now() - activeJob.startedAt.getTime() > STALE_PROCESSING_TIMEOUT_MS
 
       if (!isStale && activeJob.triggerRunId) {
-        // In-flight run — issue a fresh read token and return immediately
-        const publicAccessToken = await auth.createPublicToken({
-          scopes: { read: { runs: [activeJob.triggerRunId] } },
-          expirationTime: '2h',
-        })
-        return res.status(202).json({
-          success: true,
-          status: 'queued',
-          narrationJobId: activeJob.id,
-          triggerRunId: activeJob.triggerRunId,
-          publicAccessToken,
-          voiceProfileId: profile.id,
-        } satisfies QueuedNarrationResponse)
+        // Verify the run is still active. A QUEUED job whose task failed before
+        // it could update the DB (e.g. Prisma init error) will have a terminal
+        // run forever, blocking all future re-renders for this story+profile pair.
+        const TERMINAL_STATUSES = new Set([
+          'COMPLETED_SUCCESSFULLY', 'COMPLETED_WITH_ERRORS',
+          'FAILED', 'CRASHED', 'CANCELED', 'TIMED_OUT',
+          'SYSTEM_FAILURE', 'INTERRUPTED', 'EXPIRED',
+        ])
+        let runIsActive = false
+        try {
+          const liveRun = await runs.retrieve(activeJob.triggerRunId)
+          runIsActive = !TERMINAL_STATUSES.has(liveRun.status)
+        } catch {
+          // Can't reach Trigger.dev — assume not active, create a fresh run
+        }
+
+        if (runIsActive) {
+          // Genuinely in-flight — issue a fresh read token and return immediately
+          const publicAccessToken = await auth.createPublicToken({
+            scopes: { read: { runs: [activeJob.triggerRunId] } },
+            expirationTime: '2h',
+          })
+          return res.status(202).json({
+            success: true,
+            status: 'queued',
+            narrationJobId: activeJob.id,
+            triggerRunId: activeJob.triggerRunId,
+            publicAccessToken,
+            voiceProfileId: profile.id,
+          } satisfies QueuedNarrationResponse)
+        }
       }
 
-      // Stale — cancel and fall through to create a fresh run
-      logger.warn('[narrate] cancelling stale Trigger.dev job', {
+      // Stale or terminal run — cancel and fall through to create a fresh run
+      logger.warn('[narrate] cancelling stale/terminal Trigger.dev job', {
         storyId,
         voiceProfileId: profile.id,
         jobId: activeJob.id,
         triggerRunId: activeJob.triggerRunId,
+        isStale,
       })
       if (activeJob.triggerRunId) {
         await runs.cancel(activeJob.triggerRunId).catch(() => undefined)
@@ -206,7 +225,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           data: {
             status: 'FAILED',
             completedAt: new Date(),
-            errorMessage: 'Stale job force-cleared on retry (exceeded 20 min timeout)',
+            errorMessage: isStale
+              ? 'Stale job force-cleared on retry (exceeded 20 min timeout)'
+              : 'Job superseded — Trigger.dev run was no longer active',
           },
         })
         .catch(() => undefined)
