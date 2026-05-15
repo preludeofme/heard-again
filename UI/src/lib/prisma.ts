@@ -4,6 +4,10 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
+// Prefer DATABASE_URL (set in Trigger.dev / some envs) then POSTGRES_URL (set by Neon integration).
+// Do not gate on NODE_ENV — Trigger.dev does not set it, so the override would silently be skipped.
+const resolvedDbUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+
 const prismaOptions: Prisma.PrismaClientOptions = {
   log: process.env.NODE_ENV === 'development'
     ? [
@@ -11,11 +15,11 @@ const prismaOptions: Prisma.PrismaClientOptions = {
         { level: 'warn', emit: 'stdout' },
       ]
     : [{ level: 'error', emit: 'stdout' }],
-  ...(process.env.NODE_ENV === 'production' && process.env.DATABASE_URL
+  ...(resolvedDbUrl
     ? {
         datasources: {
           db: {
-            url: process.env.DATABASE_URL,
+            url: resolvedDbUrl,
           },
         },
       }

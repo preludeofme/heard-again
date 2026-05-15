@@ -1,5 +1,6 @@
 import { defineConfig } from "@trigger.dev/sdk/v3";
 import { prismaExtension } from "@trigger.dev/build/extensions/prisma";
+import { syncEnvVars } from "@trigger.dev/build/extensions/core";
 
 export default defineConfig({
   project: "proj_tmgbtzgspjocfgztdorx",
@@ -24,6 +25,19 @@ export default defineConfig({
     extensions: [
       prismaExtension({
         schema: "prisma/schema.prisma",
+      }),
+      syncEnvVars(async (ctx) => {
+        const vars: { name: string; value: string }[] = [];
+        const dbUrl = ctx.env.DATABASE_URL;
+        if (dbUrl) {
+          if (!ctx.env.POSTGRES_URL) {
+            vars.push({ name: "POSTGRES_URL", value: dbUrl });
+          }
+          if (!ctx.env.POSTGRES_URL_NON_POOLING) {
+            vars.push({ name: "POSTGRES_URL_NON_POOLING", value: dbUrl });
+          }
+        }
+        return vars;
       }),
     ],
   },
