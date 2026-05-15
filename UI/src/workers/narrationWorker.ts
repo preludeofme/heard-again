@@ -266,6 +266,11 @@ async function handleNarrationRender(job: Job<NarrationRenderJobData>, token?: s
         sentencesTotal: event.sentencesTotal,
         message: event.lastSentenceSeconds ? `Last sentence: ${event.lastSentenceSeconds.toFixed(1)}s` : undefined,
       })
+    },
+    async (cloudJobId) => {
+      await prisma.voiceGenerationJob
+        .update({ where: { id: voiceGenerationJobId }, data: { cloudJobId } })
+        .catch(() => undefined)
     }
   )
 
@@ -382,8 +387,8 @@ export function startNarrationWorker(): Worker<NarrationRenderJobData> | null {
     const voiceGenerationJobId = job?.data?.voiceGenerationJobId
     if (voiceGenerationJobId) {
       await prisma.voiceGenerationJob
-        .update({
-          where: { id: voiceGenerationJobId },
+        .updateMany({
+          where: { id: voiceGenerationJobId, status: { notIn: ['COMPLETED', 'CANCELLED'] } },
           data: {
             status: 'FAILED',
             completedAt: new Date(),
@@ -398,8 +403,8 @@ export function startNarrationWorker(): Worker<NarrationRenderJobData> | null {
     const storyId = job?.data?.storyId
     if (storyId) {
       await prisma.story
-        .update({
-          where: { id: storyId },
+        .updateMany({
+          where: { id: storyId, narrationRenderJobId: job?.data?.voiceGenerationJobId ?? '' },
           data: { narrationRenderJobId: null },
         })
         .catch(() => undefined)

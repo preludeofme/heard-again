@@ -45,7 +45,8 @@ export class RestTTSProvider implements TTSProvider {
     text: string,
     familyspaceId: string,
     _referenceText: string | null,
-    onProgress: (event: SynthesisProgressEvent) => Promise<void>
+    onProgress: (event: SynthesisProgressEvent) => Promise<void>,
+    _onJobSubmitted?: (cloudJobId: string) => Promise<void>
   ): Promise<SynthesisCompleteEvent> {
     const synthUrl = `${TTS_SERVICE_URL}/api/tts/synthesize-batch`
     let response: Response

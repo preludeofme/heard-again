@@ -217,12 +217,60 @@ export class RunPodTTSProvider implements TTSProvider {
     }
   }
 
+  async submitSynthesisJob(
+    profileName: string,
+    text: string,
+    familyspaceId: string,
+    referenceText: string | null
+  ): Promise<{ runpodJobId: string }> {
+    const job = await this.submitJob({
+      action: 'synthesize_batch',
+      profileName,
+      text,
+      familyspaceId,
+      referenceText: referenceText ?? undefined,
+      language: 'English',
+      silencePaddingMs: 200,
+    })
+    return { runpodJobId: job.id }
+  }
+
+  async checkSynthesisJob(runpodJobId: string): Promise<
+    | { done: false; runpodStatus: RunPodStatus }
+    | { done: true; success: true; event: SynthesisCompleteEvent }
+    | { done: true; success: false; error: string }
+  > {
+    const res = await fetch(
+      `${RUNPOD_BASE}/${RUNPOD_TTS_ENDPOINT_ID}/status/${runpodJobId}`,
+      { headers: this.authHeaders() }
+    )
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '')
+      throw new Error(`RunPod status check failed (${res.status}): ${errText}`)
+    }
+    const job = (await res.json()) as RunPodJobResponse
+    if (job.status === 'COMPLETED') {
+      return { done: true, success: true, event: job.output as SynthesisCompleteEvent }
+    }
+    if (job.status === 'FAILED') {
+      return { done: true, success: false, error: job.error ?? 'RunPod job failed' }
+    }
+    if (job.status === 'CANCELLED') {
+      return { done: true, success: false, error: 'RunPod job was cancelled' }
+    }
+    if (job.status === 'TIMED_OUT') {
+      return { done: true, success: false, error: 'TTS_JOB_TIMEOUT: RunPod job timed out' }
+    }
+    return { done: false, runpodStatus: job.status }
+  }
+
   async synthesizeBatch(
     profileName: string,
     text: string,
     familyspaceId: string,
     referenceText: string | null,
-    onProgress: (event: SynthesisProgressEvent) => Promise<void>
+    onProgress: (event: SynthesisProgressEvent) => Promise<void>,
+    onJobSubmitted?: (cloudJobId: string) => Promise<void>
   ): Promise<SynthesisCompleteEvent> {
     const job = await this.submitJob({
       action: 'synthesize_batch',
@@ -233,6 +281,11 @@ export class RunPodTTSProvider implements TTSProvider {
       language: 'English',
       silencePaddingMs: 200,
     })
+
+    // Persist the RunPod job ID immediately so callers can rescue if we stall
+    if (onJobSubmitted) {
+      await onJobSubmitted(job.id).catch(() => undefined)
+    }
 
     try {
       return await this.streamViaWebSocket(job.id, onProgress)

@@ -79,7 +79,8 @@ export interface TTSProvider {
     text: string,
     familyspaceId: string,
     referenceText: string | null,
-    onProgress: (event: SynthesisProgressEvent) => Promise<void>
+    onProgress: (event: SynthesisProgressEvent) => Promise<void>,
+    onJobSubmitted?: (cloudJobId: string) => Promise<void>
   ): Promise<SynthesisCompleteEvent>
 
   downloadAudio(audioId: string, familyspaceId: string): Promise<Buffer>

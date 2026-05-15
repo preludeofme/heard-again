@@ -24,7 +24,7 @@
     "db:generate:vercel": "prisma generate --generator client --generator client_ui --schema=../prisma/schema.prisma",
     "db:migrate": "prisma migrate dev --schema=../prisma/schema.prisma",
     "db:push": "prisma db push --schema=../prisma/schema.prisma",
-    "db:studio": "prisma studio --schema=../prisma/schema.prisma",
+    "db:studio": "prisma studio --schema=../prisma/schema.prisma --env-file ../.env",
     "db:seed": "tsx ../prisma/seed.ts",
     "build:vercel": "bash scripts/vercel-build.sh"
   },
