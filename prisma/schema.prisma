@@ -403,6 +403,7 @@ model Person {
   voiceConsents    VoiceConsent[]
   voiceProfiles    VoiceProfile[]
   chatSessions     ChatSession[]
+  storyComments    StoryComment[]           @relation("PersonStoryComments")
   linkedUser       User?                    @relation("UserLinkedPerson")
 
   @@unique([familyspaceId, gedcomXref])
@@ -508,6 +509,7 @@ model StoryComment {
   familyspaceId String
   storyId       String
   userId        String
+  personId      String?
   content       String
   parentId      String?
   createdAt     DateTime       @default(now())
@@ -516,6 +518,7 @@ model StoryComment {
   replies       StoryComment[] @relation("CommentThread")
   story         Story          @relation(fields: [storyId], references: [id], onDelete: Cascade)
   user          User           @relation(fields: [userId], references: [id])
+  person        Person?        @relation("PersonStoryComments", fields: [personId], references: [id], onDelete: SetNull)
   familyspace   Familyspace    @relation(fields: [familyspaceId], references: [id], onDelete: Cascade)
 
   @@index([familyspaceId])

@@ -10,8 +10,12 @@ interface NarrationJobStatusResponse {
   jobId: string
   storyId: string | null
   status: 'queued' | 'processing' | 'synthesizing' | 'saving' | 'completed' | 'failed'
+  /** @deprecated Use chunksDone instead */
   sentencesDone: number
+  /** @deprecated Use chunksTotal instead */
   sentencesTotal: number
+  chunksDone: number
+  chunksTotal: number
   assetId: string | null
   assetDownloadUrl: string | null
   errorMessage: string | null
@@ -126,8 +130,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   let phase: NarrationTaskProgress['phase'] | undefined
-  let sentencesDone = 0
-  let sentencesTotal = 0
+  let chunksDone = 0
+  let chunksTotal = 0
   let triggerStatus: string | undefined
 
   const isTerminal =
@@ -141,8 +145,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const progress = run.metadata?.progress as NarrationTaskProgress | undefined
       if (progress) {
         phase = progress.phase
-        sentencesDone = progress.sentencesDone ?? 0
-        sentencesTotal = progress.sentencesTotal ?? 0
+        // Prefer chunksDone/chunksTotal; fall back to legacy sentencesDone/sentencesTotal
+        chunksDone = progress.chunksDone ?? progress.sentencesDone ?? 0
+        chunksTotal = progress.chunksTotal ?? progress.sentencesTotal ?? 0
       }
     } catch (err) {
       logger.warn('[narration-jobs] Trigger.dev run retrieve failed (non-fatal)', { jobId, err })
@@ -155,8 +160,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     jobId: dbJob.id,
     storyId: dbJob.storyId,
     status,
-    sentencesDone,
-    sentencesTotal,
+    sentencesDone: chunksDone,
+    sentencesTotal: chunksTotal,
+    chunksDone,
+    chunksTotal,
     assetId: dbJob.outputAssetId,
     assetDownloadUrl: dbJob.outputAssetId ? `/api/assets/serve/${dbJob.outputAssetId}` : null,
     errorMessage: dbJob.errorMessage,

@@ -68,6 +68,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const storyId = req.query.id as string
   const voiceProfileIdParam = req.query.voiceProfileId as string | undefined
+  const textSourceParam = req.query.textSource as string | undefined
+  const requestedTextSource: 'original' | 'narrated' | null =
+    textSourceParam === 'original' || textSourceParam === 'narrated' ? textSourceParam : null
 
   const story = await prisma.story.findFirst({
     where: { id: storyId, familyspaceId: user.familyspaceId },
@@ -103,10 +106,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .json({ success: false, error: 'No voice profile specified or available for this story' })
   }
 
-  const text =
-    story.narrationStatus === 'APPROVED' && story.narratedContent
-      ? story.narratedContent
-      : story.content
+  const useNarrated =
+    requestedTextSource === 'narrated'
+      ? story.narrationStatus === 'APPROVED' && !!story.narratedContent
+      : requestedTextSource === 'original'
+        ? false
+        : story.narrationStatus === 'APPROVED' && !!story.narratedContent
+
+  const text = useNarrated ? story.narratedContent! : story.content
   if (!text || text.trim().length === 0) {
     return res.status(400).json({ success: false, error: 'Story has no text to narrate' })
   }

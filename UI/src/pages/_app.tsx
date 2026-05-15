@@ -29,17 +29,17 @@ interface CustomAppProps extends AppProps {
   } & Record<string, any>
 }
 
-export default function App({ Component, pageProps }: CustomAppProps) {
+export default function App({ Component, pageProps, router }: CustomAppProps) {
   const { session, ...restPageProps } = pageProps
 
   return (
     <div className={`${manrope.variable} ${newsreader.variable}`}>
       <AuthProvider session={session}>
-        <SelectedFamilyMemberProvider>
+        <SelectedFamilyMemberProvider router={router}>
           <SnackbarProvider maxSnack={3} anchorOrigin={{ vertical: 'top', horizontal: 'right' }}>
             <ThemeProvider theme={theme}>
               <CssBaseline />
-              <SessionErrorBoundaryWrapper>
+              <SessionErrorBoundaryWrapper router={router}>
                 <Component {...restPageProps} />
               </SessionErrorBoundaryWrapper>
             </ThemeProvider>

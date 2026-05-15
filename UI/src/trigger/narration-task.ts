@@ -17,8 +17,12 @@ export interface NarrationTaskPayload {
 
 export interface NarrationTaskProgress {
   phase: 'queued' | 'loading' | 'synthesizing' | 'saving' | 'complete' | 'failed'
+  /** @deprecated Use chunksDone instead */
   sentencesDone: number
+  /** @deprecated Use chunksTotal instead */
   sentencesTotal: number
+  chunksDone: number
+  chunksTotal: number
   message?: string
 }
 
@@ -227,12 +231,18 @@ export const narrationTask = task({
 
     const updateProgress = async (patch: Partial<NarrationTaskProgress>): Promise<void> => {
       const current = (await metadata.get('progress') ?? {}) as Partial<NarrationTaskProgress>
+      // Resolve chunk counts: prefer explicit chunksDone/chunksTotal, fall back to legacy sentencesDone/sentencesTotal
+      const resolvedChunksDone = patch.chunksDone ?? patch.sentencesDone ?? current.chunksDone ?? current.sentencesDone ?? 0
+      const resolvedChunksTotal = patch.chunksTotal ?? patch.sentencesTotal ?? current.chunksTotal ?? current.sentencesTotal ?? 0
       const merged: NarrationTaskProgress = {
         phase: 'queued',
-        sentencesDone: 0,
-        sentencesTotal: 0,
         ...current,
         ...patch,
+        // Keep both fields in sync for backward compatibility with legacy polling clients
+        chunksDone: resolvedChunksDone,
+        chunksTotal: resolvedChunksTotal,
+        sentencesDone: resolvedChunksDone,
+        sentencesTotal: resolvedChunksTotal,
       }
       await metadata.set('progress', merged as unknown as DeserializedJson)
     }
@@ -279,10 +289,10 @@ export const narrationTask = task({
       async (event) => {
         await updateProgress({
           phase: 'synthesizing',
-          sentencesDone: event.sentencesDone,
-          sentencesTotal: event.sentencesTotal,
+          chunksDone: event.sentencesDone,
+          chunksTotal: event.sentencesTotal,
           message: event.lastSentenceSeconds
-            ? `Last sentence: ${event.lastSentenceSeconds.toFixed(1)}s`
+            ? `Last chunk: ${event.lastSentenceSeconds.toFixed(1)}s`
             : undefined,
         })
       },
@@ -295,8 +305,8 @@ export const narrationTask = task({
 
     await updateProgress({
       phase: 'saving',
-      sentencesDone: completeEvent.sentenceCount,
-      sentencesTotal: completeEvent.sentenceCount,
+      chunksDone: completeEvent.sentenceCount,
+      chunksTotal: completeEvent.sentenceCount,
     })
 
     const currentStatus = await prisma.voiceGenerationJob.findUnique({
@@ -357,8 +367,8 @@ export const narrationTask = task({
 
     await updateProgress({
       phase: 'complete',
-      sentencesDone: completeEvent.sentenceCount,
-      sentencesTotal: completeEvent.sentenceCount,
+      chunksDone: completeEvent.sentenceCount,
+      chunksTotal: completeEvent.sentenceCount,
     })
 
     const totalSeconds = (Date.now() - startedAt) / 1000

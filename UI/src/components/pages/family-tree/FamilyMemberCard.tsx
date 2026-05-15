@@ -30,7 +30,7 @@ interface FamilyMemberCardProps {
   cardWidth: number
   isMobile: boolean
   onPersonClick: (person: PersonArg) => void
-  onAddPerson: () => void
+  onAddPerson: (personId?: string) => void
   onViewMemories: (person: PersonArg) => void
   onViewFullProfile?: (personId: string) => void
   onToggleSiblings?: () => void

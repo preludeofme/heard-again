@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import {
   Dialog,
   DialogTitle,
@@ -32,6 +32,8 @@ import {
 } from '@mui/icons-material'
 import { fetchWithCSRF } from '@/lib/api-client'
 import { useSession } from 'next-auth/react'
+import { useRealtimeRun } from '@trigger.dev/react-hooks'
+import type { gedcomImportTask } from '@/trigger/gedcom-import-task'
 
 interface GedcomImportModalProps {
   open: boolean
@@ -186,7 +188,8 @@ export function GedcomImportModal({ open, onClose, onSuccess, userPersonId }: Ge
   const [file, setFile] = useState<File | null>(null)
   const [status, setStatus] = useState<'idle' | 'uploading' | 'preview' | 'processing' | 'polling' | 'success' | 'error'>('idle')
   const [jobId, setJobId] = useState<string | null>(null)
-  const [importProgress, setImportProgress] = useState(0)
+  const [triggerRunId, setTriggerRunId] = useState<string | null>(null)
+  const [realtimeToken, setRealtimeToken] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [previewData, setPreviewData] = useState<PreviewData | null>(null)
 
@@ -213,7 +216,8 @@ export function GedcomImportModal({ open, onClose, onSuccess, userPersonId }: Ge
     setError(null)
     setPreviewData(null)
     setJobId(null)
-    setImportProgress(0)
+    setTriggerRunId(null)
+    setRealtimeToken(null)
     setConnectionMode('self')
     setSelfXref(null)
     setSelfSearch(null)
@@ -258,40 +262,90 @@ export function GedcomImportModal({ open, onClose, onSuccess, userPersonId }: Ge
     return () => clearTimeout(timer)
   }, [anchorSearch])
 
-  // Slowly advance the simulated progress bar while polling (caps at 90 until job finishes)
-  useEffect(() => {
-    if (status !== 'polling') return
-    setImportProgress(0)
-    const timer = setInterval(() => {
-      setImportProgress(p => Math.min(p + 1.5, 90))
-    }, 500)
-    return () => clearInterval(timer)
-  }, [status])
-
-  // Poll job status while import is processing in background
+  // Fetch realtime token once jobId is set and we enter polling state
   useEffect(() => {
     if (status !== 'polling' || !jobId) return
-    const interval = setInterval(async () => {
+    let cancelled = false
+    fetch(`/api/import/jobs/${jobId}/realtime-token`, { credentials: 'include' })
+      .then((r) => r.json())
+      .then((d: { data?: { token: string | null; runId: string | null } }) => {
+        if (cancelled) return
+        if (d.data?.token) setRealtimeToken(d.data.token)
+        if (d.data?.runId) setTriggerRunId(d.data.runId)
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [status, jobId])
+
+  // Fallback poll for job terminal state when realtime is not available
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  useEffect(() => {
+    // Only start the fallback poll when we're in polling state but have no realtime token yet
+    if (status !== 'polling' || !jobId || realtimeToken) {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current)
+        pollingRef.current = null
+      }
+      return
+    }
+    pollingRef.current = setInterval(async () => {
       try {
         const resp = await fetch(`/api/import/jobs/${jobId}`, { credentials: 'include' })
         if (!resp.ok) return
-        const data = await resp.json()
-        const jobStatus: string = data.data?.status
+        const data = await resp.json() as { data?: { status: string; errorMessage?: string; triggerRunId?: string | null } }
+        const jobStatus = data.data?.status
+        if (data.data?.triggerRunId && !triggerRunId) setTriggerRunId(data.data.triggerRunId)
         if (jobStatus === 'COMPLETED') {
-          clearInterval(interval)
-          setImportProgress(100)
-          setTimeout(() => { setStatus('success'); onSuccess?.() }, 400)
+          if (pollingRef.current) clearInterval(pollingRef.current)
+          setStatus('success')
+          onSuccess?.()
         } else if (jobStatus === 'FAILED') {
-          clearInterval(interval)
-          setError(data.data?.errorMessage || 'Import failed during processing')
+          if (pollingRef.current) clearInterval(pollingRef.current)
+          setError(data.data?.errorMessage ?? 'Import failed during processing')
           setStatus('error')
         }
       } catch {
         // transient network error — keep polling
       }
     }, 3000)
-    return () => clearInterval(interval)
-  }, [status, jobId, onSuccess])
+    return () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current)
+        pollingRef.current = null
+      }
+    }
+  }, [status, jobId, realtimeToken, triggerRunId, onSuccess])
+
+  // Realtime run subscription — drives progress bar and terminal state detection
+  const { run: liveRun } = useRealtimeRun<typeof gedcomImportTask>(triggerRunId ?? '', {
+    accessToken: realtimeToken ?? '',
+    enabled: !!(triggerRunId && realtimeToken),
+    onComplete: useCallback(() => {
+      setStatus((prev) => {
+        if (prev === 'polling') {
+          onSuccess?.()
+          return 'success'
+        }
+        return prev
+      })
+    }, [onSuccess]),
+  })
+
+  // Handle terminal failure from realtime run
+  useEffect(() => {
+    if (liveRun?.status === 'FAILED' || liveRun?.status === 'CRASHED' || liveRun?.status === 'SYSTEM_FAILURE') {
+      if (status === 'polling') {
+        setStatus('error')
+        setError('Import failed during processing')
+      }
+    }
+  }, [liveRun?.status, status])
+
+  const importPhase = liveRun?.metadata?.phase as string | undefined
+  const importProgressData = liveRun?.metadata?.progress as { done: number; total: number } | undefined
+  const importProgressPct = importProgressData && importProgressData.total > 0
+    ? Math.round((importProgressData.done / importProgressData.total) * 100)
+    : 0
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.[0]) {
@@ -466,14 +520,41 @@ export function GedcomImportModal({ open, onClose, onSuccess, userPersonId }: Ge
               This may take a minute for large files. Please keep this window open.
             </Typography>
             <Box sx={{ px: 4 }}>
-              <LinearProgress
-                variant="determinate"
-                value={importProgress}
-                sx={{ height: 10, borderRadius: 5 }}
-              />
-              <Typography variant="caption" color="text.secondary" sx={{ mt: 1.5, display: 'block' }}>
-                {importProgress < 90 ? 'Importing people and relationships…' : 'Finalizing…'}
-              </Typography>
+              {importPhase === 'downloading' || !importProgressData ? (
+                <>
+                  <LinearProgress
+                    variant="indeterminate"
+                    sx={{ height: 10, borderRadius: 5 }}
+                  />
+                  <Typography variant="caption" color="text.secondary" sx={{ mt: 1.5, display: 'block' }}>
+                    {importPhase === 'downloading' ? 'Downloading file…' : 'Starting…'}
+                  </Typography>
+                </>
+              ) : importPhase === 'complete' ? (
+                <>
+                  <LinearProgress
+                    variant="determinate"
+                    value={100}
+                    sx={{ height: 10, borderRadius: 5 }}
+                  />
+                  <Typography variant="caption" color="text.secondary" sx={{ mt: 1.5, display: 'block' }}>
+                    Finalizing…
+                  </Typography>
+                </>
+              ) : (
+                <>
+                  <LinearProgress
+                    variant="determinate"
+                    value={importProgressPct}
+                    sx={{ height: 10, borderRadius: 5 }}
+                  />
+                  <Typography variant="caption" color="text.secondary" sx={{ mt: 1.5, display: 'block' }}>
+                    {importProgressData.total > 0
+                      ? `Importing people… ${importProgressData.done.toLocaleString()} / ${importProgressData.total.toLocaleString()}`
+                      : 'Importing people and relationships…'}
+                  </Typography>
+                </>
+              )}
             </Box>
           </Box>
         )}

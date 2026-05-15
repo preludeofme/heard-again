@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react'
-import { useRouter } from 'next/router'
+import { useRouter, NextRouter } from 'next/router'
 
 export interface SelectedFamilyMember {
   id: string
@@ -74,8 +74,23 @@ function addToRecent(
 
 const SelectedFamilyMemberContext = createContext<SelectedFamilyMemberContextValue | undefined>(undefined)
 
-export function SelectedFamilyMemberProvider({ children }: { children: ReactNode }) {
-  const router = useRouter()
+export function SelectedFamilyMemberProvider({ 
+  children,
+  router: propRouter 
+}: { 
+  children: ReactNode,
+  router?: NextRouter
+}) {
+  // Use propRouter if provided, otherwise fallback to hook (but handle potential failure)
+  let hookRouter: NextRouter | null = null
+  try {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    hookRouter = useRouter()
+  } catch (e) {
+    // Ignore - router not mounted (e.g. during some build phases)
+  }
+
+  const router = propRouter || hookRouter
   
   // Eager hydration from localStorage for instantaneous UI
   const [selectedFamilyMember, setSelectedFamilyMemberState] = useState<SelectedFamilyMember | null>(() => {
@@ -91,6 +106,11 @@ export function SelectedFamilyMemberProvider({ children }: { children: ReactNode
   // 1. URL and async hydration
   useEffect(() => {
     const hydrate = async () => {
+      if (!router) {
+        setIsInitialized(true)
+        return
+      }
+
       // URL takes precedence over localStorage
       const { personId } = router.query
       if (personId && typeof personId === 'string') {
@@ -108,14 +128,16 @@ export function SelectedFamilyMemberProvider({ children }: { children: ReactNode
       setIsInitialized(true)
     }
 
-    if (router.isReady) {
+    if (router && router.isReady) {
       hydrate()
+    } else if (!router) {
+      setIsInitialized(true)
     }
-  }, [router.isReady])
+  }, [router?.isReady])
 
   // 2. Sync State -> URL
   useEffect(() => {
-    if (!isInitialized || !router.isReady) return
+    if (!router || !isInitialized || !router.isReady) return
 
     const isAwarePage = PERSON_AWARE_PAGES.some(path => router.pathname.startsWith(path))
     if (!isAwarePage) return
@@ -132,11 +154,11 @@ export function SelectedFamilyMemberProvider({ children }: { children: ReactNode
       const { personId, ...restQuery } = router.query
       router.replace({ pathname: router.pathname, query: restQuery }, undefined, { shallow: true })
     }
-  }, [selectedFamilyMember?.id, router.pathname, isInitialized, router.isReady])
+  }, [selectedFamilyMember?.id, router?.pathname, isInitialized, router?.isReady])
 
   // 3. Sync URL -> State (for manual URL changes or back/forward)
   useEffect(() => {
-    if (!isInitialized || !router.isReady) return
+    if (!router || !isInitialized || !router.isReady) return
 
     const urlPersonId = router.query.personId as string
     const statePersonId = selectedFamilyMember?.id
@@ -159,7 +181,7 @@ export function SelectedFamilyMemberProvider({ children }: { children: ReactNode
       setSelectedFamilyMemberState(null)
       removeStorage(STORAGE_KEY)
     }
-  }, [router.query.personId])
+  }, [router?.query.personId])
 
   const setSelectedFamilyMember = useCallback((person: SelectedFamilyMember | null) => {
     setSelectedFamilyMemberState(person)

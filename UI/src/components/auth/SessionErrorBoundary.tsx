@@ -166,17 +166,19 @@ export class ErrorBoundaryInner extends Component<Props, State> {
 interface SessionErrorBoundaryProps {
   children: ReactNode
   fallback?: ReactNode
+  router?: NextRouter
 }
 
-export default function SessionErrorBoundaryWrapper({ children, fallback }: SessionErrorBoundaryProps) {
-  let router: NextRouter | null = null
+export default function SessionErrorBoundaryWrapper({ children, fallback, router: propRouter }: SessionErrorBoundaryProps) {
+  let hookRouter: NextRouter | null = null
   try {
     // eslint-disable-next-line react-hooks/rules-of-hooks
-    router = useRouter()
+    hookRouter = useRouter()
   } catch (e) {
-    // During prerendering or if not in router context, useRouter might throw
-    console.warn('SessionErrorBoundaryWrapper: Router not available')
+    // Ignore - router not mounted
   }
+  
+  const router = propRouter || hookRouter
 
   return (
     <ErrorBoundaryInner router={router} fallback={fallback}>

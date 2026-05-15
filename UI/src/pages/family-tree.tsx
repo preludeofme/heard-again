@@ -6,7 +6,16 @@ import { SuccessModal } from '@/components/modals/SuccessModal'
 import { Layout } from '@/components/layout/Layout'
 import { GedcomImportModal } from '@/components/modals/GedcomImportModal'
 import { useEffect, useState, useCallback, useMemo } from 'react'
-import { Box, CircularProgress } from '@mui/material'
+import {
+  Box,
+  Button,
+  CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+} from '@mui/material'
 import { useRouter } from 'next/router'
 import { useSession } from 'next-auth/react'
 import { useSelectedFamilyMember } from '@/contexts/SelectedFamilyMemberContext'
@@ -276,6 +285,7 @@ export default function FamilyTree() {
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null)
   const [isPersonModalOpen, setIsPersonModalOpen] = useState(false)
   const [isAddPersonModalOpen, setIsAddPersonModalOpen] = useState(false)
+  const [addPersonRelativeId, setAddPersonRelativeId] = useState<string | null>(null)
   const [isGedcomImportModalOpen, setIsGedcomImportModalOpen] = useState(false)
   const [personModalInitialTab, setPersonModalInitialTab] = useState<'overview' | 'relationships'>('overview')
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false)
@@ -527,6 +537,20 @@ export default function FamilyTree() {
   }
 
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const [isLoadAllDialogOpen, setIsLoadAllDialogOpen] = useState(false)
+
+  const handleLoadAll = useCallback((): void => {
+    setIsLoadAllDialogOpen(true)
+  }, [])
+
+  const handleLoadAllConfirm = useCallback((): void => {
+    setIsLoadAllDialogOpen(false)
+    if (isIncrementalLoading) return
+    setIsIncrementalLoading(true)
+    const cleared = { up: new Set<string>(), down: new Set<string>(), siblings: new Set<string>() }
+    setExpandedPersonIds(cleared)
+    fetchPeople({ up: 999, down: 999 }, treeData?.rootPersonId, true, cleared)
+  }, [isIncrementalLoading, fetchPeople, treeData?.rootPersonId])
 
   const handleExportGedcom = async () => {
     try {
@@ -560,7 +584,10 @@ export default function FamilyTree() {
         searchablePeople={allSearchablePeople}
         rootPersonId={treeData?.rootPersonId}
         onPersonClick={handlePersonClick}
-        onAddPerson={() => setIsAddPersonModalOpen(true)}
+        onAddPerson={(personId?: string) => {
+          setAddPersonRelativeId(personId ?? null)
+          setIsAddPersonModalOpen(true)
+        }}
         onEditRelationships={handleEditRelationships}
         onPeopleChanged={fetchPeople}
         isFullscreen={isFullscreen}
@@ -584,6 +611,7 @@ export default function FamilyTree() {
         onViewFullProfile={(id) => {
           router.push(`/profile/${id}`)
         }}
+        onLoadAll={handleLoadAll}
       />
   )
 
@@ -616,10 +644,14 @@ export default function FamilyTree() {
       
       <AddEditPersonModal
         open={isAddPersonModalOpen}
-        onClose={() => setIsAddPersonModalOpen(false)}
+        onClose={() => {
+          setIsAddPersonModalOpen(false)
+          setAddPersonRelativeId(null)
+        }}
         mode="create"
         onSubmit={handleAddPerson}
         existingPeople={people.map(p => ({ id: p.id, firstName: p.firstName, lastName: p.lastName }))}
+        initialRelativeId={addPersonRelativeId}
       />
       
       <SuccessModal
@@ -638,6 +670,26 @@ export default function FamilyTree() {
           setFitViewTrigger(t => t + 1)
         }}
       />
+
+      <Dialog
+        open={isLoadAllDialogOpen}
+        onClose={() => setIsLoadAllDialogOpen(false)}
+        aria-labelledby="load-all-dialog-title"
+        aria-describedby="load-all-dialog-description"
+      >
+        <DialogTitle id="load-all-dialog-title">Load Entire Family Tree?</DialogTitle>
+        <DialogContent>
+          <DialogContentText id="load-all-dialog-description">
+            Loading the entire family tree may cause performance issues for large families. Are you sure?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setIsLoadAllDialogOpen(false)}>Cancel</Button>
+          <Button onClick={handleLoadAllConfirm} variant="contained" autoFocus>
+            Load All
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   )
 }

@@ -1,6 +1,25 @@
 import type { CreatePersonInput, ListPeopleQuery } from '@/schemas'
 import type { PersonListItem, CreatePersonResponse, PersonType } from '@/contracts'
 import { personRepository, PersonRepository } from '@/server/repositories/PersonRepository'
+import { prisma } from '@/lib/prisma'
+
+export type TrimScope = 'person' | 'children' | 'all'
+export type TrimAction = 'detach' | 'delete'
+
+export interface BranchPreviewPerson {
+  id: string
+  displayName: string | null
+  firstName: string
+  lastName: string | null
+}
+
+export interface BranchPreview {
+  people: BranchPreviewPerson[]
+  familyUnitIds: string[]
+  storiesCount: number
+  voiceProfilesCount: number
+  detachOverrides: string[]
+}
 
 // Person inclusion type for Prisma queries
 type PersonInclude = {
@@ -290,6 +309,177 @@ export class PersonService {
       },
       createdAt: person.createdAt,
     }
+  }
+
+  /**
+   * Return a preview of all people/units affected by a branch trim operation.
+   */
+  async getBranchPreview(
+    personId: string,
+    familyspaceId: string,
+    scope: TrimScope
+  ): Promise<BranchPreview> {
+    let descendantIds: string[] = []
+
+    if (scope === 'children') {
+      const parentFamilies = await prisma.familyParent.findMany({
+        where: { parentId: personId },
+        select: { familyId: true },
+      })
+      const familyIds = parentFamilies.map(f => f.familyId)
+      if (familyIds.length > 0) {
+        const children = await prisma.familyChild.findMany({
+          where: { familyId: { in: familyIds } },
+          select: { childId: true },
+        })
+        descendantIds = children.map(c => c.childId)
+      }
+    } else if (scope === 'all') {
+      const rows = await prisma.$queryRaw<Array<{ id: string }>>`
+        WITH RECURSIVE descendants AS (
+          SELECT fc."childId", fc."familyId"
+          FROM "FamilyChild" fc
+          JOIN "FamilyParent" fp ON fp."familyId" = fc."familyId"
+          WHERE fp."parentId" = ${personId}
+
+          UNION ALL
+
+          SELECT fc2."childId", fc2."familyId"
+          FROM "FamilyChild" fc2
+          JOIN "FamilyParent" fp2 ON fp2."familyId" = fc2."familyId"
+          JOIN descendants d ON fp2."parentId" = d."childId"
+        )
+        SELECT DISTINCT "childId" as id FROM descendants
+      `
+      descendantIds = rows.map(r => r.id)
+    }
+
+    const affectedIds = [personId, ...descendantIds.filter(id => id !== personId)]
+    const affectedSet = new Set(affectedIds)
+
+    // Descendants with a parent outside the affected set must be detached only
+    const detachOverrides: string[] = []
+    if (descendantIds.length > 0) {
+      const childFamilies = await prisma.familyChild.findMany({
+        where: { childId: { in: descendantIds } },
+        select: { childId: true, familyId: true },
+      })
+      const allFamilyIds = [...new Set(childFamilies.map(cf => cf.familyId))]
+      const parentLinks = await prisma.familyParent.findMany({
+        where: { familyId: { in: allFamilyIds } },
+        select: { familyId: true, parentId: true },
+      })
+
+      const familyParentsMap = new Map<string, string[]>()
+      for (const p of parentLinks) {
+        const existing = familyParentsMap.get(p.familyId) ?? []
+        existing.push(p.parentId)
+        familyParentsMap.set(p.familyId, existing)
+      }
+
+      const childFamilyMap = new Map<string, string[]>()
+      for (const cf of childFamilies) {
+        const existing = childFamilyMap.get(cf.childId) ?? []
+        existing.push(cf.familyId)
+        childFamilyMap.set(cf.childId, existing)
+      }
+
+      for (const [childId, childFamilyIds] of childFamilyMap.entries()) {
+        for (const fid of childFamilyIds) {
+          const parentIds = familyParentsMap.get(fid) ?? []
+          if (parentIds.some(pid => !affectedSet.has(pid))) {
+            detachOverrides.push(childId)
+            break
+          }
+        }
+      }
+    }
+
+    const [people, storiesCount, voiceProfilesCount, parentFamilyLinks, childFamilyLinks] =
+      await Promise.all([
+        prisma.person.findMany({
+          where: { id: { in: affectedIds }, familyspaceId },
+          select: { id: true, firstName: true, lastName: true, displayName: true },
+        }),
+        prisma.story.count({
+          where: { subjectId: { in: affectedIds }, familyspaceId },
+        }),
+        prisma.voiceProfile.count({
+          where: { personId: { in: affectedIds } },
+        }),
+        prisma.familyParent.findMany({
+          where: { parentId: { in: affectedIds } },
+          select: { familyId: true },
+        }),
+        prisma.familyChild.findMany({
+          where: { childId: { in: affectedIds } },
+          select: { familyId: true },
+        }),
+      ])
+
+    const familyUnitIdSet = new Set([
+      ...parentFamilyLinks.map(l => l.familyId),
+      ...childFamilyLinks.map(l => l.familyId),
+    ])
+
+    return {
+      people,
+      familyUnitIds: Array.from(familyUnitIdSet),
+      storiesCount,
+      voiceProfilesCount,
+      detachOverrides,
+    }
+  }
+
+  /**
+   * Detach or delete a branch rooted at personId.
+   */
+  async trimBranch(
+    personId: string,
+    familyspaceId: string,
+    scope: TrimScope,
+    action: TrimAction
+  ): Promise<{ affected: number; detachOverrides: string[] }> {
+    const preview = await this.getBranchPreview(personId, familyspaceId, scope)
+    const { people, familyUnitIds, detachOverrides } = preview
+    const affectedIds = people.map(p => p.id)
+
+    const toDetach = action === 'detach' ? affectedIds : detachOverrides
+    const toDelete =
+      action === 'delete' ? affectedIds.filter(id => !detachOverrides.includes(id)) : []
+
+    await prisma.$transaction(async tx => {
+      if (toDetach.length > 0) {
+        await tx.familyParent.deleteMany({
+          where: { parentId: { in: toDetach }, familyId: { in: familyUnitIds } },
+        })
+        await tx.familyChild.deleteMany({
+          where: { childId: { in: toDetach } },
+        })
+      }
+
+      if (toDelete.length > 0) {
+        await tx.person.deleteMany({
+          where: { id: { in: toDelete }, familyspaceId },
+        })
+      }
+
+      // Clean up FamilyUnits that now have no parents or no children
+      if (familyUnitIds.length > 0) {
+        const remaining = await tx.familyUnit.findMany({
+          where: { id: { in: familyUnitIds } },
+          include: { _count: { select: { parents: true, children: true } } },
+        })
+        const orphanedIds = remaining
+          .filter(u => u._count.parents === 0 || u._count.children === 0)
+          .map(u => u.id)
+        if (orphanedIds.length > 0) {
+          await tx.familyUnit.deleteMany({ where: { id: { in: orphanedIds } } })
+        }
+      }
+    })
+
+    return { affected: affectedIds.length, detachOverrides }
   }
 
   /**

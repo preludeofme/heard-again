@@ -7,7 +7,7 @@ import { useSelectedFamilyMember } from '@/contexts/SelectedFamilyMemberContext'
 export function useFamilyTree(
   familyData: FamilyTreeData,
   onPersonClick?: (person: TreePerson) => void,
-  onAddPerson?: () => void,
+  onAddPerson?: (personId?: string) => void,
   onEditRelationships?: (personId: string) => void,
   onPeopleChanged?: () => void
 ) {

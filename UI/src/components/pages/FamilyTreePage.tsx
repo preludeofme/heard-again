@@ -7,6 +7,8 @@ import {
   Card,
   Divider,
   IconButton,
+  Tooltip,
+  GlobalStyles,
   useTheme,
   useMediaQuery,
   Dialog,
@@ -32,6 +34,9 @@ import {
   AccountCircle,
   Search,
   Close,
+  AccountTree,
+  Image as ImageIcon,
+  PictureAsPdf,
 } from '@mui/icons-material'
 import { PersonDetailModal } from '@/components/modals/PersonDetailModal'
 import { AddEditPersonModal, PersonFormData } from '@/components/modals/AddEditPersonModal'
@@ -58,7 +63,7 @@ interface FamilyTreePageProps {
   searchablePeople?: any[]
   rootPersonId?: string
   onPersonClick?: (person: { id: string | number; name: string; avatar: string }) => void
-  onAddPerson?: () => void
+  onAddPerson?: (personId?: string) => void
   onEditRelationships?: (personId: string) => void
   onPeopleChanged?: () => void
   isFullscreen?: boolean
@@ -80,6 +85,7 @@ interface FamilyTreePageProps {
   isGeneratingBio?: boolean
   userPersonId?: string | null
   onViewFullProfile?: (personId: string) => void
+  onLoadAll?: () => void
 }
 
 
@@ -112,6 +118,7 @@ export function FamilyTreePage({
   isGeneratingBio = false,
   userPersonId,
   onViewFullProfile,
+  onLoadAll,
 }: FamilyTreePageProps): React.JSX.Element {
   const router = useRouter()
   const theme = useTheme()
@@ -258,8 +265,8 @@ export function FamilyTreePage({
     [router, setSelectedFamilyMember],
   )
 
-  const handleAddPerson = useCallback(() => {
-    onAddPerson?.()
+  const handleAddPerson = useCallback((personId?: string) => {
+    onAddPerson?.(personId)
   }, [onAddPerson])
 
   const handleEditPerson = useCallback(() => {
@@ -369,11 +376,44 @@ export function FamilyTreePage({
   const handleZoomOut = useCallback(() => canvasRef.current?.zoomOut(), [])
   const handleResetView = useCallback(() => canvasRef.current?.resetView(), [])
 
+  // ─── Export controls ─────────────────────────────────────────────────────────
+
+  const handleExportPng = useCallback(async () => {
+    await canvasRef.current?.exportPng()
+  }, [])
+
+  const handleExportPdf = useCallback(() => {
+    window.print()
+  }, [])
+
   // ─── Render ──────────────────────────────────────────────────────────────────
 
   const hasData = rawPeople.length > 0
 
   return (
+    <>
+    <GlobalStyles styles={{
+      '@media print': {
+        'body > *:not(.family-tree-print-root)': { display: 'none !important' },
+        '.family-tree-print-root': { display: 'block !important' },
+        'header, nav, footer, aside, .no-print': { display: 'none !important' },
+        '.react-flow__controls, .react-flow__minimap, .react-flow__panel': { display: 'none !important' },
+        '.family-tree-canvas-container': {
+          position: 'fixed !important',
+          top: '0 !important',
+          left: '0 !important',
+          width: '100vw !important',
+          height: '100vh !important',
+          zIndex: '9999 !important',
+          background: 'white !important',
+          pageBreakInside: 'avoid',
+        },
+        '@page': {
+          size: 'landscape',
+          margin: '10mm',
+        },
+      },
+    }} />
     <Box
       sx={{
         bgcolor: isMobile ? 'rgba(208, 227, 230, 0.3)' : 'rgba(208, 227, 230, 0.2)',
@@ -543,6 +583,41 @@ export function FamilyTreePage({
                     </Button>
                   </>
                 )}
+                {onLoadAll && (
+                  <>
+                    <Divider orientation="vertical" flexItem sx={{ mx: 0.5, borderColor: 'rgba(208, 227, 230, 0.6)' }} />
+                    <Button
+                      startIcon={<AccountTree sx={{ fontSize: 18 }} />}
+                      size="small"
+                      onClick={onLoadAll}
+                      title="Load entire family tree"
+                      sx={{ color: 'primary.main', textTransform: 'none' }}
+                    >
+                      Load All
+                    </Button>
+                  </>
+                )}
+                <Divider orientation="vertical" flexItem sx={{ mx: 0.5, borderColor: 'rgba(208, 227, 230, 0.6)' }} />
+                <Tooltip title="Export as PNG image. For large trees, export may be slow." arrow>
+                  <Button
+                    startIcon={<ImageIcon sx={{ fontSize: 18 }} />}
+                    size="small"
+                    onClick={handleExportPng}
+                    sx={{ color: 'primary.main', textTransform: 'none' }}
+                  >
+                    PNG
+                  </Button>
+                </Tooltip>
+                <Tooltip title="Export as PDF (print dialog). For large trees, export may be slow." arrow>
+                  <Button
+                    startIcon={<PictureAsPdf sx={{ fontSize: 18 }} />}
+                    size="small"
+                    onClick={handleExportPdf}
+                    sx={{ color: 'primary.main', textTransform: 'none' }}
+                  >
+                    PDF
+                  </Button>
+                </Tooltip>
               </>
             )}
 
@@ -633,6 +708,7 @@ export function FamilyTreePage({
 
       {/* Family Tree Canvas — React Flow requires explicit pixel height on its parent */}
       <Box
+        className="family-tree-canvas-container"
         sx={{
           position: 'relative',
           height: isFullscreen ? 'calc(100vh - 140px)' : { xs: 'calc(100dvh - 168px)', md: 700 },
@@ -696,7 +772,7 @@ export function FamilyTreePage({
                 transition: 'all 0.3s',
                 '&:hover': { bgcolor: 'primary.main', color: 'white' },
               }}
-              onClick={handleAddPerson}
+              onClick={() => handleAddPerson()}
             >
               <Add fontSize="large" />
             </Box>
@@ -708,7 +784,7 @@ export function FamilyTreePage({
       {hasData && !isMobile && (
         <Box
           sx={{ mt: 4, cursor: 'pointer', display: 'flex', justifyContent: 'center' }}
-          onClick={handleAddPerson}
+          onClick={() => handleAddPerson()}
         >
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <Box
@@ -1011,5 +1087,6 @@ export function FamilyTreePage({
         </Box>
       </Dialog>
     </Box>
+    </>
   )
 }

@@ -20,9 +20,7 @@ const nextConfig = {
   typescript: { ignoreBuildErrors: true },
   // standalone output is only for self-hosted Docker; Vercel manages its own output format
   ...(process.env.VERCEL !== '1' && { output: 'standalone' }),
-  // On Vercel: empty config silences the "webpack config + no turbopack config" fatal error
-  // Locally: pin root to prevent monorepo root detection
-  turbopack: process.env.VERCEL === '1' ? {} : { root: __dirname },
+  turbopack: {},
   allowedDevOrigins: ['100.75.138.91', 'trubuck-design-ai-beast.stern-mulley.ts.net', 'localhost', '127.0.0.1'],
   images: {
     remotePatterns: [

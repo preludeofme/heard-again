@@ -64,7 +64,10 @@ export class RunPodTTSProvider implements TTSProvider {
     return res.json() as Promise<RunPodJobResponse>
   }
 
-  private async pollJob(jobId: string): Promise<RunPodJobResponse> {
+  private async pollJob(
+    jobId: string,
+    onProgress?: (event: SynthesisProgressEvent) => Promise<void>
+  ): Promise<RunPodJobResponse> {
     const deadline = Date.now() + POLL_TIMEOUT_MS
 
     while (Date.now() < deadline) {
@@ -86,6 +89,13 @@ export class RunPodTTSProvider implements TTSProvider {
       }
       if (job.status === 'CANCELLED') throw new Error('RunPod job was cancelled')
       if (job.status === 'TIMED_OUT') throw new Error('TTS_JOB_TIMEOUT: RunPod job timed out')
+
+      // Emit a heartbeat progress event so the caller can reflect that synthesis
+      // is actively running. RunPod's REST status endpoint does not return
+      // per-chunk counts, so sentencesDone/Total stay at 0 (indeterminate).
+      if (onProgress && job.status === 'IN_PROGRESS') {
+        await onProgress({ type: 'progress', sentencesDone: 0, sentencesTotal: 0 }).catch(() => undefined)
+      }
 
       await new Promise<void>((resolve) => setTimeout(resolve, POLL_INTERVAL_MS))
     }
@@ -294,7 +304,7 @@ export class RunPodTTSProvider implements TTSProvider {
         jobId: job.id,
         err,
       })
-      const completed = await this.pollJob(job.id)
+      const completed = await this.pollJob(job.id, onProgress)
       return completed.output as SynthesisCompleteEvent
     }
   }

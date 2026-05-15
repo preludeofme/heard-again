@@ -18,12 +18,18 @@ export default apiHandler({
       where: { storyId, parentId: null },
       include: {
         user: {
-          select: { id: true, displayName: true, avatarUrl: true },
+          select: { id: true, displayName: true, avatarUrl: true, email: true },
+        },
+        person: {
+          select: { id: true, firstName: true, lastName: true, displayName: true },
         },
         replies: {
           include: {
             user: {
-              select: { id: true, displayName: true, avatarUrl: true },
+              select: { id: true, displayName: true, avatarUrl: true, email: true },
+            },
+            person: {
+              select: { id: true, firstName: true, lastName: true, displayName: true },
             },
           },
           orderBy: { createdAt: 'asc' },
@@ -51,7 +57,7 @@ export default apiHandler({
     })
     if (!story) throw Errors.notFound('Story')
 
-    const { content, parentId } = req.body
+    const { content, parentId, personId } = req.body as { content: string; parentId?: string; personId?: string }
 
     // Verify parent comment exists if threaded
     if (parentId) {
@@ -68,10 +74,14 @@ export default apiHandler({
         userId: user.id,
         content,
         parentId: parentId || null,
+        personId: personId || null,
       },
       include: {
         user: {
-          select: { id: true, displayName: true, avatarUrl: true },
+          select: { id: true, displayName: true, avatarUrl: true, email: true },
+        },
+        person: {
+          select: { id: true, firstName: true, lastName: true, displayName: true },
         },
       },
     })

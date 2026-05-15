@@ -4,6 +4,7 @@ import {
   Divider,
   IconButton,
   Button,
+  Tooltip,
 } from '@mui/material'
 import {
   ZoomIn,
@@ -18,6 +19,9 @@ import {
   UploadFile,
   FileDownload,
   PeopleAltOutlined as PeopleIcon,
+  AccountTree,
+  Image as ImageIcon,
+  PictureAsPdf,
 } from '@mui/icons-material'
 
 interface FamilyTreeControlsProps {
@@ -35,6 +39,9 @@ interface FamilyTreeControlsProps {
   onExportGedcom?: () => void
   onToggleSiblings?: () => void
   includeSiblings?: boolean
+  onLoadAll?: () => void
+  onExportPng?: () => void
+  onExportPdf?: () => void
 }
 
 export function FamilyTreeControls({
@@ -52,6 +59,9 @@ export function FamilyTreeControls({
   onExportGedcom,
   onToggleSiblings,
   includeSiblings = false,
+  onLoadAll,
+  onExportPng,
+  onExportPdf,
 }: FamilyTreeControlsProps) {
   return (
     <Box
@@ -202,6 +212,29 @@ export function FamilyTreeControls({
             </>
           )}
 
+          {onLoadAll && (
+            <>
+              <Divider orientation="vertical" flexItem sx={{ mx: 0.5, borderColor: 'rgba(208, 227, 230, 0.6)' }} />
+              <IconButton
+                size="small"
+                onClick={onLoadAll}
+                sx={{ color: 'primary.main' }}
+                title="Load entire family tree"
+              >
+                <AccountTree sx={{ fontSize: 18 }} />
+              </IconButton>
+              {!isMobile && (
+                <Button
+                  size="small"
+                  onClick={onLoadAll}
+                  sx={{ color: 'primary.main', textTransform: 'none', display: { xs: 'none', md: 'flex' } }}
+                >
+                  Load All
+                </Button>
+              )}
+            </>
+          )}
+
           {onToggleFullscreen && (
             <>
               <Divider orientation="vertical" flexItem sx={{ mx: 0.5, borderColor: 'rgba(208, 227, 230, 0.6)' }} />
@@ -213,6 +246,34 @@ export function FamilyTreeControls({
               >
                 {isFullscreen ? <FullscreenExit /> : <Fullscreen />}
               </IconButton>
+            </>
+          )}
+
+          {(onExportPng || onExportPdf) && (
+            <>
+              <Divider orientation="vertical" flexItem sx={{ mx: 0.5, borderColor: 'rgba(208, 227, 230, 0.6)' }} />
+              {onExportPng && (
+                <Tooltip title="Export as PNG image. For large trees, export may be slow." arrow>
+                  <IconButton
+                    size="small"
+                    onClick={onExportPng}
+                    sx={{ color: 'primary.main' }}
+                  >
+                    <ImageIcon sx={{ fontSize: 18 }} />
+                  </IconButton>
+                </Tooltip>
+              )}
+              {onExportPdf && (
+                <Tooltip title="Export as PDF (print dialog). For large trees, export may be slow." arrow>
+                  <IconButton
+                    size="small"
+                    onClick={onExportPdf}
+                    sx={{ color: 'primary.main' }}
+                  >
+                    <PictureAsPdf sx={{ fontSize: 18 }} />
+                  </IconButton>
+                </Tooltip>
+              )}
             </>
           )}
         </Box>

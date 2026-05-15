@@ -38,6 +38,7 @@ export default apiHandler({
       status: job.status,
       errorMessage: job.errorMessage,
       sourceAssetId: job.sourceAssetId,
+      triggerRunId: job.triggerRunId ?? null,
       resultSummary: job.resultSummary,
       startedAt: job.startedAt,
       completedAt: job.completedAt,

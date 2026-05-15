@@ -7,6 +7,9 @@
 // webpack treats `*.node` as a native-binary module and refuses to resolve it.
 export async function register() {
   if (process.env.NEXT_RUNTIME === 'nodejs') {
+    // Skip during build phase to prevent tracing issues with Node-only dependencies
+    if (process.env.NEXT_PHASE === 'phase-production-build') return
+    
     await import('./instrumentationNode')
   }
 }

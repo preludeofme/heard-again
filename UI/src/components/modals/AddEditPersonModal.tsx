@@ -72,6 +72,8 @@ interface AddEditPersonModalProps {
   onSubmit: (data: PersonFormData) => Promise<void>
   isSubmitting?: boolean
   existingPeople?: ExistingPerson[]
+  /** Pre-select a relative when opening in create mode (e.g. from a node "+Add" button) */
+  initialRelativeId?: string | null
 }
 
 const PERSON_TYPES = [
@@ -102,6 +104,7 @@ export function AddEditPersonModal({
   onSubmit,
   isSubmitting = false,
   existingPeople,
+  initialRelativeId,
 }: AddEditPersonModalProps) {
   const { fetchToken } = useCSRF()
   const [isInterviewMode, setIsInterviewMode] = useState(false)
@@ -167,6 +170,7 @@ export function AddEditPersonModal({
         bio: '',
         personType: PersonType.FAMILY,
         tags: [],
+        relationshipTo: initialRelativeId ?? undefined,
       })
         setInterviewMessages([{ role: 'assistant', content: "Hi! Let's add someone to your family tree. Tell me their name and how they're related to you." }])
       setAvatarPreviewUrl(null)
@@ -175,7 +179,7 @@ export function AddEditPersonModal({
     setAvatarError(null)
     setErrors({})
     setTouched({})
-  }, [person, mode, open])
+  }, [person, mode, open, initialRelativeId])
 
   useEffect(() => {
     if (!pendingAvatarFile) return

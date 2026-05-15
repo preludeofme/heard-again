@@ -68,7 +68,7 @@ interface FamilyUnit {
 
 interface LayoutCallbacks {
   onPersonClick: (person: TreeLayoutPerson) => void
-  onAddPerson: () => void
+  onAddPerson: (personId?: string) => void
   onViewMemories: (person: TreeLayoutPerson) => void
   onViewFullProfile?: (personId: string) => void
   onSetRoot?: (id: string) => void

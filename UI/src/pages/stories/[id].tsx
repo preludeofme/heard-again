@@ -3,9 +3,10 @@ import { Layout } from '@/components/layout/Layout'
 import { useRouter } from 'next/router'
 import { useEffect, useState, useCallback } from 'react'
 import {
-  Box, Typography, Card, Avatar, Chip, IconButton, Button,
+  Box, Typography, Card, Avatar, Chip, IconButton, Button, Link as MuiLink,
   TextField, Divider, CircularProgress, Grid,
   Dialog, DialogTitle, DialogContent, DialogActions,
+  ToggleButton, ToggleButtonGroup, Tooltip,
 } from '@mui/material'
 import {
   ArrowBack, Favorite, FavoriteBorder,
@@ -72,12 +73,14 @@ interface StoryDetail {
     id: string
     content: string
     createdAt: string
-    user: { id: string; displayName?: string; avatarUrl?: string }
+    user: { id: string; displayName?: string; avatarUrl?: string; email: string }
+    person?: { id: string; firstName: string; lastName: string | null; displayName: string | null } | null
     replies: Array<{
       id: string
       content: string
       createdAt: string
-      user: { id: string; displayName?: string; avatarUrl?: string }
+      user: { id: string; displayName?: string; avatarUrl?: string; email: string }
+      person?: { id: string; firstName: string; lastName: string | null; displayName: string | null } | null
     }>
   }>
   favoriteCount: number
@@ -103,6 +106,7 @@ export default function StoryDetailPage() {
   const [linkedPersonId, setLinkedPersonId] = useState<string | null | undefined>(undefined)
   const [narratorDialogOpen, setNarratorDialogOpen] = useState(false)
   const [narratorName, setNarratorName] = useState('')
+  const [textSource, setTextSource] = useState<'original' | 'narrated'>('narrated')
 
   const fetchStory = useCallback(async () => {
     if (!id) return
@@ -112,6 +116,12 @@ export default function StoryDetailPage() {
       const data = await res.json()
       if (!res.ok || !data.success) throw new Error(data.error || 'Failed to load story')
       setStory(data.data)
+      // Default to 'narrated' only when approved narrated content exists
+      if (data.data.narrationStatus === 'APPROVED' && data.data.narratedContent) {
+        setTextSource('narrated')
+      } else {
+        setTextSource('original')
+      }
       const audio = data.data.generatedAudio
       // The cache-hit check on the player keys off voiceProfileId. Without it we
       // can't tell if this asset matches the currently selected voice — bail out
@@ -773,26 +783,77 @@ export default function StoryDetailPage() {
                   </Box>
                 )}
                 {story.narrationStatus === 'APPROVED' && (
-                  <StoryNarrationPlayer
-                    storyId={story.id}
-                    title={story.title}
-                    narrationSource="approved"
-                    voiceProfiles={voiceProfiles.map((vp) => ({
-                      id: vp.id,
-                      name: vp.name,
-                      personId: vp.personId,
-                      personName: vp.person
-                        ? vp.person.nickname || `${vp.person.firstName}${vp.person.lastName ? ' ' + vp.person.lastName : ''}`
-                        : null,
-                    }))}
-                    defaultVoiceProfileId={story.voiceProfile?.id}
-                    savedNarration={savedNarration}
-                    activeJobId={story.narrationRenderJobId}
-                    onSaved={(saved) => {
-                      setSavedNarration(saved)
-                      fetchStory()
-                    }}
-                  />
+                  <>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+                      <Typography variant="body2" sx={{ color: '#546669', fontWeight: 500 }}>
+                        Read from:
+                      </Typography>
+                      <ToggleButtonGroup
+                        exclusive
+                        size="small"
+                        value={textSource}
+                        onChange={(_e, value: 'original' | 'narrated' | null) => {
+                          if (value !== null) setTextSource(value)
+                        }}
+                        aria-label="Text source for voice generation"
+                      >
+                        <ToggleButton
+                          value="original"
+                          sx={{
+                            textTransform: 'none',
+                            fontWeight: 500,
+                            fontSize: '0.8rem',
+                            px: 1.5,
+                            '&.Mui-selected': { backgroundColor: '#d0e3e6', color: '#16334a' },
+                          }}
+                        >
+                          Original
+                        </ToggleButton>
+                        <Tooltip
+                          title={!story.narratedContent ? 'No approved narration available' : ''}
+                          placement="top"
+                        >
+                          <span>
+                            <ToggleButton
+                              value="narrated"
+                              disabled={!story.narratedContent}
+                              sx={{
+                                textTransform: 'none',
+                                fontWeight: 500,
+                                fontSize: '0.8rem',
+                                px: 1.5,
+                                '&.Mui-selected': { backgroundColor: '#d0e3e6', color: '#16334a' },
+                              }}
+                            >
+                              Narrated
+                            </ToggleButton>
+                          </span>
+                        </Tooltip>
+                      </ToggleButtonGroup>
+                    </Box>
+                    <StoryNarrationPlayer
+                      key={textSource}
+                      storyId={story.id}
+                      title={story.title}
+                      narrationSource="approved"
+                      textSource={textSource}
+                      voiceProfiles={voiceProfiles.map((vp) => ({
+                        id: vp.id,
+                        name: vp.name,
+                        personId: vp.personId,
+                        personName: vp.person
+                          ? vp.person.nickname || `${vp.person.firstName}${vp.person.lastName ? ' ' + vp.person.lastName : ''}`
+                          : null,
+                      }))}
+                      defaultVoiceProfileId={story.voiceProfile?.id}
+                      savedNarration={savedNarration}
+                      activeJobId={story.narrationRenderJobId}
+                      onSaved={(saved) => {
+                        setSavedNarration(saved)
+                        fetchStory()
+                      }}
+                    />
+                  </>
                 )}
               </Card>
 
@@ -895,9 +956,19 @@ export default function StoryDetailPage() {
                     <Avatar src={comment.user.avatarUrl || ''} sx={{ width: 36, height: 36 }} />
                     <Box sx={{ flexGrow: 1 }}>
                       <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, mb: 0.5 }}>
-                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#16334a' }}>
-                          {comment.user.displayName || 'Anonymous'}
-                        </Typography>
+                        {comment.person ? (
+                          <MuiLink
+                            href={`/family-tree?personId=${comment.person.id}`}
+                            variant="body2"
+                            sx={{ fontWeight: 600, color: '#16334a', textDecorationColor: '#16334a' }}
+                          >
+                            {comment.person.displayName || `${comment.person.firstName}${comment.person.lastName ? ' ' + comment.person.lastName : ''}`}
+                          </MuiLink>
+                        ) : (
+                          <Typography variant="body2" sx={{ fontWeight: 600, color: '#16334a' }}>
+                            {comment.user.displayName || comment.user.email.split('@')[0] || 'Family Member'}
+                          </Typography>
+                        )}
                         <Typography variant="caption" sx={{ color: '#999' }}>
                           {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
                         </Typography>
@@ -912,9 +983,19 @@ export default function StoryDetailPage() {
                           {comment.replies.map((reply) => (
                             <Box key={reply.id} sx={{ mb: 2 }}>
                               <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, mb: 0.5 }}>
-                                <Typography variant="caption" sx={{ fontWeight: 600, color: '#16334a' }}>
-                                  {reply.user.displayName || 'Anonymous'}
-                                </Typography>
+                                {reply.person ? (
+                                  <MuiLink
+                                    href={`/family-tree?personId=${reply.person.id}`}
+                                    variant="caption"
+                                    sx={{ fontWeight: 600, color: '#16334a', textDecorationColor: '#16334a' }}
+                                  >
+                                    {reply.person.displayName || `${reply.person.firstName}${reply.person.lastName ? ' ' + reply.person.lastName : ''}`}
+                                  </MuiLink>
+                                ) : (
+                                  <Typography variant="caption" sx={{ fontWeight: 600, color: '#16334a' }}>
+                                    {reply.user.displayName || reply.user.email.split('@')[0] || 'Family Member'}
+                                  </Typography>
+                                )}
                                 <Typography variant="caption" sx={{ color: '#999' }}>
                                   {formatDistanceToNow(new Date(reply.createdAt), { addSuffix: true })}
                                 </Typography>

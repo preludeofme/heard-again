@@ -40,7 +40,11 @@ export interface SavedNarration {
 
 interface NarrationJobStatus {
   status: 'queued' | 'processing' | 'synthesizing' | 'saving' | 'completed' | 'failed'
+  chunksDone: number
+  chunksTotal: number
+  /** @deprecated Use chunksDone */
   sentencesDone: number
+  /** @deprecated Use chunksTotal */
   sentencesTotal: number
   assetId: string | null
   assetDownloadUrl: string | null
@@ -51,6 +55,7 @@ interface StoryNarrationPlayerProps {
   storyId: string
   title?: string
   narrationSource: 'approved' | 'original'
+  textSource: 'original' | 'narrated'
   voiceProfiles: VoiceProfileOption[]
   defaultVoiceProfileId?: string | null
   savedNarration?: SavedNarration | null
@@ -78,6 +83,10 @@ interface NarrateApiResponse {
 interface NarrationJobApiResponse extends NarrationJobStatus {
   success: boolean
   jobId: string
+  storyId?: string | null
+  durationSeconds?: number | null
+  startedAt?: string | null
+  completedAt?: string | null
   error?: string
 }
 
@@ -85,6 +94,7 @@ export function StoryNarrationPlayer({
   storyId,
   title,
   narrationSource,
+  textSource,
   voiceProfiles,
   defaultVoiceProfileId,
   savedNarration,
@@ -226,13 +236,13 @@ export function StoryNarrationPlayer({
       setState('checking')
       stopPolling()
       try {
-        const res = await fetch(
-          `/api/stories/${storyId}/narrate?voiceProfileId=${encodeURIComponent(profileId)}`,
-          {
+        const url = new URL(`/api/stories/${storyId}/narrate`, window.location.origin)
+        url.searchParams.set('voiceProfileId', profileId)
+        url.searchParams.set('textSource', textSource)
+        const res = await fetch(url.toString(), {
             headers: { Accept: 'application/json' },
             credentials: 'include',
-          },
-        )
+          })
         const payload = (await res.json()) as NarrateApiResponse
 
         if (!res.ok || !payload.success) {
@@ -268,7 +278,7 @@ export function StoryNarrationPlayer({
         setError(err instanceof Error ? err.message : 'Failed to start narration')
       }
     },
-    [onSaved, storyId, stopPolling],
+    [onSaved, storyId, stopPolling, textSource],
   )
 
   // When parent prop changes (e.g. fetchStory after polling completes), keep state in sync
@@ -350,14 +360,27 @@ export function StoryNarrationPlayer({
     if (state !== 'rendering') return null
     const liveProgress = liveRun?.metadata?.progress as NarrationTaskProgress | undefined
     const currentPhase = liveProgress?.phase ?? jobStatus?.status ?? 'queued'
-    const displaySentencesDone = liveProgress?.sentencesDone ?? jobStatus?.sentencesDone ?? 0
-    const displaySentencesTotal = liveProgress?.sentencesTotal ?? jobStatus?.sentencesTotal ?? 0
-    const total = displaySentencesTotal
-    const done = displaySentencesDone
+    // Prefer chunksDone/chunksTotal; fall back to legacy sentencesDone/sentencesTotal
+    const done =
+      liveProgress?.chunksDone ??
+      liveProgress?.sentencesDone ??
+      jobStatus?.chunksDone ??
+      jobStatus?.sentencesDone ??
+      0
+    const total =
+      liveProgress?.chunksTotal ??
+      liveProgress?.sentencesTotal ??
+      jobStatus?.chunksTotal ??
+      jobStatus?.sentencesTotal ??
+      0
     const percent = total > 0 ? (done / total) * 100 : 0
     const label = (() => {
       if (currentPhase === 'queued') return 'Queued…'
-      if (currentPhase === 'synthesizing') return `Synthesizing sentences… (${done}/${total})`
+      if (currentPhase === 'synthesizing') {
+        return total > 0
+          ? `Generating audio… ${done} / ${total} chunks`
+          : 'Generating audio…'
+      }
       if (currentPhase === 'saving') return 'Finishing up…'
       return 'Preparing narration…'
     })()
