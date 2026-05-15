@@ -1,11 +1,10 @@
 import { prisma } from '@/lib/prisma'
 import { GedcomParser } from './GedcomParser'
-import fs from 'fs/promises'
 
 export class GedcomImportService {
   async previewGedcom(
     userId: string,
-    filePath: string
+    fileContent: string
   ): Promise<{
     potentialMatches: Array<{
       xref: string;
@@ -19,8 +18,7 @@ export class GedcomImportService {
       familyCount: number;
     };
   }> {
-    const content = await fs.readFile(filePath, 'utf-8')
-    const { individuals, families } = GedcomParser.parse(content)
+    const { individuals, families } = GedcomParser.parse(fileContent)
 
     // Get user info for matching - pick the first person record created by this user (likely themselves)
     const person = await prisma.person.findFirst({
@@ -71,7 +69,7 @@ export class GedcomImportService {
   async importGedcom(
     familyspaceId: string,
     userId: string,
-    filePath: string,
+    fileContent: string,
     assetId: string,
     jobId: string,
     options?: {
@@ -79,10 +77,10 @@ export class GedcomImportService {
       gedcomXrefForLink?: string;
       motherXref?: string;
       fatherXref?: string;
-    }
+    },
+    onProgress?: (done: number, total: number) => void | Promise<void>
   ): Promise<Record<string, unknown>> {
-    const content = await fs.readFile(filePath, 'utf-8')
-    const { individuals, families } = GedcomParser.parse(content)
+    const { individuals, families } = GedcomParser.parse(fileContent)
 
     if (individuals.length === 0) {
       throw new Error('No GEDCOM individuals found in file')
@@ -252,6 +250,10 @@ export class GedcomImportService {
             importStats.personExternalRefUpserts += 1
           }
         })
+
+        if (onProgress) {
+          await onProgress(Math.min(i + BATCH_SIZE, individuals.length), individuals.length)
+        }
       }
 
       for (let i = 0; i < families.length; i += BATCH_SIZE) {

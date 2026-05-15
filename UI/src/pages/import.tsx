@@ -9,6 +9,7 @@ import {
   Chip,
   CircularProgress,
   Divider,
+  LinearProgress,
   Stack,
   Tab,
   Tabs,
@@ -16,10 +17,20 @@ import {
 } from '@mui/material'
 import { UploadFile, LibraryMusic, DataObject } from '@mui/icons-material'
 import { Layout } from '@/components/layout/Layout'
+import { useRealtimeRun } from '@trigger.dev/react-hooks'
+import type { gedcomImportTask } from '@/trigger/gedcom-import-task'
 
 type ImportTab = 'gedcom' | 'json' | 'bulk-audio'
 
 type ImportStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'CANCELLED'
+
+interface ImportJobResultSummary {
+  parsedIndividuals?: number
+  parsedFamilies?: number
+  personUpserts?: number
+  familyUpserts?: number
+  [key: string]: unknown
+}
 
 interface ImportJobItem {
   id: string
@@ -28,7 +39,8 @@ interface ImportJobItem {
   errorMessage: string | null
   createdAt: string
   completedAt: string | null
-  resultSummary: any
+  triggerRunId: string | null
+  resultSummary: ImportJobResultSummary | null
   sourceAsset: {
     id: string
     originalName: string
@@ -43,6 +55,64 @@ function statusColor(status: ImportStatus): 'default' | 'warning' | 'success' | 
   if (status === 'FAILED' || status === 'CANCELLED') return 'error'
   if (status === 'PENDING' || status === 'PROCESSING') return 'warning'
   return 'default'
+}
+
+interface ActiveJobProgressProps {
+  jobId: string
+  runId: string
+  onComplete: () => void
+}
+
+function ActiveJobProgress({ jobId, runId, onComplete }: ActiveJobProgressProps) {
+  const [accessToken, setAccessToken] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetch(`/api/import/jobs/${jobId}/realtime-token`, { credentials: 'include' })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.data?.token) setAccessToken(d.data.token)
+      })
+      .catch(() => {})
+  }, [jobId])
+
+  const { run } = useRealtimeRun<typeof gedcomImportTask>(runId, {
+    accessToken: accessToken ?? '',
+    enabled: !!accessToken,
+    onComplete,
+  })
+
+  const phase = run?.metadata?.phase as string | undefined
+  const progress = run?.metadata?.progress as { done: number; total: number } | undefined
+
+  if (!accessToken) {
+    return <LinearProgress variant="indeterminate" sx={{ borderRadius: 1, height: 6, mt: 1 }} />
+  }
+
+  if (phase === 'downloading' || !progress) {
+    return (
+      <Box sx={{ mt: 1 }}>
+        <LinearProgress variant="indeterminate" sx={{ borderRadius: 1, height: 6, mb: 0.5 }} />
+        <Typography variant="caption" sx={{ color: '#546669' }}>
+          {phase === 'downloading' ? 'Downloading file…' : 'Starting…'}
+        </Typography>
+      </Box>
+    )
+  }
+
+  const pct = Math.round((progress.done / progress.total) * 100)
+
+  return (
+    <Box sx={{ mt: 1 }}>
+      <LinearProgress
+        variant="determinate"
+        value={pct}
+        sx={{ borderRadius: 1, height: 6, mb: 0.5 }}
+      />
+      <Typography variant="caption" sx={{ color: '#546669' }}>
+        {progress.done.toLocaleString()} of {progress.total.toLocaleString()} people imported ({pct}%)
+      </Typography>
+    </Box>
+  )
 }
 
 export default function ImportPage() {
@@ -76,8 +146,8 @@ export default function ImportPage() {
       }
 
       setJobs(data.data.jobs || [])
-    } catch (err: any) {
-      setError(err.message || 'Failed to load import jobs')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to load import jobs')
     } finally {
       setIsLoadingJobs(false)
     }
@@ -117,8 +187,8 @@ export default function ImportPage() {
 
       setSuccess('Import job created successfully.')
       await loadJobs()
-    } catch (err: any) {
-      setError(err.message || 'Import failed')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Import failed')
     } finally {
       setIsSubmitting(false)
     }
@@ -205,35 +275,59 @@ export default function ImportPage() {
                   </Typography>
                 ) : (
                   <Stack spacing={2}>
-                    {jobs.map((job, index) => (
-                      <Box key={job.id}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
-                          <Box>
-                            <Typography variant="subtitle2" sx={{ color: '#16334a', fontWeight: 700 }}>
-                              {job.sourceType} Import
-                            </Typography>
-                            <Typography variant="caption" sx={{ color: '#6f7c7f' }}>
-                              Requested: {new Date(job.createdAt).toLocaleString()}
-                              {job.completedAt ? ` • Completed: ${new Date(job.completedAt).toLocaleString()}` : ''}
-                            </Typography>
-                            {job.sourceAsset?.originalName && (
-                              <Typography variant="caption" sx={{ display: 'block', color: '#7f8a8d', mt: 0.5 }}>
-                                Source: {job.sourceAsset.originalName}
+                    {jobs.map((job, index) => {
+                      const isActive = job.status === 'PENDING' || job.status === 'PROCESSING'
+                      const summary = job.resultSummary
+
+                      return (
+                        <Box key={job.id}>
+                          <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2 }}>
+                            <Box sx={{ flex: 1, minWidth: 0 }}>
+                              <Typography variant="subtitle2" sx={{ color: '#16334a', fontWeight: 700 }}>
+                                {job.sourceType} Import
                               </Typography>
-                            )}
-                            {job.errorMessage && (
-                              <Typography variant="caption" sx={{ display: 'block', color: '#9c2a2a', mt: 0.5 }}>
-                                {job.errorMessage}
+                              <Typography variant="caption" sx={{ color: '#6f7c7f' }}>
+                                Requested: {new Date(job.createdAt).toLocaleString()}
+                                {job.completedAt ? ` • Completed: ${new Date(job.completedAt).toLocaleString()}` : ''}
                               </Typography>
-                            )}
+                              {job.sourceAsset?.originalName && (
+                                <Typography variant="caption" sx={{ display: 'block', color: '#7f8a8d', mt: 0.5 }}>
+                                  Source: {job.sourceAsset.originalName}
+                                </Typography>
+                              )}
+
+                              {isActive && job.triggerRunId && (
+                                <ActiveJobProgress
+                                  jobId={job.id}
+                                  runId={job.triggerRunId}
+                                  onComplete={loadJobs}
+                                />
+                              )}
+
+                              {isActive && !job.triggerRunId && (
+                                <LinearProgress variant="indeterminate" sx={{ borderRadius: 1, height: 6, mt: 1 }} />
+                              )}
+
+                              {job.status === 'COMPLETED' && summary?.personUpserts != null && (
+                                <Typography variant="caption" sx={{ display: 'block', color: '#2e6b3e', mt: 0.5 }}>
+                                  {summary.personUpserts.toLocaleString()} people · {(summary.familyUpserts ?? 0).toLocaleString()} families imported
+                                </Typography>
+                              )}
+
+                              {job.errorMessage && (
+                                <Typography variant="caption" sx={{ display: 'block', color: '#9c2a2a', mt: 0.5 }}>
+                                  {job.errorMessage}
+                                </Typography>
+                              )}
+                            </Box>
+
+                            <Chip label={job.status} color={statusColor(job.status)} size="small" sx={{ flexShrink: 0 }} />
                           </Box>
 
-                          <Chip label={job.status} color={statusColor(job.status)} size="small" />
+                          {index < jobs.length - 1 && <Divider sx={{ mt: 2 }} />}
                         </Box>
-
-                        {index < jobs.length - 1 && <Divider sx={{ mt: 2 }} />}
-                      </Box>
-                    ))}
+                      )
+                    })}
                   </Stack>
                 )}
               </CardContent>

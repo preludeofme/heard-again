@@ -1,8 +1,8 @@
-// Workers run as a separate container (narration-worker service) in production.
+// Narration runs as a separate container (narration-worker service) in production.
 // In development (NARRATION_WORKER_ENABLED=true, no separate worker container),
-// they start inline with the Next.js server process.
+// it starts inline with the Next.js server process.
+// GEDCOM import is handled by Trigger.dev — no local worker needed.
 import { startNarrationWorker } from './workers/narrationWorker'
-import { startImportWorker } from './lib/queues/importQueue'
 import { initStorage } from './lib/storage/init-storage'
 
 // Ensure local dev GCS bucket exists when running against fake-gcs-server
@@ -22,13 +22,6 @@ if (workersEnabled) {
     }
   } catch (error) {
     console.error('[instrumentation] Failed to start narration worker:', error)
-  }
-
-  try {
-    startImportWorker()
-    console.log('[instrumentation] import worker started')
-  } catch (error) {
-    console.error('[instrumentation] Failed to start import worker:', error)
   }
 } else {
   console.log('[instrumentation] workers disabled — running as separate narration-worker container')

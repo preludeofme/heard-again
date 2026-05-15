@@ -759,6 +759,7 @@ model ImportJob {
   errorMessage  String?
   importedById  String
   resultSummary Json?
+  triggerRunId  String?
   startedAt     DateTime?
   completedAt   DateTime?
   createdAt     DateTime         @default(now())

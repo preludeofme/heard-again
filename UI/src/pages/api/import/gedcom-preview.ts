@@ -9,6 +9,8 @@ import { errorResponse, successResponse, apiHandler } from '@/lib/api-helpers'
 import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 import { validateFileContent, generateSecureFilename } from '@/lib/security/file-validator'
 import { gedcomImportService } from '@/server/services/gedcom/GedcomImportService'
+import { getStorageService } from '@/lib/storage/storage-service'
+import { GedcomParser } from '@/server/services/gedcom/GedcomParser'
 
 export const config = {
   api: {
@@ -16,24 +18,32 @@ export const config = {
   },
 }
 
-const IMPORT_DIR = path.join('/tmp', 'heard-again-imports')
-
 const ALLOWED_GEDCOM_MIME_TYPES = [
   'text/plain',
   'application/octet-stream',
 ] as const
 
+function storageTypeFromMode(mode: string): 'LOCAL' | 'S3' | 'CLOUDFLARE_R2' | 'GOOGLE_CLOUD' {
+  switch (mode) {
+    case 'r2': return 'CLOUDFLARE_R2'
+    case 's3': return 'S3'
+    case 'gcs':
+    case 'gcp': return 'GOOGLE_CLOUD'
+    default: return 'LOCAL'
+  }
+}
+
 async function previewGedcom(req: NextApiRequest, res: NextApiResponse) {
   const user = await getAuthUserWithFamilyspace(req, res)
   await requireFamilyspaceRole(user.id, user.familyspaceId, 'EDITOR')
 
-  const familyspaceDir = path.join(IMPORT_DIR, user.familyspaceId, 'gedcom')
-  await fs.mkdir(familyspaceDir, { recursive: true })
+  const tmpDir = path.join('/tmp', 'heard-again-gedcom-tmp')
+  await fs.mkdir(tmpDir, { recursive: true })
 
   const form = formidable({
     keepExtensions: false,
     maxFileSize: 100 * 1024 * 1024,
-    uploadDir: familyspaceDir,
+    uploadDir: tmpDir,
     filename: () => `${uuidv4()}.tmp`,
   })
 
@@ -47,6 +57,8 @@ async function previewGedcom(req: NextApiRequest, res: NextApiResponse) {
   const file = fileArray[0]
 
   const fileBuffer = await fs.readFile(file.filepath)
+  await fs.unlink(file.filepath).catch(() => {})
+
   const validationResult = await validateFileContent(
     fileBuffer,
     file.originalFilename || 'gedcom.ged',
@@ -54,8 +66,11 @@ async function previewGedcom(req: NextApiRequest, res: NextApiResponse) {
   )
 
   if (!validationResult.isValid) {
-    await fs.unlink(file.filepath).catch(() => {})
     return errorResponse(res, validationResult.error || 'Validation failed', 400)
+  }
+
+  if (!ALLOWED_GEDCOM_MIME_TYPES.includes(validationResult.detectedType! as 'text/plain' | 'application/octet-stream')) {
+    return errorResponse(res, `File type '${validationResult.detectedType}' not allowed`, 400)
   }
 
   const secureFilename = generateSecureFilename(
@@ -63,41 +78,42 @@ async function previewGedcom(req: NextApiRequest, res: NextApiResponse) {
     'text/plain'
   ).replace(/\.[^.]+$/, '.ged')
 
-  const finalPath = path.join(familyspaceDir, secureFilename)
-  await fs.rename(file.filepath, finalPath)
+  const storageService = getStorageService()
+  const uploadResult = await storageService.uploadFile(
+    fileBuffer,
+    secureFilename,
+    'text/plain',
+    { folder: `familyspace-${user.familyspaceId}/gedcom` }
+  )
 
-  // Create asset record so we can reference it later
   const asset = await prisma.asset.create({
     data: {
       familyspaceId: user.familyspaceId,
-      filename: path.basename(finalPath),
+      filename: uploadResult.filename,
       originalName: file.originalFilename || 'import.ged',
       mimeType: 'text/plain',
-      sizeBytes: BigInt(fileBuffer.length),
-      storageType: 'LOCAL',
-      storagePath: path.relative(process.cwd(), finalPath),
+      sizeBytes: BigInt(uploadResult.sizeBytes),
+      storageType: storageTypeFromMode(storageService.getMode()) as any,
+      storagePath: uploadResult.storagePath,
       assetType: 'DOCUMENT',
       processingStatus: 'PENDING',
       uploadedById: user.id,
       metadata: {
         importType: 'GEDCOM',
-        secureFilename: secureFilename,
+        secureFilename,
       },
     },
   })
 
   try {
-    const previewData = await gedcomImportService.previewGedcom(user.id, finalPath)
-    
-    // Also return a list of all individuals for parent selection
-    const { individuals } = require('@/server/services/gedcom/GedcomParser').GedcomParser.parse(
-      await fs.readFile(finalPath, 'utf-8')
-    )
+    const fileContent = fileBuffer.toString('utf-8')
+    const previewData = await gedcomImportService.previewGedcom(user.id, fileContent)
+    const { individuals } = GedcomParser.parse(fileContent)
 
     return successResponse(res, {
       assetId: asset.id,
       preview: previewData,
-      allIndividuals: individuals.map((i: any) => ({
+      allIndividuals: individuals.map((i) => ({
         xref: i.xref,
         fullName: i.fullName,
         firstName: i.firstName,
@@ -105,8 +121,9 @@ async function previewGedcom(req: NextApiRequest, res: NextApiResponse) {
         birthDate: i.birthDate,
       }))
     })
-  } catch (err: any) {
-    logger.error(`GEDCOM preview failed: ${err.message}`)
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err)
+    logger.error(`GEDCOM preview failed: ${message}`)
     return errorResponse(res, 'Failed to parse GEDCOM for preview', 500)
   }
 }
