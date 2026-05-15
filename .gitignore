@@ -69,3 +69,5 @@ tfplan*
 *.tfvars
 .vercel
 UI/tsconfig.tsbuildinfo
+
+.trigger
