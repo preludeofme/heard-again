@@ -1,0 +1,1392 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
+}
+
+
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("POSTGRES_URL")
+  directUrl = env("POSTGRES_URL_NON_POOLING")
+}
+
+model User {
+  id                        String                @id @default(uuid())
+  email                     String                @unique
+  password                  String?
+  oauthProvider             String?
+  oauthId                   String?
+  displayName             String?
+  avatarUrl                 String?
+  status                    UserStatus            @default(ACTIVE)
+  createdAt                 DateTime              @default(now())
+  updatedAt                 DateTime              @updatedAt
+  lastLoginAt               DateTime?
+  defaultFamilyspaceId      String?
+  image                     String?
+  name                      String?
+  emailVerified             DateTime?
+  mfaBackupCodes            String?
+  mfaEnabled                Boolean               @default(false)
+  mfaSecret                 String?
+  linkedPersonId            String?               @unique
+  uploadedAssets            Asset[]
+  collections               Collection[]
+  collectionStories       CollectionStory[]
+  createdDocuments        Document[]
+  exportJobs                ExportJob[]
+  mergeProposals            FamilyMergeProposal[]
+  importJobs                ImportJob[]
+  memberships               Membership[]
+  notifications             Notification[]
+  createdPeople             Person[]
+  createdStories          Story[]               @relation("StoryCreator")
+  narrationApprovals      Story[]               @relation("StoryNarrationApprover")
+  comments                StoryComment[]
+  defaultFamilyspace        Familyspace?          @relation("UserDefaultFamilyspace", fields: [defaultFamilyspaceId], references: [id])
+  linkedPerson              Person?               @relation("UserLinkedPerson", fields: [linkedPersonId], references: [id], onDelete: SetNull)
+  favorites                 UserStoryFavorite[]
+  voiceConsents             VoiceConsent[]
+  voiceProfiles             VoiceProfile[]
+  ownedFamilyspaces         Familyspace[]         @relation("FamilyspaceOwner")
+  invitedFamilyspaceInvites FamilyspaceInvite[]
+  accounts                  Account[]
+  sessions                  Session[]
+  chatSessions              ChatSession[]
+
+  @@index([email])
+  @@index([oauthProvider, oauthId])
+  @@index([linkedPersonId])
+}
+
+model Familyspace {
+  id                     String                @id @default(uuid())
+  name                   String
+  slug                   String                @unique
+  ownerId                String
+  bio                    String?               @db.Text
+  planType               PlanType              @default(FREE)
+  deploymentMode         DeploymentMode        @default(LOCAL)
+  billingCustomerId      String?
+  tunnelEnabled          Boolean               @default(false)
+  cloudGpuEnabled        Boolean               @default(false)
+  storageQuotaBytes      BigInt                @default(0)
+  memberQuota            Int                   @default(1)
+  generationMinuteQuota  Int                   @default(0)
+  status                 FamilyspaceStatus     @default(ACTIVE)
+  isPublic               Boolean               @default(false)
+  allowMemberStories     Boolean               @default(true)
+  deletionVotes          Json?                 @default("{}")
+  avatarAssetId          String?
+  avatarAsset            Asset?                @relation("FamilyspaceAvatar", fields: [avatarAssetId], references: [id])
+  createdAt              DateTime              @default(now())
+  updatedAt              DateTime              @updatedAt
+  assets                 Asset[]
+  auditLogs              AuditLog[]
+  collections            Collection[]
+  documents              Document[]
+  exportJobs             ExportJob[]
+  mergeProposalsAsSource FamilyMergeProposal[] @relation("MergeSourceFamilyspace")
+  mergeProposalsAsTarget FamilyMergeProposal[] @relation("MergeTargetFamilyspace")
+  familyUnits            FamilyUnit[]
+  importJobs             ImportJob[]
+  instances              Instance[]
+  members                Membership[]
+  notifications          Notification[]
+  people                 Person[]
+  personaProfiles        PersonaProfile[]
+  stories                Story[]
+  storyComments          StoryComment[]
+  subscription           Subscription?
+  defaultForUsers        User[]                @relation("UserDefaultFamilyspace")
+  voiceConsents          VoiceConsent[]
+  voiceProfiles          VoiceProfile[]
+  owner                  User                  @relation("FamilyspaceOwner", fields: [ownerId], references: [id])
+  invites                FamilyspaceInvite[]
+  chatSessions           ChatSession[]
+
+  @@index([ownerId])
+  @@index([slug])
+}
+
+model Membership {
+  id               String           @id @default(uuid())
+  familyspaceId    String
+  userId           String
+  role             FamilyspaceRole  @default(VIEWER)
+  invitedById      String?
+  invitedAt        DateTime?
+  joinedAt         DateTime         @default(now())
+  status           MembershipStatus @default(ACTIVE)
+  canCreateStories Boolean?
+  canEditStories   Boolean?
+  canDeleteStories Boolean?
+  canManagePeople  Boolean?
+  canManageVoices  Boolean?
+  canManageBilling Boolean?
+  canManageMembers Boolean?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  familyspace      Familyspace      @relation(fields: [familyspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([familyspaceId, userId])
+  @@index([familyspaceId])
+  @@index([userId])
+}
+
+model PersonName {
+  id         String         @id @default(uuid())
+  personId   String
+  nameType   PersonNameType @default(BIRTH)
+  givenName  String
+  surname    String?
+  prefix     String?
+  suffix     String?
+  nickname   String?
+  isPrimary  Boolean        @default(false)
+  startDate  DateTime?
+  endDate    DateTime?
+  gedcomXref String?
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  person     Person         @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@unique([personId, gedcomXref])
+  @@index([personId, isPrimary])
+}
+
+model PersonEvent {
+  id              String                  @id @default(uuid())
+  personId        String
+  eventType       PersonEventType
+  eventDate       DateTime?
+  rawDate         String?
+  place           String?
+  latitude        Float?
+  longitude       Float?
+  description     String?
+  customType      String?
+  sourceCitation  String?
+  isPrimary       Boolean                 @default(false)
+  gedcomXref      String?
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+  person          Person                  @relation(fields: [personId], references: [id], onDelete: Cascade)
+  sourceCitations PersonSourceCitation[]
+
+  @@unique([personId, gedcomXref])
+  @@index([personId, eventType, eventDate])
+}
+
+model FamilyUnit {
+  id            String         @id @default(uuid())
+  familyspaceId String
+  gedcomXref    String?
+  marriageDate  DateTime?
+  marriagePlace String?
+  divorceDate   DateTime?
+  notes         String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  children      FamilyChild[]
+  parents       FamilyParent[]
+  familyspace   Familyspace    @relation(fields: [familyspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([familyspaceId, gedcomXref])
+  @@index([familyspaceId])
+}
+
+model FamilyParent {
+  id               String                 @id @default(uuid())
+  familyId         String
+  parentId         String
+  relationshipType ParentRelationshipType @default(BIOLOGICAL)
+  sortOrder        Int                    @default(0)
+  createdAt        DateTime               @default(now())
+  family           FamilyUnit             @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  parent           Person                 @relation(fields: [parentId], references: [id], onDelete: Cascade)
+
+  @@unique([familyId, parentId])
+  @@index([parentId])
+}
+
+model FamilyChild {
+  id               String                @id @default(uuid())
+  familyId         String
+  childId          String
+  relationshipType ChildRelationshipType @default(BIOLOGICAL)
+  sortOrder        Int                   @default(0)
+  createdAt        DateTime              @default(now())
+  child            Person                @relation(fields: [childId], references: [id], onDelete: Cascade)
+  family           FamilyUnit            @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  @@unique([familyId, childId])
+  @@index([childId])
+}
+
+model PersonExternalRef {
+  id         String            @id @default(uuid())
+  personId   String
+  system     ExternalRefSystem
+  externalId String
+  metadata   Json?
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+  person     Person            @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@unique([personId, system, externalId])
+  @@index([personId])
+}
+
+model PersonNote {
+  id         String         @id @default(uuid())
+  personId   String
+  noteType   PersonNoteType @default(GENERAL)
+  content    String
+  gedcomXref String?
+  sortOrder  Int            @default(0)
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  person     Person         @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@unique([personId, gedcomXref])
+  @@index([personId])
+  @@index([noteType])
+}
+
+model PersonSourceCitation {
+  id           String       @id @default(uuid())
+  personId     String?
+  eventId      String?
+  gedcomSRef   String?
+  page         String?
+  text         String?
+  sourceTitle  String?
+  sourceAuthor String?
+  sourceDate   String?
+  gedcomXref   String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  person       Person?      @relation(fields: [personId], references: [id], onDelete: Cascade)
+  event        PersonEvent? @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([personId])
+  @@index([eventId])
+  @@index([gedcomSRef])
+}
+
+model Instance {
+  id                   String         @id @default(uuid())
+  familyspaceId        String
+  type                 InstanceType
+  status               InstanceStatus @default(REGISTERING)
+  version              String
+  computeMode          ComputeMode    @default(LOCAL)
+  dataMode             DataMode       @default(LOCAL)
+  tunnelEnabled        Boolean        @default(false)
+  tunnelSubdomain      String?
+  tunnelToken          String?
+  tunnelTokenExpiresAt DateTime?
+  lastAuthenticatedAt  DateTime?
+  lastErrorAt          DateTime?
+  lastErrorMessage     String?
+  registeredAt         DateTime       @default(now())
+  lastHeartbeatAt      DateTime?
+  region               String?
+  hostUrl              String?
+  metadata             Json?
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+  tunnelCredentials    String?
+  tunnelDnsRecordId    String?
+  tunnelId             String?
+  tunnelName           String?
+  familyspace          Familyspace    @relation(fields: [familyspaceId], references: [id], onDelete: Cascade)
+
+  @@index([familyspaceId])
+  @@index([tunnelSubdomain])
+}
+
+model Subscription {
+  id                    String        @id @default(uuid())
+  familyspaceId         String        @unique
+  planId                String
+  billingStatus         BillingStatus @default(TRIAL)
+  stripeSubscriptionId  String?
+  stripeCustomerId      String?
+  renewalDate           DateTime?
+  cancelledAt           DateTime?
+  generationMinutesUsed Int           @default(0)
+  storageBytesUsed      BigInt        @default(0)
+  lastBillingResetAt    DateTime      @default(now())
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  plan                  Plan          @relation(fields: [planId], references: [id])
+  familyspace           Familyspace   @relation(fields: [familyspaceId], references: [id], onDelete: Cascade)
+
+  @@index([familyspaceId])
+  @@index([stripeSubscriptionId])
+}
+
+model Plan {
+  id                        String         @id @default(cuid())
+  name                      String         @unique
+  planType                  PlanType
+  priceMonthlyCents         Int
+  priceYearlyCents          Int?
+  tunnelEnabled             Boolean        @default(false)
+  cloudGpuEnabled           Boolean        @default(false)
+  cloudStorageEnabled       Boolean        @default(false)
+  generationMinutesIncluded Int            @default(0)
+  storageQuotaBytes         BigInt         @default(0)
+  memberQuota               Int            @default(1)
+  voiceProfileQuota         Int            @default(0)
+  prioritySupport           Boolean        @default(false)
+  advancedAnalytics         Boolean        @default(false)
+  isActive                  Boolean        @default(true)
+  createdAt                 DateTime       @default(now())
+  updatedAt                 DateTime       @updatedAt
+  subscriptions             Subscription[]
+}
+
+model Person {
+  id               String                   @id @default(uuid())
+  familyspaceId    String
+  firstName        String
+  lastName         String?
+  displayName      String?
+  birthDate        DateTime?
+  deathDate        DateTime?
+  isDeceased       Boolean                  @default(false)
+  bio              String?
+  avatarAssetId    String?
+  middleName       String?
+  nickname         String?
+  maidenName       String?
+  suffix           String?
+  personType       PersonType               @default(FAMILY)
+  tags             String[]
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+  createdById      String
+  gedcomXref       String?
+  causeOfDeath     String?
+  sex              GedcomSex?
+  documentLinks    DocumentPerson[]
+  familyChildLinks FamilyChild[]
+  mergeSources     FamilyMergePersonMatch[] @relation("MergeSourcePerson")
+  mergeTargets     FamilyMergePersonMatch[] @relation("MergeTargetPerson")
+  parentInFamilies FamilyParent[]
+  avatarAsset      Asset?                   @relation("PersonAvatar", fields: [avatarAssetId], references: [id])
+  createdBy        User                     @relation(fields: [createdById], references: [id])
+  familyspace      Familyspace              @relation(fields: [familyspaceId], references: [id], onDelete: Cascade)
+  events           PersonEvent[]
+  externalRefs     PersonExternalRef[]
+  names            PersonName[]
+  notes            PersonNote[]
+  sourceCitations  PersonSourceCitation[]
+  personaProfiles  PersonaProfile[]
+  storiesAsSpeaker Story[]                  @relation("StorySpeaker")
+  storiesAsSubject Story[]                  @relation("StorySubject")
+  voiceConsents    VoiceConsent[]
+  voiceProfiles    VoiceProfile[]
+  chatSessions     ChatSession[]
+  linkedUser       User?                    @relation("UserLinkedPerson")
+
+  @@unique([familyspaceId, gedcomXref])
+  @@index([familyspaceId])
+  @@index([firstName, lastName])
+  @@index([maidenName])
+}
+
+model PersonaProfile {
+  id                       String    @id @default(uuid())
+  personId                 String
+  familyspaceId            String
+  version                  Int       @default(1)
+  status                   String    @default("draft")
+  vocabulary               String[]  @default([])
+  sentencePatterns         String[]  @default([])
+  tone                     Json?
+  formality                String    @default("neutral")
+  averageSentenceLength    Float     @default(15.0)
+  commonPhrases            String[]  @default([])
+  emotionIndicators        Json[]    @default([])
+  knownFacts               Json[]    @default([])
+  relationships            Json[]    @default([])
+  systemPrompt             String    @default("")
+  responseGuidelines       String[]  @default([])
+  relationshipInstructions Json      @default("{}")
+  behaviorInstructions     String[]  @default([])
+  topicInstructions        Json      @default("{}")
+  contextInstructions      Json      @default("{}")
+  styleOverrides           Json      @default("{}")
+  writingStyle             Json?
+  customInstructions       Json?
+  documentSampleCount      Int       @default(0)
+  confidenceScore          Float     @default(0.0)
+  lastUpdated              DateTime  @default(now())
+  deletedAt                DateTime?
+  createdAt                DateTime  @default(now())
+  person                   Person    @relation(fields: [personId], references: [id], onDelete: Cascade)
+  familyspace              Familyspace @relation(fields: [familyspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([personId, familyspaceId, version])
+  @@index([personId])
+  @@index([familyspaceId])
+  @@index([status])
+}
+
+model Story {
+  id                    String               @id @default(uuid())
+  familyspaceId         String
+  title                 String
+  content               String
+  storyType             StoryType            @default(MEMORY)
+  subjectId             String?
+  speakerId             String?
+  generatedAudioAssetId String?
+  voiceProfileId        String?
+  excerpt               String?
+  storyDate             DateTime?
+  storyDatePrecision    DatePrecision        @default(EXACT)
+  location              String?
+  tags                  String[]
+  status                StoryStatus          @default(DRAFT)
+  isPinned              Boolean              @default(false)
+  deletedAt             DateTime?
+  authorRelationship    String?
+  isPublic              Boolean              @default(false)
+  shareToken            String?              @unique
+  transcript            String?
+  transcriptionStatus   TranscriptionStatus  @default(NONE)
+  narratedContent       String?
+  narrationStatus       NarrationStatus      @default(NONE)
+  narrationModel        String?
+  narrationUpdatedAt    DateTime?
+  narrationApprovedAt   DateTime?
+  narrationApprovedById String?
+  narrationRenderJobId  String?
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+  createdById           String?
+  collections           CollectionStory[]
+  createdBy             User?                @relation("StoryCreator", fields: [createdById], references: [id])
+  narrationApprovedBy   User?                @relation("StoryNarrationApprover", fields: [narrationApprovedById], references: [id])
+  generatedAudioAsset   Asset?               @relation("StoryGeneratedAudio", fields: [generatedAudioAssetId], references: [id])
+  speaker               Person?              @relation("StorySpeaker", fields: [speakerId], references: [id])
+  subject               Person?              @relation("StorySubject", fields: [subjectId], references: [id])
+  voiceProfile          VoiceProfile?        @relation(fields: [voiceProfileId], references: [id])
+  familyspace           Familyspace          @relation(fields: [familyspaceId], references: [id], onDelete: Cascade)
+  assets                StoryAsset[]
+  comments              StoryComment[]
+  favorites             UserStoryFavorite[]
+  generationJobs        VoiceGenerationJob[]
+
+  @@index([familyspaceId])
+  @@index([subjectId])
+  @@index([speakerId])
+  @@index([storyDate])
+  @@index([status])
+  @@index([narrationStatus])
+}
+
+model StoryComment {
+  id            String         @id @default(uuid())
+  familyspaceId String
+  storyId       String
+  userId        String
+  content       String
+  parentId      String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  parent        StoryComment?  @relation("CommentThread", fields: [parentId], references: [id])
+  replies       StoryComment[] @relation("CommentThread")
+  story         Story          @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  user          User           @relation(fields: [userId], references: [id])
+  familyspace   Familyspace    @relation(fields: [familyspaceId], references: [id], onDelete: Cascade)
+
+  @@index([familyspaceId])
+  @@index([storyId])
+  @@index([userId])
+  @@index([parentId])
+}
+
+model Asset {
+  id                       String               @id @default(uuid())
+  familyspaceId            String
+  filename                 String
+  originalName             String
+  mimeType                 String
+  sizeBytes                BigInt
+  storageType              StorageType
+  storagePath              String
+  storageBucket            String?
+  assetType                AssetType
+  isAISynthesized          Boolean              @default(false)
+  durationSeconds          Float?
+  width                    Int?
+  height                   Int?
+  transcript               String?
+  metadata                 Json?
+  processingStatus         ProcessingStatus     @default(PENDING)
+  processingError          String?
+  createdAt                DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+  uploadedById          String?
+  uploadedBy            User?                 @relation(fields: [uploadedById], references: [id])
+  familyspace              Familyspace          @relation(fields: [familyspaceId], references: [id], onDelete: Cascade)
+  document                 Document?
+  exportOutputs            ExportJob[]          @relation("ExportOutputAsset")
+  importSources            ImportJob[]          @relation("ImportSourceAsset")
+  personAvatarFor          Person[]             @relation("PersonAvatar")
+  familyspaceAvatarFor     Familyspace[]        @relation("FamilyspaceAvatar")
+  generatedAudioForStories Story[]              @relation("StoryGeneratedAudio")
+  storyAssets              StoryAsset[]
+  voiceGenerationOutputs   VoiceGenerationJob[] @relation("VoiceGenerationOutputAsset")
+  modelArtifactFor         VoiceProfile[]
+  voiceProfileSources      VoiceProfile[]       @relation("VoiceProfileSourceAsset")
+
+  @@index([familyspaceId])
+  @@index([assetType])
+  @@index([processingStatus])
+}
+
+model Document {
+  id                    String           @id @default(uuid())
+  familyspaceId         String
+  assetId               String           @unique
+  title                 String
+  description           String?
+  documentType          DocumentType     @default(OTHER)
+  dateOccurred          DateTime?
+  dateOccurredPrecision DatePrecision    @default(EXACT)
+  isDeleted             Boolean          @default(false)
+  deletedAt             DateTime?
+  deletedById           String?
+  aiSummary             String?
+  aiSuggestedPeople     Json?
+  content               String?
+  source                String?           @default("upload")
+  embeddingStatus       EmbeddingStatus   @default(PENDING)
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  createdById           String
+  asset                 Asset            @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  createdBy             User             @relation(fields: [createdById], references: [id])
+  familyspace           Familyspace      @relation(fields: [familyspaceId], references: [id], onDelete: Cascade)
+  people                DocumentPerson[]
+  chunks                DocumentChunk[]
+
+  @@index([familyspaceId])
+  @@index([documentType])
+  @@index([isDeleted])
+  @@index([dateOccurred])
+}
+
+model DocumentPerson {
+  id           String   @id @default(uuid())
+  documentId   String
+  personId     String
+  role         String?
+  aiSuggested  Boolean  @default(false)
+  aiConfidence Float?
+  createdAt    DateTime @default(now())
+  document     Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  person       Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, personId])
+  @@index([documentId])
+  @@index([personId])
+}
+
+model UserStoryFavorite {
+  id        String   @id @default(uuid())
+  userId    String
+  storyId   String
+  createdAt DateTime @default(now())
+  story     Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, storyId])
+  @@index([userId])
+  @@index([storyId])
+}
+
+model StoryAsset {
+  id        String    @id @default(uuid())
+  storyId   String
+  assetId   String
+  assetRole AssetRole @default(ATTACHMENT)
+  sortOrder Int       @default(0)
+  caption   String?
+  createdAt DateTime  @default(now())
+  asset     Asset     @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  story     Story     @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  @@unique([storyId, assetId])
+  @@index([storyId])
+  @@index([assetId])
+}
+
+model VoiceProfile {
+  id                   String               @id @default(uuid())
+  familyspaceId        String
+  personId             String?
+  createdById          String
+  name                 String
+  description          String?
+  modelArtifactAssetId String?
+  modelType            VoiceModelType       @default(QWEN3_BASE)
+  engineName           String?
+  engineVersion        String?
+  sourceAssetId        String?
+  sourceTranscript     String?
+  styleParams          Json?
+  isDefault            Boolean              @default(false)
+  isCloned             Boolean              @default(true)
+  status               VoiceStatus          @default(READY)
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  deletedAt            DateTime?
+  externalId           String?
+  stories              Story[]
+  voiceConsents        VoiceConsent[]
+  generationJobs       VoiceGenerationJob[]
+  createdBy            User                 @relation(fields: [createdById], references: [id])
+  modelArtifactAsset   Asset?               @relation(fields: [modelArtifactAssetId], references: [id])
+  person               Person?              @relation(fields: [personId], references: [id])
+  sourceAsset          Asset?               @relation("VoiceProfileSourceAsset", fields: [sourceAssetId], references: [id])
+  familyspace          Familyspace          @relation(fields: [familyspaceId], references: [id], onDelete: Cascade)
+
+  @@index([familyspaceId])
+  @@index([personId])
+  @@index([createdById])
+  @@index([externalId])
+}
+
+model VoiceGenerationJob {
+  id                 String           @id @default(uuid())
+  voiceProfileId     String
+  storyId            String?
+  text               String
+  styleOverride      Json?
+  generationMode     GenerationMode   @default(DEFAULT)
+  status             GenerationStatus @default(QUEUED)
+  priority           Int              @default(5)
+  queuedAt           DateTime         @default(now())
+  startedAt          DateTime?
+  completedAt        DateTime?
+  outputAssetId      String?
+  errorMessage       String?
+  cloudJobId         String?
+  triggerRunId       String?
+  computeInstance    String?
+  durationSeconds    Float?
+  computeTimeSeconds Float?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  outputAsset        Asset?           @relation("VoiceGenerationOutputAsset", fields: [outputAssetId], references: [id])
+  story              Story?           @relation(fields: [storyId], references: [id])
+  voiceProfile       VoiceProfile     @relation(fields: [voiceProfileId], references: [id], onDelete: Cascade)
+
+  @@index([voiceProfileId])
+  @@index([status])
+  @@index([queuedAt])
+}
+
+model AuditLog {
+  id           String      @id @default(uuid())
+  familyspaceId String
+  actorId      String?
+  actorType    ActorType
+  action       String
+  resourceType String
+  resourceId   String?
+  ipAddress    String?
+  userAgent    String?
+  beforeState  Json?
+  afterState   Json?
+  metadata     Json?
+  createdAt    DateTime    @default(now())
+  familyspace  Familyspace @relation(fields: [familyspaceId], references: [id], onDelete: Cascade)
+
+  @@index([familyspaceId])
+  @@index([action])
+  @@index([resourceType, resourceId])
+  @@index([createdAt])
+}
+
+model FamilyspaceInvite {
+  id            String          @id @default(uuid())
+  familyspaceId String
+  email         String
+  role          FamilyspaceRole @default(VIEWER)
+  invitedById   String
+  token         String          @unique
+  status        InviteStatus    @default(PENDING)
+  expiresAt     DateTime
+  acceptedAt    DateTime?
+  declinedAt    DateTime?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  invitedBy     User            @relation(fields: [invitedById], references: [id])
+  familyspace   Familyspace     @relation(fields: [familyspaceId], references: [id], onDelete: Cascade)
+
+  @@index([familyspaceId])
+  @@index([email])
+  @@index([token])
+}
+
+model ImportJob {
+  id            String           @id @default(uuid())
+  familyspaceId String
+  sourceType    ImportSourceType
+  sourceAssetId String?
+  status        JobStatus        @default(PENDING)
+  errorMessage  String?
+  importedById  String
+  resultSummary Json?
+  startedAt     DateTime?
+  completedAt   DateTime?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  importedBy    User             @relation(fields: [importedById], references: [id])
+  sourceAsset   Asset?           @relation("ImportSourceAsset", fields: [sourceAssetId], references: [id])
+  familyspace   Familyspace      @relation(fields: [familyspaceId], references: [id], onDelete: Cascade)
+
+  @@index([familyspaceId])
+  @@index([status])
+}
+
+model ExportJob {
+  id            String      @id @default(uuid())
+  familyspaceId String
+  exportType    ExportType
+  status        JobStatus   @default(PENDING)
+  errorMessage  String?
+  requestedById String
+  outputAssetId String?
+  startedAt     DateTime?
+  completedAt   DateTime?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  outputAsset   Asset?      @relation("ExportOutputAsset", fields: [outputAssetId], references: [id])
+  requestedBy   User        @relation(fields: [requestedById], references: [id])
+  familyspace   Familyspace @relation(fields: [familyspaceId], references: [id], onDelete: Cascade)
+
+  @@index([familyspaceId])
+  @@index([status])
+}
+
+model FamilyMergeProposal {
+  id                     String                   @id @default(uuid())
+  targetFamilyspaceId    String
+  sourceFamilyspaceId    String
+  proposedById           String
+  status                 MergeStatus              @default(PENDING)
+  overallMatchScore      Float?
+  matchedPeopleCount     Int                      @default(0)
+  totalSourcePeople      Int                      @default(0)
+  conflictDetails        Json?
+  reviewedAt             DateTime?
+  reviewedById           String?
+  executedAt             DateTime?
+  executedById           String?
+  errorMessage           String?
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+  personMatches          FamilyMergePersonMatch[]
+  proposedBy             User                     @relation(fields: [proposedById], references: [id])
+  sourceFamilyspace      Familyspace              @relation("MergeSourceFamilyspace", fields: [sourceFamilyspaceId], references: [id], onDelete: Cascade)
+  targetFamilyspace      Familyspace              @relation("MergeTargetFamilyspace", fields: [targetFamilyspaceId], references: [id], onDelete: Cascade)
+
+  @@index([targetFamilyspaceId])
+  @@index([sourceFamilyspaceId])
+  @@index([status])
+  @@index([proposedById])
+}
+
+model FamilyMergePersonMatch {
+  id             String              @id @default(uuid())
+  proposalId     String
+  targetPersonId String
+  sourcePersonId String
+  matchScore     Float
+  matchReason    String
+  isIncluded     Boolean             @default(true)
+  userOverride   Boolean             @default(false)
+  status         MergeStatus         @default(PENDING)
+  mergedAt       DateTime?
+  errorMessage   String?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  proposal       FamilyMergeProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  sourcePerson   Person              @relation("MergeSourcePerson", fields: [sourcePersonId], references: [id], onDelete: Cascade)
+  targetPerson   Person              @relation("MergeTargetPerson", fields: [targetPersonId], references: [id], onDelete: Cascade)
+
+  @@unique([proposalId, targetPersonId, sourcePersonId])
+  @@index([proposalId])
+  @@index([targetPersonId])
+  @@index([sourcePersonId])
+  @@index([status])
+}
+
+model VoiceConsent {
+  id                    String        @id @default(uuid())
+  familyspaceId         String
+  personId              String?
+  voiceProfileId        String?
+  consentType           ConsentType
+  grantedByUserId       String
+  attestationText       String?
+  allowsGeneration      Boolean       @default(true)
+  allowsCloudProcessing Boolean       @default(false)
+  allowsSharing         Boolean       @default(false)
+  recordedAt            DateTime      @default(now())
+  updatedAt             DateTime      @default(now()) @updatedAt
+  revokedAt             DateTime?
+  metadata              Json?
+  grantedByUser         User          @relation(fields: [grantedByUserId], references: [id])
+  person                Person?       @relation(fields: [personId], references: [id])
+  voiceProfile          VoiceProfile? @relation(fields: [voiceProfileId], references: [id])
+  familyspace           Familyspace   @relation(fields: [familyspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([familyspaceId, personId, voiceProfileId, consentType])
+  @@index([familyspaceId])
+  @@index([personId])
+  @@index([voiceProfileId])
+}
+
+model Collection {
+  id            String            @id @default(uuid())
+  familyspaceId String
+  name          String
+  description   String?
+  createdById   String
+  isPinned      Boolean           @default(false)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  createdBy     User              @relation(fields: [createdById], references: [id])
+  familyspace   Familyspace       @relation(fields: [familyspaceId], references: [id], onDelete: Cascade)
+  stories       CollectionStory[]
+
+  @@index([familyspaceId])
+  @@index([createdById])
+}
+
+model CollectionStory {
+  id           String     @id @default(uuid())
+  collectionId String
+  storyId      String
+  sortOrder    Int        @default(0)
+  addedAt      DateTime   @default(now())
+  addedById    String
+  addedBy      User       @relation(fields: [addedById], references: [id])
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  story        Story      @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  @@unique([collectionId, storyId])
+  @@index([collectionId])
+  @@index([storyId])
+}
+
+model Notification {
+  id            String           @id @default(uuid())
+  familyspaceId String
+  userId        String
+  type          NotificationType
+  title         String
+  message       String?
+  isRead        Boolean          @default(false)
+  resourceType  String?
+  resourceId    String?
+  createdAt     DateTime         @default(now())
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  familyspace   Familyspace      @relation(fields: [familyspaceId], references: [id], onDelete: Cascade)
+
+  @@index([familyspaceId])
+  @@index([userId, isRead])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String  @map("user_id")
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id")
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verificationtokens")
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  DELETED
+}
+
+enum PlanType {
+  FREE
+  CONNECTED
+  HYBRID
+  CLOUD
+}
+
+enum DeploymentMode {
+  LOCAL
+  TUNNELED
+  CLOUD
+}
+
+enum FamilyspaceStatus {
+  ACTIVE
+  SUSPENDED
+  CANCELLED
+}
+
+enum FamilyspaceRole {
+  OWNER
+  ADMIN
+  EDITOR
+  VIEWER
+  LEGACY
+}
+
+enum MembershipStatus {
+  ACTIVE
+  SUSPENDED
+  REMOVED
+}
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  EXPIRED
+  REVOKED
+}
+
+enum ImportSourceType {
+  GEDCOM
+  JSON
+  CSV
+  MANUAL_MIGRATION
+}
+
+enum ExportType {
+  PDF
+  JSON
+  ZIP
+  GEDCOM
+}
+
+enum JobStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum ConsentType {
+  SELF
+  FAMILY_ATTESTATION
+  ESTATE_REPRESENTATIVE
+  OTHER
+}
+
+enum PersonNameType {
+  BIRTH
+  MARRIED
+  AKA
+  RELIGIOUS
+  OTHER
+}
+
+enum PersonEventType {
+  BIRTH
+  BAPTISM
+  DEATH
+  BURIAL
+  CREMATION
+  MARRIAGE
+  DIVORCE
+  RESIDENCE
+  OCCUPATION
+  EDUCATION
+  MILITARY_SERVICE
+  NATURALIZATION
+  IMMIGRATION
+  EMIGRATION
+  CENSUS
+  RETIREMENT
+  WILL
+  TITLE
+  PHYSICAL_DESCRIPTION
+  MEDICAL
+  ADOPTION
+  CUSTOM
+}
+
+enum PersonNoteType {
+  GENERAL
+  RESEARCH
+  OBITUARY
+  SOURCE
+  OTHER
+}
+
+enum ParentRelationshipType {
+  BIOLOGICAL
+  ADOPTIVE
+  STEP
+  FOSTER
+  GUARDIAN
+  PARTNER
+  OTHER
+}
+
+enum ChildRelationshipType {
+  BIOLOGICAL
+  ADOPTED
+  STEP
+  FOSTER
+  GUARDIAN
+}
+
+enum ExternalRefSystem {
+  GEDCOM
+  GRAMPS
+  ROOTSMAGIC
+  FAMILYSEARCH
+  ANCESTRY
+  MYHERITAGE
+  OTHER
+}
+
+enum GenerationMode {
+  DEFAULT
+  LOCAL
+  CLOUD
+  HYBRID
+}
+
+enum NotificationType {
+  INVITE_RECEIVED
+  INVITE_ACCEPTED
+  STORY_COMMENT
+  STORY_SHARED
+  GENERATION_COMPLETED
+  GENERATION_FAILED
+}
+
+enum PersonType {
+  FAMILY
+  FRIEND
+  MENTOR
+  COLLEAGUE
+  OTHER
+}
+
+enum InstanceType {
+  LOCAL
+  CLOUD
+  HYBRID
+}
+
+enum InstanceStatus {
+  REGISTERING
+  ACTIVE
+  UPDATING
+  OFFLINE
+  DECOMMISSIONED
+}
+
+enum ComputeMode {
+  LOCAL
+  CLOUD
+  HYBRID
+}
+
+enum DataMode {
+  LOCAL
+  CLOUD
+  SYNCED
+}
+
+enum BillingStatus {
+  TRIAL
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  EXPIRED
+}
+
+enum GedcomSex {
+  M
+  F
+  U
+  X
+}
+
+enum StoryType {
+  MEMORY
+  INTERVIEW
+  LETTER
+  DOCUMENT
+  TRIBUTE
+  PODCAST
+  RECORDING
+}
+
+enum DatePrecision {
+  EXACT
+  YEAR_MONTH
+  YEAR
+  DECADE
+  APPROXIMATE
+}
+
+enum StoryStatus {
+  DRAFT
+  REVIEW
+  PUBLISHED
+  ARCHIVED
+}
+
+enum TranscriptionStatus {
+  NONE
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+enum NarrationStatus {
+  NONE
+  PENDING
+  READY
+  APPROVED
+  STALE
+  FAILED
+}
+
+enum DocumentType {
+  PDF
+  LETTER
+  PHOTO
+  HANDWRITTEN
+  CERTIFICATE
+  RECORDING
+  AUDIO
+  VIDEO
+  OTHER
+}
+
+enum StorageType {
+  LOCAL
+  S3
+  CLOUDFLARE_R2
+  AZURE_BLOB
+  GOOGLE_CLOUD
+}
+
+enum AssetType {
+  AUDIO
+  VIDEO
+  IMAGE
+  DOCUMENT
+  TRANSCRIPT
+  GENERATED_AUDIO
+}
+
+enum ProcessingStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum AssetRole {
+  PRIMARY
+  ATTACHMENT
+  TRANSCRIPT
+  THUMBNAIL
+}
+
+enum VoiceModelType {
+  QWEN3_BASE
+  QWEN3_DESIGN
+}
+
+enum VoiceStatus {
+  TRAINING
+  READY
+  ERROR
+  DISABLED
+}
+
+enum GenerationStatus {
+  QUEUED
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum ActorType {
+  USER
+  SYSTEM
+  API_KEY
+  WEBHOOK
+}
+
+enum MergeStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CONFLICT
+  MERGED
+  FAILED
+}
+
+// --- Chat Service Models ---
+
+model ChatSession {
+  id            String         @id @default(uuid())
+  familyspaceId String
+  personId      String
+  userId        String
+  title         String?
+  status        ChatSessionStatus @default(ACTIVE)
+  metadata      Json           @default("{}")
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  messages      ChatMessage[]
+  familyspace   Familyspace    @relation(fields: [familyspaceId], references: [id], onDelete: Cascade)
+  person        Person         @relation(fields: [personId], references: [id], onDelete: Cascade)
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([familyspaceId])
+  @@index([personId])
+  @@index([userId])
+}
+
+model ChatMessage {
+  id        String      @id @default(uuid())
+  sessionId String
+  role      MessageRole
+  content   String
+  metadata  Json        @default("{}")
+  createdAt DateTime    @default(now())
+  session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+}
+
+model DocumentChunk {
+  id             String   @id @default(uuid())
+  documentId     String
+  chunkIndex     Int
+  content        String
+  metadata       Json     @default("{}")
+  embedding      Float[]
+  embeddingModel String?
+  createdAt      DateTime @default(now())
+  document       Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, chunkIndex])
+}
+
+model IngestionJob {
+  id            String             @id @default(uuid())
+  documentId    String
+  familyspaceId String
+  userId        String
+  type          IngestionJobType
+  status        IngestionJobStatus @default(QUEUED)
+  priority      JobPriority        @default(NORMAL)
+  progress      Json               @default("{}")
+  config        Json               @default("{}")
+  error         Json?
+  metadata      Json               @default("{}")
+  createdAt     DateTime           @default(now())
+  startedAt     DateTime?
+  completedAt   DateTime?
+  updatedAt     DateTime           @updatedAt
+
+  @@index([familyspaceId])
+  @@index([documentId])
+}
+
+enum ChatSessionStatus {
+  ACTIVE
+  ARCHIVED
+  DELETED
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
+enum IngestionJobType {
+  DOCUMENT_PROCESSING
+  TEXT_EXTRACTION
+  CHUNKING
+  EMBEDDING_GENERATION
+  INDEXING
+}
+
+enum IngestionJobStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+  RETRYING
+}
+
+enum JobPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum EmbeddingStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
