@@ -12,7 +12,7 @@ sed -i '/generator client_ui/,/}/d' prisma/schema.prisma
 sed -i '/generator client_chat/,/}/d' prisma/schema.prisma
 
 echo "Generating Prisma client..."
-npx prisma generate
+npx --yes prisma generate
 
 echo "Building Next.js app..."
 npm run build
