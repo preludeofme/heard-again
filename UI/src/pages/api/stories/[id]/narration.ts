@@ -234,10 +234,10 @@ export default apiHandler({
       await prisma.asset.delete({ where: { id: asset.id } })
     }
 
-    // Clear narrationRenderJobId on the story
+    // Clear audio references on the story
     await prisma.story.update({
       where: { id: storyId },
-      data: { narrationRenderJobId: null },
+      data: { narrationRenderJobId: null, generatedAudioAssetId: null },
     })
 
     return successResponse(res, { deleted: true, count: assets.length })

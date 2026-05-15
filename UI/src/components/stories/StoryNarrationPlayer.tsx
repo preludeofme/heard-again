@@ -320,6 +320,8 @@ export function StoryNarrationPlayer({
         setReadyNarration(null)
         setJobId(null)
         setJobStatus(null)
+        setTriggerRunId(null)
+        setPublicAccessToken(null)
         setState('idle')
       } else {
         const payload = await res.json()

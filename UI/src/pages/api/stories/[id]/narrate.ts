@@ -7,48 +7,6 @@ import { auth, runs } from '@trigger.dev/sdk/v3'
 
 const STALE_PROCESSING_TIMEOUT_MS = 20 * 60 * 1_000
 
-async function clearStaleJobIfNeeded(storyId: string, voiceProfileId: string): Promise<void> {
-  const staleJob = await prisma.voiceGenerationJob.findFirst({
-    where: {
-      storyId,
-      voiceProfileId,
-      status: { in: ['QUEUED', 'PROCESSING'] },
-    },
-    select: { id: true, status: true, startedAt: true, triggerRunId: true },
-    orderBy: { createdAt: 'desc' },
-  })
-  if (!staleJob) return
-
-  const isStale =
-    staleJob.status === 'PROCESSING' &&
-    staleJob.startedAt !== null &&
-    Date.now() - staleJob.startedAt.getTime() > STALE_PROCESSING_TIMEOUT_MS
-
-  if (!isStale) return
-
-  logger.warn('[narrate] cancelling stale Trigger.dev job', {
-    storyId,
-    voiceProfileId,
-    jobId: staleJob.id,
-    triggerRunId: staleJob.triggerRunId,
-  })
-
-  if (staleJob.triggerRunId) {
-    await runs.cancel(staleJob.triggerRunId).catch(() => undefined)
-  }
-
-  await prisma.voiceGenerationJob
-    .update({
-      where: { id: staleJob.id },
-      data: {
-        status: 'FAILED',
-        completedAt: new Date(),
-        errorMessage: 'Stale job force-cleared on retry (exceeded 20 min timeout)',
-      },
-    })
-    .catch(() => undefined)
-}
-
 interface CachedNarrationResponse {
   success: true
   status: 'ready'
@@ -196,7 +154,63 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    await clearStaleJobIfNeeded(storyId, profile.id)
+    // Check for an already-active job for this story+profile pair.
+    // Dedup is handled at the DB level so we never rely on Trigger.dev idempotency
+    // returning the right (non-terminal) run — completed runs share the same key
+    // but should produce a fresh execution.
+    const activeJob = await prisma.voiceGenerationJob.findFirst({
+      where: {
+        storyId,
+        voiceProfileId: profile.id,
+        status: { in: ['QUEUED', 'PROCESSING'] },
+      },
+      select: { id: true, triggerRunId: true, status: true, startedAt: true },
+      orderBy: { createdAt: 'desc' },
+    })
+
+    if (activeJob) {
+      const isStale =
+        activeJob.status === 'PROCESSING' &&
+        activeJob.startedAt !== null &&
+        Date.now() - activeJob.startedAt.getTime() > STALE_PROCESSING_TIMEOUT_MS
+
+      if (!isStale && activeJob.triggerRunId) {
+        // In-flight run — issue a fresh read token and return immediately
+        const publicAccessToken = await auth.createPublicToken({
+          scopes: { read: { runs: [activeJob.triggerRunId] } },
+          expirationTime: '2h',
+        })
+        return res.status(202).json({
+          success: true,
+          status: 'queued',
+          narrationJobId: activeJob.id,
+          triggerRunId: activeJob.triggerRunId,
+          publicAccessToken,
+          voiceProfileId: profile.id,
+        } satisfies QueuedNarrationResponse)
+      }
+
+      // Stale — cancel and fall through to create a fresh run
+      logger.warn('[narrate] cancelling stale Trigger.dev job', {
+        storyId,
+        voiceProfileId: profile.id,
+        jobId: activeJob.id,
+        triggerRunId: activeJob.triggerRunId,
+      })
+      if (activeJob.triggerRunId) {
+        await runs.cancel(activeJob.triggerRunId).catch(() => undefined)
+      }
+      await prisma.voiceGenerationJob
+        .update({
+          where: { id: activeJob.id },
+          data: {
+            status: 'FAILED',
+            completedAt: new Date(),
+            errorMessage: 'Stale job force-cleared on retry (exceeded 20 min timeout)',
+          },
+        })
+        .catch(() => undefined)
+    }
 
     const voiceGenerationJob = await prisma.voiceGenerationJob.create({
       data: {
@@ -209,6 +223,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       select: { id: true },
     })
 
+    // Idempotency key is scoped to the job ID so the same HTTP request can be
+    // safely retried, but a fresh request always creates a new Trigger.dev run.
     const run = await narrationTask.trigger(
       {
         storyId,
@@ -218,35 +234,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         voiceGenerationJobId: voiceGenerationJob.id,
       },
       {
-        idempotencyKey: `narration:render:${storyId}:${profile.id}`,
+        idempotencyKey: `narration:job:${voiceGenerationJob.id}`,
         tags: [`story:${storyId}`, `family:${user.familyspaceId}`],
       }
     )
-
-    const existingJobForRun = await prisma.voiceGenerationJob.findFirst({
-      where: { triggerRunId: run.id },
-      select: { id: true },
-    })
-
-    if (existingJobForRun) {
-      await prisma.voiceGenerationJob
-        .delete({ where: { id: voiceGenerationJob.id } })
-        .catch(() => undefined)
-
-      const publicAccessToken = await auth.createPublicToken({
-        scopes: { read: { runs: [run.id] } },
-        expirationTime: '2h',
-      })
-
-      return res.status(202).json({
-        success: true,
-        status: 'queued',
-        narrationJobId: existingJobForRun.id,
-        triggerRunId: run.id,
-        publicAccessToken,
-        voiceProfileId: profile.id,
-      } satisfies QueuedNarrationResponse)
-    }
 
     await prisma.voiceGenerationJob.update({
       where: { id: voiceGenerationJob.id },
