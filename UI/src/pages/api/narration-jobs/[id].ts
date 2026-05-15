@@ -3,88 +3,6 @@ import { prisma } from '@/lib/prisma'
 import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 import { logger } from '@/lib/logger'
 import { getNarrationQueue, narrationDedupeKey, removeNarrationQueueJob } from '@/lib/queues/narrationQueue'
-import { RunPodTTSProvider } from '@/lib/tts/runpod-tts-provider'
-import type { SynthesisCompleteEvent } from '@/lib/tts/tts-provider.types'
-
-async function finalizeRunPodJob(params: {
-  dbJobId: string
-  storyId: string
-  voiceProfileId: string
-  familyspaceId: string
-  userId: string
-  personId: string | null
-  event: SynthesisCompleteEvent
-}): Promise<string | null> {
-  const { dbJobId, storyId, voiceProfileId, familyspaceId, userId, personId, event } = params
-  const extension = event.format === 'wav' ? 'wav' : 'mp3'
-  const audioFilename = event.audioId.split('/').pop() ?? `${event.audioId}.${extension}`
-
-  // Create the asset record pointing directly at the R2 key RunPod already wrote
-  let asset: { id: string }
-  try {
-    asset = await prisma.asset.create({
-      data: {
-        familyspaceId,
-        filename: audioFilename,
-        originalName: audioFilename,
-        mimeType: event.mimeType,
-        sizeBytes: BigInt(event.fileSize),
-        storageType: 'CLOUDFLARE_R2',
-        storagePath: event.audioId,
-        assetType: 'GENERATED_AUDIO',
-        processingStatus: 'COMPLETED',
-        uploadedById: userId,
-        durationSeconds: event.duration,
-        metadata: {
-          source: 'narration.runpod-direct',
-          ttsAudioId: event.audioId,
-          voiceProfileId,
-          personId,
-          storyId,
-          sentenceCount: event.sentenceCount,
-          synthesisTimeSeconds: event.synthesisTime,
-          format: extension,
-        },
-      },
-      select: { id: true },
-    })
-  } catch (err) {
-    logger.error('[narration-jobs] asset create failed during RunPod finalization', { dbJobId, err })
-    throw err
-  }
-
-  // Atomically mark the job COMPLETED only if it's still in a non-terminal state
-  const updated = await prisma.voiceGenerationJob.updateMany({
-    where: { id: dbJobId, status: { in: ['QUEUED', 'PROCESSING'] } },
-    data: {
-      status: 'COMPLETED',
-      completedAt: new Date(),
-      outputAssetId: asset.id,
-      durationSeconds: event.duration,
-      computeTimeSeconds: event.synthesisTime,
-    },
-  })
-
-  if (updated.count === 0) {
-    // Another concurrent poll already finalized — discard the duplicate asset
-    await prisma.asset.delete({ where: { id: asset.id } }).catch(() => undefined)
-    const existing = await prisma.voiceGenerationJob.findUnique({
-      where: { id: dbJobId },
-      select: { outputAssetId: true },
-    })
-    return existing?.outputAssetId ?? null
-  }
-
-  await prisma.story
-    .updateMany({
-      where: { id: storyId },
-      data: { generatedAudioAssetId: asset.id, voiceProfileId, narrationRenderJobId: null },
-    })
-    .catch((err) => logger.warn('[narration-jobs] story update after finalization failed', { storyId, err }))
-
-  logger.info('[narration-jobs] RunPod job finalized', { dbJobId, assetId: asset.id, storyId })
-  return asset.id
-}
 
 interface NarrationJobStatusResponse {
   success: boolean
@@ -207,8 +125,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       outputAssetId: true,
       durationSeconds: true,
       voiceProfileId: true,
-      cloudJobId: true,
-      voiceProfile: { select: { personId: true } },
     },
   })
 
@@ -220,79 +136,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   let sentencesDone = 0
   let sentencesTotal = 0
 
-  const isTerminal = dbJob.status === 'COMPLETED' || dbJob.status === 'FAILED' || dbJob.status === 'CANCELLED'
-
-  // RunPod-direct flow: poll RunPod status and finalize inline on completion
-  if (dbJob.cloudJobId && !isTerminal) {
-    try {
-      const tts = new RunPodTTSProvider()
-      const result = await tts.checkSynthesisJob(dbJob.cloudJobId)
-
-      if (result.done && result.success) {
-        phase = 'saving'
-        const assetId = await finalizeRunPodJob({
-          dbJobId: dbJob.id,
-          storyId: dbJob.storyId ?? '',
-          voiceProfileId: dbJob.voiceProfileId,
-          familyspaceId: user.familyspaceId,
-          userId: user.id,
-          personId: dbJob.voiceProfile?.personId ?? null,
-          event: result.event,
-        })
-        const freshJob = await prisma.voiceGenerationJob.findUnique({
-          where: { id: dbJob.id },
-          select: { status: true, outputAssetId: true, durationSeconds: true, completedAt: true, errorMessage: true },
-        })
-        return res.status(200).json({
-          success: true,
-          jobId: dbJob.id,
-          storyId: dbJob.storyId,
-          status: 'completed',
-          sentencesDone: result.event.sentenceCount,
-          sentencesTotal: result.event.sentenceCount,
-          assetId: assetId ?? freshJob?.outputAssetId ?? null,
-          assetDownloadUrl: (assetId ?? freshJob?.outputAssetId)
-            ? `/api/assets/serve/${assetId ?? freshJob?.outputAssetId}`
-            : null,
-          errorMessage: null,
-          startedAt: dbJob.startedAt?.toISOString() ?? null,
-          completedAt: freshJob?.completedAt?.toISOString() ?? new Date().toISOString(),
-          durationSeconds: result.event.duration,
-        } satisfies NarrationJobStatusResponse)
-      }
-
-      if (result.done && !result.success) {
-        await prisma.voiceGenerationJob
-          .update({
-            where: { id: dbJob.id },
-            data: { status: 'FAILED', completedAt: new Date(), errorMessage: result.error.slice(0, 1000) },
-          })
-          .catch(() => undefined)
-        return res.status(200).json({
-          success: true,
-          jobId: dbJob.id,
-          storyId: dbJob.storyId,
-          status: 'failed',
-          sentencesDone: 0,
-          sentencesTotal: 0,
-          assetId: null,
-          assetDownloadUrl: null,
-          errorMessage: result.error,
-          startedAt: dbJob.startedAt?.toISOString() ?? null,
-          completedAt: new Date().toISOString(),
-          durationSeconds: null,
-        } satisfies NarrationJobStatusResponse)
-      }
-
-      // Still in progress — map RunPod status to a synthesizing phase
-      phase = 'synthesizing'
-    } catch (err) {
-      logger.warn('[narration-jobs] RunPod status check failed (non-fatal)', { jobId, err })
-    }
-  }
-
-  // BullMQ-based flow: look up queue progress
-  if (!dbJob.cloudJobId && !isTerminal && dbJob.storyId) {
+  if (dbJob.status !== 'COMPLETED' && dbJob.status !== 'FAILED' && dbJob.storyId) {
     try {
       const queue = getNarrationQueue()
       const dedupeKey = narrationDedupeKey(dbJob.storyId, dbJob.voiceProfileId)
