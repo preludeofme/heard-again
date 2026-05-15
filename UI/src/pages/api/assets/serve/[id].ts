@@ -108,22 +108,45 @@ export default withSecurityHeaders(withRateLimit('general', async function handl
       return
     }
 
-    // For cloud storage, redirect to the signed URL
-    const publicUrl = await storageService.getPublicUrl(asset.storagePath || '')
-    
-    // Set cache headers before redirect
+    // For cloud storage, proxy the file content directly rather than issuing a 302
+    // redirect to R2. A redirect would be blocked by the page-level CSP
+    // (media-src 'self' blob:) because browsers check media-src against the
+    // final redirect destination, not the same-origin API route URL.
+    const mimeType = asset.mimeType || 'application/octet-stream'
+    const fileBuffer = await storageService.getFile(asset.storagePath || '')
+    const totalSize = fileBuffer.length
+
+    res.setHeader('Content-Type', mimeType)
+    res.setHeader('Accept-Ranges', 'bytes')
     res.setHeader('Cache-Control', 'private, max-age=3600')
-    
-    // Log access for audit
-    logger.info('Asset redirect:', {
+    res.setHeader('X-Content-Type-Options', 'nosniff')
+    res.setHeader('Content-Disposition', `inline; filename="${asset.originalName || asset.filename}"`)
+
+    logger.info('Asset served:', {
       assetId: asset.id,
       familyspaceId: asset.familyspaceId,
       userId: user.id,
       originalName: asset.originalName,
-      publicUrl: publicUrl.replace(/\/[^\/]+$/, '/***') // Redact sensitive parts
+      mimeType,
+      size: totalSize,
     })
-    
-    res.redirect(302, publicUrl)
+
+    const rangeHeader = req.headers.range
+    if (rangeHeader) {
+      const [startStr, endStr] = rangeHeader.replace('bytes=', '').split('-')
+      const start = parseInt(startStr, 10)
+      const end = endStr ? parseInt(endStr, 10) : totalSize - 1
+      const chunkSize = end - start + 1
+
+      res.setHeader('Content-Range', `bytes ${start}-${end}/${totalSize}`)
+      res.setHeader('Content-Length', chunkSize)
+      res.writeHead(206)
+      res.end(fileBuffer.subarray(start, end + 1))
+      return
+    }
+
+    res.setHeader('Content-Length', totalSize)
+    res.status(200).end(fileBuffer)
     
   } catch (error) {
     logger.error('File serving error:', error)
