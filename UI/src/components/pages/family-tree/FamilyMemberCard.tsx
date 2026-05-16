@@ -210,7 +210,7 @@ export function FamilyMemberCard({
             pb: 0.5,
             borderTop: '1px solid rgba(255,255,255,0.15)',
             display: 'grid',
-            gridTemplateColumns: 'repeat(4, 1fr)',
+            gridTemplateColumns: 'repeat(5, 1fr)',
             width: '100%',
           }}
         >
@@ -269,12 +269,24 @@ export function FamilyMemberCard({
             <IconButton
               size="small"
               className="nodrag"
-              onClick={(e) => { e.stopPropagation(); onEditRelationships ? onEditRelationships(String(person.id)) : onAddPerson() }}
+              onClick={(e) => { e.stopPropagation(); onEditRelationships?.(String(person.id)) }}
               sx={{ color: 'rgba(255,255,255,0.85)', '&:hover': { bgcolor: 'rgba(255,255,255,0.15)', color: 'white' } }}
             >
               <PeopleIcon sx={{ fontSize: 18 }} />
             </IconButton>
             <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.6rem', fontWeight: 600, textTransform: 'uppercase' }}>Kin</Typography>
+          </Box>
+
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
+            <IconButton
+              size="small"
+              className="nodrag"
+              onClick={(e) => { e.stopPropagation(); onAddPerson(String(person.id)) }}
+              sx={{ color: 'rgba(255,255,255,0.85)', '&:hover': { bgcolor: 'rgba(255,255,255,0.15)', color: 'white' } }}
+            >
+              <PersonAdd sx={{ fontSize: 18 }} />
+            </IconButton>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.6rem', fontWeight: 600, textTransform: 'uppercase' }}>Add</Typography>
           </Box>
         </Box>
       </Card>

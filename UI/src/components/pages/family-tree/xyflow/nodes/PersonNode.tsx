@@ -243,7 +243,6 @@ export function PersonNode({ data }: NodeProps): React.JSX.Element {
         sx={{
           position: 'relative',
           zIndex: 10,
-          '&:hover .person-node-add-btn': { opacity: 1 },
         }}
       >
         <FamilyMemberCard
@@ -262,39 +261,6 @@ export function PersonNode({ data }: NodeProps): React.JSX.Element {
           onEditRelationships={d.onEditRelationships}
           compact={true}
         />
-
-        {/* "+Add" quick-add button — appears on hover, nodrag prevents drag interference */}
-        <Tooltip title="Add relative" placement="right">
-          <IconButton
-            className="person-node-add-btn nodrag"
-            size="small"
-            aria-label={`Add relative to ${d.person.name}`}
-            onMouseDown={(e: React.MouseEvent) => e.stopPropagation()}
-            onClick={(e: React.MouseEvent) => {
-              e.stopPropagation()
-              d.onAddPerson(d.person.id)
-            }}
-            sx={{
-              position: 'absolute',
-              bottom: 8,
-              right: 8,
-              zIndex: 20,
-              opacity: 0,
-              transition: 'opacity 0.2s, background-color 0.2s',
-              bgcolor: cardBgColor,
-              color: '#ffffff',
-              border: `1.5px solid ${borderColor}`,
-              width: 28,
-              height: 28,
-              '&:hover': {
-                bgcolor: d.isSelf ? '#14594a' : '#0d2236',
-                borderColor: 'rgba(255,255,255,0.4)',
-              },
-            }}
-          >
-            <AddIcon sx={{ fontSize: 16 }} />
-          </IconButton>
-        </Tooltip>
       </Box>
       
       {/* Handles at the end, lowest z-index and non-blocking */}

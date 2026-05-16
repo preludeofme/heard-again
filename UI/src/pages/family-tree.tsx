@@ -421,7 +421,7 @@ export default function FamilyTree() {
     fetchPeople({ up: 2, down: 2 }, id, false, cleared)
   }, [fetchPeople, isIncrementalLoading])
 
-  const handlePersonClick = (person: { id: string | number; name: string; avatar: string }) => {
+  const handlePersonClick = useCallback((person: { id: string | number; name: string; avatar: string }) => {
     // Parse name into first and last name
     const nameParts = person.name.split(' ')
     const firstName = nameParts[0] || ''
@@ -436,13 +436,24 @@ export default function FamilyTree() {
       avatarUrl: person.avatar || undefined,
     })
     // No longer navigating directly - the detail modal will open via useFamilyTree logic
-  }
+  }, [setSelectedFamilyMember])
 
-  const handleEditRelationships = (personId: string) => {
+  const handleEditRelationships = useCallback((personId: string) => {
     setPersonModalInitialTab('relationships')
     setSelectedPersonId(personId)
     setIsPersonModalOpen(true)
-  }
+  }, [])
+
+  const handleToggleFullscreen = useCallback(() => setIsFullscreen((prev) => !prev), [])
+  const handleImportGedcom = useCallback(() => setIsGedcomImportModalOpen(true), [])
+  const handleViewFullProfile = useCallback((id: string) => {
+    router.push(`/profile/${id}`)
+  }, [router])
+
+  const onAddPersonCallback = useCallback((personId?: string) => {
+    setAddPersonRelativeId(personId ?? null)
+    setIsAddPersonModalOpen(true)
+  }, [])
 
   const handleAddPerson = async (personData: PersonFormData) => {
     try {
@@ -552,7 +563,7 @@ export default function FamilyTree() {
     fetchPeople({ up: 999, down: 999 }, treeData?.rootPersonId, true, cleared)
   }, [isIncrementalLoading, fetchPeople, treeData?.rootPersonId])
 
-  const handleExportGedcom = async () => {
+  const handleExportGedcom = useCallback(async () => {
     try {
       const response = await fetchWithCSRFAndJSON('/api/export/gedcom', {})
       if (!response.ok) throw new Error('Export failed')
@@ -565,7 +576,7 @@ export default function FamilyTree() {
     } catch (error) {
       console.error('Failed to export GEDCOM:', error)
     }
-  }
+  }, [])
 
   if (isLoading) {
     return (
@@ -584,15 +595,12 @@ export default function FamilyTree() {
         searchablePeople={allSearchablePeople}
         rootPersonId={treeData?.rootPersonId}
         onPersonClick={handlePersonClick}
-        onAddPerson={(personId?: string) => {
-          setAddPersonRelativeId(personId ?? null)
-          setIsAddPersonModalOpen(true)
-        }}
+        onAddPerson={onAddPersonCallback}
         onEditRelationships={handleEditRelationships}
         onPeopleChanged={fetchPeople}
         isFullscreen={isFullscreen}
-        onToggleFullscreen={() => setIsFullscreen((prev) => !prev)}
-        onImportGedcom={() => setIsGedcomImportModalOpen(true)}
+        onToggleFullscreen={handleToggleFullscreen}
+        onImportGedcom={handleImportGedcom}
         onExportGedcom={handleExportGedcom}
         initialSearchExpanded={initialSearchExpanded}
         initialSearchQuery={initialSearchQuery}
@@ -608,9 +616,7 @@ export default function FamilyTree() {
         onGenerateBio={handleGenerateBio}
         isGeneratingBio={isGeneratingBio}
         userPersonId={session?.user?.linkedPersonId}
-        onViewFullProfile={(id) => {
-          router.push(`/profile/${id}`)
-        }}
+        onViewFullProfile={handleViewFullProfile}
         onLoadAll={handleLoadAll}
       />
   )
