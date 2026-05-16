@@ -462,58 +462,60 @@ export function AudioRecorder({
               </Typography>
             </Box>
 
-            {/* ── Bottom controls ── */}
-            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mb: showScript ? 4 : 3 }}>
-              {!isRecording ? (
-                <Button
-                  variant="contained"
-                  size="large"
-                  startIcon={<Mic />}
-                  onClick={startRecording}
-                  sx={{
-                    borderRadius: 50,
-                    px: 4,
-                    py: 1.5,
-                    backgroundColor: '#e53935',
-                    textTransform: 'none',
-                    fontWeight: 600,
-                    '&:hover': { backgroundColor: '#c62828' },
-                  }}
-                >
-                  Start Recording
-                </Button>
-              ) : (
-                <>
-                  <IconButton
+            {/* Controls — hidden when script is showing (script owns start/stop above + below) */}
+            {!showScript && (
+              <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mb: 3 }}>
+                {!isRecording ? (
+                  <Button
+                    variant="contained"
                     size="large"
-                    onClick={pauseRecording}
-                    aria-label={isPaused ? 'Resume recording' : 'Pause recording'}
+                    startIcon={<Mic />}
+                    onClick={startRecording}
                     sx={{
-                      width: 56,
-                      height: 56,
-                      backgroundColor: '#f5f5f5',
-                      '&:hover': { backgroundColor: '#e0e0e0' },
-                    }}
-                  >
-                    {isPaused ? <PlayArrow /> : <Pause />}
-                  </IconButton>
-                  <IconButton
-                    size="large"
-                    onClick={stopRecording}
-                    aria-label="Stop recording"
-                    sx={{
-                      width: 72,
-                      height: 72,
+                      borderRadius: 50,
+                      px: 4,
+                      py: 1.5,
                       backgroundColor: '#e53935',
-                      color: 'white',
+                      textTransform: 'none',
+                      fontWeight: 600,
                       '&:hover': { backgroundColor: '#c62828' },
                     }}
                   >
-                    <Stop />
-                  </IconButton>
-                </>
-              )}
-            </Box>
+                    Start Recording
+                  </Button>
+                ) : (
+                  <>
+                    <IconButton
+                      size="large"
+                      onClick={pauseRecording}
+                      aria-label={isPaused ? 'Resume recording' : 'Pause recording'}
+                      sx={{
+                        width: 56,
+                        height: 56,
+                        backgroundColor: '#f5f5f5',
+                        '&:hover': { backgroundColor: '#e0e0e0' },
+                      }}
+                    >
+                      {isPaused ? <PlayArrow /> : <Pause />}
+                    </IconButton>
+                    <IconButton
+                      size="large"
+                      onClick={stopRecording}
+                      aria-label="Stop recording"
+                      sx={{
+                        width: 72,
+                        height: 72,
+                        backgroundColor: '#e53935',
+                        color: 'white',
+                        '&:hover': { backgroundColor: '#c62828' },
+                      }}
+                    >
+                      <Stop />
+                    </IconButton>
+                  </>
+                )}
+              </Box>
+            )}
 
             {isRecording && (
               <Box sx={{ mb: 4, px: 4 }}>
