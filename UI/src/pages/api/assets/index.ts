@@ -22,12 +22,13 @@ export default apiHandler({
       modelArtifactFor: { none: {} },
       generatedAudioForStories: { none: {} },
       // Hide GEDCOM import files — these are structural data, not keepsakes.
-      NOT: {
-        metadata: {
-          path: ['importType'],
-          equals: 'GEDCOM',
-        },
-      },
+      // Exclude GEDCOM import files. Assets with metadata: null are regular uploads
+      // and must be included — PostgreSQL evaluates NOT (NULL = 'GEDCOM') as NULL
+      // (not TRUE), which silently drops every null-metadata row without this OR guard.
+      OR: [
+        { metadata: null },
+        { NOT: { metadata: { path: ['importType'], equals: 'GEDCOM' } } },
+      ],
     }
 
     if (type && typeof type === 'string') {
