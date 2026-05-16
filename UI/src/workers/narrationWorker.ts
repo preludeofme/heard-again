@@ -2,7 +2,7 @@ import { Worker, Job } from 'bullmq'
 import { logger } from '@/lib/logger'
 import { prisma } from '@/lib/prisma'
 import { getStorageService } from '@/lib/storage/storage-service'
-import { getTTSProvider } from '@/lib/tts'
+import { getTTSProvider } from '@/lib/tts/index'
 import {
   NARRATION_QUEUE,
   NarrationRenderJobData,

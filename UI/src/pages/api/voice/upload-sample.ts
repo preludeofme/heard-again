@@ -1,6 +1,6 @@
 import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { getTTSProvider } from '@/lib/tts'
+import { getTTSProvider } from '@/lib/tts/index'
 import { prisma } from '@/lib/prisma'
 import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 import { validateFileContent } from '@/lib/security/file-validator'
