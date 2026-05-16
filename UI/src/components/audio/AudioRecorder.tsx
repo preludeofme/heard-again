@@ -444,58 +444,6 @@ export function AudioRecorder({
         {!audioBlob ? (
           // Recording Phase
           <Box sx={{ textAlign: 'center' }}>
-            {/* ── Top controls ── */}
-            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mb: 3 }}>
-              {!isRecording ? (
-                <Button
-                  variant="contained"
-                  size="large"
-                  startIcon={<Mic />}
-                  onClick={startRecording}
-                  sx={{
-                    borderRadius: 50,
-                    px: 4,
-                    py: 1.5,
-                    backgroundColor: '#e53935',
-                    textTransform: 'none',
-                    fontWeight: 600,
-                    '&:hover': { backgroundColor: '#c62828' },
-                  }}
-                >
-                  Start Recording
-                </Button>
-              ) : (
-                <>
-                  <IconButton
-                    size="large"
-                    onClick={pauseRecording}
-                    aria-label={isPaused ? 'Resume recording' : 'Pause recording'}
-                    sx={{
-                      width: 56,
-                      height: 56,
-                      backgroundColor: '#f5f5f5',
-                      '&:hover': { backgroundColor: '#e0e0e0' },
-                    }}
-                  >
-                    {isPaused ? <PlayArrow /> : <Pause />}
-                  </IconButton>
-                  <IconButton
-                    size="large"
-                    onClick={stopRecording}
-                    aria-label="Stop recording"
-                    sx={{
-                      width: 72,
-                      height: 72,
-                      backgroundColor: '#e53935',
-                      color: 'white',
-                      '&:hover': { backgroundColor: '#c62828' },
-                    }}
-                  >
-                    <Stop />
-                  </IconButton>
-                </>
-              )}
-            </Box>
 
             <Box sx={{ mb: 4 }}>
               <Typography
@@ -587,7 +535,15 @@ export function AudioRecorder({
               </Box>
             )}
 
-            {showScript && <VoiceCloneScript />}
+            {showScript && (
+              <VoiceCloneScript
+                isRecording={isRecording}
+                isPaused={isPaused}
+                onStart={startRecording}
+                onStop={stopRecording}
+                onPause={pauseRecording}
+              />
+            )}
           </Box>
         ) : (
           // Review Phase

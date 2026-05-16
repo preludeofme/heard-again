@@ -21,6 +21,7 @@ import {
   Delete as DeleteIcon,
   Cancel as CancelIcon,
 } from '@mui/icons-material'
+import { WaveformPlayer } from '@/components/audio/WaveformPlayer'
 import { fetchWithCSRF } from '@/lib/api-client'
 import { useRealtimeRun } from '@trigger.dev/react-hooks'
 import type { NarrationTaskProgress } from '@/trigger/narration-task'
@@ -501,13 +502,7 @@ export function StoryNarrationPlayer({
 
       {state === 'ready' && readyNarration && (
         <Box sx={{ mt: 1 }}>
-          <audio
-            controls
-            preload="metadata"
-            src={readyNarration.downloadUrl}
-            style={{ width: '100%', height: 40 }}
-            data-testid="narration-audio"
-          />
+          <WaveformPlayer audioUrl={readyNarration.downloadUrl} />
           <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1, gap: 1 }}>
             <Button
               onClick={handleDelete}

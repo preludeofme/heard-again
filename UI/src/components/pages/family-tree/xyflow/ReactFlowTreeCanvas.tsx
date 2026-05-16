@@ -169,7 +169,7 @@ function ReactFlowTreeCanvasInner({
         nodeTypes={nodeTypes}
         fitView
         fitViewOptions={{ padding: 0.15 }}
-        minZoom={0.2}
+        minZoom={0.04}
         maxZoom={2}
         nodesDraggable={false}
         nodesConnectable={false}

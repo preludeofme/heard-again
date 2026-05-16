@@ -159,8 +159,8 @@ export function VoiceTrainingModal({
 
   // For navigating to consent from success state
   const handleRecordConsent = () => {
-    if (onRecordConsent && trainingJob?.modelId) {
-      onRecordConsent(trainingJob.modelId)
+    if (onRecordConsent) {
+      onRecordConsent(trainingJob?.modelId ?? '')
     } else {
       handleClose()
     }

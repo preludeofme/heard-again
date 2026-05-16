@@ -966,7 +966,7 @@ export default function StoryDetailPage() {
                           </MuiLink>
                         ) : (
                           <Typography variant="body2" sx={{ fontWeight: 600, color: '#16334a' }}>
-                            {comment.user.displayName || comment.user.email.split('@')[0] || 'Family Member'}
+                            {comment.user.displayName || comment.user.email?.split('@')[0] || 'Family Member'}
                           </Typography>
                         )}
                         <Typography variant="caption" sx={{ color: '#999' }}>
@@ -993,7 +993,7 @@ export default function StoryDetailPage() {
                                   </MuiLink>
                                 ) : (
                                   <Typography variant="caption" sx={{ fontWeight: 600, color: '#16334a' }}>
-                                    {reply.user.displayName || reply.user.email.split('@')[0] || 'Family Member'}
+                                    {reply.user.displayName || reply.user.email?.split('@')[0] || 'Family Member'}
                                   </Typography>
                                 )}
                                 <Typography variant="caption" sx={{ color: '#999' }}>

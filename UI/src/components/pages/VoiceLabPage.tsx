@@ -168,11 +168,17 @@ export function VoiceLabPage({ voiceModels, controller, autoCreate }: VoiceLabPa
 
   const handleOpenConsent = (modelId: string) => {
     const model = voiceModels.find(m => m.id === modelId)
-    const person = model?.person ?? selectedFamilyMember
+    // When modelId is missing (training job didn't return it yet), use the newest
+    // model belonging to the currently selected family member as fallback.
+    const resolvedModel = model ?? (selectedFamilyMember
+      ? voiceModels.find(m => m.person?.id === selectedFamilyMember.id)
+      : undefined)
+    const person = resolvedModel?.person ?? selectedFamilyMember
     if (!person) return
+    const resolvedModelId = modelId || resolvedModel?.id || ''
     setConsentPersonId(person.id)
     setConsentPersonName(`${person.firstName}${person.lastName ? ` ${person.lastName}` : ''}`)
-    setConsentVoiceProfileId(modelId)
+    setConsentVoiceProfileId(resolvedModelId)
     setShowConsentModal(true)
     toggleRecordingModal()
   }

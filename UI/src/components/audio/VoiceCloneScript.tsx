@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Box, Typography, Collapse, Button } from '@mui/material'
-import { ExpandMore, ExpandLess, AutoAwesome } from '@mui/icons-material'
+import { Box, Typography, Collapse, Button, IconButton } from '@mui/material'
+import { ExpandMore, ExpandLess, AutoAwesome, Mic, Stop, Pause, PlayArrow } from '@mui/icons-material'
 
 interface ScriptLine {
   direction: string
@@ -34,7 +34,72 @@ const READING_TIPS: readonly string[] = [
   'If you stumble, just restart the recording for a clean take',
 ] as const
 
-export function VoiceCloneScript() {
+interface VoiceCloneScriptProps {
+  isRecording?: boolean
+  isPaused?: boolean
+  onStart?: () => void
+  onStop?: () => void
+  onPause?: () => void
+}
+
+function ScriptControls({
+  isRecording,
+  isPaused,
+  onStart,
+  onStop,
+  onPause,
+}: Required<VoiceCloneScriptProps>) {
+  return (
+    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 1.5 }}>
+      {!isRecording ? (
+        <Button
+          variant="contained"
+          size="small"
+          startIcon={<Mic sx={{ fontSize: 16 }} />}
+          onClick={onStart}
+          sx={{
+            borderRadius: 50,
+            px: 3,
+            py: 0.75,
+            backgroundColor: '#e53935',
+            textTransform: 'none',
+            fontWeight: 600,
+            fontSize: '0.82rem',
+            '&:hover': { backgroundColor: '#c62828' },
+          }}
+        >
+          Start Recording
+        </Button>
+      ) : (
+        <>
+          <IconButton
+            size="small"
+            onClick={onPause}
+            aria-label={isPaused ? 'Resume recording' : 'Pause recording'}
+            sx={{ backgroundColor: '#f5f5f5', '&:hover': { backgroundColor: '#e0e0e0' } }}
+          >
+            {isPaused ? <PlayArrow fontSize="small" /> : <Pause fontSize="small" />}
+          </IconButton>
+          <IconButton
+            onClick={onStop}
+            aria-label="Stop recording"
+            sx={{ backgroundColor: '#e53935', color: 'white', '&:hover': { backgroundColor: '#c62828' } }}
+          >
+            <Stop />
+          </IconButton>
+        </>
+      )}
+    </Box>
+  )
+}
+
+export function VoiceCloneScript({
+  isRecording = false,
+  isPaused = false,
+  onStart = () => {},
+  onStop = () => {},
+  onPause = () => {},
+}: VoiceCloneScriptProps) {
   const [showTips, setShowTips] = useState(false)
 
   return (
@@ -62,6 +127,17 @@ export function VoiceCloneScript() {
         The model copies whatever range is in this recording. Shifting from soft to bright to
         gentle gives it more of your real voice to learn from.
       </Typography>
+
+      {/* Controls above the script */}
+      <Box sx={{ mb: 2 }}>
+        <ScriptControls
+          isRecording={isRecording}
+          isPaused={isPaused}
+          onStart={onStart}
+          onStop={onStop}
+          onPause={onPause}
+        />
+      </Box>
 
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.75 }}>
         {SCRIPT_LINES.map((line, idx) => (
@@ -91,6 +167,17 @@ export function VoiceCloneScript() {
             </Typography>
           </Box>
         ))}
+      </Box>
+
+      {/* Controls below the script */}
+      <Box sx={{ mt: 2 }}>
+        <ScriptControls
+          isRecording={isRecording}
+          isPaused={isPaused}
+          onStart={onStart}
+          onStop={onStop}
+          onPause={onPause}
+        />
       </Box>
 
       <Button
