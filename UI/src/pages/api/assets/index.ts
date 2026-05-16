@@ -12,23 +12,27 @@ export default apiHandler({
     const pageSize = Math.min(50, Math.max(1, parseInt(limit as string, 10) || 20))
     const skip = (pageNum - 1) * pageSize
 
+    // Precompute GEDCOM import asset IDs to exclude.
+    // Querying positively for importType=GEDCOM avoids PostgreSQL's NULL semantics
+    // issue: NOT (NULL = 'GEDCOM') evaluates to NULL, not TRUE, silently excluding
+    // every regular upload whose metadata is null.
+    const gedcomAssets = await prisma.asset.findMany({
+      where: {
+        familyspaceId: user.familyspaceId,
+        metadata: { path: ['importType'], equals: 'GEDCOM' },
+      },
+      select: { id: true },
+    })
+    const gedcomIds = gedcomAssets.map((a) => a.id)
+
     const where: any = {
       familyspaceId: user.familyspaceId,
-      // Hide AI-generated narration audio and voice-training/voice-generation assets
-      // — these aren't user-curated documents.
       isAISynthesized: false,
       voiceGenerationOutputs: { none: {} },
       voiceProfileSources: { none: {} },
       modelArtifactFor: { none: {} },
       generatedAudioForStories: { none: {} },
-      // Hide GEDCOM import files — these are structural data, not keepsakes.
-      // Exclude GEDCOM import files. Assets with metadata: null are regular uploads
-      // and must be included — PostgreSQL evaluates NOT (NULL = 'GEDCOM') as NULL
-      // (not TRUE), which silently drops every null-metadata row without this OR guard.
-      OR: [
-        { metadata: null },
-        { NOT: { metadata: { path: ['importType'], equals: 'GEDCOM' } } },
-      ],
+      ...(gedcomIds.length > 0 ? { NOT: { id: { in: gedcomIds } } } : {}),
     }
 
     if (type && typeof type === 'string') {
