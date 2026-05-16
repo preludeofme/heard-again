@@ -1,16 +1,16 @@
-# Large asset directories
-TTS/
-caddy/
-screenshots/
-playwright-report/
-test-results/
-uploads/
+# Large asset directories (leading / anchors to repo root to avoid matching src/lib/tts/)
+/TTS/
+/caddy/
+/screenshots/
+/playwright-report/
+/test-results/
+/uploads/
 **/generated/
 **/uploads/
 
 # Cross-service code not needed for UI deployment
-Chat/
-infra/
+/Chat/
+/infra/
 
 # Cache and logs
 .next/
