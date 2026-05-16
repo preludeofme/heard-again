@@ -14,6 +14,16 @@ import fs from 'fs'
 import { v4 as uuidv4 } from 'uuid'
 import type { NextApiRequest, NextApiResponse } from 'next'
 
+function storageTypeFromMode(mode: string): 'LOCAL' | 'S3' | 'CLOUDFLARE_R2' | 'GOOGLE_CLOUD' {
+  switch (mode) {
+    case 'r2': return 'CLOUDFLARE_R2'
+    case 's3': return 'S3'
+    case 'gcs':
+    case 'gcp': return 'GOOGLE_CLOUD'
+    default: return 'LOCAL'
+  }
+}
+
 // Disable Next.js body parser for file uploads
 export const config = {
   api: {
@@ -238,7 +248,7 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse) {
         originalName: file.originalFilename || 'unknown',
         mimeType: finalMimeType,
         sizeBytes: BigInt(uploadResult.sizeBytes),
-        storageType: storageMode.toUpperCase() as any,
+        storageType: storageTypeFromMode(storageMode),
         storagePath: uploadResult.storagePath,
         assetType: uploadResult.assetType as any,
         processingStatus: uploadResult.processingStatus,
