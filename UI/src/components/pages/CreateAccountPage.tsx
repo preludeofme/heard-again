@@ -30,7 +30,8 @@ export function CreateAccountPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
-    fullName: '',
+    firstName: '',
+    lastName: '',
     email: '',
     password: '',
   })
@@ -47,7 +48,8 @@ export function CreateAccountPage() {
         body: JSON.stringify({
           email: formData.email,
           password: formData.password,
-          displayName: formData.fullName,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
         }),
       })
 
@@ -344,16 +346,27 @@ export function CreateAccountPage() {
 
                 {/* Email Form */}
                 <Box component="form" onSubmit={handleSubmit} sx={{ spaceY: 3 }}>
-                  <TextField
-                    fullWidth
-                    label="Full Name"
-                    placeholder="Johnathan Doe"
-                    value={formData.fullName}
-                    onChange={(e) =>
-                      setFormData({ ...formData, fullName: e.target.value })
-                    }
-                    sx={{ mb: 3 }}
-                  />
+                  <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+                    <TextField
+                      fullWidth
+                      required
+                      label="First Name"
+                      placeholder="Johnathan"
+                      value={formData.firstName}
+                      onChange={(e) =>
+                        setFormData({ ...formData, firstName: e.target.value })
+                      }
+                    />
+                    <TextField
+                      fullWidth
+                      label="Last Name"
+                      placeholder="Doe"
+                      value={formData.lastName}
+                      onChange={(e) =>
+                        setFormData({ ...formData, lastName: e.target.value })
+                      }
+                    />
+                  </Box>
 
                   <TextField
                     fullWidth

@@ -127,14 +127,27 @@ export function FamilyTreePage({
 
   // Derive rootPersonId from rawPeople if not supplied by the page
   const effectiveRootId: string = useMemo(() => {
-    if (rootPersonId) return rootPersonId
-    const newest = [...rawPeople].sort((a, b) => {
-      const aTime = a.birthDate ? new Date(a.birthDate).getTime() : 0
-      const bTime = b.birthDate ? new Date(b.birthDate).getTime() : 0
-      if (!isNaN(aTime) && !isNaN(bTime)) return bTime - aTime // descending
-      return 0
-    })[0]
-    return newest ? newest.id : ''
+    const candidateId = rootPersonId ?? (() => {
+      const newest = [...rawPeople].sort((a, b) => {
+        const aTime = a.birthDate ? new Date(a.birthDate).getTime() : 0
+        const bTime = b.birthDate ? new Date(b.birthDate).getTime() : 0
+        if (!isNaN(aTime) && !isNaN(bTime)) return bTime - aTime
+        return 0
+      })[0]
+      return newest ? newest.id : ''
+    })()
+
+    // If the candidate isn't in rawPeople, fall back to the first person who has
+    // both PARENT and CHILD edge types (a true interior node in the tree).
+    if (candidateId && !rawPeople.some(p => p.id === candidateId)) {
+      const interior = rawPeople.find(p => {
+        const types = new Set(p.relationshipEdges.map(e => e.type))
+        return types.has('PARENT') && types.has('CHILD')
+      })
+      return interior ? interior.id : (rawPeople[0]?.id ?? '')
+    }
+
+    return candidateId
   }, [rootPersonId, rawPeople])
 
   // Canvas ref for zoom/pan controls

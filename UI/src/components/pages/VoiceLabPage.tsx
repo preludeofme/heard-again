@@ -168,14 +168,13 @@ export function VoiceLabPage({ voiceModels, controller, autoCreate }: VoiceLabPa
 
   const handleOpenConsent = (modelId: string) => {
     const model = voiceModels.find(m => m.id === modelId)
-    const person = model?.person || selectedFamilyMember
-    if (person) {
-      setConsentPersonId(person.id)
-      setConsentPersonName(person.firstName + (person.lastName ? ` ${person.lastName}` : ''))
-      setConsentVoiceProfileId(modelId)
-      setShowConsentModal(true)
-      toggleRecordingModal()
-    }
+    const person = model?.person ?? selectedFamilyMember
+    if (!person) return
+    setConsentPersonId(person.id)
+    setConsentPersonName(`${person.firstName}${person.lastName ? ` ${person.lastName}` : ''}`)
+    setConsentVoiceProfileId(modelId)
+    setShowConsentModal(true)
+    toggleRecordingModal()
   }
 
   return (

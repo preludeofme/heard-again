@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import { useSession } from 'next-auth/react'
 import { fetchWithCSRFAndJSON } from '@/lib/api-client'
@@ -33,6 +33,25 @@ export default function OnboardingPage() {
     firstName: '',
     lastName: '',
   })
+
+  // Pre-fill firstName/lastName from the session name set during signup
+  useEffect(() => {
+    const name = session?.user?.name
+    if (name && !formData.firstName) {
+      const spaceIdx = name.indexOf(' ')
+      if (spaceIdx === -1) {
+        setFormData((prev) => ({ ...prev, firstName: name }))
+      } else {
+        setFormData((prev) => ({
+          ...prev,
+          firstName: name.slice(0, spaceIdx),
+          lastName: name.slice(spaceIdx + 1),
+        }))
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.user?.name])
+
   const handleNext = async () => {
     if (activeStep === 0) {
       if (!formData.familyName.trim()) {

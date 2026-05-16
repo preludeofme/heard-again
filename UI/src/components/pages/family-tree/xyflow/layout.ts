@@ -187,6 +187,46 @@ function assignGenerations(
     if (!generationById.has(person.id)) generationById.set(person.id, 0)
   }
 
+  // If >80% of people ended up at gen 0, the root likely had no traversable edges.
+  // Re-run BFS from the person with the most PARENT+CHILD connections.
+  const gen0Count = Array.from(generationById.values()).filter(g => g === 0).length
+  if (people.length > 1 && gen0Count / people.length > 0.8) {
+    let bestId = rootPersonId
+    let bestCount = -1
+    for (const person of people) {
+      const count = person.relationshipEdges.filter(
+        e => e.type === 'PARENT' || e.type === 'CHILD'
+      ).length
+      if (count > bestCount) {
+        bestCount = count
+        bestId = person.id
+      }
+    }
+    if (bestId !== rootPersonId) {
+      const retried = new Map<string, number>([[bestId, 0]])
+      const retryQueue: string[] = [bestId]
+      while (retryQueue.length > 0) {
+        const currentId = retryQueue.shift()!
+        const currentGen = retried.get(currentId)!
+        const current = peopleById.get(currentId)
+        if (!current) continue
+        for (const edge of current.relationshipEdges) {
+          const relId = edge.relatedPerson.id
+          if (!peopleById.has(relId) || retried.has(relId)) continue
+          let delta = 0
+          if (edge.type === 'PARENT') delta = 1
+          else if (edge.type === 'CHILD') delta = -1
+          retried.set(relId, currentGen + delta)
+          retryQueue.push(relId)
+        }
+      }
+      for (const person of people) {
+        if (!retried.has(person.id)) retried.set(person.id, 0)
+      }
+      return retried
+    }
+  }
+
   return generationById
 }
 

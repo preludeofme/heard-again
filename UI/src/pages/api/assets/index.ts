@@ -12,7 +12,7 @@ export default apiHandler({
     const pageSize = Math.min(50, Math.max(1, parseInt(limit as string, 10) || 20))
     const skip = (pageNum - 1) * pageSize
 
-    const where: any = { 
+    const where: any = {
       familyspaceId: user.familyspaceId,
       // Hide AI-generated narration audio and voice-training/voice-generation assets
       // — these aren't user-curated documents.
@@ -21,6 +21,13 @@ export default apiHandler({
       voiceProfileSources: { none: {} },
       modelArtifactFor: { none: {} },
       generatedAudioForStories: { none: {} },
+      // Hide GEDCOM import files — these are structural data, not keepsakes.
+      NOT: {
+        metadata: {
+          path: ['importType'],
+          equals: 'GEDCOM',
+        },
+      },
     }
 
     if (type && typeof type === 'string') {

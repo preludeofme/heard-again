@@ -1,7 +1,7 @@
 import Head from 'next/head'
 import { useRouter } from 'next/router'
 import { useEffect, useRef, useState } from 'react'
-import { Box, CircularProgress, Typography } from '@mui/material'
+import { Box, CircularProgress, Tab, Tabs, Typography } from '@mui/material'
 import { Layout } from '@/components/layout/Layout'
 import { useSelectedFamilyMember } from '@/contexts/SelectedFamilyMemberContext'
 import { ProfileColors } from '@/components/profile/ProfileConstants'
@@ -61,6 +61,7 @@ export default function PersonProfilePage() {
   const [documents, setDocuments] = useState<DocItem[]>([])
   const [docTotal, setDocTotal] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState(0)
 
   // 1. URL -> State Sync: When a profile is loaded, update the global selection
   useEffect(() => {
@@ -345,23 +346,52 @@ export default function PersonProfilePage() {
             />
           </Box>
 
-          <NarrativeTimeline 
-            stories={stories}
-            personId={personId}
-            timelineRef={timelineRef}
-            onDragStart={onDragStart}
-            onDragMove={onDragMove}
-            onDragEnd={onDragEnd}
-            onTouchStart={onTouchStart}
-            onTouchMove={onTouchMove}
-            hasDragged={hasDragged}
-          />
+          {/* ─── Content Tabs ─── */}
+          <Box>
+            <Tabs
+              value={activeTab}
+              onChange={(_, v) => setActiveTab(v)}
+              sx={{
+                mb: 4,
+                borderBottom: `1px solid ${ProfileColors.outlineVariant}`,
+                '& .MuiTab-root': {
+                  fontFamily: 'var(--font-manrope), sans-serif',
+                  fontWeight: 600,
+                  fontSize: '0.95rem',
+                  color: ProfileColors.onSurfaceVariant,
+                  textTransform: 'none',
+                  minWidth: 120,
+                },
+                '& .Mui-selected': { color: ProfileColors.primary },
+                '& .MuiTabs-indicator': { backgroundColor: ProfileColors.primary },
+              }}
+            >
+              <Tab label="Timeline" />
+              <Tab label="Memories" />
+            </Tabs>
 
-          <MemoriesGrid 
-            documents={documents}
-            docTotal={docTotal}
-            personId={personId}
-          />
+            <Box hidden={activeTab !== 0}>
+              <NarrativeTimeline
+                stories={stories}
+                personId={personId}
+                timelineRef={timelineRef}
+                onDragStart={onDragStart}
+                onDragMove={onDragMove}
+                onDragEnd={onDragEnd}
+                onTouchStart={onTouchStart}
+                onTouchMove={onTouchMove}
+                hasDragged={hasDragged}
+              />
+            </Box>
+
+            <Box hidden={activeTab !== 1}>
+              <MemoriesGrid
+                documents={documents}
+                docTotal={docTotal}
+                personId={personId}
+              />
+            </Box>
+          </Box>
 
         </Box>
       </Layout>

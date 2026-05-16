@@ -111,18 +111,29 @@ export default function PublicContributePage() {
   const handleAudioComplete = async (audioBlob: Blob, duration: number) => {
     setIsSubmitting(true)
     try {
-      // 1. Upload asset
-      const formData = new FormData()
-      formData.append('file', audioBlob, 'recording.webm')
-      const uploadRes = await fetchWithCSRF('/api/assets/upload', {
-        method: 'POST',
-        body: formData
-      })
-      if (!uploadRes.ok) throw new Error('Upload failed')
-      const uploadData = await uploadRes.json()
-      const assetId = uploadData.data.id
+      const filename = `recording.${audioBlob.type.includes('mp4') ? 'mp4' : 'webm'}`
 
-      // 2. Create story
+      // 1. Request presigned upload URL
+      const uploadReqRes = await fetchWithCSRF('/api/assets/request-upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename, mimeType: audioBlob.type, fileSize: audioBlob.size }),
+      })
+      if (!uploadReqRes.ok) {
+        const errData = await uploadReqRes.json().catch(() => ({}))
+        throw new Error((errData as any).error || 'Failed to request upload URL')
+      }
+      const { assetId, uploadUrl } = await uploadReqRes.json() as { assetId: string; uploadUrl: string }
+
+      // 2. PUT directly to R2 — bypasses Vercel body size limit and ClamAV pipeline
+      const putRes = await fetch(uploadUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': audioBlob.type },
+        body: audioBlob,
+      })
+      if (!putRes.ok) throw new Error('Storage upload failed')
+
+      // 3. Create story
       const res = await fetchWithCSRF('/api/stories', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -135,18 +146,18 @@ export default function PublicContributePage() {
           location: location || undefined,
           storyType: 'RECORDING',
           assetIds: [assetId],
-          status: 'PUBLISHED'
-        })
+          status: 'PUBLISHED',
+        }),
       })
 
       if (res.ok) {
         setIsSuccess(true)
       } else {
         const data = await res.json()
-        setError(data.error || 'Failed to submit story')
+        setError((data as any).error || 'Failed to submit story')
       }
     } catch (err) {
-      setError('An error occurred during audio submission')
+      setError(err instanceof Error ? err.message : 'An error occurred during audio submission')
     } finally {
       setIsSubmitting(false)
     }

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { Box, Typography, IconButton, CircularProgress } from '@mui/material'
+import { Box, Typography, IconButton, CircularProgress, Alert } from '@mui/material'
 import { Replay10, Forward30, PlayArrow, Stop, ChevronLeft, ChevronRight } from '@mui/icons-material'
 import Link from 'next/link'
 import { ProfileColors, WAVEFORM_HEIGHTS } from './ProfileConstants'
@@ -41,6 +41,7 @@ export function VoiceSignature({
   
   const [isPlaying, setIsPlaying] = useState(false)
   const [isSynthesizing, setIsSynthesizing] = useState(false)
+  const [playError, setPlayError] = useState<string | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
   const handlePrev = () => {
@@ -73,6 +74,7 @@ export function VoiceSignature({
 
     if (!currentVoice) return
 
+    setPlayError(null)
     setIsSynthesizing(true)
     try {
       const response = await fetchWithCSRFAndJSON('/api/voice/synthesize', {
@@ -80,19 +82,21 @@ export function VoiceSignature({
         text: `Hello, this is a sample of my digital voice clone for ${firstName || 'the family story'}.`,
       })
 
-      if (!response.ok) throw new Error('Failed to synthesize')
-      
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}))
+        throw new Error((errData as any).error || 'Failed to synthesize')
+      }
+
       const result = await response.json()
-      // Extract from { success: true, data: { audioUrl: ... } } structure
       const audioUrl = result.data?.audioUrl || result.audioUrl
-      
+
       if (!audioUrl) {
         throw new Error('No audio URL in response')
       }
-      
+
       const audio = new Audio(audioUrl)
       audioRef.current = audio
-      
+
       audio.onended = () => {
         setIsPlaying(false)
         audioRef.current = null
@@ -101,7 +105,12 @@ export function VoiceSignature({
       setIsPlaying(true)
       audio.play()
     } catch (err) {
-      console.error('Playback failed:', err)
+      const msg = err instanceof Error ? err.message : 'Playback failed'
+      if (msg.toLowerCase().includes('consent') || msg.toLowerCase().includes('blocked')) {
+        setPlayError('Consent required — record consent in Voice Lab before playing.')
+      } else {
+        setPlayError('Playback failed. Please try again.')
+      }
     } finally {
       setIsSynthesizing(false)
     }
@@ -233,6 +242,12 @@ export function VoiceSignature({
             </IconButton>
           )}
         </Box>
+
+        {playError && (
+          <Alert severity="warning" sx={{ mt: 2, textAlign: 'left' }}>
+            {playError}
+          </Alert>
+        )}
       </Box>
 
       {/* Quote or Stats */}

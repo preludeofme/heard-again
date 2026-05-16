@@ -6,12 +6,14 @@ import { validate, rules } from '@/lib/validation'
 
 export default apiHandler({
   POST: async (req, res) => {
-    const { email, password, displayName, familyspaceName } = req.body
+    const { email, password, firstName, lastName, familyspaceName } = req.body
+    const displayName = [firstName, lastName].filter(Boolean).join(' ') || undefined
 
     // Validation
     const { valid, errors } = validate(req.body, {
       email: [rules.required, rules.email],
       password: [rules.required, rules.minLength(8)],
+      firstName: [rules.required],
     })
 
     if (!valid) {
@@ -30,7 +32,7 @@ export default apiHandler({
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10)
 
-    // Generate a slug from familyspace name or email
+    // Generate a slug from familyspace name or display name or email
     const baseName = familyspaceName || displayName || email.split('@')[0]
     const slug = baseName
       .toLowerCase()
@@ -54,7 +56,8 @@ export default apiHandler({
         data: {
           email,
           password: hashedPassword,
-          displayName: displayName || null,
+          displayName: displayName ?? null,
+          name: displayName ?? null,
         },
       })
 
