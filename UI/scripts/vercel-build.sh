@@ -14,5 +14,8 @@ sed -i '/generator client_chat/,/}/d' prisma/schema.prisma
 echo "Generating Prisma client..."
 npx --yes prisma generate
 
+echo "Applying database migrations..."
+npx --yes prisma migrate deploy
+
 echo "Building Next.js app..."
 npm run build
