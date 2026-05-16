@@ -235,10 +235,16 @@ export class StoryService {
           user: {
             select: { id: true, displayName: true, avatarUrl: true },
           },
+          person: {
+            select: { id: true, firstName: true, lastName: true, displayName: true },
+          },
           replies: {
             include: {
               user: {
                 select: { id: true, displayName: true, avatarUrl: true },
+              },
+              person: {
+                select: { id: true, firstName: true, lastName: true, displayName: true },
               },
             },
             orderBy: { createdAt: 'asc' },
