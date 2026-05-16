@@ -368,4 +368,22 @@ export class RunPodTTSProvider implements TTSProvider {
     const storage = getStorageService()
     return storage.getFile(audioId)
   }
+
+  async transcribeAudio(
+    audioBuffer: Buffer,
+    filename: string,
+    mimeType: string,
+    familyspaceId: string
+  ): Promise<string> {
+    const audioInput = await this.buildAudioInput(audioBuffer, filename, mimeType, familyspaceId)
+
+    const job = await this.submitJob(
+      { action: 'transcribe', filename, mimeType, ...audioInput },
+      true // runsync — transcription is fast enough for a synchronous call
+    )
+
+    const completed = job.status === 'COMPLETED' ? job : await this.pollJob(job.id)
+    const output = completed.output as { transcript?: string | null } | null
+    return output?.transcript ?? ''
+  }
 }

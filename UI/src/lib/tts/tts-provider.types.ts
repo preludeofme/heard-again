@@ -84,4 +84,12 @@ export interface TTSProvider {
   ): Promise<SynthesisCompleteEvent>
 
   downloadAudio(audioId: string, familyspaceId: string): Promise<Buffer>
+
+  /** Transcribe audio to text via Whisper. Optional — falls back to TTS REST service if unimplemented. */
+  transcribeAudio?(
+    audioBuffer: Buffer,
+    filename: string,
+    mimeType: string,
+    familyspaceId: string
+  ): Promise<string>
 }

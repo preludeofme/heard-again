@@ -23,6 +23,8 @@ from app.runpod_schemas import (
     RunPodTTSInput,
     SynthesizeBatchInput,
     SynthesisCompleteEvent,
+    TranscribeInput,
+    TranscribeResult,
     UploadReferenceInput,
     UploadReferenceResult,
 )
@@ -204,6 +206,23 @@ def _handle_synthesize_batch(req: SynthesizeBatchInput) -> dict[str, Any]:
         shutil.rmtree(job_dir, ignore_errors=True)
 
 
+def _handle_transcribe(req: TranscribeInput) -> dict[str, Any]:
+    job_dir = TEMP_DIR / f"transcribe-{uuid.uuid4().hex}"
+    job_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        audio_path = job_dir / req.filename
+        if req.audioBase64:
+            audio_path.write_bytes(base64.b64decode(req.audioBase64))
+        elif req.audioUrl:
+            _download_url(req.audioUrl, audio_path)
+        else:
+            raise ValueError("Either audioBase64 or audioUrl is required")
+        transcript = _transcribe(audio_path)
+        return TranscribeResult(transcript=transcript).model_dump()
+    finally:
+        shutil.rmtree(job_dir, ignore_errors=True)
+
+
 def _handle_download_audio(req: DownloadAudioInput) -> dict[str, Any]:
     r2 = R2Client()
     audio_bytes = r2.download_file_bytes(req.audioId)
@@ -290,6 +309,10 @@ def handler(event: dict[str, Any]) -> dict[str, Any]:
         if action == "synthesize_batch":
             req = SynthesizeBatchInput.model_validate(payload)
             return _handle_synthesize_batch(req)
+
+        if action == "transcribe":
+            req = TranscribeInput.model_validate(payload)
+            return _handle_transcribe(req)
 
         if action == "download_audio":
             req = DownloadAudioInput.model_validate(payload)

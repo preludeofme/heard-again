@@ -77,3 +77,15 @@ class DownloadAudioInput(BaseModel):
 class DownloadAudioResult(BaseModel):
     audioBase64: str
     mimeType: str = "audio/mpeg"
+
+
+class TranscribeInput(BaseModel):
+    action: Literal["transcribe"]
+    filename: str
+    mimeType: str
+    audioBase64: Optional[str] = None
+    audioUrl: Optional[str] = None
+
+
+class TranscribeResult(BaseModel):
+    transcript: Optional[str]
