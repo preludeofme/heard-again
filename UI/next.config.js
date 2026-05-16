@@ -20,7 +20,9 @@ const nextConfig = {
   typescript: { ignoreBuildErrors: true },
   // standalone output is only for self-hosted Docker; Vercel manages its own output format
   ...(process.env.VERCEL !== '1' && { output: 'standalone' }),
-  turbopack: {},
+  // root: __dirname pins the project root for Turbopack so tsconfig paths resolve correctly
+  // in both local monorepo and Vercel's rootDirectory:UI deployment
+  turbopack: { root: __dirname },
   allowedDevOrigins: ['100.75.138.91', 'trubuck-design-ai-beast.stern-mulley.ts.net', 'localhost', '127.0.0.1'],
   images: {
     remotePatterns: [

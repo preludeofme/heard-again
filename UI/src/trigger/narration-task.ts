@@ -2,7 +2,7 @@ import { task, metadata, logger as triggerLogger } from '@trigger.dev/sdk/v3'
 import type { DeserializedJson } from '@trigger.dev/core'
 import { prisma } from '@/lib/prisma'
 import { getStorageService } from '@/lib/storage/storage-service'
-import { getTTSProvider } from '@/lib/tts/index'
+import { getTTSProvider } from '@/lib/tts'
 import { logger } from '@/lib/logger'
 
 // ─── Types ────────────────────────────────────────────────────────────────────

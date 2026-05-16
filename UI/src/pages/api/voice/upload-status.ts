@@ -2,7 +2,7 @@ import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '@/lib/prisma'
 import { getAuthUserWithFamilyspace } from '@/lib/auth-helpers'
-import { getTTSProvider } from '@/lib/tts/index'
+import { getTTSProvider } from '@/lib/tts'
 import { getStorageService } from '@/lib/storage/storage-service'
 
 const handler = async (req: NextApiRequest, res: NextApiResponse): Promise<void> => {

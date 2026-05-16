@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 import { getStorageService } from '@/lib/storage/storage-service'
 import { S3StorageProvider } from '@/lib/storage/providers/s3-provider'
-import { getTTSProvider } from '@/lib/tts/index'
+import { getTTSProvider } from '@/lib/tts'
 
 const handler = async (req: NextApiRequest, res: NextApiResponse): Promise<void> => {
   if (req.method !== 'POST') {
