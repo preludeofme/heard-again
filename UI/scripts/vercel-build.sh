@@ -4,6 +4,7 @@ set -e
 echo "Preparing Prisma schema for Vercel build..."
 mkdir -p prisma
 cp ../prisma/schema.prisma ./prisma/schema.prisma
+cp -r ../prisma/migrations ./prisma/migrations
 
 echo "Removing extraneous generators..."
 # Use a different delimiter for sed since paths might contain slashes (though unlikely here)
