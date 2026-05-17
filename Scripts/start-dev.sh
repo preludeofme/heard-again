@@ -505,20 +505,20 @@ else
     TTS_STARTED=false
 fi
 
-# Start Narration Worker (BullMQ consumer — required for narration jobs to process)
-echo "  Starting Narration Worker..."
-cd "$UI_DIR"
-if [ "$LOG_MODE" = "live" ]; then
-    npm run workers:start 2>&1 | tee "$MAIN_APP_DIR/logs/workers.log" &
-else
-    npm run workers:start > "$MAIN_APP_DIR/logs/workers.log" 2>&1 &
-fi
-WORKERS_PID=$!
-echo $WORKERS_PID >> "$PIDS_FILE"
+# Start Trigger.dev dev worker (handles narration-render and gedcom-import tasks locally)
+echo "  Starting Trigger.dev dev worker..."
 cd "$MAIN_APP_DIR"
-echo -e "    ${GREEN}✓ Narration Worker started (PID: $WORKERS_PID)${NC}"
+if [ "$LOG_MODE" = "live" ]; then
+    TRIGGER_API_URL=http://localhost:3030 npx trigger.dev@latest dev 2>&1 | tee "$MAIN_APP_DIR/logs/trigger-dev.log" &
+else
+    TRIGGER_API_URL=http://localhost:3030 npx trigger.dev@latest dev > "$MAIN_APP_DIR/logs/trigger-dev.log" 2>&1 &
+fi
+TRIGGER_PID=$!
+echo $TRIGGER_PID >> "$PIDS_FILE"
+echo -e "    ${GREEN}✓ Trigger.dev worker started (PID: $TRIGGER_PID)${NC}"
+echo -e "    ${BLUE}  API: http://localhost:3030${NC}"
 if [ "$LOG_MODE" != "live" ]; then
-    echo -e "    ${BLUE}  Logs: $MAIN_APP_DIR/logs/workers.log${NC}"
+    echo -e "    ${BLUE}  Logs: $MAIN_APP_DIR/logs/trigger-dev.log${NC}"
 fi
 
 echo ""
@@ -551,7 +551,7 @@ echo -e "  ${BLUE}Main App:${NC}      https://localhost:$MAIN_APP_PORT"
 if [ "$TTS_STARTED" = true ]; then
     echo -e "  ${BLUE}TTS Service:${NC}   http://localhost:$TTS_SERVICE_PORT"
 fi
-echo -e "  ${BLUE}Workers:${NC}       BullMQ narration + import (PID: $WORKERS_PID)"
+echo -e "  ${BLUE}Trigger.dev:${NC}   local worker — narration + GEDCOM import (PID: $TRIGGER_PID)"
 echo ""
 if [ "$LOG_MODE" = "live" ]; then
     echo -e "  ${YELLOW}Live logging enabled - all service output shown above${NC}"

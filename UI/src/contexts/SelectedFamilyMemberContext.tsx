@@ -92,16 +92,20 @@ export function SelectedFamilyMemberProvider({
 
   const router = propRouter || hookRouter
   
-  // Eager hydration from localStorage for instantaneous UI
-  const [selectedFamilyMember, setSelectedFamilyMemberState] = useState<SelectedFamilyMember | null>(() => {
-    return readStorage<SelectedFamilyMember>(STORAGE_KEY)
-  })
-  
-  const [recentlyViewedMembers, setRecentlyViewedMembers] = useState<SelectedFamilyMember[]>(() => {
-    return readStorage<SelectedFamilyMember[]>(RECENT_KEY) || []
-  })
-  
+  // Must start null on both server and client to avoid SSR/client tree mismatch.
+  // localStorage is read in a useEffect (client-only, post-mount) below.
+  const [selectedFamilyMember, setSelectedFamilyMemberState] = useState<SelectedFamilyMember | null>(null)
+  const [recentlyViewedMembers, setRecentlyViewedMembers] = useState<SelectedFamilyMember[]>([])
   const [isInitialized, setIsInitialized] = useState(false)
+
+  // Hydrate from localStorage after mount (client-only, runs one render after SSR)
+  useEffect(() => {
+    const stored = readStorage<SelectedFamilyMember>(STORAGE_KEY)
+    if (stored) setSelectedFamilyMemberState(stored)
+
+    const storedRecent = readStorage<SelectedFamilyMember[]>(RECENT_KEY)
+    if (storedRecent?.length) setRecentlyViewedMembers(storedRecent)
+  }, [])
 
   // 1. URL and async hydration
   useEffect(() => {
