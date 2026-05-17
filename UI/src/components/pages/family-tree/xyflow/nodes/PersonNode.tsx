@@ -243,6 +243,9 @@ export function PersonNode({ data }: NodeProps): React.JSX.Element {
         sx={{
           position: 'relative',
           zIndex: 10,
+          opacity: d.isDimmed ? 0.35 : 1,
+          filter: d.highlightType === 'selected' ? 'drop-shadow(0 0 10px rgba(26,107,90,0.5))' : 'none',
+          transition: 'opacity 180ms ease, filter 180ms ease',
         }}
       >
         <FamilyMemberCard
