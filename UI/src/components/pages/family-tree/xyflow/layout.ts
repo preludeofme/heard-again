@@ -352,6 +352,8 @@ export function buildFamilyTreeLayout(
   if (people.length === 0) return { nodes: [], edges: [] }
 
   const peopleById = new Map(people.map((p) => [p.id, p]))
+  const normalizedGraph = buildFamilyGraph(people)
+  const highlightById = getRelationshipHighlightMap(normalizedGraph, selectedPersonId)
   const { childrenByParent, parentsByChild, spousesByPerson, siblingsByPerson } = buildRelationshipMaps(people)
   const generationById = assignGenerations(people, rootPersonId)
 
