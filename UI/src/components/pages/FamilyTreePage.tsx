@@ -42,7 +42,14 @@ import { PersonDetailModal } from '@/components/modals/PersonDetailModal'
 import { AddEditPersonModal, PersonFormData } from '@/components/modals/AddEditPersonModal'
 import { FamilyMemberSearch, SearchableFamilyMember } from '@/components/search'
 import { fetchWithCSRFAndJSON, fetchWithCSRF } from '@/lib/api-client'
-import { ReactFlowTreeCanvas, ReactFlowTreeCanvasHandle } from '@/components/pages/family-tree/xyflow/ReactFlowTreeCanvas'
+import dynamic from 'next/dynamic'
+import type { ReactFlowTreeCanvasHandle } from '@/components/pages/family-tree/xyflow/ReactFlowTreeCanvas'
+
+// @xyflow/react is browser-only — SSR breaks its internal hook dispatcher
+const ReactFlowTreeCanvas = dynamic(
+  () => import('@/components/pages/family-tree/xyflow/ReactFlowTreeCanvas').then((m) => m.ReactFlowTreeCanvas),
+  { ssr: false, loading: () => <CircularProgress sx={{ position: 'absolute', top: '50%', left: '50%', translate: '-50% -50%' }} /> },
+)
 import type { ApiPersonWithEdges, TreeLayoutPerson } from '@/components/pages/family-tree/xyflow/types'
 import type { PersonType } from '@/contracts'
 import { useSelectedFamilyMember } from '@/contexts/SelectedFamilyMemberContext'

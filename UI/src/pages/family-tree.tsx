@@ -4,7 +4,13 @@ import { PersonModal } from '@/components/modals/PersonModal'
 import { AddEditPersonModal, PersonFormData } from '@/components/modals/AddEditPersonModal'
 import { SuccessModal } from '@/components/modals/SuccessModal'
 import { Layout } from '@/components/layout/Layout'
-import { GedcomImportModal } from '@/components/modals/GedcomImportModal'
+import dynamic from 'next/dynamic'
+
+// @trigger.dev/react-hooks uses browser-only APIs — must skip SSR
+const GedcomImportModal = dynamic(
+  () => import('@/components/modals/GedcomImportModal').then((m) => m.GedcomImportModal),
+  { ssr: false, loading: () => <CircularProgress sx={{ position: 'absolute', top: '50%', left: '50%', translate: '-50% -50%' }} /> },
+)
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import {
   Box,

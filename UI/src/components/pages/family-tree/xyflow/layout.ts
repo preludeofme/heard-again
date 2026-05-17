@@ -152,8 +152,6 @@ function assignGenerations(
   rootPersonId: string,
 ): Map<string, number> {
   const peopleById = new Map(people.map((p) => [p.id, p]))
-  const normalizedGraph = buildFamilyGraph(people)
-  const highlightById = getRelationshipHighlightMap(normalizedGraph, selectedPersonId)
   const generationById = new Map<string, number>([[rootPersonId, 0]])
   const queue: string[] = [rootPersonId]
 

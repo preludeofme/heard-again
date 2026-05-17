@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import {
   ReactFlow,
   Background,
@@ -192,7 +192,14 @@ function ReactFlowTreeCanvasInner({
   )
 }
 
-export function ReactFlowTreeCanvas(props: ReactFlowTreeCanvasProps): React.JSX.Element {
+export function ReactFlowTreeCanvas(props: ReactFlowTreeCanvasProps): React.JSX.Element | null {
+  // Zustand 4.x / xyflow hooks crash during the first render cycle after hydration
+  // in React 19. Defer the inner render until the component is settled on the client.
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
+
+  if (!mounted) return null
+
   return (
     <ReactFlowProvider>
       <div style={{ width: '100%', height: '100%' }}>

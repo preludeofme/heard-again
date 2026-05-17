@@ -39,6 +39,19 @@ const nextConfig = {
     },
   },
   webpack: (config, { isServer, webpack }) => {
+    const path = require('path')
+
+    // Force a single React instance across the monorepo. @trigger.dev/sdk at
+    // the workspace root causes use-sync-external-store to hoist to root
+    // node_modules, where it resolves a different React copy (root 19.2.6) than
+    // the UI package (19.2.4). Two React instances → dispatcher mismatch →
+    // "resolveDispatcher() is null" crash in @xyflow/react + zustand/traditional.
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      'react': path.resolve(__dirname, 'node_modules/react'),
+      'react-dom': path.resolve(__dirname, 'node_modules/react-dom'),
+    }
+
     if (!isServer) {
       // Mock Node.js modules that server-side libs depend on
       config.resolve.fallback = {
