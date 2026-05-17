@@ -2,6 +2,8 @@ import type { Node, Edge } from '@xyflow/react'
 import type { TreePerson } from '../types'
 import type { ApiPersonWithEdges, TreeLayoutPerson, PersonNodeData, TreeNodeLevel } from './types'
 import { getRelationshipDescriptor } from '@/lib/relationship-utils'
+import { buildFamilyGraph } from './layout/buildFamilyGraph'
+import { getRelationshipHighlightMap } from './utils/relationshipHighlighting'
 
 // ─── Layout constants ────────────────────────────────────────────────────────
 
@@ -348,6 +350,8 @@ export function buildFamilyTreeLayout(
   if (people.length === 0) return { nodes: [], edges: [] }
 
   const peopleById = new Map(people.map((p) => [p.id, p]))
+  const normalizedGraph = buildFamilyGraph(people)
+  const highlightById = getRelationshipHighlightMap(normalizedGraph, selectedPersonId)
   const { childrenByParent, parentsByChild, spousesByPerson, siblingsByPerson } = buildRelationshipMaps(people)
   const generationById = assignGenerations(people, rootPersonId)
 

@@ -1,5 +1,6 @@
 // Shared types for the @xyflow/react family tree layer
 import { TreePerson } from '../types'
+import type { RelationshipHighlightType } from './layout/familyTreeTypes'
 
 export interface ApiPerson {
   id: string
@@ -64,6 +65,8 @@ export interface PersonNodeData {
   missingDown?: boolean
   missingLeft?: boolean
   missingRight?: boolean
+  highlightType?: RelationshipHighlightType
+  isDimmed?: boolean
 }
 
 /** Marker so TypeScript knows the node type */
