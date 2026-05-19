@@ -119,26 +119,12 @@ export default apiHandler({
       if (userPerson) {
         rootId = userPerson.id
       } else {
-        // Fallback: Find the youngest person (newest member) who is connected to the tree
+        // Fallback: prefer connected people, then pick the most recently created
         const connectedPeople = allPeople.filter(p => (familiesByPersonId.get(p.id)?.length || 0) > 0)
         const searchPool = connectedPeople.length > 0 ? connectedPeople : allPeople
-        
-        rootId = searchPool.reduce((newest, current) => {
-          if (newest.birthDate && current.birthDate) {
-            const newDate = new Date(newest.birthDate).getTime()
-            const currDate = new Date(current.birthDate).getTime()
-            if (!isNaN(newDate) && !isNaN(currDate)) {
-              return currDate > newDate ? current : newest
-            }
-          }
-          if (current.birthDate && !isNaN(new Date(current.birthDate).getTime())) return current
-          if (newest.birthDate && !isNaN(new Date(newest.birthDate).getTime())) return newest
-          
-          // Fallback to most connections if no valid birth dates
-          const prevCount = familiesByPersonId.get(newest.id)?.length || 0
-          const currCount = familiesByPersonId.get(current.id)?.length || 0
-          return currCount > prevCount ? current : newest
-        }).id
+        rootId = searchPool.sort((a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        )[0].id
       }
     }
 
@@ -234,8 +220,9 @@ export default apiHandler({
       
       families.forEach(({ isParent, isChild, unit }) => {
         if (isParent) {
-          // Spouses
+          // Spouses — skip if parent record is missing (orphaned FK)
           unit.parents.forEach((p: any) => {
+            if (!p.parent) return
             if (p.parentId !== person.id && peopleIdsInResult.has(p.parentId)) {
               edges.push({
                 id: `spouse-${person.id}-${p.parentId}`,
@@ -247,8 +234,9 @@ export default apiHandler({
               })
             }
           })
-          // Children
+          // Children — skip if child record is missing (orphaned FK)
           unit.children.forEach((c: any) => {
+            if (!c.child) return
             edges.push({
               id: `parent-${person.id}-${c.childId}`,
               type: 'CHILD',
@@ -259,10 +247,11 @@ export default apiHandler({
             })
           })
         }
-        
+
         if (isChild) {
-          // Parents
+          // Parents — skip if parent record is missing (orphaned FK)
           unit.parents.forEach((p: any) => {
+            if (!p.parent) return
             edges.push({
               id: `child-${person.id}-${p.parentId}`,
               type: 'PARENT',
@@ -273,18 +262,17 @@ export default apiHandler({
             })
           })
 
-          // Siblings
+          // Siblings — skip if sibling record is missing (orphaned FK)
           unit.children.forEach((c: any) => {
-            if (c.childId !== person.id) {
-              edges.push({
-                id: `sibling-${person.id}-${c.childId}`,
-                type: 'SIBLING',
-                direction: 'outgoing',
-                isBiological: true,
-                notes: null,
-                relatedPerson: c.child as any
-              })
-            }
+            if (!c.child || c.childId === person.id) return
+            edges.push({
+              id: `sibling-${person.id}-${c.childId}`,
+              type: 'SIBLING',
+              direction: 'outgoing',
+              isBiological: true,
+              notes: null,
+              relatedPerson: c.child as any
+            })
           })
         }
       })

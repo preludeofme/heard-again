@@ -131,7 +131,7 @@ export function useFamilyTree(
           deathDate: data.deathDate,
           bio: data.bio,
           personType: data.personType,
-        })
+        }, { method: 'PUT' })
         if (!res.ok) throw new Error('Failed to update person')
       }
 

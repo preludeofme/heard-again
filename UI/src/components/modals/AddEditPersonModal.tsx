@@ -605,7 +605,7 @@ export function AddEditPersonModal({
           variant="contained"
           onClick={handleSubmit}
           disabled={isSubmitting || (isInterviewMode && !formData.firstName)}
-          startIcon={isSubmitting ? undefined : <CheckIcon />}
+          startIcon={isSubmitting ? <CircularProgress size={16} sx={{ color: 'inherit' }} /> : <CheckIcon />}
           sx={{ backgroundColor: '#16334a', textTransform: 'none', borderRadius: 2, px: 4, '&:hover': { backgroundColor: '#2e4a62' } }}
         >
           {isSubmitting ? 'Saving...' : mode === 'create' ? 'Add to Family Tree' : 'Save Changes'}

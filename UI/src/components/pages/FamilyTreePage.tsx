@@ -322,7 +322,7 @@ export function FamilyTreePage({
             deathDate: data.deathDate,
             bio: data.bio,
             personType: data.personType,
-          })
+          }, { method: 'PUT' })
           if (!res.ok) throw new Error('Failed to update person')
         }
         setAddEditModalOpen(false)
@@ -822,35 +822,48 @@ export function FamilyTreePage({
               height: '100%',
               minHeight: 400,
               gap: 3,
+              px: 3,
             }}
           >
+            <Box
+              sx={{
+                width: 80,
+                height: 80,
+                borderRadius: '50%',
+                bgcolor: 'rgba(22, 51, 74, 0.07)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'primary.main',
+              }}
+            >
+              <People sx={{ fontSize: 40 }} />
+            </Box>
             <Typography
               variant="h4"
-              sx={{ fontFamily: 'var(--font-newsreader), serif', color: 'primary.main' }}
+              sx={{ fontFamily: 'var(--font-newsreader), serif', color: 'primary.main', textAlign: 'center' }}
             >
               Begin your family legacy
             </Typography>
             <Typography variant="body1" sx={{ color: 'secondary.main', textAlign: 'center', maxWidth: 400 }}>
               Add your first family member to start building your tree.
             </Typography>
-            <Box
-              sx={{
-                width: 56,
-                height: 56,
-                borderRadius: '50%',
-                bgcolor: 'rgba(208, 227, 230, 0.5)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'secondary.main',
-                cursor: 'pointer',
-                transition: 'all 0.3s',
-                '&:hover': { bgcolor: 'primary.main', color: 'white' },
-              }}
+            <Button
+              variant="contained"
+              size="large"
+              startIcon={<Add />}
               onClick={() => handleAddPerson()}
+              sx={{
+                px: 4,
+                py: 1.5,
+                borderRadius: 3,
+                background: 'linear-gradient(135deg, #16334a 0%, #2e4a62 100%)',
+                fontWeight: 600,
+                fontSize: '1rem',
+              }}
             >
-              <Add fontSize="large" />
-            </Box>
+              Add Your First Relative
+            </Button>
           </Box>
         )}
       </Box>

@@ -38,6 +38,7 @@ import {
 } from '@mui/icons-material'
 import Link from 'next/link'
 import { ActiveMemberHeader } from './ActiveMemberHeader'
+import { FamilyspaceSwitcher } from './FamilyspaceSwitcher'
 import { ProfileColors } from '@/components/profile/ProfileConstants'
 import { useSelectedFamilyMember } from '@/contexts/SelectedFamilyMemberContext'
 
@@ -272,6 +273,9 @@ export function Layout({ children }: LayoutProps) {
           )}
 
           <Box sx={{ flexGrow: 1 }} />
+
+          {/* Current family space indicator */}
+          {!isMobile && <FamilyspaceSwitcher />}
 
           {/* Active family member pill */}
           <ActiveMemberHeader compact />

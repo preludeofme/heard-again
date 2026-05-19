@@ -1,6 +1,7 @@
 import Head from 'next/head'
 import { useEffect, useState } from 'react'
 import { fetchWithCSRFAndJSON } from '@/lib/api-client'
+import { ConfirmDialog } from '@/components/modals/ConfirmDialog'
 import {
   Alert,
   Box,
@@ -68,6 +69,7 @@ export default function TunnelSetup() {
   const [copied, setCopied] = useState(false)
   const [tunnelMode, setTunnelMode] = useState<TunnelMode>('named')
   const [showCredentialsDialog, setShowCredentialsDialog] = useState(false)
+  const [isDeleteTunnelConfirmOpen, setIsDeleteTunnelConfirmOpen] = useState(false)
   const [configFiles, setConfigFiles] = useState<Record<string, string> | null>(null)
   const [isCreatingTunnel, setIsCreatingTunnel] = useState(false)
 
@@ -148,9 +150,7 @@ export default function TunnelSetup() {
   }
 
   const deleteTunnel = async () => {
-    if (!confirm('Are you sure you want to delete this tunnel? This action cannot be undone.')) {
-      return
-    }
+    setIsDeleteTunnelConfirmOpen(false)
 
     try {
       const response = await fetchWithCSRFAndJSON('/api/instance/tunnel-v2', {
@@ -501,7 +501,7 @@ export default function TunnelSetup() {
                     size="small"
                     color="error"
                     startIcon={<Delete />}
-                    onClick={deleteTunnel}
+                    onClick={() => setIsDeleteTunnelConfirmOpen(true)}
                   >
                     Delete Tunnel
                   </Button>
@@ -646,6 +646,16 @@ export default function TunnelSetup() {
             </DialogActions>
           </Dialog>
         </Container>
+
+        <ConfirmDialog
+          open={isDeleteTunnelConfirmOpen}
+          title="Delete Tunnel?"
+          message="Are you sure you want to delete this tunnel? This action cannot be undone."
+          confirmLabel="Delete Tunnel"
+          confirmColor="error"
+          onConfirm={deleteTunnel}
+          onCancel={() => setIsDeleteTunnelConfirmOpen(false)}
+        />
       </Layout>
     </>
   )

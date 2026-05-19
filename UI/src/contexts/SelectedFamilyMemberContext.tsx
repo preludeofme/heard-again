@@ -204,6 +204,9 @@ export function SelectedFamilyMemberProvider({
   const clearSelectedFamilyMember = useCallback(() => {
     setSelectedFamilyMemberState(null)
     removeStorage(STORAGE_KEY)
+    // Also clear recently-viewed list so members from the old space don't bleed into the new space's flyout
+    setRecentlyViewedMembers([])
+    removeStorage(RECENT_KEY)
   }, [])
 
   const value: SelectedFamilyMemberContextValue = {

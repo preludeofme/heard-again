@@ -11,6 +11,8 @@ import {
 import { format } from 'date-fns'
 import { fetchWithCSRFAndJSON, fetchWithCSRF } from '@/lib/api-client'
 import { FamilyMemberSelect } from '@/components/search'
+import { ConfirmDialog } from './ConfirmDialog'
+import { PersonType } from '@/contracts'
 
 interface VoiceProfile {
   id: string
@@ -72,10 +74,11 @@ interface PersonModalProps {
 }
 
 const PERSON_TYPES = [
-  { value: 'LIVING', label: 'Living' },
-  { value: 'DECEASED', label: 'Deceased' },
-  { value: 'ANCESTOR', label: 'Ancestor' },
-  { value: 'DESCENDANT', label: 'Descendant' },
+  { value: PersonType.FAMILY, label: 'Family' },
+  { value: PersonType.FRIEND, label: 'Friend' },
+  { value: PersonType.MENTOR, label: 'Mentor' },
+  { value: PersonType.COLLEAGUE, label: 'Colleague' },
+  { value: PersonType.OTHER, label: 'Other' },
 ]
 
 const RELATIONSHIP_TYPES = [
@@ -105,6 +108,8 @@ export function PersonModal({ open, personId, initialTab = 'overview', onClose, 
   const [marriagePlace, setMarriagePlace] = useState('')
   const [isMutatingRelationship, setIsMutatingRelationship] = useState(false)
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
+  const [isDiscardConfirmOpen, setIsDiscardConfirmOpen] = useState(false)
+  const [pendingRelDeleteId, setPendingRelDeleteId] = useState<string | null>(null)
 
   // Avatar state
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null)
@@ -222,12 +227,16 @@ export function PersonModal({ open, personId, initialTab = 'overview', onClose, 
     }
   }
 
-  const handleDeleteRelationship = async (relationshipId: string) => {
-    if (!confirm('Remove this relationship?')) return
+  const handleDeleteRelationship = (relationshipId: string) => {
+    setPendingRelDeleteId(relationshipId)
+  }
+
+  const confirmDeleteRelationship = async () => {
+    if (!pendingRelDeleteId) return
     setIsMutatingRelationship(true)
     setError(null)
     try {
-      const encodedId = encodeURIComponent(relationshipId)
+      const encodedId = encodeURIComponent(pendingRelDeleteId)
       const res = await fetchWithCSRF(`/api/relationships/${encodedId}`, {
         method: 'DELETE',
       })
@@ -238,6 +247,7 @@ export function PersonModal({ open, personId, initialTab = 'overview', onClose, 
       setError(err.message)
     } finally {
       setIsMutatingRelationship(false)
+      setPendingRelDeleteId(null)
     }
   }
 
@@ -246,8 +256,23 @@ export function PersonModal({ open, personId, initialTab = 'overview', onClose, 
     setIsSaving(true)
     setError(null)
     try {
-      // 1. Update person text data
-      const res = await fetchWithCSRFAndJSON(`/api/people/${personId}`, editForm)
+      // 1. Update person text data — send only schema-valid fields (not relationships/counts/etc.)
+      const payload = {
+        firstName: editForm.firstName,
+        lastName: editForm.lastName ?? null,
+        displayName: editForm.displayName ?? null,
+        middleName: editForm.middleName ?? null,
+        nickname: editForm.nickname ?? null,
+        maidenName: editForm.maidenName ?? null,
+        suffix: editForm.suffix ?? null,
+        personType: editForm.personType,
+        birthDate: editForm.birthDate ?? null,
+        deathDate: editForm.deathDate ?? null,
+        isDeceased: editForm.isDeceased,
+        bio: editForm.bio ?? null,
+        tags: editForm.tags,
+      }
+      const res = await fetchWithCSRFAndJSON(`/api/people/${personId}`, payload, { method: 'PUT' })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to save')
       
@@ -302,8 +327,10 @@ export function PersonModal({ open, personId, initialTab = 'overview', onClose, 
   }
 
   const handleClose = () => {
-    if (isEditing && !confirm('Discard unsaved changes?')) return
-    setIsEditing(false)
+    if (isEditing) {
+      setIsDiscardConfirmOpen(true)
+      return
+    }
     onClose()
   }
 
@@ -843,7 +870,7 @@ export function PersonModal({ open, personId, initialTab = 'overview', onClose, 
               </Button>
               <Button
                 variant="contained"
-                startIcon={<Save />}
+                startIcon={isSaving ? <CircularProgress size={16} sx={{ color: 'inherit' }} /> : <Save />}
                 onClick={handleSave}
                 disabled={isSaving}
                 sx={{ textTransform: 'none', borderRadius: 2 }}
@@ -864,37 +891,49 @@ export function PersonModal({ open, personId, initialTab = 'overview', onClose, 
         </Box>
       </DialogActions>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog 
-        open={isDeleteConfirmOpen} 
-        onClose={() => setIsDeleteConfirmOpen(false)}
-        PaperProps={{ sx: { borderRadius: 3, p: 1 } }}
-      >
-        <DialogTitle sx={{ fontFamily: 'var(--font-newsreader), serif', color: 'primary.main' }}>
-          Delete Family Member?
-        </DialogTitle>
-        <DialogContent>
-          <Typography variant="body2" color="text.secondary">
-            Are you sure you want to delete <strong>{person?.firstName} {person?.lastName}</strong>? 
-            This will permanently remove their records, relationships, and any associated data. 
+      <ConfirmDialog
+        open={isDeleteConfirmOpen}
+        title="Delete Family Member?"
+        message={
+          <>
+            Are you sure you want to delete <strong>{person?.firstName} {person?.lastName}</strong>?
+            {' '}This will permanently remove their records, relationships, and any associated data.
             This action cannot be undone.
-          </Typography>
-        </DialogContent>
-        <DialogActions sx={{ p: 3 }}>
-          <Button onClick={() => setIsDeleteConfirmOpen(false)} sx={{ textTransform: 'none' }}>
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleDelete} 
-            color="error" 
-            variant="contained" 
-            disabled={isSaving}
-            sx={{ textTransform: 'none', borderRadius: 2, px: 3 }}
-          >
-            {isSaving ? 'Deleting...' : 'Delete Permanently'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+          </>
+        }
+        confirmLabel="Delete Permanently"
+        confirmColor="error"
+        isLoading={isSaving}
+        onConfirm={handleDelete}
+        onCancel={() => setIsDeleteConfirmOpen(false)}
+      />
+
+      <ConfirmDialog
+        open={Boolean(pendingRelDeleteId)}
+        title="Remove Relationship?"
+        message="Are you sure you want to remove this relationship? This action cannot be undone."
+        confirmLabel="Remove"
+        confirmColor="error"
+        isLoading={isMutatingRelationship}
+        onConfirm={confirmDeleteRelationship}
+        onCancel={() => setPendingRelDeleteId(null)}
+      />
+
+      <ConfirmDialog
+        open={isDiscardConfirmOpen}
+        title="Discard Changes?"
+        message="You have unsaved changes. Are you sure you want to close without saving?"
+        confirmLabel="Discard"
+        confirmColor="error"
+        onConfirm={() => {
+          setIsDiscardConfirmOpen(false)
+          setIsEditing(false)
+          setEditForm(person!)
+          setError(null)
+          onClose()
+        }}
+        onCancel={() => setIsDiscardConfirmOpen(false)}
+      />
     </Dialog>
   )
 }

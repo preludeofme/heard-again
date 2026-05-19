@@ -132,11 +132,23 @@ export const createPersonSchema = basePersonSchema
 
 export type CreatePersonInput = z.infer<typeof createPersonSchema>
 
-export const updatePersonSchema = basePersonSchema
-  .partial()
-  .extend({
-    id: uuidSchema.optional(),
-  })
+// Update schema allows null for nullable DB fields (Prisma returns null, not undefined)
+export const updatePersonSchema = z.object({
+  id: uuidSchema.optional(),
+  firstName: z.string().min(1).max(100).optional(),
+  lastName: z.string().max(100).nullish(),
+  displayName: z.string().max(200).nullish(),
+  nickname: z.string().max(100).nullish(),
+  maidenName: z.string().max(100).nullish(),
+  suffix: z.string().max(20).nullish(),
+  middleName: z.string().max(100).nullish(),
+  birthDate: z.string().datetime().or(z.string().date()).nullish(),
+  deathDate: z.string().datetime().or(z.string().date()).nullish(),
+  isDeceased: z.boolean().optional(),
+  bio: z.string().max(5000).nullish(),
+  personType: personTypeSchema.optional(),
+  tags: z.array(z.string().max(50)).max(20).nullish(),
+})
   .refine(personRefinements[0], personRefinementMessages[0])
   .refine(personRefinements[1], personRefinementMessages[1])
 

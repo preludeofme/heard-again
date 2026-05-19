@@ -54,8 +54,8 @@ export function LoginPage() {
         throw new Error('Invalid email or password')
       }
 
-      // Redirect on success
-      router.push(callbackUrl)
+      // Full reload forces NextAuth session state to be re-read from the server
+      window.location.href = callbackUrl
     } catch (err: any) {
       setError(err.message || 'An error occurred')
     } finally {

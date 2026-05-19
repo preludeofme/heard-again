@@ -22,6 +22,7 @@ import {
   Settings as SettingsIcon,
 } from '@mui/icons-material'
 import { useApi } from '@/hooks/useApi'
+import { useSelectedFamilyMember } from '@/contexts/SelectedFamilyMemberContext'
 import Link from 'next/link'
 
 interface Familyspace {
@@ -44,6 +45,7 @@ interface Familyspace {
 export function FamilyspaceSwitcher() {
   const theme = useTheme()
   const { data: session, update } = useSession()
+  const { clearSelectedFamilyMember } = useSelectedFamilyMember()
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
   const [isSwitching, setIsSwitching] = useState<string | null>(null)
 
@@ -80,7 +82,8 @@ export function FamilyspaceSwitcher() {
       // Update session to reflect new default familyspace
       await update()
 
-      // Reload page to refresh data for new familyspace
+      // Clear stale selected member before reloading into the new space
+      clearSelectedFamilyMember()
       window.location.reload()
     } catch (error) {
       console.error('Failed to switch familyspace:', error)

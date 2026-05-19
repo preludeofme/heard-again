@@ -9,7 +9,7 @@ interface VoiceSignatureProps {
   personId?: string
   firstName?: string
   bio?: string | null
-  voiceProfiles?: Array<{ id: string; name: string; isDefault: boolean; isCloned: boolean }>
+  voiceProfiles?: Array<{ id: string; name: string; isDefault: boolean; isCloned: boolean; sampleAudioUrl?: string | null }>
   isGlobal?: boolean
   stats?: {
     totalRecordings: number
@@ -75,45 +75,54 @@ export function VoiceSignature({
     if (!currentVoice) return
 
     setPlayError(null)
-    setIsSynthesizing(true)
-    try {
-      const response = await fetchWithCSRFAndJSON('/api/voice/synthesize', {
-        modelId: currentVoice.id,
-        text: `Hello, this is a sample of my digital voice clone for ${firstName || 'the family story'}.`,
-      })
 
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({}))
-        throw new Error((errData as any).error || 'Failed to synthesize')
+    let audioUrl: string | null = currentVoice.sampleAudioUrl ?? null
+
+    if (!audioUrl) {
+      setIsSynthesizing(true)
+      try {
+        const response = await fetchWithCSRFAndJSON('/api/voice/synthesize', {
+          modelId: currentVoice.id,
+          text: `Hello, this is a sample of my digital voice clone for ${firstName || 'the family story'}.`,
+        })
+
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({}))
+          throw new Error((errData as any).error || 'Failed to synthesize')
+        }
+
+        const result = await response.json()
+        audioUrl = result.data?.audioUrl || result.audioUrl || null
+
+        if (!audioUrl) {
+          throw new Error('No audio URL in response')
+        }
+      } catch (err) {
+        setIsSynthesizing(false)
+        const msg = err instanceof Error ? err.message : 'Playback failed'
+        if (msg.toLowerCase().includes('consent') || msg.toLowerCase().includes('blocked')) {
+          setPlayError('Consent required — record consent in Voice Lab before playing.')
+        } else {
+          setPlayError('Playback failed. Please try again.')
+        }
+        return
+      } finally {
+        setIsSynthesizing(false)
       }
-
-      const result = await response.json()
-      const audioUrl = result.data?.audioUrl || result.audioUrl
-
-      if (!audioUrl) {
-        throw new Error('No audio URL in response')
-      }
-
-      const audio = new Audio(audioUrl)
-      audioRef.current = audio
-
-      audio.onended = () => {
-        setIsPlaying(false)
-        audioRef.current = null
-      }
-
-      setIsPlaying(true)
-      audio.play()
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Playback failed'
-      if (msg.toLowerCase().includes('consent') || msg.toLowerCase().includes('blocked')) {
-        setPlayError('Consent required — record consent in Voice Lab before playing.')
-      } else {
-        setPlayError('Playback failed. Please try again.')
-      }
-    } finally {
-      setIsSynthesizing(false)
     }
+
+    if (!audioUrl) return
+
+    const audio = new Audio(audioUrl)
+    audioRef.current = audio
+
+    audio.onended = () => {
+      setIsPlaying(false)
+      audioRef.current = null
+    }
+
+    setIsPlaying(true)
+    audio.play()
   }
 
   return (

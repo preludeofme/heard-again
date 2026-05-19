@@ -69,7 +69,7 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user, account }) {
+    async jwt({ token, user, account, trigger }) {
       // On initial sign-in, persist user info into the JWT
       if (user) {
         token.id = user.id
@@ -79,6 +79,21 @@ export const authOptions: NextAuthOptions = {
         token.avatarUrl = (user as any).avatarUrl || (user as any).image || null
         token.defaultFamilyspaceId = (user as any).defaultFamilyspaceId || null
         token.linkedPersonId = (user as any).linkedPersonId || null
+      }
+
+      // On session update (e.g. after switching familyspace), always refresh from DB
+      if (trigger === 'update' && token.id) {
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: token.id as string },
+            select: { defaultFamilyspaceId: true },
+          })
+          if (dbUser?.defaultFamilyspaceId) {
+            token.defaultFamilyspaceId = dbUser.defaultFamilyspaceId
+          }
+        } catch (e) {
+          logger.error('Failed to refresh defaultFamilyspaceId on update:', e)
+        }
       }
 
       // Self-heal: if defaultFamilyspaceId is missing (stale token, post-DB-reset, etc.)

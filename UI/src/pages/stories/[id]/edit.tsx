@@ -10,6 +10,7 @@ import {
 import { ArrowBack, Save, Delete, AutoFixHigh as RegenerateIcon } from '@mui/icons-material'
 import { fetchWithCSRF } from '@/lib/api-client'
 import { RichTextEditor } from '@/components/editor/RichTextEditor'
+import { ConfirmDialog } from '@/components/modals/ConfirmDialog'
 
 type NarrationStatus = 'NONE' | 'PENDING' | 'READY' | 'APPROVED' | 'STALE' | 'FAILED'
 
@@ -55,6 +56,7 @@ export default function StoryEditPage() {
   const [status, setStatus] = useState<'DRAFT' | 'PUBLISHED'>('PUBLISHED')
   const [showOptional, setShowOptional] = useState(false)
   const [narrationPromptOpen, setNarrationPromptOpen] = useState(false)
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
   const [regeneratingNarration, setRegeneratingNarration] = useState(false)
 
   const fetchStory = useCallback(async () => {
@@ -145,7 +147,7 @@ export default function StoryEditPage() {
   }
 
   const handleDelete = async () => {
-    if (!confirm('Delete this story? This cannot be undone.')) return
+    setIsDeleteConfirmOpen(false)
     setIsDeleting(true)
     try {
       const res = await fetchWithCSRF(`/api/stories/${storyId}`, {
@@ -213,7 +215,7 @@ export default function StoryEditPage() {
               variant="text"
               color="error"
               startIcon={<Delete />}
-              onClick={handleDelete}
+              onClick={() => setIsDeleteConfirmOpen(true)}
               disabled={isDeleting || isSaving}
               sx={{ textTransform: 'none' }}
             >
@@ -430,6 +432,17 @@ export default function StoryEditPage() {
             </Button>
           </DialogActions>
         </Dialog>
+
+        <ConfirmDialog
+          open={isDeleteConfirmOpen}
+          title="Delete Story?"
+          message="Are you sure you want to delete this story? This action cannot be undone."
+          confirmLabel="Delete Story"
+          confirmColor="error"
+          isLoading={isDeleting}
+          onConfirm={handleDelete}
+          onCancel={() => setIsDeleteConfirmOpen(false)}
+        />
       </Layout>
     </>
   )

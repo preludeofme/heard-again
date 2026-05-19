@@ -1,6 +1,7 @@
 import Head from 'next/head'
 import { useCallback, useEffect, useState } from 'react'
 import { fetchWithCSRF, fetchWithCSRFAndJSON } from '@/lib/api-client'
+import { ConfirmDialog } from '@/components/modals/ConfirmDialog'
 import {
   Alert,
   Box,
@@ -145,6 +146,7 @@ export default function FamilyMergePage() {
   const [isLoadingDetail, setIsLoadingDetail] = useState(false)
   
   const [isExecuting, setIsExecuting] = useState(false)
+  const [pendingDeleteProposalId, setPendingDeleteProposalId] = useState<string | null>(null)
 
   const loadProposals = useCallback(async () => {
     setIsLoading(true)
@@ -336,9 +338,10 @@ export default function FamilyMergePage() {
     }
   }
 
-  const deleteProposal = async (proposalId: string) => {
-    if (!confirm('Are you sure you want to delete this proposal?')) return
-    
+  const confirmDeleteProposal = async () => {
+    const proposalId = pendingDeleteProposalId
+    if (!proposalId) return
+    setPendingDeleteProposalId(null)
     setError(null)
     try {
       const response = await fetchWithCSRF(`/api/family-merge/proposals/${proposalId}`, {
@@ -510,7 +513,7 @@ export default function FamilyMergePage() {
                                 <IconButton
                                   size="small"
                                   color="error"
-                                  onClick={() => deleteProposal(proposal.id)}
+                                  onClick={() => setPendingDeleteProposalId(proposal.id)}
                                   disabled={proposal.status === 'MERGED'}
                                   title="Delete"
                                 >
@@ -720,6 +723,16 @@ export default function FamilyMergePage() {
             )}
           </DialogActions>
         </Dialog>
+
+        <ConfirmDialog
+          open={Boolean(pendingDeleteProposalId)}
+          title="Delete Proposal?"
+          message="Are you sure you want to delete this proposal? This action cannot be undone."
+          confirmLabel="Delete Proposal"
+          confirmColor="error"
+          onConfirm={confirmDeleteProposal}
+          onCancel={() => setPendingDeleteProposalId(null)}
+        />
       </Layout>
     </>
   )

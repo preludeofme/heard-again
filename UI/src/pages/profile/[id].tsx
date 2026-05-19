@@ -24,7 +24,7 @@ interface PersonDetails {
   isDeceased?: boolean
   bio?: string | null
   avatarUrl?: string | null
-  voiceProfiles?: Array<{ id: string; name: string; isDefault: boolean; isCloned: boolean }>
+  voiceProfiles?: Array<{ id: string; name: string; isDefault: boolean; isCloned: boolean; sampleAudioUrl?: string | null }>
   relationships?: Array<{
     id: string
     type: 'PARENT' | 'CHILD' | 'SPOUSE'

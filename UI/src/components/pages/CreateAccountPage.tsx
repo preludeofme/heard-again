@@ -70,8 +70,8 @@ export function CreateAccountPage() {
         throw new Error('Account created but failed to sign in')
       }
 
-      // Redirect to onboarding on success (middleware will verify completion)
-      router.push('/onboarding')
+      // Force full page load so NextAuth session state is picked up immediately
+      window.location.href = '/onboarding'
     } catch (err: any) {
       setError(err.message || 'An error occurred')
     } finally {
