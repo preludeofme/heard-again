@@ -73,6 +73,7 @@ interface FamilyTreePageProps {
   onAddPerson?: (personId?: string) => void
   onEditRelationships?: (personId: string) => void
   onPeopleChanged?: () => void
+  onPersonAvatarUpdated?: (personId: string, avatarUrl: string) => void
   isFullscreen?: boolean
   onToggleFullscreen?: () => void
   onImportGedcom?: () => void
@@ -104,6 +105,7 @@ export function FamilyTreePage({
   searchablePeople = [],
   rootPersonId,
   onPeopleChanged: _onPeopleChanged,
+  onPersonAvatarUpdated,
   onImportGedcom,
   onExportGedcom,
   onLoadMore: _onLoadMore,
@@ -389,6 +391,59 @@ export function FamilyTreePage({
     },
     [router, rawPeople, setSelectedFamilyMember],
   )
+
+  const handleRelativeClick = useCallback(
+    async (personId: string) => {
+      setSelectedPersonId(personId)
+      setDetailModalOpen(true)
+      setIsLoadingDetail(true)
+      setDetailError(null)
+      try {
+        const [personRes, storiesRes, relationshipsRes] = await Promise.all([
+          fetch(`/api/people/${personId}`, { credentials: 'include' }),
+          fetch(`/api/stories?subjectId=${personId}&limit=20`, { credentials: 'include' }),
+          fetch(`/api/people/${personId}/relationships`, { credentials: 'include' }),
+        ])
+        const personData = (await personRes.json()) as {
+          success: boolean
+          data: Record<string, unknown>
+          error?: string
+        }
+        const storiesData = (await storiesRes.json()) as {
+          data?: { stories?: unknown[] }
+        }
+        const relationshipsData = (await relationshipsRes.json()) as { data?: unknown[] }
+        if (personData.success) {
+          setPersonDetail(personData.data)
+          setPersonStories(storiesData.data?.stories ?? [])
+          setPersonVoiceProfiles((personData.data.voiceProfiles as unknown[]) ?? [])
+          setPersonRelationships(relationshipsData.data ?? [])
+        } else {
+          setDetailError(personData.error ?? 'Failed to load person details')
+        }
+      } catch {
+        setDetailError('Failed to load person details')
+      } finally {
+        setIsLoadingDetail(false)
+      }
+    },
+    [],
+  )
+
+  const handleAvatarUpdated = useCallback(async () => {
+    if (!selectedPersonId) return
+    try {
+      const res = await fetch(`/api/people/${selectedPersonId}`, { credentials: 'include' })
+      const data = (await res.json()) as { success: boolean; data: Record<string, unknown> }
+      if (data.success) {
+        setPersonDetail(data.data)
+        const newAvatarUrl = data.data.avatarUrl as string | null | undefined
+        if (newAvatarUrl) onPersonAvatarUpdated?.(selectedPersonId, newAvatarUrl)
+      }
+    } catch {
+      // silently fail
+    }
+  }, [selectedPersonId, onPersonAvatarUpdated])
 
   // ─── Zoom / pan controls ─────────────────────────────────────────────────────
 
@@ -1041,6 +1096,8 @@ export function FamilyTreePage({
         onAddRelationship={handleAddRelationship}
         onStoryClick={handleStoryClick}
         onViewFullProfile={handleViewFullProfile}
+        onRelativeClick={handleRelativeClick}
+        onAvatarUpdated={handleAvatarUpdated}
       />
 
       {/* Add/Edit Person Modal — edit path only */}

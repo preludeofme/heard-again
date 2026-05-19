@@ -1,13 +1,16 @@
 import Head from 'next/head'
 import { useRouter } from 'next/router'
 import { useEffect, useRef, useState } from 'react'
-import { Box, CircularProgress, Tab, Tabs, Typography } from '@mui/material'
+import { Box, CircularProgress, IconButton, Tab, Tabs, Tooltip, Typography } from '@mui/material'
+import { PhotoCamera as PhotoCameraIcon } from '@mui/icons-material'
 import { Layout } from '@/components/layout/Layout'
 import { useSelectedFamilyMember } from '@/contexts/SelectedFamilyMemberContext'
 import { ProfileColors } from '@/components/profile/ProfileConstants'
 import { VoiceSignature } from '@/components/profile/VoiceSignature'
 import { MiniFamilyTree } from '@/components/profile/MiniFamilyTree'
 import { NarrativeTimeline } from '@/components/profile/NarrativeTimeline'
+import { fetchWithCSRF } from '@/lib/api-client'
+import { resizeImageFile } from '@/lib/resize-image'
 import { MemoriesGrid } from '@/components/profile/MemoriesGrid'
 
 interface PersonDetails {
@@ -35,6 +38,7 @@ interface Story {
   content: string
   excerpt?: string | null
   storyDate?: string | null
+  createdAt: string
 }
 
 interface DocItem {
@@ -62,6 +66,45 @@ export default function PersonProfilePage() {
   const [docTotal, setDocTotal] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
   const [activeTab, setActiveTab] = useState(0)
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
+  const avatarInputRef = useRef<HTMLInputElement>(null)
+
+  const handleAvatarUpload = async (file: File) => {
+    if (!personId) return
+    setIsUploadingAvatar(true)
+    try {
+      const resized = await resizeImageFile(file)
+      const form = new FormData()
+      form.append('file', resized)
+      const res = await fetchWithCSRF(`/api/people/${personId}/avatar`, {
+        method: 'POST',
+        body: form,
+      })
+      if (!res.ok) throw new Error('Upload failed')
+      const data = await res.json()
+      const newAvatarUrl = data.data?.avatarAssetId
+        ? `/api/assets/serve/${data.data.avatarAssetId}`
+        : null
+      if (newAvatarUrl) {
+        setPerson(prev => {
+          if (!prev) return prev
+          const updated = { ...prev, avatarUrl: newAvatarUrl }
+          setSelectedFamilyMember({
+            id: updated.id,
+            firstName: updated.firstName,
+            lastName: updated.lastName,
+            displayName: updated.displayName,
+            avatarUrl: newAvatarUrl,
+          })
+          return updated
+        })
+      }
+    } catch {
+      // silently fail — user sees no change
+    } finally {
+      setIsUploadingAvatar(false)
+    }
+  }
 
   // 1. URL -> State Sync: When a profile is loaded, update the global selection
   useEffect(() => {
@@ -196,6 +239,17 @@ export default function PersonProfilePage() {
           >
             {/* Portrait */}
             <Box sx={{ position: 'relative', flexShrink: 0 }}>
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/*"
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) handleAvatarUpload(file)
+                  e.target.value = ''
+                }}
+              />
               <Box
                 sx={{
                   width: { xs: 150, md: 190 },
@@ -223,6 +277,31 @@ export default function PersonProfilePage() {
                   </Typography>
                 )}
               </Box>
+
+              {/* Camera upload overlay */}
+              <Tooltip title="Change profile photo">
+                <IconButton
+                  onClick={() => avatarInputRef.current?.click()}
+                  disabled={isUploadingAvatar}
+                  size="small"
+                  sx={{
+                    position: 'absolute',
+                    bottom: 4,
+                    left: 4,
+                    bgcolor: 'rgba(255,255,255,0.92)',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                    '&:hover': { bgcolor: '#fff' },
+                  }}
+                  aria-label="Change profile photo"
+                >
+                  {isUploadingAvatar ? (
+                    <CircularProgress size={18} sx={{ color: ProfileColors.primary }} />
+                  ) : (
+                    <PhotoCameraIcon sx={{ fontSize: 18, color: ProfileColors.primary }} />
+                  )}
+                </IconButton>
+              </Tooltip>
+
               {(birthYear || deathYear) && (
                 <Box
                   sx={{

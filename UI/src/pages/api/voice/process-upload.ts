@@ -48,16 +48,37 @@ const handler = async (req: NextApiRequest, res: NextApiResponse): Promise<void>
 
     const storage = getStorageService()
     const rawProvider = storage.getProvider()
+    const ttsProvider = getTTSProvider()
 
+    // Local storage mode: call the REST TTS provider synchronously instead of RunPod
     if (!(rawProvider instanceof S3StorageProvider)) {
-      res.status(400).json({ error: 'Process upload requires R2/S3 storage' })
+      const fileBuffer = await storage.getFile(asset.storagePath)
+
+      const result = await ttsProvider.uploadReference(
+        fileBuffer,
+        asset.originalName,
+        asset.mimeType,
+        user.familyspaceId
+      )
+
+      await prisma.asset.update({
+        where: { id: assetId },
+        data: {
+          processingStatus: 'COMPLETED',
+          transcript: result.transcript,
+          durationSeconds: result.duration,
+          storagePath: result.filePath,
+          metadata: { ttsFileId: result.fileId },
+        },
+      })
+
+      // Return a placeholder jobId — upload-status will see COMPLETED on first poll
+      res.status(200).json({ runpodJobId: '' })
       return
     }
 
     // Get a short-lived presigned GET URL so RunPod can fetch the file from R2
     const { url: audioUrl } = await rawProvider.getSecureUrl(asset.storagePath, 900)
-
-    const ttsProvider = getTTSProvider()
 
     if (!ttsProvider.submitUploadReferenceFromUrl) {
       res.status(400).json({ error: 'TTS provider does not support URL-based submission' })

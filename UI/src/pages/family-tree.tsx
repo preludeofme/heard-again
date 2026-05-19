@@ -54,6 +54,7 @@ interface RelationshipEdge {
     lastName: string | null
     nickname: string | null
     avatarAssetId: string | null
+    avatarUrl: string | null
     sex?: 'M' | 'F' | 'U' | 'X'
   }
 }
@@ -386,6 +387,10 @@ export default function FamilyTree() {
     fetchSearchablePeople()
   }, [fetchPeople, fetchSearchablePeople])
 
+  const handlePersonAvatarUpdated = useCallback((personId: string, avatarUrl: string) => {
+    setRawPeople(prev => prev.map(p => p.id === personId ? { ...p, avatarUrl } : p))
+  }, [])
+
   // Logic to load more when needed — expands only the specific person's branch
   const handleLoadMore = useCallback(async (direction: 'up' | 'down' | 'left' | 'right', personId: string) => {
     if (isIncrementalLoading) return
@@ -604,6 +609,7 @@ export default function FamilyTree() {
         onAddPerson={onAddPersonCallback}
         onEditRelationships={handleEditRelationships}
         onPeopleChanged={fetchPeople}
+        onPersonAvatarUpdated={handlePersonAvatarUpdated}
         isFullscreen={isFullscreen}
         onToggleFullscreen={handleToggleFullscreen}
         onImportGedcom={handleImportGedcom}

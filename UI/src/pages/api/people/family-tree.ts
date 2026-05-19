@@ -15,6 +15,7 @@ interface RelationshipEdge {
     lastName: string | null
     nickname: string | null
     avatarAssetId: string | null
+    avatarUrl: string | null
   }
 }
 
@@ -288,7 +289,19 @@ export default apiHandler({
         }
       })
       
-      return { ...person, relationshipEdges: edges }
+      return {
+        ...person,
+        avatarUrl: person.avatarAssetId ? `/api/assets/serve/${person.avatarAssetId}` : null,
+        relationshipEdges: edges.map(edge => ({
+          ...edge,
+          relatedPerson: {
+            ...edge.relatedPerson,
+            avatarUrl: edge.relatedPerson.avatarAssetId
+              ? `/api/assets/serve/${edge.relatedPerson.avatarAssetId}`
+              : null,
+          },
+        })),
+      }
     })
 
     console.log(`[Family Tree API] Returning ${responseData.length} people. Root ID: ${rootId}`);

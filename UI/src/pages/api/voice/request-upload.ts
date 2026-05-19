@@ -31,15 +31,36 @@ const handler = async (req: NextApiRequest, res: NextApiResponse): Promise<void>
 
     const storage = getStorageService()
     const rawProvider = storage.getProvider()
+    const ext = filename.split('.').pop() ?? 'wav'
 
+    // Local storage mode: return a local API endpoint instead of a presigned URL
     if (!(rawProvider instanceof S3StorageProvider)) {
-      res.status(400).json({ error: 'Presigned uploads require R2/S3 storage mode' })
+      const key = `tts-staging/${user.familyspaceId}/${uuidv4()}.${ext}`
+      const asset = await prisma.asset.create({
+        data: {
+          familyspaceId: user.familyspaceId,
+          filename: `${uuidv4()}.${ext}`,
+          originalName: filename,
+          mimeType,
+          sizeBytes: BigInt(fileSize ?? 0),
+          storageType: 'LOCAL',
+          storagePath: key,
+          assetType: 'AUDIO',
+          isAISynthesized: true,
+          processingStatus: 'PENDING',
+          uploadedById: user.id,
+          metadata: {},
+        },
+      })
+      res.status(200).json({
+        assetId: asset.id,
+        uploadUrl: `/api/voice/local-upload?assetId=${asset.id}`,
+        expiresAt: new Date(Date.now() + PRESIGNED_EXPIRES_SECONDS * 1000).toISOString(),
+      })
       return
     }
 
-    const ext = filename.split('.').pop() ?? 'wav'
     const key = `tts-staging/${user.familyspaceId}/${uuidv4()}.${ext}`
-
     const uploadUrl = await rawProvider.getPresignedUploadUrl(key, mimeType, PRESIGNED_EXPIRES_SECONDS)
 
     const asset = await prisma.asset.create({

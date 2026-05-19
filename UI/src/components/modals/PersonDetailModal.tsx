@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useRef, useState } from 'react'
 import {
   Dialog,
   DialogTitle,
@@ -31,12 +31,16 @@ import {
   Add as AddIcon,
   Favorite as FavoriteIcon,
   PlayArrow as PlayIcon,
+  Stop as StopIcon,
   Schedule as ScheduleIcon,
   Person as PersonIcon,
   MoreVert as MoreIcon,
   OpenInNew as OpenInNewIcon,
+  PhotoCamera as PhotoCameraIcon,
 } from '@mui/icons-material'
 import { formatDistanceToNow } from 'date-fns'
+import { fetchWithCSRFAndJSON, fetchWithCSRF } from '@/lib/api-client'
+import { resizeImageFile } from '@/lib/resize-image'
 
 interface Person {
   id: string
@@ -74,6 +78,7 @@ interface VoiceProfile {
   description?: string
   isDefault: boolean
   audioSampleCount: number
+  sampleAudioUrl?: string | null
   createdAt: string
 }
 
@@ -106,6 +111,8 @@ interface PersonDetailModalProps {
   onAddRelationship?: (personId: string) => void
   onStoryClick?: (storyId: string) => void
   onViewFullProfile?: (personId: string) => void
+  onRelativeClick?: (personId: string) => void
+  onAvatarUpdated?: () => void
 }
 
 export function PersonDetailModal({
@@ -124,8 +131,76 @@ export function PersonDetailModal({
   onAddRelationship,
   onStoryClick,
   onViewFullProfile,
+  onRelativeClick,
+  onAvatarUpdated,
 }: PersonDetailModalProps) {
   const [activeTab, setActiveTab] = useState(0)
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
+  const [playingProfileId, setPlayingProfileId] = useState<string | null>(null)
+  const [isSynthesizing, setIsSynthesizing] = useState(false)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const avatarInputRef = useRef<HTMLInputElement>(null)
+
+  const handleAvatarUpload = async (file: File) => {
+    if (!person) return
+    setIsUploadingAvatar(true)
+    try {
+      const resized = await resizeImageFile(file)
+      const form = new FormData()
+      form.append('file', resized)
+      const res = await fetchWithCSRF(`/api/people/${person.id}/avatar`, {
+        method: 'POST',
+        body: form,
+      })
+      if (!res.ok) throw new Error('Upload failed')
+      onAvatarUpdated?.()
+    } catch {
+      // silently fail
+    } finally {
+      setIsUploadingAvatar(false)
+    }
+  }
+
+  const handlePlayVoice = async (profile: VoiceProfile) => {
+    if (playingProfileId === profile.id) {
+      audioRef.current?.pause()
+      audioRef.current = null
+      setPlayingProfileId(null)
+      return
+    }
+
+    let audioUrl: string | null = profile.sampleAudioUrl ?? null
+
+    if (!audioUrl) {
+      setIsSynthesizing(true)
+      try {
+        const firstName = person?.firstName ?? 'the family'
+        const response = await fetchWithCSRFAndJSON('/api/voice/synthesize', {
+          modelId: profile.id,
+          text: `Hello, this is a sample of my digital voice clone for ${firstName}.`,
+        })
+        if (!response.ok) throw new Error('Synthesis failed')
+        const result = await response.json()
+        audioUrl = result.data?.audioUrl || result.audioUrl || null
+      } catch {
+        setIsSynthesizing(false)
+        return
+      } finally {
+        setIsSynthesizing(false)
+      }
+    }
+
+    if (!audioUrl) return
+
+    const audio = new Audio(audioUrl)
+    audioRef.current = audio
+    audio.onended = () => {
+      setPlayingProfileId(null)
+      audioRef.current = null
+    }
+    setPlayingProfileId(profile.id)
+    audio.play()
+  }
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue)
@@ -306,18 +381,54 @@ export function PersonDetailModal({
           </IconButton>
 
           <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 3, pr: 5 }}>
-            <Avatar
-              src={person?.avatarUrl}
-              sx={{
-                width: 100,
-                height: 100,
-                border: '4px solid rgba(255,255,255,0.3)',
-                fontSize: '2.5rem',
-                backgroundColor: 'rgba(255,255,255,0.2)',
-              }}
-            >
-              {person?.firstName?.[0]}{person?.lastName?.[0]}
-            </Avatar>
+            <Box sx={{ position: 'relative', flexShrink: 0 }}>
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/*"
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) handleAvatarUpload(file)
+                  e.target.value = ''
+                }}
+              />
+              <Avatar
+                src={person?.avatarUrl}
+                sx={{
+                  width: 100,
+                  height: 100,
+                  border: '4px solid rgba(255,255,255,0.3)',
+                  fontSize: '2.5rem',
+                  backgroundColor: 'rgba(255,255,255,0.2)',
+                }}
+              >
+                {person?.firstName?.[0]}{person?.lastName?.[0]}
+              </Avatar>
+              <Tooltip title="Change photo">
+                <IconButton
+                  size="small"
+                  onClick={() => avatarInputRef.current?.click()}
+                  disabled={isUploadingAvatar}
+                  sx={{
+                    position: 'absolute',
+                    bottom: -4,
+                    right: -4,
+                    bgcolor: 'rgba(255,255,255,0.9)',
+                    '&:hover': { bgcolor: '#fff' },
+                    width: 28,
+                    height: 28,
+                  }}
+                  aria-label="Change profile photo"
+                >
+                  {isUploadingAvatar ? (
+                    <CircularProgress size={14} sx={{ color: '#16334a' }} />
+                  ) : (
+                    <PhotoCameraIcon sx={{ fontSize: 14, color: '#16334a' }} />
+                  )}
+                </IconButton>
+              </Tooltip>
+            </Box>
 
             <Box sx={{ flex: 1 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -603,11 +714,19 @@ export function PersonDetailModal({
                               </Typography>
                             )}
                           </Box>
-                          <IconButton 
-                            aria-label={`Play voice sample for ${profile.name}`}
+                          <IconButton
+                            onClick={() => handlePlayVoice(profile)}
+                            disabled={isSynthesizing && playingProfileId !== profile.id}
+                            aria-label={playingProfileId === profile.id ? 'Stop voice sample' : `Play voice sample for ${profile.name}`}
                             sx={{ color: '#546669' }}
                           >
-                            <PlayIcon />
+                            {isSynthesizing && playingProfileId !== profile.id ? (
+                              <CircularProgress size={20} sx={{ color: '#546669' }} />
+                            ) : playingProfileId === profile.id ? (
+                              <StopIcon />
+                            ) : (
+                              <PlayIcon />
+                            )}
                           </IconButton>
                         </Box>
 
@@ -645,6 +764,9 @@ export function PersonDetailModal({
                   {relationships.map((rel) => (
                     <Grid key={rel.id} size={{ xs: 12, sm: 6 }}>
                       <Card
+                        onClick={() => onRelativeClick?.(rel.relatedPerson.id)}
+                        role="button"
+                        aria-label={`View ${rel.relatedPerson.firstName}'s profile`}
                         sx={{
                           p: 3,
                           borderRadius: 3,
@@ -652,8 +774,8 @@ export function PersonDetailModal({
                           alignItems: 'center',
                           gap: 2,
                           transition: 'all 0.2s',
-                          cursor: 'pointer',
-                          '&:hover': { boxShadow: '0 4px 20px rgba(0,0,0,0.08)' },
+                          cursor: onRelativeClick ? 'pointer' : 'default',
+                          '&:hover': onRelativeClick ? { boxShadow: '0 4px 20px rgba(0,0,0,0.08)' } : {},
                         }}
                       >
                         <Avatar

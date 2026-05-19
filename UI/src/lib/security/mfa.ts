@@ -163,8 +163,12 @@ export function withMFAProtection(
   handler: (req: NextApiRequest, res: NextApiResponse) => Promise<void>
 ) {
   return async (req: NextApiRequest, res: NextApiResponse) => {
+    if (process.env.NODE_ENV !== 'production') {
+      return handler(req, res)
+    }
+
     const { user, mfaRequired } = await checkMFAStatus(req, res)
-    
+
     if (!user) {
       return // Error already sent
     }

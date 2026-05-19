@@ -14,12 +14,8 @@ const handler = async (req: NextApiRequest, res: NextApiResponse): Promise<void>
   const user = await getAuthUserWithFamilyspace(req, res)
   const { assetId, runpodJobId } = req.query
 
-  if (
-    !assetId || !runpodJobId ||
-    typeof assetId !== 'string' ||
-    typeof runpodJobId !== 'string'
-  ) {
-    res.status(400).json({ error: 'assetId and runpodJobId query params are required' })
+  if (!assetId || typeof assetId !== 'string' || typeof runpodJobId !== 'string') {
+    res.status(400).json({ error: 'assetId query param is required' })
     return
   }
 
