@@ -3,7 +3,7 @@ import { prismaExtension } from "@trigger.dev/build/extensions/prisma";
 import { syncEnvVars } from "@trigger.dev/build/extensions/core";
 
 export default defineConfig({
-  project: "proj_tmgbtzgspjocfgztdorx",
+  project: "proj_pcwbloaahiyfikeyicmv",
   runtime: "node",
   logLevel: "log",
   // The max compute seconds a task is allowed to run. If the task run exceeds this duration, it will be stopped.
@@ -72,6 +72,7 @@ export default defineConfig({
           "TTS_SERVICE_TOKEN",
           "RUNPOD_API_KEY",
           "RUNPOD_TTS_ENDPOINT_ID",
+          "RUNPOD_ENDPOINT_ID",
           "RUNPOD_POLL_INTERVAL_MS",
           "RUNPOD_POLL_TIMEOUT_MS",
         ]) {

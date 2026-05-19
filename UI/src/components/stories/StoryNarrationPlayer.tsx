@@ -77,6 +77,7 @@ interface NarrateApiResponse {
   narrationJobId?: string
   triggerRunId?: string
   publicAccessToken?: string
+  triggerApiUrl?: string
   queueJobId?: string
   error?: string
 }
@@ -117,6 +118,7 @@ export function StoryNarrationPlayer({
   const [error, setError] = useState<string | null>(null)
   const [triggerRunId, setTriggerRunId] = useState<string | null>(null)
   const [publicAccessToken, setPublicAccessToken] = useState<string | null>(null)
+  const [triggerApiUrl, setTriggerApiUrl] = useState<string | null>(null)
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const stopPolling = useCallback(() => {
@@ -167,6 +169,7 @@ export function StoryNarrationPlayer({
 
   const { run: liveRun } = useRealtimeRun(triggerRunId ?? '', {
     accessToken: publicAccessToken ?? '',
+    baseURL: triggerApiUrl ?? undefined,
     enabled: !!triggerRunId && !!publicAccessToken && state === 'rendering',
   })
 
@@ -269,6 +272,7 @@ export function StoryNarrationPlayer({
           setJobStatus(null)
           if (payload.triggerRunId) setTriggerRunId(payload.triggerRunId)
           if (payload.publicAccessToken) setPublicAccessToken(payload.publicAccessToken)
+          if (payload.triggerApiUrl) setTriggerApiUrl(payload.triggerApiUrl)
           setState('rendering')
           return
         }

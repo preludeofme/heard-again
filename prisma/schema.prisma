@@ -661,6 +661,7 @@ model VoiceProfile {
   isDefault            Boolean              @default(false)
   isCloned             Boolean              @default(true)
   status               VoiceStatus          @default(READY)
+  sampleAudioUrl       String?
   createdAt            DateTime             @default(now())
   updatedAt            DateTime             @updatedAt
   deletedAt            DateTime?

@@ -11,6 +11,7 @@ interface Story {
   content: string
   excerpt?: string | null
   storyDate?: string | null
+  createdAt: string
 }
 
 interface NarrativeTimelineProps {
@@ -28,6 +29,11 @@ interface NarrativeTimelineProps {
 
 const toYear = (d?: string | null) => (d ? new Date(d).getFullYear() : null)
 
+const storyPaperAngle = (id: string): number => {
+  const sum = id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0)
+  return (sum % 41) - 20
+}
+
 export function NarrativeTimeline({
   stories,
   personId,
@@ -41,12 +47,11 @@ export function NarrativeTimeline({
   hasDragged,
 }: NarrativeTimelineProps) {
   const router = useRouter()
-  const sortedStories = [...stories].sort((a, b) => {
-    if (!a.storyDate && !b.storyDate) return 0
-    if (!a.storyDate) return 1
-    if (!b.storyDate) return -1
-    return new Date(a.storyDate).getTime() - new Date(b.storyDate).getTime()
-  })
+  const getStoryDate = (s: Story) =>
+    s.storyDate ? new Date(s.storyDate) : new Date(s.createdAt)
+  const sortedStories = [...stories].sort(
+    (a, b) => getStoryDate(a).getTime() - getStoryDate(b).getTime(),
+  )
 
   const handleCardClick = (storyId: string) => {
     if (!hasDragged) {
@@ -81,7 +86,7 @@ export function NarrativeTimeline({
         </Box>
       ) : (
         <Box sx={{ position: 'relative' }}>
-          <Box sx={{ position: 'absolute', top: 310, left: 0, right: 0, height: 2, background: `linear-gradient(to right, transparent, ${ProfileColors.outlineVariant}30, transparent)`, zIndex: 0 }} />
+          <Box sx={{ position: 'absolute', top: 340, left: 0, right: 0, height: 2, background: `linear-gradient(to right, transparent, ${ProfileColors.outlineVariant}30, transparent)`, zIndex: 0, pointerEvents: 'none' }} />
           <Box
             ref={timelineRef}
             onMouseDown={onDragStart}
@@ -107,13 +112,17 @@ export function NarrativeTimeline({
             }}
           >
             {sortedStories.map(story => {
-              const year = toYear(story.storyDate)
+              const year = toYear(story.storyDate) ?? toYear(story.createdAt)
               const firstImg = extractFirstImage(story.content)
+              const paperAngle = !firstImg ? storyPaperAngle(story.id) : 0
+              const hoverTransform = paperAngle
+                ? `translateY(-7px) rotate(${paperAngle}deg)`
+                : 'translateY(-7px)'
               return (
                 <Box
                   key={story.id}
                   onClick={() => handleCardClick(story.id)}
-                  sx={{ flexShrink: 0, width: { xs: 240, md: 300 }, textDecoration: 'none', position: 'relative', cursor: 'pointer', '&:hover .story-card': { transform: 'translateY(-7px)' } }}
+                  sx={{ flexShrink: 0, width: { xs: 240, md: 300 }, textDecoration: 'none', position: 'relative', cursor: 'pointer', '&:hover .story-card': { transform: hoverTransform } }}
                 >
                   <Box
                     className="story-card"
@@ -123,36 +132,75 @@ export function NarrativeTimeline({
                       aspectRatio: '3/4',
                       borderRadius: '2rem',
                       overflow: 'hidden',
-                      background: `linear-gradient(160deg, ${ProfileColors.surfaceContainer} 0%, ${ProfileColors.surfaceContainerLow} 100%)`,
-                      boxShadow: '0 8px 32px rgba(28,28,25,0.09)',
+                      background: firstImg
+                        ? `linear-gradient(160deg, ${ProfileColors.surfaceContainer} 0%, ${ProfileColors.surfaceContainerLow} 100%)`
+                        : 'none',
+                      boxShadow: firstImg
+                        ? '0 8px 32px rgba(28,28,25,0.09)'
+                        : '0 6px 28px rgba(28,28,25,0.14), 2px 3px 8px rgba(28,28,25,0.06)',
                       transition: 'transform 0.4s ease',
                       pointerEvents: 'none',
+                      transform: paperAngle ? `rotate(${paperAngle}deg)` : undefined,
                     }}
                   >
-                    {firstImg && (
-                      <Box 
-                        component="img" 
-                        src={firstImg} 
-                        sx={{ 
-                          position: 'absolute', 
-                          inset: 0, 
-                          width: '100%', 
-                          height: '100%', 
+                    {firstImg ? (
+                      <Box
+                        component="img"
+                        src={firstImg}
+                        sx={{
+                          position: 'absolute',
+                          inset: 0,
+                          width: '100%',
+                          height: '100%',
                           objectFit: 'cover',
-                          opacity: 0.9
-                        }} 
+                          opacity: 0.9,
+                        }}
                       />
+                    ) : (
+                      <Box
+                        sx={{
+                          position: 'absolute',
+                          inset: 0,
+                          bgcolor: '#faf6ef',
+                          backgroundImage:
+                            'repeating-linear-gradient(to bottom, transparent 0, transparent 23px, rgba(0,0,0,0.055) 23px, rgba(0,0,0,0.055) 24px)',
+                          backgroundPosition: '0 32px',
+                          px: 3,
+                          pt: 4,
+                          pb: 2,
+                          overflow: 'hidden',
+                        }}
+                      >
+                        <Typography
+                          sx={{
+                            fontFamily: 'var(--font-newsreader), serif',
+                            fontSize: { xs: '0.78rem', md: '0.83rem' },
+                            fontStyle: 'italic',
+                            color: 'rgba(22,51,74,0.68)',
+                            lineHeight: 1.75,
+                            display: '-webkit-box',
+                            WebkitLineClamp: 12,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                            wordBreak: 'break-word',
+                          }}
+                        >
+                          {story.content
+                            ? story.content.replace(/<[^>]*>/g, '').trim()
+                            : story.excerpt || story.title}
+                        </Typography>
+                      </Box>
                     )}
                     {year && (
                       <Typography
                         sx={{
                           position: 'absolute',
-                          top: 20,
-                          left: 22,
+                          top: 16,
+                          left: 18,
                           fontFamily: 'var(--font-newsreader), serif',
                           fontSize: { xs: '2.75rem', md: '3.25rem' },
                           fontWeight: 700,
-                          color: 'rgba(22,51,74,0.45)',
+                          color: firstImg ? 'rgba(22,51,74,0.45)' : 'rgba(22,51,74,0.18)',
                           lineHeight: 1,
                         }}
                       >
@@ -161,24 +209,22 @@ export function NarrativeTimeline({
                     )}
                   </Box>
 
-                  {/* Timeline dot */}
-                  <Box
-                    sx={{
-                      position: 'absolute',
-                      bottom: 66,
-                      left: '50%',
-                      transform: 'translateX(-50%)',
-                      width: 14,
-                      height: 14,
-                      borderRadius: '50%',
-                      bgcolor: ProfileColors.primary,
-                      border: `3px solid ${ProfileColors.surface}`,
-                      outline: `2px solid ${ProfileColors.primary}28`,
-                      zIndex: 10,
-                    }}
-                  />
+                  {/* Timeline dot — sits between card and text in normal flow */}
+                  <Box sx={{ display: 'flex', justifyContent: 'center', py: 1.5 }}>
+                    <Box
+                      sx={{
+                        width: 14,
+                        height: 14,
+                        borderRadius: '50%',
+                        bgcolor: ProfileColors.primary,
+                        border: `3px solid ${ProfileColors.surface}`,
+                        outline: `2px solid ${ProfileColors.primary}28`,
+                        flexShrink: 0,
+                      }}
+                    />
+                  </Box>
 
-                  <Box sx={{ pt: 3.5, pointerEvents: 'none' }}>
+                  <Box sx={{ pointerEvents: 'none' }}>
                     <Typography sx={{ fontFamily: 'var(--font-newsreader), serif', fontSize: '1.2rem', fontWeight: 600, color: ProfileColors.primary }}>
                       {story.title}
                     </Typography>

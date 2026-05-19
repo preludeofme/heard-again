@@ -1,7 +1,8 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { Box, Typography } from '@mui/material'
 import Link from 'next/link'
 import { ProfileColors } from './ProfileConstants'
+import { DocumentViewer } from '@/components/viewers/DocumentViewer'
 
 interface DocItem {
   id: string
@@ -24,6 +25,8 @@ export function MemoriesGrid({
   personId,
   isGlobal = false,
 }: MemoriesGridProps) {
+  const [viewerDoc, setViewerDoc] = useState<DocItem | null>(null)
+
   return (
     <Box component="section">
       <Box sx={{ bgcolor: ProfileColors.surfaceContainerLow, borderRadius: '3rem', p: { xs: 3, md: 6 } }}>
@@ -65,8 +68,9 @@ export function MemoriesGrid({
             {documents.map(doc => (
               <Box
                 key={doc.id}
-                component={Link}
-                href={`/documents/${doc.id}`}
+                onClick={() => doc.asset?.id ? setViewerDoc(doc) : undefined}
+                role={doc.asset?.id ? 'button' : undefined}
+                aria-label={doc.asset?.id ? `View ${doc.title}` : undefined}
                 sx={{
                   position: 'relative',
                   aspectRatio: '1',
@@ -74,8 +78,7 @@ export function MemoriesGrid({
                   borderRadius: '1rem',
                   overflow: 'hidden',
                   boxShadow: '0 2px 10px rgba(28,28,25,0.05)',
-                  textDecoration: 'none',
-                  cursor: 'zoom-in',
+                  cursor: doc.asset?.id ? 'zoom-in' : 'default',
                   transition: 'box-shadow 0.3s',
                   '&:hover .doc-img': { transform: 'scale(1.08)', opacity: 1 },
                   '&:hover .doc-overlay': { opacity: 1 },
@@ -120,6 +123,21 @@ export function MemoriesGrid({
           </Box>
         )}
       </Box>
+
+      {viewerDoc?.asset && (
+        <DocumentViewer
+          open={!!viewerDoc}
+          onClose={() => setViewerDoc(null)}
+          document={{
+            id: viewerDoc.id,
+            filename: viewerDoc.title,
+            originalName: viewerDoc.title,
+            mimeType: viewerDoc.asset.mimeType,
+            publicUrl: `/api/assets/serve/${viewerDoc.asset.id}`,
+            storagePath: viewerDoc.asset.id,
+          }}
+        />
+      )}
     </Box>
   )
 }

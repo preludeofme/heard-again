@@ -21,6 +21,7 @@ interface QueuedNarrationResponse {
   narrationJobId: string
   triggerRunId: string
   publicAccessToken: string
+  triggerApiUrl: string
   voiceProfileId: string
 }
 
@@ -210,6 +211,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             narrationJobId: activeJob.id,
             triggerRunId: activeJob.triggerRunId,
             publicAccessToken,
+            triggerApiUrl: process.env.TRIGGER_API_URL ?? 'https://api.trigger.dev',
             voiceProfileId: profile.id,
           } satisfies QueuedNarrationResponse)
         }
@@ -288,6 +290,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       narrationJobId: voiceGenerationJob.id,
       triggerRunId: run.id,
       publicAccessToken,
+      triggerApiUrl: process.env.TRIGGER_API_URL ?? 'https://api.trigger.dev',
       voiceProfileId: profile.id,
     } satisfies QueuedNarrationResponse)
   } catch (error) {

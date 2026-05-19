@@ -69,6 +69,7 @@ export default apiHandler({
       isDefault: p.isDefault,
       isCloned: p.isCloned,
       status: p.status,
+      sampleAudioUrl: p.sampleAudioUrl,
       styleParams: p.styleParams,
       createdBy: p.createdBy,
       counts: p._count,

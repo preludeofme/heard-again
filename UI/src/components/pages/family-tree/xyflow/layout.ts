@@ -142,6 +142,24 @@ function buildRelationshipMaps(people: ApiPersonWithEdges[]) {
     }
   })
 
+  // Treat shared parents as siblings
+  parentsByChild.forEach((parents, childA) => {
+    parents.forEach(parentId => {
+      const children = childrenByParent.get(parentId)
+      if (children) {
+        children.forEach(childB => {
+          if (childA !== childB) {
+            if (!siblingsByPerson.has(childA)) siblingsByPerson.set(childA, new Set())
+            siblingsByPerson.get(childA)!.add(childB)
+            
+            if (!siblingsByPerson.has(childB)) siblingsByPerson.set(childB, new Set())
+            siblingsByPerson.get(childB)!.add(childA)
+          }
+        })
+      }
+    })
+  })
+
   return { childrenByParent, parentsByChild, spousesByPerson, siblingsByPerson }
 }
 
@@ -237,6 +255,7 @@ function assignGenerations(
 function sortGenerationRow(
   ids: string[],
   spousesByPerson: Map<string, Set<string>>,
+  siblingsByPerson: Map<string, Set<string>>,
   ranks?: Map<string, number>,
 ): string[] {
   // Sort initial IDs by rank then by ID for determinism
@@ -253,23 +272,49 @@ function sortGenerationRow(
   const ordered: string[] = []
 
   while (remaining.size > 0) {
-    // Pick first remaining in sorted order
     const seed = Array.from(remaining)[0]!
-    remaining.delete(seed)
-    ordered.push(seed)
+    const queue = [seed]
+    const cluster = new Set<string>()
 
-    // Immediately place all same-generation spouses
-    const spouses = spousesByPerson.get(seed)
-    if (spouses) {
-      // Sort spouses for determinism
-      Array.from(spouses)
-        .sort((a, b) => a.localeCompare(b))
-        .forEach((spouseId) => {
+    while (queue.length > 0) {
+      const current = queue.shift()!
+      if (!remaining.has(current)) continue
+      
+      const isFirstInCluster = cluster.size === 0
+      remaining.delete(current)
+      cluster.add(current)
+
+      // Always enqueue spouses first so they stay adjacent to the person
+      const spouses = spousesByPerson.get(current)
+      const spousesToInsert: string[] = []
+      if (spouses) {
+        Array.from(spouses).sort((a,b) => a.localeCompare(b)).forEach(spouseId => {
           if (remaining.has(spouseId)) {
             remaining.delete(spouseId)
-            ordered.push(spouseId)
+            cluster.add(spouseId)
+            spousesToInsert.push(spouseId)
+            queue.push(spouseId)
           }
         })
+      }
+
+      // To keep siblings visually adjacent, we place the spouses of the first sibling
+      // on the LEFT (before them), and all subsequent spouses on the RIGHT (after them).
+      if (isFirstInCluster) {
+        ordered.push(...spousesToInsert, current)
+      } else {
+        ordered.push(current, ...spousesToInsert)
+      }
+
+      // Then enqueue siblings
+      const siblings = siblingsByPerson.get(current)
+      if (siblings) {
+        Array.from(siblings).sort((a,b) => a.localeCompare(b)).forEach(siblingId => {
+          if (remaining.has(siblingId) && !queue.includes(siblingId)) {
+            queue.push(siblingId)
+          }
+        })
+      }
     }
   }
 
@@ -375,7 +420,7 @@ export function buildFamilyTreeLayout(
 
   // ─── Step 1: Layout Gen 0 (Reference) ───────────────────────────────────────
   {
-    const ids = sortGenerationRow(byGeneration.get(0) ?? [], spousesByPerson)
+    const ids = sortGenerationRow(byGeneration.get(0) ?? [], spousesByPerson, siblingsByPerson)
     const { width, height } = cardDimensions(0)
     const y = rowY.get(0) ?? 0
     const totalW = ids.length * width + Math.max(0, ids.length - 1) * H_GAP
@@ -401,7 +446,7 @@ export function buildFamilyTreeLayout(
       inheritedRanks.set(id, r)
     })
     
-    const ids = sortGenerationRow(rawIds, spousesByPerson, inheritedRanks)
+    const ids = sortGenerationRow(rawIds, spousesByPerson, siblingsByPerson, inheritedRanks)
     const { width, height } = cardDimensions(gen)
     const y = rowY.get(gen)!
     const desiredX = new Map<string, number>()
@@ -501,7 +546,7 @@ export function buildFamilyTreeLayout(
       inheritedRanks.set(id, r)
     })
 
-    const ids = sortGenerationRow(rawIds, spousesByPerson, inheritedRanks)
+    const ids = sortGenerationRow(rawIds, spousesByPerson, siblingsByPerson, inheritedRanks)
     const { width, height } = cardDimensions(gen)
     const y = rowY.get(gen)!
     const desiredX = new Map<string, number>()

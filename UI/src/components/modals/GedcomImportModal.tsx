@@ -190,6 +190,7 @@ export function GedcomImportModal({ open, onClose, onSuccess, userPersonId }: Ge
   const [jobId, setJobId] = useState<string | null>(null)
   const [triggerRunId, setTriggerRunId] = useState<string | null>(null)
   const [realtimeToken, setRealtimeToken] = useState<string | null>(null)
+  const [triggerApiUrl, setTriggerApiUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [previewData, setPreviewData] = useState<PreviewData | null>(null)
 
@@ -218,6 +219,7 @@ export function GedcomImportModal({ open, onClose, onSuccess, userPersonId }: Ge
     setJobId(null)
     setTriggerRunId(null)
     setRealtimeToken(null)
+    setTriggerApiUrl(null)
     setConnectionMode('self')
     setSelfXref(null)
     setSelfSearch(null)
@@ -272,6 +274,7 @@ export function GedcomImportModal({ open, onClose, onSuccess, userPersonId }: Ge
         if (cancelled) return
         if (d.data?.token) setRealtimeToken(d.data.token)
         if (d.data?.runId) setTriggerRunId(d.data.runId)
+        if ((d.data as Record<string, unknown>)?.triggerApiUrl) setTriggerApiUrl((d.data as Record<string, unknown>).triggerApiUrl as string)
       })
       .catch(() => {})
     return () => { cancelled = true }
@@ -319,6 +322,7 @@ export function GedcomImportModal({ open, onClose, onSuccess, userPersonId }: Ge
   // Realtime run subscription — drives progress bar and terminal state detection
   const { run: liveRun } = useRealtimeRun<typeof gedcomImportTask>(triggerRunId ?? '', {
     accessToken: realtimeToken ?? '',
+    baseURL: triggerApiUrl ?? undefined,
     enabled: !!(triggerRunId && realtimeToken),
     onComplete: useCallback(() => {
       setStatus((prev) => {

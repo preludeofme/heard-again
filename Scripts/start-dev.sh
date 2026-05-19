@@ -57,6 +57,11 @@ cleanup() {
         echo "  Stopping Redis container..."
         docker stop redis-dev >/dev/null 2>&1 || true
     fi
+    # Stop Exporter dev container
+    if docker ps --format '{{.Names}}' | grep -q '^exporter-dev$'; then
+        echo "  Stopping Exporter container..."
+        docker stop exporter-dev >/dev/null 2>&1 || true
+    fi
     echo -e "${GREEN}All services stopped.${NC}"
     exit 0
 }
@@ -306,6 +311,13 @@ if [ -f "$MAIN_APP_DIR/.env" ]; then
     fi
 fi
 
+# 4. Exporter .env bootstrap
+if [ ! -f "$MAIN_APP_DIR/Exporter/.env" ] && [ -d "$MAIN_APP_DIR/Exporter" ]; then
+    echo "  Creating Exporter .env for local testing..."
+    echo "# Auto-generated local testing config" > "$MAIN_APP_DIR/Exporter/.env"
+    echo "SAVE_LOCAL=true" >> "$MAIN_APP_DIR/Exporter/.env"
+fi
+
 echo -e "  ${GREEN}✓ Environment files ready${NC}"
 
 echo ""
@@ -509,16 +521,48 @@ fi
 echo "  Starting Trigger.dev dev worker..."
 cd "$MAIN_APP_DIR"
 if [ "$LOG_MODE" = "live" ]; then
-    TRIGGER_API_URL=http://localhost:3030 npx trigger.dev@latest dev 2>&1 | tee "$MAIN_APP_DIR/logs/trigger-dev.log" &
+    npx trigger.dev@latest dev 2>&1 | tee "$MAIN_APP_DIR/logs/trigger-dev.log" &
 else
-    TRIGGER_API_URL=http://localhost:3030 npx trigger.dev@latest dev > "$MAIN_APP_DIR/logs/trigger-dev.log" 2>&1 &
+    npx trigger.dev@latest dev > "$MAIN_APP_DIR/logs/trigger-dev.log" 2>&1 &
 fi
 TRIGGER_PID=$!
 echo $TRIGGER_PID >> "$PIDS_FILE"
 echo -e "    ${GREEN}✓ Trigger.dev worker started (PID: $TRIGGER_PID)${NC}"
-echo -e "    ${BLUE}  API: http://localhost:3030${NC}"
+echo -e "    ${BLUE}  API: https://api.trigger.dev${NC}"
 if [ "$LOG_MODE" != "live" ]; then
     echo -e "    ${BLUE}  Logs: $MAIN_APP_DIR/logs/trigger-dev.log${NC}"
+fi
+
+echo ""
+
+# Start Exporter Service via Docker
+echo "  Starting Exporter Service (port 8001)..."
+if command -v docker &> /dev/null && [ -d "$MAIN_APP_DIR/Exporter" ]; then
+    cd "$MAIN_APP_DIR/Exporter"
+    # Always rebuild — Docker layer cache keeps this fast when nothing changed.
+    # First build downloads ~300 MB Chrome for Testing; subsequent builds are near-instant.
+    echo "    Building Exporter Docker image..."
+    if [ "$LOG_MODE" = "live" ]; then
+        docker build -t heard-again-exporter-local .
+    else
+        docker build -t heard-again-exporter-local . > /dev/null 2>&1
+    fi
+    
+    # Run container
+    mkdir -p "$UI_DIR/public/exports"
+    docker rm -f exporter-dev >/dev/null 2>&1 || true
+    docker run -d --name exporter-dev -p 8001:8000 \
+      --add-host=host.docker.internal:host-gateway \
+      --env-file .env \
+      -v "$UI_DIR/public/exports:/app/output" \
+      heard-again-exporter-local > /dev/null 2>&1
+    
+    cd "$MAIN_APP_DIR"
+    echo -e "    ${GREEN}✓ Exporter Service started via Docker${NC}"
+    EXPORTER_STARTED=true
+else
+    echo -e "    ${YELLOW}⚠ Exporter Service skipped (Docker not available or Exporter dir missing)${NC}"
+    EXPORTER_STARTED=false
 fi
 
 echo ""
@@ -551,7 +595,10 @@ echo -e "  ${BLUE}Main App:${NC}      https://localhost:$MAIN_APP_PORT"
 if [ "$TTS_STARTED" = true ]; then
     echo -e "  ${BLUE}TTS Service:${NC}   http://localhost:$TTS_SERVICE_PORT"
 fi
-echo -e "  ${BLUE}Trigger.dev:${NC}   local worker — narration + GEDCOM import (PID: $TRIGGER_PID)"
+echo -e "  ${BLUE}Trigger.dev:${NC}   cloud worker (proj_tmgbtzgspjocfgztdorx) — PID: $TRIGGER_PID"
+if [ "$EXPORTER_STARTED" = true ]; then
+    echo -e "  ${BLUE}Exporter:${NC}      http://localhost:8001/run (Docker)"
+fi
 echo ""
 if [ "$LOG_MODE" = "live" ]; then
     echo -e "  ${YELLOW}Live logging enabled - all service output shown above${NC}"

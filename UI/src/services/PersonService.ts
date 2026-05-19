@@ -183,6 +183,7 @@ export class PersonService {
           name: true,
           isDefault: true,
           isCloned: true,
+          sampleAudioUrl: true,
           createdAt: true,
         },
       },

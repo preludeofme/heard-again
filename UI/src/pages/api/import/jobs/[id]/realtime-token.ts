@@ -27,6 +27,7 @@ export default apiHandler({
       expirationTime: '2h',
     })
 
-    return successResponse(res, { token, runId: job.triggerRunId })
+    const triggerApiUrl = process.env.TRIGGER_API_URL ?? 'https://api.trigger.dev'
+    return successResponse(res, { token, runId: job.triggerRunId, triggerApiUrl })
   },
 })

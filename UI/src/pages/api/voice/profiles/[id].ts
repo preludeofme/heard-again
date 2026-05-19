@@ -38,6 +38,7 @@ export default apiHandler({
       isDefault: profile.isDefault,
       isCloned: profile.isCloned,
       status: profile.status,
+      sampleAudioUrl: profile.sampleAudioUrl,
       styleParams: profile.styleParams,
       sourceAsset: profile.sourceAsset,
       sourceTranscript: profile.sourceTranscript,
@@ -60,13 +61,14 @@ export default apiHandler({
     })
     if (!existing) throw Errors.notFound('Voice profile')
 
-    const { name, description, personId, styleParams, isDefault } = req.body
+    const { name, description, personId, styleParams, isDefault, sampleAudioUrl } = req.body
 
     const updateData: any = {}
     if (name !== undefined) updateData.name = name
     if (description !== undefined) updateData.description = description
     if (personId !== undefined) updateData.personId = personId || null
     if (styleParams !== undefined) updateData.styleParams = styleParams
+    if (sampleAudioUrl !== undefined) updateData.sampleAudioUrl = sampleAudioUrl || null
     if (isDefault !== undefined) {
       updateData.isDefault = isDefault
       // If setting as default, unset other defaults for same person
