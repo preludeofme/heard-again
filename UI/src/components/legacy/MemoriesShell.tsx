@@ -473,7 +473,7 @@ export function MemoriesShell({ lens, onLensChange, children }: MemoriesShellPro
                       },
                     }}
                   >
-                    <MenuItem component={Link} href="/contribute" onClick={() => setAddMenuAnchor(null)}>
+                    <MenuItem component={Link} href={selectedFamilyMember?.id ? `/stories/contribute?subjectId=${selectedFamilyMember.id}` : '/stories/contribute'} onClick={() => setAddMenuAnchor(null)}>
                       <ListItemIcon><StoriesIcon fontSize="small" /></ListItemIcon>
                       <ListItemText primary="New Story" secondary="Record a memory or life event" />
                     </MenuItem>

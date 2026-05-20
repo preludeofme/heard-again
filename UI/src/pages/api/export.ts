@@ -1,8 +1,9 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { getServerSession } from 'next-auth/next'
-import { authOptions } from './auth/[...nextauth]'
+import { authOptions } from '@/lib/auth'
 import { auth } from '@trigger.dev/sdk/v3'
 import { exportTreeTask } from '@/trigger/export-tree-task'
+import { logger } from '@/lib/logger'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -70,7 +71,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error)
-    console.error('Failed to trigger export task:', message)
+    logger.error({ message }, 'Failed to trigger export task')
     return res.status(500).json({ success: false, error: 'Internal Server Error' })
   }
 }

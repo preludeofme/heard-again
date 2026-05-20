@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { getServerSession } from 'next-auth/next'
-import { authOptions } from './auth/[...nextauth]'
+import { authOptions } from '@/lib/auth'
+import { logger } from '@/lib/logger'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -54,7 +55,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
   } catch (error: any) {
-    console.error('Failed to check RunPod status:', error)
+    logger.error({ error }, 'Failed to check RunPod status')
     return res.status(500).json({ success: false, error: 'Internal Server Error' })
   }
 }

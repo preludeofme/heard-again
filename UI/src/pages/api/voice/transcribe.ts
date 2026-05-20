@@ -1,6 +1,7 @@
 import { apiHandler, successResponse, errorResponse } from '@/lib/api-helpers'
 import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 import { fetchWithCSRFAndFormData } from '@/lib/api-client'
+import { logger } from '@/lib/logger'
 import formidable from 'formidable'
 import fs from 'fs'
 import { withCSRFProtection } from '@/lib/security/csrf'
@@ -47,7 +48,7 @@ async function transcribeHandler(req: NextApiRequest, res: NextApiResponse) {
 
     if (!ttsRes.ok) {
       const error = await ttsRes.text()
-      console.error('TTS transcription failed:', error)
+      logger.error({ error }, 'TTS transcription failed')
       return errorResponse(res, 'Transcription service failed', 500)
     }
 
@@ -55,7 +56,7 @@ async function transcribeHandler(req: NextApiRequest, res: NextApiResponse) {
     return successResponse(res, data)
 
   } catch (error: any) {
-    console.error('Transcription API error:', error)
+    logger.error({ error }, 'Transcription API error')
     return errorResponse(res, error.message || 'Transcription failed', 500)
   }
 }

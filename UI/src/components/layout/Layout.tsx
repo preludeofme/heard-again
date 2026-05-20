@@ -68,8 +68,7 @@ function UserMenu() {
   const handleClose = () => setAnchorEl(null)
   const handleSignOut = async () => {
     handleClose()
-    await signOut({ redirect: false })
-    router.push('/')
+    await signOut({ callbackUrl: '/login' })
   }
 
   if (status === 'loading') return <Avatar sx={{ width: 32, height: 32 }} />

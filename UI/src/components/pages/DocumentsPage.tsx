@@ -56,7 +56,7 @@ export function DocumentsPage({ documents, onUploadSuccess, onDelete, onLink, on
     return doc.type === selectedFilter
   })
 
-  const handleUploadSuccess = (result: any) => {
+  const handleUploadSuccess = (_result: unknown) => {
     onUploadSuccess?.()
   }
 
@@ -64,7 +64,7 @@ export function DocumentsPage({ documents, onUploadSuccess, onDelete, onLink, on
     console.error('Upload failed:', error)
   }
 
-  const handleDocumentClick = (document: any) => {
+  const handleDocumentClick = (document: DocumentArtifact) => {
     setSelectedDocument(document)
     setViewerOpen(true)
   }

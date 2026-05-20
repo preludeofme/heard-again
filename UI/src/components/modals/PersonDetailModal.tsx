@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import {
   Dialog,
   DialogTitle,
@@ -20,6 +20,7 @@ import {
   ListItemText,
   Tooltip,
   CircularProgress,
+  TextField,
 } from '@mui/material'
 import {
   Close as CloseIcon,
@@ -37,10 +38,17 @@ import {
   MoreVert as MoreIcon,
   OpenInNew as OpenInNewIcon,
   PhotoCamera as PhotoCameraIcon,
+  PermMedia as MediaIcon,
+  AudioFile as AudioFileIcon,
+  VideoFile as VideoFileIcon,
+  InsertDriveFile as FileIcon,
+  Download as DownloadIcon,
+  Check as CheckIcon,
 } from '@mui/icons-material'
 import { formatDistanceToNow } from 'date-fns'
 import { fetchWithCSRFAndJSON, fetchWithCSRF } from '@/lib/api-client'
 import { resizeImageFile } from '@/lib/resize-image'
+import { ConfirmDialog } from './ConfirmDialog'
 
 interface Person {
   id: string
@@ -95,6 +103,20 @@ interface Relationship {
   isMutual: boolean
 }
 
+interface MediaDocument {
+  id: string
+  title: string
+  documentType: string
+  createdAt: string
+  asset: {
+    id: string
+    filename: string
+    mimeType: string
+    sizeBytes: number | null
+    storagePath: string
+  } | null
+}
+
 interface PersonDetailModalProps {
   open: boolean
   onClose: () => void
@@ -141,6 +163,22 @@ export function PersonDetailModal({
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const avatarInputRef = useRef<HTMLInputElement>(null)
 
+  // Media tab state
+  const [mediaDocs, setMediaDocs] = useState<MediaDocument[]>([])
+  const [isLoadingMedia, setIsLoadingMedia] = useState(false)
+  const [playingMediaId, setPlayingMediaId] = useState<string | null>(null)
+  const mediaAudioRef = useRef<HTMLAudioElement | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<MediaDocument | null>(null)
+  const [isDeletingMedia, setIsDeletingMedia] = useState(false)
+  const [isDeletePersonConfirmOpen, setIsDeletePersonConfirmOpen] = useState(false)
+  const [editingTitleId, setEditingTitleId] = useState<string | null>(null)
+  const [editingTitleValue, setEditingTitleValue] = useState('')
+  const [isSavingTitle, setIsSavingTitle] = useState(false)
+  const audioUploadRef = useRef<HTMLInputElement>(null)
+  const videoUploadRef = useRef<HTMLInputElement>(null)
+  const docUploadRef = useRef<HTMLInputElement>(null)
+  const [isUploadingMedia, setIsUploadingMedia] = useState(false)
+
   const handleAvatarUpload = async (file: File) => {
     if (!person) return
     setIsUploadingAvatar(true)
@@ -160,6 +198,116 @@ export function PersonDetailModal({
       setIsUploadingAvatar(false)
     }
   }
+
+  const fetchMediaDocs = useCallback(async () => {
+    if (!person) return
+    setIsLoadingMedia(true)
+    try {
+      const res = await fetch(`/api/documents?personId=${person.id}&limit=100`)
+      if (!res.ok) throw new Error('Failed to load media')
+      const json = await res.json()
+      setMediaDocs((json.data as MediaDocument[]) ?? [])
+    } catch {
+      // silently fail — empty state will show
+    } finally {
+      setIsLoadingMedia(false)
+    }
+  }, [person])
+
+  useEffect(() => {
+    if (activeTab === 3 && person) {
+      void fetchMediaDocs()
+    }
+  }, [activeTab, person, fetchMediaDocs])
+
+  const handleMediaUpload = async (file: File, docType: string) => {
+    if (!person) return
+    setIsUploadingMedia(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('personId', person.id)
+      const uploadRes = await fetchWithCSRF('/api/assets/upload', {
+        method: 'POST',
+        body: formData,
+      })
+      if (!uploadRes.ok) throw new Error('Upload failed')
+      const uploadJson = await uploadRes.json()
+      const assetId: string = uploadJson.data?.id ?? uploadJson.id
+      const title = file.name.replace(/\.[^/.]+$/, '')
+      const docRes = await fetchWithCSRFAndJSON('/api/documents', {
+        assetId,
+        title,
+        documentType: docType,
+        people: [{ personId: person.id }],
+      })
+      if (!docRes.ok) throw new Error('Document creation failed')
+      await fetchMediaDocs()
+    } catch {
+      // silently fail
+    } finally {
+      setIsUploadingMedia(false)
+    }
+  }
+
+  const handlePlayMedia = (doc: MediaDocument) => {
+    if (playingMediaId === doc.id) {
+      mediaAudioRef.current?.pause()
+      mediaAudioRef.current = null
+      setPlayingMediaId(null)
+      return
+    }
+    if (!doc.asset) return
+    const url = `/api/assets/serve/${doc.asset.id}`
+    const audio = new Audio(url)
+    mediaAudioRef.current = audio
+    audio.onended = () => {
+      setPlayingMediaId(null)
+      mediaAudioRef.current = null
+    }
+    setPlayingMediaId(doc.id)
+    void audio.play()
+  }
+
+  const handleDeleteMedia = async () => {
+    if (!deleteTarget) return
+    setIsDeletingMedia(true)
+    try {
+      const res = await fetchWithCSRF(`/api/documents/${deleteTarget.id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('Delete failed')
+      setMediaDocs((prev) => prev.filter((d) => d.id !== deleteTarget.id))
+      setDeleteTarget(null)
+    } catch {
+      // silently fail
+    } finally {
+      setIsDeletingMedia(false)
+    }
+  }
+
+  const startEditTitle = (doc: MediaDocument) => {
+    setEditingTitleId(doc.id)
+    setEditingTitleValue(doc.title)
+  }
+
+  const saveEditTitle = async (docId: string) => {
+    const trimmed = editingTitleValue.trim()
+    if (!trimmed) return
+    setIsSavingTitle(true)
+    try {
+      const res = await fetchWithCSRFAndJSON(`/api/documents/${docId}`, { title: trimmed }, { method: 'PUT' })
+      if (!res.ok) throw new Error('Update failed')
+      setMediaDocs((prev) => prev.map((d) => d.id === docId ? { ...d, title: trimmed } : d))
+    } catch {
+      // silently fail
+    } finally {
+      setIsSavingTitle(false)
+      setEditingTitleId(null)
+    }
+  }
+
+  const audioDocs = mediaDocs.filter((d) => d.documentType === 'AUDIO' || d.documentType === 'RECORDING')
+  const videoDocs = mediaDocs.filter((d) => d.documentType === 'VIDEO')
+  const otherDocs = mediaDocs.filter((d) => !['AUDIO', 'RECORDING', 'VIDEO'].includes(d.documentType))
 
   const handlePlayVoice = async (profile: VoiceProfile) => {
     if (playingProfileId === profile.id) {
@@ -448,25 +596,6 @@ export function PersonDetailModal({
                     {getLifespanText()}
                   </Typography>
                 </Box>
-                
-                <Button
-                  variant="contained"
-                  size="small"
-                  startIcon={<OpenInNewIcon />}
-                  onClick={() => person && person.id && onViewFullProfile?.(person.id)}
-                  sx={{
-                    backgroundColor: 'rgba(255,255,255,0.2)',
-                    backdropFilter: 'blur(4px)',
-                    color: 'white',
-                    textTransform: 'none',
-                    borderRadius: 2,
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    '&:hover': { backgroundColor: 'rgba(255,255,255,0.3)' },
-                    display: { xs: 'none', sm: 'flex' }
-                  }}
-                >
-                  Full Profile
-                </Button>
               </Box>
 
               <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
@@ -539,6 +668,11 @@ export function PersonDetailModal({
             <Tab
               label={`Relatives (${relationships?.length || 0})`}
               icon={<PeopleIcon sx={{ fontSize: 18 }} />}
+              iconPosition="start"
+            />
+            <Tab
+              label={`Media (${mediaDocs.length})`}
+              icon={<MediaIcon sx={{ fontSize: 18 }} />}
               iconPosition="start"
             />
           </Tabs>
@@ -746,6 +880,208 @@ export function PersonDetailModal({
             </Box>
           )}
 
+          {/* Media Tab */}
+          {activeTab === 3 && (
+            <Box>
+              {/* Hidden file inputs */}
+              <input ref={audioUploadRef} type="file" accept="audio/*" style={{ display: 'none' }}
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) void handleMediaUpload(f, 'AUDIO'); e.target.value = '' }} />
+              <input ref={videoUploadRef} type="file" accept="video/*" style={{ display: 'none' }}
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) void handleMediaUpload(f, 'VIDEO'); e.target.value = '' }} />
+              <input ref={docUploadRef} type="file" accept=".pdf,.doc,.docx,.txt,image/*" style={{ display: 'none' }}
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) void handleMediaUpload(f, f.type.startsWith('image/') ? 'PHOTO' : 'PDF'); e.target.value = '' }} />
+
+              {isLoadingMedia ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
+                  <CircularProgress />
+                </Box>
+              ) : (
+                <>
+                  {/* Audio Section */}
+                  <Box sx={{ mb: 3 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <AudioFileIcon sx={{ fontSize: 18, color: '#546669' }} />
+                        <Typography variant="subtitle2" sx={{ color: '#16334a', fontWeight: 600 }}>Audio</Typography>
+                      </Box>
+                      <Button size="small" startIcon={isUploadingMedia ? <CircularProgress size={12} /> : <AddIcon />}
+                        disabled={isUploadingMedia}
+                        onClick={() => audioUploadRef.current?.click()}
+                        sx={{ textTransform: 'none', color: '#16334a', fontSize: '0.75rem' }}>
+                        Upload
+                      </Button>
+                    </Box>
+                    {audioDocs.length === 0 ? (
+                      <Typography variant="body2" sx={{ color: '#aaa', pl: 1 }}>No audio files yet.</Typography>
+                    ) : (
+                      <List dense sx={{ p: 0 }}>
+                        {audioDocs.map((doc) => (
+                          <ListItem key={doc.id} disableGutters sx={{ gap: 1, py: 0.5 }}>
+                            <IconButton size="small" aria-label={playingMediaId === doc.id ? 'Stop audio' : `Play ${doc.title}`}
+                              onClick={() => handlePlayMedia(doc)} sx={{ color: '#16334a' }}>
+                              {playingMediaId === doc.id ? <StopIcon fontSize="small" /> : <PlayIcon fontSize="small" />}
+                            </IconButton>
+                            <Box sx={{ flex: 1, minWidth: 0 }}>
+                              {editingTitleId === doc.id ? (
+                                <TextField size="small" value={editingTitleValue} autoFocus
+                                  onChange={(e) => setEditingTitleValue(e.target.value)}
+                                  onBlur={() => void saveEditTitle(doc.id)}
+                                  onKeyDown={(e) => { if (e.key === 'Enter') void saveEditTitle(doc.id); if (e.key === 'Escape') setEditingTitleId(null) }}
+                                  InputProps={{ endAdornment: isSavingTitle ? <CircularProgress size={12} /> : <CheckIcon sx={{ fontSize: 14, color: '#1a6b5a', cursor: 'pointer' }} onClick={() => void saveEditTitle(doc.id)} /> }}
+                                  sx={{ width: '100%' }} />
+                              ) : (
+                                <Typography variant="body2" noWrap sx={{ color: '#333' }}>{doc.title}</Typography>
+                              )}
+                            </Box>
+                            <Tooltip title="Edit title">
+                              <IconButton size="small" aria-label={`Edit title for ${doc.title}`} onClick={() => startEditTitle(doc)} sx={{ color: '#546669' }}>
+                                <EditIcon sx={{ fontSize: 14 }} />
+                              </IconButton>
+                            </Tooltip>
+                            {doc.asset && (
+                              <Tooltip title="Download">
+                                <IconButton size="small" component="a" href={`/api/assets/serve/${doc.asset.id}`} download={doc.asset.filename}
+                                  aria-label={`Download ${doc.title}`} sx={{ color: '#546669' }}>
+                                  <DownloadIcon sx={{ fontSize: 14 }} />
+                                </IconButton>
+                              </Tooltip>
+                            )}
+                            <Tooltip title="Delete">
+                              <IconButton size="small" aria-label={`Delete ${doc.title}`} onClick={() => setDeleteTarget(doc)} sx={{ color: '#c62828' }}>
+                                <DeleteIcon sx={{ fontSize: 14 }} />
+                              </IconButton>
+                            </Tooltip>
+                          </ListItem>
+                        ))}
+                      </List>
+                    )}
+                  </Box>
+
+                  <Divider sx={{ my: 2 }} />
+
+                  {/* Video Section */}
+                  <Box sx={{ mb: 3 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <VideoFileIcon sx={{ fontSize: 18, color: '#546669' }} />
+                        <Typography variant="subtitle2" sx={{ color: '#16334a', fontWeight: 600 }}>Video</Typography>
+                      </Box>
+                      <Button size="small" startIcon={isUploadingMedia ? <CircularProgress size={12} /> : <AddIcon />}
+                        disabled={isUploadingMedia}
+                        onClick={() => videoUploadRef.current?.click()}
+                        sx={{ textTransform: 'none', color: '#16334a', fontSize: '0.75rem' }}>
+                        Upload
+                      </Button>
+                    </Box>
+                    {videoDocs.length === 0 ? (
+                      <Typography variant="body2" sx={{ color: '#aaa', pl: 1 }}>No video files yet.</Typography>
+                    ) : (
+                      <List dense sx={{ p: 0 }}>
+                        {videoDocs.map((doc) => (
+                          <ListItem key={doc.id} disableGutters sx={{ gap: 1, py: 0.5 }}>
+                            <VideoFileIcon sx={{ fontSize: 20, color: '#546669', ml: 0.5, mr: 0.5 }} />
+                            <Box sx={{ flex: 1, minWidth: 0 }}>
+                              {editingTitleId === doc.id ? (
+                                <TextField size="small" value={editingTitleValue} autoFocus
+                                  onChange={(e) => setEditingTitleValue(e.target.value)}
+                                  onBlur={() => void saveEditTitle(doc.id)}
+                                  onKeyDown={(e) => { if (e.key === 'Enter') void saveEditTitle(doc.id); if (e.key === 'Escape') setEditingTitleId(null) }}
+                                  InputProps={{ endAdornment: isSavingTitle ? <CircularProgress size={12} /> : <CheckIcon sx={{ fontSize: 14, color: '#1a6b5a', cursor: 'pointer' }} onClick={() => void saveEditTitle(doc.id)} /> }}
+                                  sx={{ width: '100%' }} />
+                              ) : (
+                                <Typography variant="body2" noWrap sx={{ color: '#333' }}>{doc.title}</Typography>
+                              )}
+                            </Box>
+                            <Tooltip title="Edit title">
+                              <IconButton size="small" aria-label={`Edit title for ${doc.title}`} onClick={() => startEditTitle(doc)} sx={{ color: '#546669' }}>
+                                <EditIcon sx={{ fontSize: 14 }} />
+                              </IconButton>
+                            </Tooltip>
+                            {doc.asset && (
+                              <Tooltip title="Download">
+                                <IconButton size="small" component="a" href={`/api/assets/serve/${doc.asset.id}`} download={doc.asset.filename}
+                                  aria-label={`Download ${doc.title}`} sx={{ color: '#546669' }}>
+                                  <DownloadIcon sx={{ fontSize: 14 }} />
+                                </IconButton>
+                              </Tooltip>
+                            )}
+                            <Tooltip title="Delete">
+                              <IconButton size="small" aria-label={`Delete ${doc.title}`} onClick={() => setDeleteTarget(doc)} sx={{ color: '#c62828' }}>
+                                <DeleteIcon sx={{ fontSize: 14 }} />
+                              </IconButton>
+                            </Tooltip>
+                          </ListItem>
+                        ))}
+                      </List>
+                    )}
+                  </Box>
+
+                  <Divider sx={{ my: 2 }} />
+
+                  {/* Documents Section */}
+                  <Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <FileIcon sx={{ fontSize: 18, color: '#546669' }} />
+                        <Typography variant="subtitle2" sx={{ color: '#16334a', fontWeight: 600 }}>Documents &amp; Photos</Typography>
+                      </Box>
+                      <Button size="small" startIcon={isUploadingMedia ? <CircularProgress size={12} /> : <AddIcon />}
+                        disabled={isUploadingMedia}
+                        onClick={() => docUploadRef.current?.click()}
+                        sx={{ textTransform: 'none', color: '#16334a', fontSize: '0.75rem' }}>
+                        Upload
+                      </Button>
+                    </Box>
+                    {otherDocs.length === 0 ? (
+                      <Typography variant="body2" sx={{ color: '#aaa', pl: 1 }}>No documents or photos yet.</Typography>
+                    ) : (
+                      <List dense sx={{ p: 0 }}>
+                        {otherDocs.map((doc) => (
+                          <ListItem key={doc.id} disableGutters sx={{ gap: 1, py: 0.5 }}>
+                            <FileIcon sx={{ fontSize: 20, color: '#546669', ml: 0.5, mr: 0.5 }} />
+                            <Box sx={{ flex: 1, minWidth: 0 }}>
+                              {editingTitleId === doc.id ? (
+                                <TextField size="small" value={editingTitleValue} autoFocus
+                                  onChange={(e) => setEditingTitleValue(e.target.value)}
+                                  onBlur={() => void saveEditTitle(doc.id)}
+                                  onKeyDown={(e) => { if (e.key === 'Enter') void saveEditTitle(doc.id); if (e.key === 'Escape') setEditingTitleId(null) }}
+                                  InputProps={{ endAdornment: isSavingTitle ? <CircularProgress size={12} /> : <CheckIcon sx={{ fontSize: 14, color: '#1a6b5a', cursor: 'pointer' }} onClick={() => void saveEditTitle(doc.id)} /> }}
+                                  sx={{ width: '100%' }} />
+                              ) : (
+                                <Typography variant="body2" noWrap sx={{ color: '#333' }}>{doc.title}</Typography>
+                              )}
+                              <Typography variant="caption" sx={{ color: '#aaa' }}>
+                                {doc.documentType.toLowerCase().replace('_', ' ')}
+                              </Typography>
+                            </Box>
+                            <Tooltip title="Edit title">
+                              <IconButton size="small" aria-label={`Edit title for ${doc.title}`} onClick={() => startEditTitle(doc)} sx={{ color: '#546669' }}>
+                                <EditIcon sx={{ fontSize: 14 }} />
+                              </IconButton>
+                            </Tooltip>
+                            {doc.asset && (
+                              <Tooltip title="Download">
+                                <IconButton size="small" component="a" href={`/api/assets/serve/${doc.asset.id}`} download={doc.asset.filename}
+                                  aria-label={`Download ${doc.title}`} sx={{ color: '#546669' }}>
+                                  <DownloadIcon sx={{ fontSize: 14 }} />
+                                </IconButton>
+                              </Tooltip>
+                            )}
+                            <Tooltip title="Delete">
+                              <IconButton size="small" aria-label={`Delete ${doc.title}`} onClick={() => setDeleteTarget(doc)} sx={{ color: '#c62828' }}>
+                                <DeleteIcon sx={{ fontSize: 14 }} />
+                              </IconButton>
+                            </Tooltip>
+                          </ListItem>
+                        ))}
+                      </List>
+                    )}
+                  </Box>
+                </>
+              )}
+            </Box>
+          )}
+
           {/* Relationships Tab */}
           {activeTab === 2 && (
             <Box>
@@ -806,6 +1142,32 @@ export function PersonDetailModal({
         </Box>
       </DialogContent>
 
+      {/* Media delete confirmation */}
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title="Delete Media"
+        message={`Are you sure you want to delete "${deleteTarget?.title}"? This cannot be undone.`}
+        confirmLabel="Delete"
+        confirmColor="error"
+        isLoading={isDeletingMedia}
+        onConfirm={() => void handleDeleteMedia()}
+        onCancel={() => setDeleteTarget(null)}
+      />
+
+      {/* Person delete confirmation */}
+      <ConfirmDialog
+        open={isDeletePersonConfirmOpen}
+        title="Delete Family Member?"
+        message={`Are you sure you want to delete ${person?.displayName ?? [person?.firstName, person?.lastName].filter(Boolean).join(' ') ?? 'this person'}? This cannot be undone.`}
+        confirmLabel="Delete Permanently"
+        confirmColor="error"
+        onConfirm={() => {
+          if (person?.id) onDelete?.(person.id)
+          setIsDeletePersonConfirmOpen(false)
+        }}
+        onCancel={() => setIsDeletePersonConfirmOpen(false)}
+      />
+
       {/* Actions */}
       <Box sx={{ p: 3, backgroundColor: '#f6f3ee', display: 'flex', gap: 2, justifyContent: 'space-between' }}>
         <Box sx={{ display: 'flex', gap: 1 }}>
@@ -826,7 +1188,7 @@ export function PersonDetailModal({
             variant="outlined"
             color="error"
             startIcon={<DeleteIcon />}
-            onClick={() => person && person.id && onDelete?.(person.id)}
+            onClick={() => person && person.id && setIsDeletePersonConfirmOpen(true)}
             sx={{
               textTransform: 'none',
               borderRadius: 2,

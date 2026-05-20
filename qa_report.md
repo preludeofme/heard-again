@@ -166,6 +166,15 @@ Replace the native `confirm()` with a stylized Material UI Modal to maintain a c
 
 ## UX Recommendations
 
+### UX Flow Redundancies & Friction Points
+- **Redundant Clicks in Contribute Navigation (High):** On the `Family Legacy` dashboard, clicking "New Story" navigates the user to the `/contribute` landing page where they are forced to click "Begin" to finally access the story form. Clicking "New Story" should bypass the landing page and take the user directly to the contribution form (`/stories/contribute?subjectId=...`).
+- **Redundant "Full Profile" Buttons (Medium):** The Family Tree Relative Preview Dialog contains both a small "Full Profile" button at the top-right and a large "View Full Profile" button at the bottom. These perform the exact same navigation. Remove one to declutter the modal dialog.
+- **Mismatched Navigation Elements on Relative Profile (Medium):** The `/profile/[id]` page features a raw, unstyled chip labeled "Family Tree" next to the user's name that acts as a link. This duplicates the "View full family tree →" link at the bottom of the section. Consider removing the top chip or styling it clearly as a button with an icon.
+- **"Family Member Not Found" / Query Params Desync (Critical):** On the `/stories/contribute` page, selecting a different relative from the top-right header context selector updates the `personId` query parameter instead of `subjectId`, breaking the page and displaying a "Family member not found" error banner. The selector must correctly update the active target parameter for the current view.
+- **Cross-Space Context Leakage in Dropdown (Critical):** The "Recently viewed" relative list inside the header context selector leaks relatives belonging to other family spaces. Ensure this list is strictly filtered by the currently active `familyspaceId`.
+- **Leftover Technical Debug Text (Medium):** Remove the unstyled raw technical debug output (`secureContext: true | mediaDevices: true...`) displayed inside the user-facing instruction box on the `/stories/contribute` Audio tab.
+
+### General UX Improvements
 - **Onboarding:** Ensure users are smoothly guided into their first Family Space without manual refreshes.
 - **Empty States:** When a Family Space is empty, provide a clear, centralized "Add your first relative" call to action on the tree canvas instead of relying on sidebar buttons.
 - **Context Clarity:** Display the current Family Space name prominently near the family member selector to prevent confusion about which space is active.

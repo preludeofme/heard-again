@@ -27,7 +27,7 @@ interface VoiceLabPageProps {
     showRecordingModal: boolean
     trainingJob: { status?: string; modelId?: string } | null
     isTraining: boolean
-    trainingSamples: any[]
+    trainingSamples: File[]
     toggleRecordingModal: () => void
     uploadTrainingSample: (file: File) => Promise<void>
     removeTrainingSample: (index: number) => void
@@ -117,9 +117,9 @@ export function VoiceLabPage({ voiceModels, controller, autoCreate }: VoiceLabPa
         audioRef.current = null
       }
       audio.play()
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Synthesis failed:', err)
-      const errorMsg = err.message || ''
+      const errorMsg = err instanceof Error ? err.message : ''
       if (errorMsg.includes('consent') || errorMsg.includes('blocked')) {
         const person = selectedVoice?.person || selectedFamilyMember
         if (person) {

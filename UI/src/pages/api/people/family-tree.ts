@@ -128,9 +128,9 @@ export default apiHandler({
       }
     }
 
-    console.log(`[Family Tree API] Root selection: ${rootId}. Connections: ${familiesByPersonId.get(rootId)?.length || 0}`)
+    logger.debug({ rootId, connections: familiesByPersonId.get(rootId)?.length || 0 }, 'Family Tree API root selection')
     if (familiesByPersonId.has(rootId)) {
-      console.log(`[Family Tree API] Root connections detail:`, familiesByPersonId.get(rootId)?.map(f => ({ isChild: f.isChild, isParent: f.isParent, unitId: f.unit.id })))
+      logger.debug({ rootId, connections: familiesByPersonId.get(rootId)?.map(f => ({ isChild: f.isChild, isParent: f.isParent, unitId: f.unit.id })) }, 'Family Tree API root connections detail')
     }
 
     // 4. Balanced Traversal (Include full family units at each step)
@@ -147,11 +147,11 @@ export default apiHandler({
     const traverseUp = (id: string, currentDepth: number) => {
       if (currentDepth >= dUp) return
       const families = familiesByPersonId.get(id) || []
-      console.log(`[Family Tree API] traverseUp(id=${id}, depth=${currentDepth}) found ${families.length} families`)
+      logger.debug({ id, currentDepth, familyCount: families.length }, 'Family Tree API traverseUp')
       
       // Find families where this person is a child (i.e. their parents' unit)
       families.filter(f => f.isChild).forEach(f => {
-        console.log(`[Family Tree API] traverseUp - processing unit ${f.unit.id} where person is child. Unit has ${f.unit.parents.length} parents.`)
+        logger.debug({ unitId: f.unit.id, parentCount: f.unit.parents.length }, 'Family Tree API traverseUp processing unit where person is child')
         // Always include direct parents
         f.unit.parents.forEach((p: any) => {
           results.add(p.parentId)
@@ -292,10 +292,10 @@ export default apiHandler({
       }
     })
 
-    console.log(`[Family Tree API] Returning ${responseData.length} people. Root ID: ${rootId}`);
+    logger.debug({ count: responseData.length, rootId }, 'Family Tree API returning people')
     if (responseData.length > 1) {
-      console.log(`[Family Tree API] Sample edges for root:`, responseData.find(p => p.id === rootId)?.relationshipEdges);
-      console.log(`[Family Tree API] Sample edges for second person:`, responseData.find(p => p.id !== rootId)?.relationshipEdges);
+      logger.debug({ rootEdges: responseData.find(p => p.id === rootId)?.relationshipEdges }, 'Family Tree API sample edges for root')
+      logger.debug({ secondEdges: responseData.find(p => p.id !== rootId)?.relationshipEdges }, 'Family Tree API sample edges for second person')
     }
 
     return res.status(200).json({

@@ -543,7 +543,7 @@ Tasks are ordered by dependency sequence within each phase. Complete tasks in or
 
 > These are ongoing tasks, not one-shot. Work through them progressively.
 
-- [ ] **23.1 — Replace `console.*` calls in API routes with structured `logger.*`**
+- [x] **23.1 — Replace `console.*` calls in API routes with structured `logger.*`**
   - **Affected**: All files under `UI/src/pages/api/` that use `console.log/error/warn`
   - **Steps**:
     1. Find all occurrences: `grep -rn "console\." UI/src/pages/api --include="*.ts"`
@@ -552,7 +552,7 @@ Tasks are ordered by dependency sequence within each phase. Complete tasks in or
     4. Run `tsc --noEmit`
   - **Validation**: `grep -rn "console\." UI/src/pages/api` returns 0 results; structured logs appear in the pino output during a test request
 
-- [ ] **23.2 — Replace `console.*` calls in library files**
+- [x] **23.2 — Replace `console.*` calls in library files**
   - **Affected**: `UI/src/lib/security/security-headers.ts`, `UI/src/lib/security/file-validator.ts`, `UI/src/lib/auth.ts`, and other lib files
   - **Steps**:
     1. Find: `grep -rn "console\." UI/src/lib --include="*.ts"`
@@ -560,7 +560,7 @@ Tasks are ordered by dependency sequence within each phase. Complete tasks in or
   - **Validation**: `grep -rn "console\." UI/src/lib` returns 0 results
   - **Depends on**: 23.1 (do API routes first to establish the pattern)
 
-- [ ] **23.3 — Type the highest-risk `any` usages in API response sanitisers**
+- [x] **23.3 — Type the highest-risk `any` usages in API response sanitisers**
   - **Affected**: `UI/src/lib/api-helpers.ts` (`sanitizeAssetResponse(asset: any)`, `sanitizeStoryResponse(story: any)`)
   - **Steps**:
     1. Define explicit Prisma-derived or application types for `Asset`, `Story`, `Document` return shapes (or import from existing `@/types`)
@@ -568,7 +568,7 @@ Tasks are ordered by dependency sequence within each phase. Complete tasks in or
     3. Run `tsc --noEmit` and resolve any downstream type errors
   - **Validation**: `grep -n "any" UI/src/lib/api-helpers.ts` returns 0 untyped usages; `tsc --noEmit` passes clean
 
-- [ ] **23.4 — Type controller interfaces in `VoiceLabPage` and `DocumentsPage`**
+- [x] **23.4 — Type controller interfaces in `VoiceLabPage` and `DocumentsPage`**
   - **Affected**: `UI/src/components/pages/VoiceLabPage.tsx:26` (`trainingJob: any`), `UI/src/components/pages/DocumentsPage.tsx:19` (`selectedDocument: any`)
   - **Steps**:
     1. Define a `TrainingJob` interface in `@/types/voice.ts` and import it into `VoiceLabPage`
@@ -577,6 +577,63 @@ Tasks are ordered by dependency sequence within each phase. Complete tasks in or
     4. Run `tsc --noEmit`
   - **Validation**: `tsc --noEmit` passes; no `any` usages remain in these two component files
   - **Depends on**: 23.3
+
+---
+
+### 24. UX and Navigation Polish (From QA Report)
+
+- [x] **24.1 — Bypass Contribution Landing Page**
+  - **Affected**: `UI/src/components/pages/Dashboard.tsx`
+  - **Steps**:
+    1. Update "New Story" links on the dashboard to navigate directly to `/stories/contribute?subjectId=...` instead of the `/contribute` landing page.
+
+- [x] **24.2 — Remove Redundant "Full Profile" Button**
+  - **Affected**: `UI/src/components/modals/PersonDetailModal.tsx`
+  - **Steps**:
+    1. Remove one of the duplicate "Full Profile" buttons (either the top-right small button or the large button at the bottom) to declutter the modal.
+
+- [x] **24.3 — Clean up Navigation Elements on Relative Profile**
+  - **Affected**: `UI/src/pages/profile/[id].tsx`
+  - **Steps**:
+    1. Remove the unstyled "Family Tree" chip near the user's name, or style it as a clear button with an icon, to avoid duplicating the bottom link.
+
+- [x] **24.4 — Fix Query Params Desync on Contribution Page**
+  - **Affected**: `UI/src/pages/stories/contribute.tsx`
+  - **Steps**:
+    1. Ensure that selecting a different relative from the header context selector on the contribute page correctly updates the `subjectId` query parameter instead of `personId`.
+
+- [x] **24.5 — Remove Technical Debug Text**
+  - **Affected**: `UI/src/pages/stories/contribute.tsx` (Audio tab)
+  - **Steps**:
+    1. Remove the raw technical debug output (e.g., `secureContext: true | mediaDevices: true...`) from the user-facing instruction box.
+
+- [x] **24.6 — Align Sidebar Padding**
+  - **Affected**: Relative details sidebar (`UI/src/components/layout/Sidebar.tsx` or similar)
+  - **Steps**:
+    1. Ensure the spacing in the relative details sidebar aligns consistently with the main app padding.
+
+---
+
+### 25. Outstanding Functional Features (From QA Report)
+
+- [x] **25.1 — Verify Relative Deletion Flow**
+  - **Affected**: Family Tree Canvas, Relative Profiles
+  - **Steps**:
+    1. Verify that deleting a relative from the family tree and deleting a relative's profile works successfully (was previously blocked by visibility and API issues).
+
+- [x] **25.2 — Add Media to Relatives in Family Tree**
+  - **Affected**: Family Tree / Relative Profiles
+  - **Steps**:
+    1. Implement adding a profile photo to a relative in the family tree flow.
+    2. Implement adding an audio recording to a relative in the family tree flow.
+    3. Implement adding a document to a relative in the family tree flow.
+
+- [x] **25.3 — Relative Media Management (Videos, Audio, Documents)**
+  - **Affected**: Relative Profiles
+  - **Steps**:
+    1. Implement UI and API endpoints to view, edit, and delete a relative's videos.
+    2. Implement UI and API endpoints to view, edit, and delete a relative's audio recordings.
+    3. Implement UI and API endpoints to view, edit, and delete a relative's documents.
 
 ---
 

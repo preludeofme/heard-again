@@ -1,5 +1,14 @@
 /** @type {import('next').NextConfig} */
+const path = require('path')
 const isDev = process.env.NODE_ENV === 'development'
+
+// @trigger.dev/* packages are hoisted to the workspace root node_modules by npm
+// workspaces. Turbopack's module resolver doesn't always traverse parent dirs, so
+// we provide explicit aliases pointing to the resolved locations.
+const workspaceRoot = path.resolve(__dirname, '..')
+function workspacePkg(name) {
+  return path.resolve(workspaceRoot, 'node_modules', name)
+}
 
 const nextConfig = {
   reactStrictMode: true,
@@ -15,14 +24,30 @@ const nextConfig = {
     'bullmq',
     'ioredis',
     'sharp',
+    // GCP storage and its CJS deps are Node-only — traced via instrumentation but
+    // must not be bundled by Turbopack (inherits, duplexify, readable-stream etc.)
+    '@google-cloud/storage',
+    'duplexify',
+    'readable-stream',
+    'end-of-stream',
+    'stream-shift',
+    'teeny-request',
+    'google-auth-library',
   ],
+  // @trigger.dev/react-hooks is ESM-only and hoisted to workspace root
+  // node_modules — transpilePackages tells Turbopack to bundle it rather than
+  // try to resolve it as an external CJS module.
+  transpilePackages: ['@trigger.dev/react-hooks'],
   // @types/react v18/v19 dual-version conflicts from MUI internals; type-check runs in CI separately
   typescript: { ignoreBuildErrors: true },
   // standalone output is only for self-hosted Docker; Vercel manages its own output format
   ...(process.env.VERCEL !== '1' && { output: 'standalone' }),
-  // root: __dirname pins the project root for Turbopack so tsconfig paths resolve correctly
-  // in both local monorepo and Vercel's rootDirectory:UI deployment
-  turbopack: { root: __dirname },
+  // root set to the npm workspace root so Turbopack can find packages hoisted there
+  // (e.g. @trigger.dev/*, use-sync-external-store). tsconfig path aliases (@/*) are
+  // resolved via tsconfig.json which Next.js reads independently of this root.
+  turbopack: {
+    root: workspaceRoot,
+  },
   allowedDevOrigins: ['100.75.138.91', 'trubuck-design-ai-beast.stern-mulley.ts.net', 'localhost', '127.0.0.1'],
   images: {
     remotePatterns: [

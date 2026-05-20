@@ -40,6 +40,7 @@ import {
 } from '@mui/icons-material'
 import { PersonDetailModal } from '@/components/modals/PersonDetailModal'
 import { AddEditPersonModal, PersonFormData } from '@/components/modals/AddEditPersonModal'
+import { ConfirmDialog } from '@/components/modals/ConfirmDialog'
 import { FamilyMemberSearch, SearchableFamilyMember } from '@/components/search'
 import { fetchWithCSRFAndJSON, fetchWithCSRF } from '@/lib/api-client'
 import dynamic from 'next/dynamic'
@@ -168,6 +169,9 @@ export function FamilyTreePage({
   const [addEditMode, setAddEditMode] = useState<'create' | 'edit'>('create')
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
+  const [personToDeleteId, setPersonToDeleteId] = useState<string | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
   const [legendCollapsed, setLegendCollapsed] = useState(false)
   const [insightCollapsed, setInsightCollapsed] = useState(false)
   const [selectedSearchMemberId, setSelectedSearchMemberId] = useState<string | null>(null)
@@ -336,16 +340,26 @@ export function FamilyTreePage({
     [addEditMode, selectedPersonId],
   )
 
-  const handleDeletePerson = useCallback(async (personId: string) => {
+  const handleDeletePerson = useCallback((personId: string) => {
+    setPersonToDeleteId(personId)
+    setConfirmDeleteOpen(true)
+  }, [])
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (!personToDeleteId) return
+    setIsDeleting(true)
     try {
-      const res = await fetchWithCSRF(`/api/people/${personId}`, { method: 'DELETE' })
+      const res = await fetchWithCSRF(`/api/people/${personToDeleteId}`, { method: 'DELETE' })
       if (!res.ok) throw new Error('Failed to delete person')
+      setConfirmDeleteOpen(false)
       setDetailModalOpen(false)
       window.location.reload()
     } catch {
       // error is surfaced by modal state
+    } finally {
+      setIsDeleting(false)
     }
-  }, [])
+  }, [personToDeleteId])
 
   const handleAddStory = useCallback((personId: string) => {
     router.push(`/stories/contribute?subjectId=${personId}`)
@@ -1136,6 +1150,18 @@ export function FamilyTreePage({
           isSubmitting={isSubmitting}
         />
       )}
+
+      {/* Delete Person Confirmation */}
+      <ConfirmDialog
+        open={confirmDeleteOpen}
+        title="Delete Person"
+        message="This will permanently delete this person and all associated data. This action cannot be undone."
+        confirmLabel="Delete"
+        confirmColor="error"
+        isLoading={isDeleting}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setConfirmDeleteOpen(false)}
+      />
 
       {/* Mobile Search Modal */}
       <Dialog

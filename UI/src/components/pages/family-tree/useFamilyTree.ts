@@ -113,8 +113,8 @@ export function useFamilyTree(
           firstName: data.firstName,
           lastName: data.lastName,
           displayName: data.displayName,
-          birthDate: data.birthDate,
-          deathDate: data.deathDate,
+          birthDate: data.birthDate || null,
+          deathDate: data.deathDate || null,
           bio: data.bio,
           personType: data.personType,
         })
@@ -127,8 +127,8 @@ export function useFamilyTree(
           firstName: data.firstName,
           lastName: data.lastName,
           displayName: data.displayName,
-          birthDate: data.birthDate,
-          deathDate: data.deathDate,
+          birthDate: data.birthDate || null,
+          deathDate: data.deathDate || null,
           bio: data.bio,
           personType: data.personType,
         }, { method: 'PUT' })

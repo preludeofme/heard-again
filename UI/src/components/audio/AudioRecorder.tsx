@@ -11,9 +11,6 @@ import { VoiceCloneScript } from './VoiceCloneScript'
 
 type MicPermission = 'checking' | 'prompt' | 'granted' | 'denied' | 'unsupported'
 
-// Visible only in development — helps diagnose permission state on real devices
-const IS_DEV = process.env.NODE_ENV === 'development'
-
 interface AudioRecorderProps {
   onRecordingComplete?: (audioBlob: Blob, duration: number) => void
   onCancel?: () => void
@@ -311,15 +308,6 @@ export function AudioRecorder({
             </Typography>
           </Alert>
 
-          {/* Dev diagnostics — only in development */}
-          {IS_DEV && rawErrorName && (
-            <Alert severity="error" sx={{ mb: 1.5, textAlign: 'left' }}>
-              <Typography variant="caption" sx={{ fontFamily: 'monospace', wordBreak: 'break-all' }}>
-                {rawErrorName}
-              </Typography>
-            </Alert>
-          )}
-
           <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', mt: 2 }}>
             <Button
               size="small"
@@ -370,16 +358,6 @@ export function AudioRecorder({
           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 3, maxWidth: 280, mx: 'auto' }}>
             Your recordings are only used to create a voice profile and are never shared.
           </Typography>
-
-          {/* Dev diagnostics */}
-          {IS_DEV && (
-            <Alert severity="info" sx={{ mb: 2, textAlign: 'left' }}>
-              <Typography variant="caption" sx={{ fontFamily: 'monospace' }}>
-                secureContext: {String(window.isSecureContext)} | mediaDevices: {String(!!navigator.mediaDevices)} | permState: {micPermission}
-                {rawErrorName ? ` | lastError: ${rawErrorName}` : ''}
-              </Typography>
-            </Alert>
-          )}
 
           {/* HTTPS warning — shown when mediaDevices is blocked due to insecure context */}
           {isInsecureContext && (

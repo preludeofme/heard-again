@@ -374,30 +374,6 @@ export default function PersonProfilePage() {
                 </Typography>
               )}
 
-              {/* Action buttons */}
-              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mt: 3.5, justifyContent: { xs: 'center', md: 'flex-start' } }}>
-                <Box
-                  component={'div' as React.ElementType}
-                  onClick={() => router.push(`/family-tree?personId=${personId}`)}
-                  sx={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    px: 3.5,
-                    py: 1.25,
-                    bgcolor: ProfileColors.secondaryContainer,
-                    color: ProfileColors.onSecondaryContainer,
-                    borderRadius: '9999px',
-                    fontFamily: 'var(--font-manrope), sans-serif',
-                    fontWeight: 600,
-                    fontSize: '0.95rem',
-                    cursor: 'pointer',
-                    transition: 'background 0.2s',
-                    '&:hover': { bgcolor: '#b7cacd' },
-                  }}
-                >
-                  Family Tree
-                </Box>
-              </Box>
             </Box>
           </Box>
 
