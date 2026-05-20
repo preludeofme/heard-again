@@ -1,22 +1,15 @@
 #!/bin/bash
 set -e
 
-echo "Preparing Prisma schema for Vercel build..."
-mkdir -p prisma
-cp ../prisma/schema.prisma ./prisma/schema.prisma
-cp -r ../prisma/migrations ./prisma/migrations
-
-echo "Removing extraneous generators..."
-# Use a different delimiter for sed since paths might contain slashes (though unlikely here)
-# or just escape properly. Here we use standard / as it's safe for these patterns.
-sed -i '/generator client_ui/,/}/d' prisma/schema.prisma
-sed -i '/generator client_chat/,/}/d' prisma/schema.prisma
-
 echo "Generating Prisma client..."
-npx --yes prisma generate
+# Use the client_ui generator — it has an explicit output path
+# (../UI/node_modules/.prisma/client relative to the root schema) which avoids
+# the workspace-hoisting issue where Prisma can't resolve @prisma/client via
+# require.resolve when @prisma/client is in the workspace-root node_modules.
+npx --yes prisma generate --generator client_ui --schema=../prisma/schema.prisma
 
 echo "Applying database migrations..."
-npx --yes prisma migrate deploy
+npx --yes prisma migrate deploy --schema=../prisma/schema.prisma
 
 echo "Building Next.js app..."
 npm run build
