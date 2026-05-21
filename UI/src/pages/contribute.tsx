@@ -59,7 +59,9 @@ export default function ContributePage() {
       description: 'Speak from the heart. Capture a story, message, or favorite phrase in their own voice.',
       icon: <MicIcon sx={{ fontSize: 32 }} />,
       accent: ProfileColors.secondaryContainer,
-      href: '/legacy?lens=voices',
+      href: selectedFamilyMember?.id
+        ? `/stories/contribute?subjectId=${selectedFamilyMember.id}&storyType=voice`
+        : '/stories/contribute?storyType=voice',
     },
     {
       key: 'keepsake',

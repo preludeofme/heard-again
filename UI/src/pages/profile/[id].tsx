@@ -133,6 +133,19 @@ export default function PersonProfilePage() {
   const [dragScrollLeft, setDragScrollLeft] = useState(0)
   const [hasDragged, setHasDragged] = useState(false)
 
+  const refreshDocuments = () => {
+    if (!personId) return
+    fetch(`/api/documents?personId=${personId}&limit=4`, { credentials: 'include' })
+      .then(r => r.json())
+      .then(dData => {
+        if (dData.success) {
+          setDocuments(dData.data || [])
+          setDocTotal(dData.pagination?.total || 0)
+        }
+      })
+      .catch(() => {})
+  }
+
   useEffect(() => {
     if (!personId) return
     let active = true
@@ -444,6 +457,7 @@ export default function PersonProfilePage() {
                 documents={documents}
                 docTotal={docTotal}
                 personId={personId}
+                onUploadSuccess={refreshDocuments}
               />
             </Box>
           </Box>

@@ -59,6 +59,7 @@ async function getDocuments(req: NextApiRequest, res: NextApiResponse, familyspa
       voiceProfileSources: { none: {} },
       modelArtifactFor: { none: {} },
       generatedAudioForStories: { none: {} },
+      exportOutputs: { none: {} },
     },
   }
 

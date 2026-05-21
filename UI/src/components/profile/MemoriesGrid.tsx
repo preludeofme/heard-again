@@ -3,6 +3,7 @@ import { Box, Typography } from '@mui/material'
 import Link from 'next/link'
 import { ProfileColors } from './ProfileConstants'
 import { DocumentViewer } from '@/components/viewers/DocumentViewer'
+import { FileUpload } from '@/components/upload/FileUpload'
 
 interface DocItem {
   id: string
@@ -17,6 +18,7 @@ interface MemoriesGridProps {
   docTotal: number
   personId?: string
   isGlobal?: boolean
+  onUploadSuccess?: () => void
 }
 
 export function MemoriesGrid({
@@ -24,6 +26,7 @@ export function MemoriesGrid({
   docTotal,
   personId,
   isGlobal = false,
+  onUploadSuccess,
 }: MemoriesGridProps) {
   const [viewerDoc, setViewerDoc] = useState<DocItem | null>(null)
 
@@ -36,7 +39,7 @@ export function MemoriesGrid({
               {isGlobal ? 'The Family Story' : 'The Keepsake Drawer'}
             </Typography>
             <Typography sx={{ fontFamily: 'var(--font-manrope), sans-serif', fontSize: '0.875rem', color: ProfileColors.onSurfaceVariant, mt: 0.5 }}>
-              Scanned letters, blueprints, and physical memories.
+              Scanned letters, pictures, news articles, and more
             </Typography>
           </Box>
           {docTotal > 4 && (
@@ -55,13 +58,28 @@ export function MemoriesGrid({
             <Typography sx={{ color: ProfileColors.onSurfaceVariant, fontFamily: 'var(--font-newsreader), serif', fontSize: '1.1rem', fontStyle: 'italic' }}>
               {isGlobal ? 'No keepsakes here yet.' : 'No keepsakes here yet.'}
             </Typography>
-            <Box
-              component={Link}
-              href={isGlobal ? '/legacy?lens=keepsakes' : personId ? `/legacy?lens=keepsakes&personId=${personId}` : '/legacy?lens=keepsakes'}
-              sx={{ display: 'inline-block', mt: 2, color: ProfileColors.primary, textDecoration: 'none', fontFamily: 'var(--font-manrope), sans-serif', fontWeight: 600, fontSize: '0.9rem', borderBottom: `2px solid ${ProfileColors.primary}35`, pb: 0.25 }}
-            >
-              Upload documents →
-            </Box>
+            {onUploadSuccess ? (
+              <FileUpload
+                onUploadSuccess={onUploadSuccess}
+                accept="image/*,application/pdf,audio/*,video/*"
+                maxSize={100 * 1024 * 1024}
+                personId={personId}
+              >
+                <Box
+                  sx={{ display: 'inline-block', mt: 2, color: ProfileColors.primary, textDecoration: 'none', fontFamily: 'var(--font-manrope), sans-serif', fontWeight: 600, fontSize: '0.9rem', borderBottom: `2px solid ${ProfileColors.primary}35`, pb: 0.25, cursor: 'pointer' }}
+                >
+                  Upload documents →
+                </Box>
+              </FileUpload>
+            ) : (
+              <Box
+                component={Link}
+                href={isGlobal ? '/legacy?lens=keepsakes' : personId ? `/legacy?lens=keepsakes&personId=${personId}` : '/legacy?lens=keepsakes'}
+                sx={{ display: 'inline-block', mt: 2, color: ProfileColors.primary, textDecoration: 'none', fontFamily: 'var(--font-manrope), sans-serif', fontWeight: 600, fontSize: '0.9rem', borderBottom: `2px solid ${ProfileColors.primary}35`, pb: 0.25 }}
+              >
+                Upload documents →
+              </Box>
+            )}
           </Box>
         ) : (
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(4, 1fr)' }, gap: { xs: 2, md: 3 } }}>

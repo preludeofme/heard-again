@@ -96,9 +96,11 @@ function MemberRow({ member, isSelected, onSelect }: MemberRowProps) {
 interface MemberSwitcherFlyoutProps {
   anchorEl: HTMLElement | null
   onClose: () => void
+  /** When provided, called instead of the default context-set + navigate behavior */
+  onMemberSelect?: (member: PersonOption) => void
 }
 
-export function MemberSwitcherFlyout({ anchorEl, onClose }: MemberSwitcherFlyoutProps) {
+export function MemberSwitcherFlyout({ anchorEl, onClose, onMemberSelect }: MemberSwitcherFlyoutProps) {
   const router = useRouter()
   const { selectedFamilyMember, recentlyViewedMembers, setSelectedFamilyMember, clearSelectedFamilyMember } =
     useSelectedFamilyMember()
@@ -135,6 +137,12 @@ export function MemberSwitcherFlyout({ anchorEl, onClose }: MemberSwitcherFlyout
 
   const handleSelect = useCallback(
     (member: PersonOption | SelectedFamilyMember) => {
+      if (onMemberSelect) {
+        onMemberSelect(member as PersonOption)
+        onClose()
+        return
+      }
+
       setSelectedFamilyMember({
         id: member.id,
         firstName: (member as PersonOption).firstName,
@@ -142,7 +150,7 @@ export function MemberSwitcherFlyout({ anchorEl, onClose }: MemberSwitcherFlyout
         displayName: (member as PersonOption).displayName,
         avatarUrl: (member as PersonOption).avatarUrl,
       })
-      
+
       onClose()
 
       // Auto-navigate to profile, unless on family-tree
@@ -150,7 +158,7 @@ export function MemberSwitcherFlyout({ anchorEl, onClose }: MemberSwitcherFlyout
         router.push(`/profile/${member.id}`)
       }
     },
-    [setSelectedFamilyMember, onClose, router],
+    [setSelectedFamilyMember, onClose, router, onMemberSelect],
   )
 
   const handleClear = useCallback(() => {
@@ -163,9 +171,10 @@ export function MemberSwitcherFlyout({ anchorEl, onClose }: MemberSwitcherFlyout
     memberLabel(m).toLowerCase().includes(lowerQuery),
   )
 
-  // Recent members that aren't the currently selected one — shown only when not searching
+  // Recent members scoped to the current familyspace — exclude selected and any cross-space leftovers
+  const allMemberIds = new Set(allMembers.map((m) => m.id))
   const recentToShow = recentlyViewedMembers.filter(
-    (r) => r.id !== selectedFamilyMember?.id,
+    (r) => r.id !== selectedFamilyMember?.id && (!isLoading && allMembers.length > 0 ? allMemberIds.has(r.id) : true),
   )
 
   return (

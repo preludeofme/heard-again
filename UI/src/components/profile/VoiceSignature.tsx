@@ -265,11 +265,11 @@ export function VoiceSignature({
           <Typography sx={{ fontFamily: 'var(--font-newsreader), serif', fontStyle: 'italic', fontSize: '1.05rem', color: ProfileColors.primary, textAlign: 'center', lineHeight: 1.6 }}>
             &ldquo;Preserving the unique cadence and character of every family voice.&rdquo;
           </Typography>
-        ) : bio ? (
+        ) : hasAnyVoice && bio ? (
           <Typography sx={{ fontFamily: 'var(--font-newsreader), serif', fontStyle: 'italic', fontSize: '1.05rem', color: ProfileColors.primary, textAlign: 'center', lineHeight: 1.6 }}>
             &ldquo;{bio.length > 130 ? bio.substring(0, 130).trimEnd() + '\u2026' : bio}&rdquo;
           </Typography>
-        ) : (
+        ) : !hasAnyVoice ? (
           <Box sx={{ textAlign: 'center' }}>
             <Box
               component={Link}
@@ -279,7 +279,7 @@ export function VoiceSignature({
               + Create Voice Profile in Voice Lab
             </Box>
           </Box>
-        )}
+        ) : null}
       </Box>
     </Box>
   )

@@ -11,7 +11,6 @@ import {
   GlobalStyles,
   useTheme,
   useMediaQuery,
-  Dialog,
   CircularProgress,
 } from '@mui/material'
 import {
@@ -20,9 +19,6 @@ import {
   RestartAlt,
   Add,
   AutoFixHigh,
-  PersonAdd,
-  NearMe,
-  PanTool,
   Fullscreen,
   FullscreenExit,
   ExpandMore,
@@ -33,7 +29,6 @@ import {
   Download,
   AccountCircle,
   Search,
-  Close,
   AccountTree,
   Image as ImageIcon,
   PictureAsPdf,
@@ -41,7 +36,7 @@ import {
 import { PersonDetailModal } from '@/components/modals/PersonDetailModal'
 import { AddEditPersonModal, PersonFormData } from '@/components/modals/AddEditPersonModal'
 import { ConfirmDialog } from '@/components/modals/ConfirmDialog'
-import { FamilyMemberSearch, SearchableFamilyMember } from '@/components/search'
+import { MemberSwitcherFlyout } from '@/components/layout/MemberSwitcherFlyout'
 import { fetchWithCSRFAndJSON, fetchWithCSRF } from '@/lib/api-client'
 import dynamic from 'next/dynamic'
 import type { ReactFlowTreeCanvasHandle } from '@/components/pages/family-tree/xyflow/ReactFlowTreeCanvas'
@@ -174,11 +169,8 @@ export function FamilyTreePage({
   const [isDeleting, setIsDeleting] = useState(false)
   const [legendCollapsed, setLegendCollapsed] = useState(false)
   const [insightCollapsed, setInsightCollapsed] = useState(false)
-  const [selectedSearchMemberId, setSelectedSearchMemberId] = useState<string | null>(null)
   const [isPanMode] = useState(true)
-  const [isSearching, setIsSearching] = useState(false)
-  const [searchResults, setSearchResults] = useState<any[]>([])
-  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false)
+  const [searchAnchorEl, setSearchAnchorEl] = useState<HTMLElement | null>(null)
 
   // Data states
   const [personDetail, setPersonDetail] = useState<Record<string, unknown> | null>(null)
@@ -188,37 +180,20 @@ export function FamilyTreePage({
   const [isLoadingDetail, setIsLoadingDetail] = useState(false)
   const [detailError, setDetailError] = useState<string | null>(null)
 
-  // Search overlay members — derived from search results if searching, else searchablePeople, else rawPeople
-  const searchableMembers = useMemo<SearchableFamilyMember[]>(() => {
-    const source = searchResults.length > 0 ? searchResults : (searchablePeople.length > 0 ? searchablePeople : rawPeople)
-    return source.map((p) => ({
-      id: p.id,
-      name: p.displayName || `${p.firstName}${p.lastName ? ' ' + p.lastName : ''}`,
-      relationship: 'Family Member',
-      avatar: p.avatarUrl || (p as any).avatar || '',
-    }))
-  }, [searchResults, searchablePeople, rawPeople])
-
   // ─── Handlers ───────────────────────────────────────────────────────────────
 
-  const handleRemoteSearch = useCallback(async (query: string) => {
-    if (!query.trim()) {
-      setSearchResults([])
-      return
-    }
-    setIsSearching(true)
-    try {
-      const res = await fetch(`/api/people?search=${encodeURIComponent(query)}&limit=20`, { credentials: 'include' })
-      const data = await res.json()
-      if (data.success && data.data) {
-        setSearchResults(data.data)
+  const handleTreeMemberSelect = useCallback(
+    (member: { id: string }) => {
+      const isCurrentlyVisible = rawPeople.some(p => p.id === member.id)
+      if (isCurrentlyVisible) {
+        canvasRef.current?.centerOnNode(member.id, { zoom: 1 })
+      } else {
+        onSetRoot?.(member.id)
       }
-    } catch (err) {
-      console.error('Remote search failed:', err)
-    } finally {
-      setIsSearching(false)
-    }
-  }, [])
+      setSearchAnchorEl(null)
+    },
+    [rawPeople, onSetRoot],
+  )
 
   const handleFindMe = useCallback(() => {
     if (effectiveRootId) {
@@ -561,51 +536,12 @@ export function FamilyTreePage({
               zIndex: 100, // Ensure search results are above canvas
             }}
           >
-            {isMobile ? (
-              <IconButton 
-                onClick={() => setIsMobileSearchOpen(true)}
-                sx={{ color: 'primary.main', mr: 0.5 }}
-              >
-                <Search />
-              </IconButton>
-            ) : (
-              <Box sx={{ flex: 1, mr: 1, minWidth: 0 }}>
-                <FamilyMemberSearch
-                  members={searchableMembers}
-                  selectedId={selectedSearchMemberId}
-                  onSelect={(member) => {
-                    setSelectedSearchMemberId(member?.id ?? null)
-                    if (member) {
-                      // If already in the current tree view, just center on them
-                      const isCurrentlyVisible = rawPeople.some(p => p.id === member.id)
-                      
-                      if (isCurrentlyVisible) {
-                        canvasRef.current?.centerOnNode(member.id, { zoom: 1 })
-                      } else {
-                        // Otherwise, fetch a new tree focused on them
-                        onSetRoot?.(member.id)
-                        // The tree will re-render and fit view automatically when data arrives
-                      }
-                    }
-                  }}
-                  onSearch={handleRemoteSearch}
-                  loading={isSearching}
-                  placeholder="Search family..."
-                  title="Search"
-                  showSelectedChip={false}
-                  allowClear={true}
-                  sx={{
-                    p: 0,
-                    bgcolor: 'transparent',
-                    boxShadow: 'none',
-                    backdropFilter: 'none',
-                    '& .MuiBox-root': { mt: 0 },
-                    '& input': { py: 1, bgcolor: 'transparent' },
-                    '& > .MuiBox-root:first-of-type': { display: 'none' } // Hide header
-                  }}
-                />
-              </Box>
-            )}
+            <IconButton
+              onClick={(e) => setSearchAnchorEl(e.currentTarget)}
+              sx={{ color: 'primary.main', mr: isMobile ? 0.5 : 0 }}
+            >
+              <Search />
+            </IconButton>
 
             <Divider orientation="vertical" flexItem sx={{ mx: 0.5, borderColor: 'rgba(208, 227, 230, 0.6)' }} />
             
@@ -1163,45 +1099,12 @@ export function FamilyTreePage({
         onCancel={() => setConfirmDeleteOpen(false)}
       />
 
-      {/* Mobile Search Modal */}
-      <Dialog
-        fullScreen={isMobile}
-        open={isMobileSearchOpen}
-        onClose={() => setIsMobileSearchOpen(false)}
-        PaperProps={{
-          sx: { bgcolor: 'rgba(246, 243, 238, 0.98)', backdropFilter: 'blur(10px)' }
-        }}
-      >
-        <Box sx={{ p: 2 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-            <IconButton onClick={() => setIsMobileSearchOpen(false)}>
-              <Close />
-            </IconButton>
-          </Box>
-          <FamilyMemberSearch
-            members={searchableMembers}
-            selectedId={selectedSearchMemberId}
-            onSelect={(member) => {
-              setSelectedSearchMemberId(member?.id ?? null)
-              if (member) {
-                const isCurrentlyVisible = rawPeople.some(p => p.id === member.id)
-                if (isCurrentlyVisible) {
-                  canvasRef.current?.centerOnNode(member.id, { zoom: 1 })
-                } else {
-                  onSetRoot?.(member.id)
-                }
-                setIsMobileSearchOpen(false)
-              }
-            }}
-            onSearch={handleRemoteSearch}
-            loading={isSearching}
-            placeholder="Search family member..."
-            title="Family Search"
-            showSelectedChip={false}
-            allowClear={true}
-          />
-        </Box>
-      </Dialog>
+      {/* Family Member Search Flyout */}
+      <MemberSwitcherFlyout
+        anchorEl={searchAnchorEl}
+        onClose={() => setSearchAnchorEl(null)}
+        onMemberSelect={handleTreeMemberSelect}
+      />
     </Box>
     </>
   )

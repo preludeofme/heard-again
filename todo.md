@@ -1,34 +1,50 @@
 ## Misc Updates
 
-[ ] familyspace/new - when user clicks create new familyspace it routes to a 404 page
-    [ ] the 404 has a go home button but it doesn't route the user back to the home page
-[ ] narrative timeline
-    [ ] the paper rendering looks good and the year is in the right place, but we need to move the text down as it's overlapping the year
-[ ] Recent users drop down shows recent users from other profiles/userspaces. It gives you a 404 error but it shouldn't even show them in the list
-[ ] Keepsake Drawer
-    [ ] change the title wording from "Scanned letters, blueprints, and physical memories. to "Scanned letters, pictures, news articles, and more"
-    [ ] When the user clicks the Upload  it routes them to the family space legacy page on the keepsakes and heirlooms instead of for the specific profile/user upload page.
-[ ] profile page
-    [ ] i'm on https://trubuck-design-ai-beast.stern-mulley.ts.net:4777/profile/10303510-70af-45fe-9403-853dcf83e39d and the voice signature button is missing so there's not a way to add a new voice model.
-        [ ] looks like the description of the person is being displayed in the voice signature area 
-[ ] Legacy page / keepsakes
-    [ ] the export zip is showing in the letters list on the keepsakes (should not be included)
-[ ] family search 
-    [ ]  There are multiple search components and i want to combine them into a single component to be reused throughout the app. 
-    [ ] The search method on the family tree actually works as i'm wanting it, however i like the header search visually with the recent users drop down. So we'll need to combine these components. The search method from the family tree but use the ui from the header search. 
-        [ ] Replace the search component on the family tree with the new combined component.
-        [ ] Replace the search component in the header with the new combined component.
-        [ ] Replace the search component on the stories contribute page with the new combined component.
+[x] familyspace/new - when user clicks create new familyspace it routes to a 404 page
+    [x] created /familyspace/new page with creation form and switch+redirect flow
+    [ ] feedback: I tested the new page/flow and it does create the new family space however it doesn't switch to it after you create it. once created it should automatically switch to the new family space. 
+    [ ] feedback: when clicking the new family from the dropdown in the header received an error "Failed to switch familyspace"
+    [ ] feedback: Need to ensure that with the new family space, the user is generated as the first member of the family for the family tree. 
+[x] narrative timeline
+    [x] moved text down (pt: 4 → pt: 10 / 80px) so it no longer overlaps the year glyph
+[x] Recent users drop down shows recent users from other profiles/userspaces. It gives you a 404 error but it shouldn't even show them in the list
+    [x] filter recentToShow against allMembers so cross-space entries are excluded
+[x] Keepsake Drawer
+    [x] changed wording to "Scanned letters, pictures, news articles, and more"
+    [x] Upload on profile Memories tab now opens inline file picker with personId (no navigation away)
+[x] profile page
+    [x] voice signature "Create Voice Profile" link always shown when no voice profiles exist (regardless of bio)
+    [x] bio shown as quote only when voice profiles exist
+    [ ] Need to update on the profile it shows "Timeline" and also "Narrative" which also needs filters for events, stories, milestones (similar to the family profile Legacy page)
+[x] Legacy page / keepsakes
+    [x] export zip excluded from document list via exportOutputs: { none: {} } filter in documents API
+    [ ] filter out familyspace-export-1778332017632.ged GED files and gedcom files
+
+[x] Contribute 
+    [x] "Record a Voice Memory" now routes to /stories/contribute?storyType=voice (with subjectId if person selected)
+    [x] stories/contribute page reads storyType=voice param and defaults to audio recorder tab
+
+[x] family search 
+    [x] Unified MemberSwitcherFlyout used as single search component across the app
+    [x] Replace the search component on the family tree with the new combined component.
+        [x] Desktop toolbar: search icon opens MemberSwitcherFlyout (anchored to button)
+        [x] Mobile: same search icon opens MemberSwitcherFlyout (replaces full-screen dialog)
+        [x] onMemberSelect centers on node if visible, else sets as new tree root
+    [x] Replace the search component on the stories contribute page with the new combined component.
+        [x] "Who is this about?" screen uses MemberSwitcherFlyout flyout instead of FamilyMemberSelect
+    [x] Header already uses MemberSwitcherFlyout natively — no change needed
+    [ ] feedback: The new combined member search component is not working on the header. it doesn't find any members when i start typing a name. it should find multiple family members for "Ryan" however it doesn't find any
+[ ] Need to create an Invite page to invitte a new member to the family space. should also allow for customization on their permissions so if it's just a family friend it's only ability is to create stories, and only see public/friends memories etc.  but family members can see everything
+[ ] Need to build out the schema to allow for users to select permissions on stories so it's public, family only, friends & family
+    [ ] Need to add the option to the ui on stories so you can set it when creating stories or editing stories
 [ ] Gedcom import 
     [ ] Ensure that our schema and parsing works with v7 gedcom files. review /home/trubuck-design/Projects/Personal/heard-again/docs/archived-dev-docs/gedcom7-rc.pdf
     [ ] Make sure notes/sources/etc that are not person specific info is logged appropriately such as stories/narratives etc. 
 [ ] Family Tree
     [ ] Need to make a visual distinction between blood family and in laws. so that when looking at a large tree you can see who is actually blood family and who married in, especially when looking at a line that has a lot of members in the same line (i.e. 5 siblings with 5 spouses, the spouses should have a different line style or color to distinguish them from blood family.)
-    [ ] Expand button - can you confirm what function that is filling? 
+    [x] Expand button - "Load All" button with AccountTree icon that loads the entire familyspace tree (all members), not just the ancestor/descendant view
+
+[ ] Timeline
+    [x] Redesigned horizontal timeline layout — replaced large empty colored square with compact companion panel (person avatars + event type badge), alternating above/below the center dot
 [ ] PNG Export
     [ ] need to finish building out the png export 
-[ ] Timeline
-    [ ] The timeline view on the https://trubuck-design-ai-beast.stern-mulley.ts.net:4777/legacy?lens=journey there needs to have some sort of redesign as there is a large square of color that is empty across from events such as births and marriages. Maybe look for another use for that space to make it a cleaner look or visually appealing. 
-[ ] Contribute 
-    [ ] on the contribution page it shows "Record a Voice Memory" and that should take you to the add story page with tthe voice recording. but instead it takes you to the voice https://trubuck-design-ai-beast.stern-mulley.ts.net:4777/legacy?lens=voices instead of https://trubuck-design-ai-beast.stern-mulley.ts.net:4777/stories/contribute and if you have a person alreaady selected it should take you to their contribute page: https://trubuck-design-ai-beast.stern-mulley.ts.net:4777/stories/contribute?subjectId=4983f542-ffcf-47eb-b7af-6609d4dadf54 but need tto have it go to the voice recording vs the text memory entry. So might need to add a url parameter and default the story type accordingly. 
-    

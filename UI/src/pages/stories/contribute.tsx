@@ -16,7 +16,7 @@ import {
 } from '@mui/icons-material'
 import { Layout } from '@/components/layout/Layout'
 import { AudioRecorder } from '@/components/audio/AudioRecorder'
-import { FamilyMemberSelect } from '@/components/search'
+import { MemberSwitcherFlyout } from '@/components/layout/MemberSwitcherFlyout'
 import { RichTextEditor } from '@/components/editor/RichTextEditor'
 
 const RELATIONSHIP_OPTIONS = [
@@ -37,12 +37,14 @@ const RELATIONSHIP_OPTIONS = [
 export default function PublicContributePage() {
   const router = useRouter()
   const { data: session, status } = useSession()
-  const { subjectId } = router.query
+  const { subjectId, storyType: storyTypeParam } = router.query
+  const storyTypeValue = Array.isArray(storyTypeParam) ? storyTypeParam[0] : storyTypeParam
 
   const [subject, setSubject] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  
+  const [searchAnchorEl, setSearchAnchorEl] = useState<HTMLElement | null>(null)
+
   const [storyTitle, setStoryTitle] = useState('')
   const [storyContent, setStoryContent] = useState('')
   const [storyDate, setStoryDate] = useState('')
@@ -51,6 +53,10 @@ export default function PublicContributePage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
   const [showAudio, setShowAudio] = useState(false)
+
+  useEffect(() => {
+    if (storyTypeValue === 'voice') setShowAudio(true)
+  }, [storyTypeValue])
 
   useEffect(() => {
     if (!subjectId) return
@@ -183,15 +189,21 @@ export default function PublicContributePage() {
           </Typography>
           
           <Box sx={{ textAlign: 'left', mb: 4 }}>
-            <FamilyMemberSelect
-              value={null}
-              onChange={(id) => {
-                if (id) {
-                  router.push(`/stories/contribute?subjectId=${id}`, undefined, { shallow: true })
-                }
+            <Button
+              variant="outlined"
+              fullWidth
+              onClick={(e) => setSearchAnchorEl(e.currentTarget)}
+              sx={{ borderRadius: 2, color: '#16334a', borderColor: '#16334a', py: 1.5, fontSize: '1rem' }}
+            >
+              Search for a family member…
+            </Button>
+            <MemberSwitcherFlyout
+              anchorEl={searchAnchorEl}
+              onClose={() => setSearchAnchorEl(null)}
+              onMemberSelect={(member) => {
+                setSearchAnchorEl(null)
+                router.push(`/stories/contribute?subjectId=${member.id}`, undefined, { shallow: true })
               }}
-              label="Search family member"
-              placeholder="Start typing a name..."
             />
           </Box>
 

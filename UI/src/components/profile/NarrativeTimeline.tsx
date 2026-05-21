@@ -166,7 +166,7 @@ export function NarrativeTimeline({
                             'repeating-linear-gradient(to bottom, transparent 0, transparent 23px, rgba(0,0,0,0.055) 23px, rgba(0,0,0,0.055) 24px)',
                           backgroundPosition: '0 32px',
                           px: 3,
-                          pt: 4,
+                          pt: 10,
                           pb: 2,
                           overflow: 'hidden',
                         }}

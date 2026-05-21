@@ -688,122 +688,118 @@ export function TimelinePageComponent({ events, isLoading, hasMore, onLoadMore, 
               const Icon = config.icon
               const isEven = index % 2 === 0
 
+              const mainCard = (
+                <Card
+                  className="event-card"
+                  sx={{
+                    width: '100%',
+                    borderRadius: 5,
+                    bgcolor: ProfileColors.surfaceContainerLowest,
+                    boxShadow: '0 4px 24px rgba(0,0,0,0.04)',
+                    transition: 'transform 0.4s ease, box-shadow 0.3s',
+                    border: `1px solid ${ProfileColors.outlineVariant}15`,
+                    overflow: 'hidden',
+                    '&:hover': {
+                      transform: isEven ? 'translateY(-6px)' : 'translateY(6px)',
+                      boxShadow: '0 12px 40px rgba(0,0,0,0.09)',
+                    },
+                  }}
+                >
+                  {event.metadata?.imageAssetId && (
+                    <Box sx={{ height: 120, width: '100%' }}>
+                      <Box
+                        component="img"
+                        src={`/api/assets/serve/${event.metadata.imageAssetId}`}
+                        alt={event.title}
+                        sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                    </Box>
+                  )}
+                  <CardContent sx={{ p: 3 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, alignItems: 'center' }}>
+                      <Typography sx={{ color: config.color, fontWeight: 700, fontSize: '0.62rem', textTransform: 'uppercase', letterSpacing: 1.5 }}>
+                        {formatEventDate(event.date, event.datePrecision)}
+                      </Typography>
+                      <Chip label={config.label} size="small" sx={{ height: 18, fontSize: '0.6rem', fontWeight: 700, bgcolor: config.color + '15', color: config.color, border: 'none' }} />
+                    </Box>
+                    <Typography className="serif-font" sx={{ color: ProfileColors.primary, fontWeight: 700, fontSize: '1.05rem', lineHeight: 1.25, mb: 0.75 }}>
+                      {event.title}
+                    </Typography>
+                    {event.description && (
+                      <Typography sx={{ color: ProfileColors.onSurfaceVariant, lineHeight: 1.6, fontFamily: 'var(--font-newsreader), serif', fontSize: '0.85rem', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                        {event.type === 'story' ? stripHtml(event.description) : event.description}
+                      </Typography>
+                    )}
+                  </CardContent>
+                </Card>
+              )
+
+              const companionPanel = (
+                <Box
+                  sx={{
+                    width: '100%',
+                    borderRadius: 5,
+                    bgcolor: ProfileColors.surfaceContainerLow,
+                    border: `1px solid ${ProfileColors.outlineVariant}10`,
+                    p: 2.5,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 1.5,
+                    minHeight: 100,
+                  }}
+                >
+                  <Box sx={{ display: 'flex', gap: -0.5 }}>
+                    {event.people.slice(0, 3).map((person) => (
+                      <Avatar
+                        key={person.id}
+                        src={person.avatarAssetId ? `/api/assets/serve/${person.avatarAssetId}` : undefined}
+                        sx={{ width: 32, height: 32, border: '2px solid #fff', boxShadow: 1, fontSize: 12, bgcolor: config.color + '30', color: config.color }}
+                      >
+                        {person.firstName[0]}
+                      </Avatar>
+                    ))}
+                    {event.people.length > 3 && (
+                      <Avatar sx={{ width: 32, height: 32, fontSize: 10, bgcolor: ProfileColors.surfaceContainerHigh, color: ProfileColors.primary, fontWeight: 700, border: '2px solid #fff' }}>
+                        +{event.people.length - 3}
+                      </Avatar>
+                    )}
+                  </Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                    <Icon sx={{ fontSize: 14, color: config.color, opacity: 0.7 }} />
+                    <Typography sx={{ fontFamily: 'var(--font-manrope), sans-serif', fontSize: '0.7rem', fontWeight: 600, color: ProfileColors.onSurfaceVariant, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                      {config.label}
+                    </Typography>
+                  </Box>
+                </Box>
+              )
+
               return (
                 <Box
                   key={event.id}
                   onClick={() => handleOpenDetail(event)}
-                  sx={{ 
-                    flexShrink: 0, 
-                    width: 340, 
-                    position: 'relative', 
+                  sx={{
+                    flexShrink: 0,
+                    width: 260,
+                    position: 'relative',
                     cursor: 'pointer',
-                    '&:hover .event-card': { transform: isEven ? 'translateY(-15px)' : 'translateY(15px)' },
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
-                    justifyContent: 'center'
+                    gap: 0,
                   }}
                 >
-                  <Card
-                    className="event-card"
-                    sx={{
-                      width: '100%',
-                      borderRadius: 6,
-                      bgcolor: ProfileColors.surfaceContainerLowest,
-                      boxShadow: '0 8px 40px rgba(0,0,0,0.05)',
-                      transition: 'transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-                      mb: isEven ? 24 : 0,
-                      mt: !isEven ? 24 : 0,
-                      border: `1px solid ${ProfileColors.outlineVariant}15`,
-                      overflow: 'hidden'
-                    }}
-                  >
-                    {event.metadata?.imageAssetId && (
-                      <Box sx={{ height: 160, width: '100%' }}>
-                        <Box 
-                          component="img"
-                          src={`/api/assets/serve/${event.metadata.imageAssetId}`}
-                          alt={event.title}
-                          sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                        />
-                      </Box>
-                    )}
-                    <CardContent sx={{ p: 4 }}>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                         <Typography
-                          sx={{
-                            color: config.color,
-                            fontWeight: 800,
-                            textTransform: 'uppercase',
-                            letterSpacing: 1.5,
-                            fontSize: '0.7rem'
-                          }}
-                        >
-                          {formatEventDate(event.date, event.datePrecision)}
-                        </Typography>
-                        <Icon sx={{ color: config.color, fontSize: 20, opacity: 0.8 }} />
-                      </Box>
-                     
-                      <Typography 
-                        variant="h6" 
-                        className="serif-font"
-                        sx={{ 
-                          color: ProfileColors.primary, 
-                          mb: 1.5, 
-                          fontWeight: 700,
-                          fontSize: '1.25rem',
-                          lineHeight: 1.2
-                        }}
-                      >
-                        {event.title}
-                      </Typography>
+                  {isEven ? mainCard : companionPanel}
 
-                      {event.description && (
-                        <Typography 
-                          variant="body2" 
-                          sx={{ 
-                            color: ProfileColors.onSurfaceVariant, 
-                            lineHeight: 1.7,
-                            fontFamily: 'var(--font-newsreader), serif',
-                            fontSize: '0.95rem',
-                            display: '-webkit-box',
-                            WebkitLineClamp: 3,
-                            WebkitBoxOrient: 'vertical',
-                            overflow: 'hidden',
-                          }}
-                        >
-                          {event.description}
-                        </Typography>
-                      )}
-                    </CardContent>
-                  </Card>
+                  {/* Center dot */}
+                  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 0.5, flexShrink: 0 }}>
+                    <Box sx={{ width: 1.5, height: 12, bgcolor: `${config.color}40` }} />
+                    <Box sx={{ width: 14, height: 14, borderRadius: '50%', bgcolor: config.color, border: `3px solid #fff`, boxShadow: `0 0 0 2px ${config.color}30`, zIndex: 10 }} />
+                    <Box sx={{ width: 1.5, height: 12, bgcolor: `${config.color}40` }} />
+                  </Box>
 
-                  {/* Connector Dot on the center line */}
-                  <Box
-                    sx={{
-                      position: 'absolute',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      width: 12,
-                      height: 12,
-                      borderRadius: '50%',
-                      bgcolor: config.color,
-                      border: `3px solid #fff`,
-                      boxShadow: `0 0 0 1px ${config.color}30`,
-                      zIndex: 10,
-                    }}
-                  />
-                  
-                  {/* Vertical line to card */}
-                  <Box sx={{ 
-                    position: 'absolute', 
-                    top: isEven ? '50%' : 'auto',
-                    bottom: !isEven ? '50%' : 'auto',
-                    height: 96,
-                    width: 1, 
-                    bgcolor: `${config.color}30`,
-                    zIndex: 0
-                  }} />
+                  {isEven ? companionPanel : mainCard}
                 </Box>
               )
             })}
