@@ -29,7 +29,7 @@
     "@fastify/multipart": "^8.0.0",
     "@fastify/rate-limit": "^9.0.0",
     "@prisma/client": "^6.19.2",
-    "axios": "^1.14.0",
+    "axios": "^1.16.1",
     "bullmq": "^4.0.0",
     "chromadb": "^1.7.0",
     "chromadb-default-embed": "^2.14.0",

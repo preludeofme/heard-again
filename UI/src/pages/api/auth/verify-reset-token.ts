@@ -47,9 +47,6 @@ export default apiHandler({
       throw Errors.badRequest('User not found')
     }
 
-    return successResponse(res, {
-      valid: true,
-      email: user.email,
-    })
+    return successResponse(res, { valid: true })
   },
 }, { csrf: false })

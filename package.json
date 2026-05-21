@@ -43,7 +43,9 @@
   "dependencies": {
     "@prisma/client": "^6.19.2",
     "@trigger.dev/sdk": "^4.4.6",
+    "@types/dompurify": "^3.0.5",
     "archiver": "^8.0.0",
+    "isomorphic-dompurify": "^3.14.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6"
   },
@@ -55,6 +57,9 @@
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0"
+    "@types/react-dom": "^19.0.0",
+    "systeminformation": "^5.31.6",
+    "next": "16.2.6",
+    "protobufjs": "^7.0.0"
   }
 }

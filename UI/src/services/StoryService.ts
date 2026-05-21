@@ -1,3 +1,4 @@
+import DOMPurify from 'isomorphic-dompurify'
 import type {
   CreateStoryInput,
   ListStoriesQuery,
@@ -22,6 +23,12 @@ type StoryInclude = {
   createdBy: { select: { id: true; displayName: true; email: true; avatarUrl: true } }
   generatedAudioAsset: { select: { id: true; storagePath: true; durationSeconds: true } }
   _count: { select: { comments: true; assets: true; favorites: true } }
+}
+
+const ALLOWED_STORY_TAGS = ['p', 'br', 'strong', 'em', 'ul', 'ol', 'li', 'blockquote', 'h2', 'h3', 'a', 'img']
+
+function sanitizeStoryContent(content: string): string {
+  return DOMPurify.sanitize(content, { ALLOWED_TAGS: ALLOWED_STORY_TAGS, ALLOWED_ATTR: ['href', 'src', 'alt', 'title'] })
 }
 
 const STORY_INCLUDE: StoryInclude = {
@@ -97,13 +104,14 @@ export class StoryService {
       generatedAudioAssetId = data.assetIds[0]
     }
 
-    const excerpt = data.excerpt ?? (data.content ? data.content.replace(/<[^>]*>/g, '').substring(0, 200) : '')
+    const safeContent = data.content != null ? sanitizeStoryContent(data.content) : data.content
+    const excerpt = data.excerpt ?? (safeContent ? safeContent.replace(/<[^>]*>/g, '').substring(0, 200) : '')
 
     const story = await this.repo.create({
       familyspaceId,
       createdById: userId,
       title: data.title,
-      content: data.content,
+      content: safeContent,
       storyType: data.storyType ?? StoryType.MEMORY,
       subjectId: data.subjectId ?? null,
       speakerId: data.speakerId ?? null,
@@ -150,10 +158,10 @@ export class StoryService {
     
     if (data.title !== undefined) updateData.title = data.title
     if (data.content !== undefined) {
-      updateData.content = data.content
-      // Update excerpt if content changed and no explicit excerpt provided
+      const safeContent = data.content != null ? sanitizeStoryContent(data.content) : ''
+      updateData.content = safeContent
       if (!data.excerpt) {
-        updateData.excerpt = data.content.replace(/<[^>]*>/g, '').substring(0, 200)
+        updateData.excerpt = safeContent.replace(/<[^>]*>/g, '').substring(0, 200)
       }
     }
     if (data.excerpt !== undefined) updateData.excerpt = data.excerpt

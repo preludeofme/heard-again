@@ -3,6 +3,7 @@ import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-h
 import { storyService } from '@/services'
 import { createStorySchema, listStoriesQuerySchema, validateQuery } from '@/schemas'
 import { prisma } from '@/lib/prisma'
+import { withRateLimit } from '@/lib/security/rate-limiter'
 
 export const config = {
   api: {
@@ -12,7 +13,7 @@ export const config = {
   },
 }
 
-export default apiHandler({
+const handler = apiHandler({
   // GET /api/stories - List stories (with filters)
   GET: async (req, res) => {
     const user = await getAuthUserWithFamilyspace(req, res)
@@ -96,3 +97,5 @@ export default apiHandler({
     }
   },
 })
+
+export default withRateLimit('general', handler)

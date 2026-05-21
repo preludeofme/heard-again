@@ -2,6 +2,10 @@ node_modules
 .next
 logs/
 uploads/
+
+# TLS certificates and private keys — never commit
+certs/
+UI/certificates/
 *.log
 output/
 tsconfig.tsbuildinfo

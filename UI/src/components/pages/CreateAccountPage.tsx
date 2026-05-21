@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { useRouter } from 'next/router'
 import { signIn } from 'next-auth/react'
+import { fetchWithCSRF } from '@/lib/api-client'
 import {
   Box,
   Typography,
@@ -42,7 +43,7 @@ export function CreateAccountPage() {
     setIsLoading(true)
 
     try {
-      const response = await fetch('/api/auth/signup', {
+      const response = await fetchWithCSRF('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

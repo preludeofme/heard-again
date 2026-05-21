@@ -40,16 +40,20 @@ function addCSPHeaders(res: NextApiResponse, config?: SecurityHeadersConfig): vo
 }
 
 function addSTSHeaders(req: NextApiRequest, res: NextApiResponse, config?: SecurityHeadersConfig): void {
-  if (config?.strictTransportSecurity && req.headers['x-forwarded-proto'] === 'https') {
-    const sts = config.strictTransportSecurity
-    const stsDirectives = [
-      `max-age=${sts.maxAge || 31536000}`,
-      sts.includeSubDomains ? 'includeSubDomains' : '',
-      sts.preload ? 'preload' : '',
-    ].filter(Boolean).join('; ')
-    
-    res.setHeader('Strict-Transport-Security', stsDirectives)
-  }
+  if (!config?.strictTransportSecurity) return
+  // Emit HSTS when behind a TLS-terminating proxy (x-forwarded-proto: https) OR
+  // unconditionally in production where the proxy is always present.
+  const isHttps =
+    req.headers['x-forwarded-proto'] === 'https' ||
+    process.env.NODE_ENV === 'production'
+  if (!isHttps) return
+  const sts = config.strictTransportSecurity
+  const stsDirectives = [
+    `max-age=${sts.maxAge || 31536000}`,
+    sts.includeSubDomains ? 'includeSubDomains' : '',
+    sts.preload ? 'preload' : '',
+  ].filter(Boolean).join('; ')
+  res.setHeader('Strict-Transport-Security', stsDirectives)
 }
 
 function addStandardSecurityHeaders(res: NextApiResponse, config?: SecurityHeadersConfig): void {
