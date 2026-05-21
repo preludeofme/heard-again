@@ -41,11 +41,18 @@
     "prisma": "^6.19.2"
   },
   "dependencies": {
-    "@prisma/client": "^6.19.2",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@google-cloud/storage": "^7.7.0",
+    "@mui/icons-material": "^7.3.9",
+    "@mui/material": "^7.3.9",
+    "@mui/system": "^7.3.9",
+    "@prisma/client": "^6.19.3",
     "@trigger.dev/sdk": "^4.4.6",
     "@types/dompurify": "^3.0.5",
     "archiver": "^8.0.0",
     "isomorphic-dompurify": "^3.14.0",
+    "next-auth": "^4.24.13",
     "react": "^19.2.6",
     "react-dom": "^19.2.6"
   },

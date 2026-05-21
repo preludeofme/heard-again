@@ -73,8 +73,8 @@ const nextConfig = {
     // "resolveDispatcher() is null" crash in @xyflow/react + zustand/traditional.
     config.resolve.alias = {
       ...config.resolve.alias,
-      'react': path.resolve(__dirname, 'node_modules/react'),
-      'react-dom': path.resolve(__dirname, 'node_modules/react-dom'),
+      'react': workspacePkg('react'),
+      'react-dom': workspacePkg('react-dom'),
     }
 
     if (!isServer) {
