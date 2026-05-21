@@ -9,6 +9,7 @@ import {
 } from '@mui/material'
 import Head from 'next/head'
 import Link from 'next/link'
+import { PublicHeader } from '../components/layout/PublicHeader'
 
 export default function TermsOfLegacyPage() {
   const theme = useTheme()
@@ -16,88 +17,10 @@ export default function TermsOfLegacyPage() {
   return (
     <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', bgcolor: 'background.default' }}>
       <Head>
-        <title>Terms of Legacy - Heard Again</title>
+        <title>Terms of Service - Heard Again</title>
       </Head>
 
-      {/* Header */}
-      <Box
-        component="header"
-        sx={{
-          bgcolor: 'background.default',
-          borderBottom: '1px solid',
-          borderColor: 'rgba(208, 227, 230, 0.5)',
-          position: 'sticky',
-          top: 0,
-          zIndex: 50,
-        }}
-      >
-        <Container maxWidth="lg">
-          <Box
-            sx={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              py: 2,
-            }}
-          >
-            <Typography
-              variant="h6"
-              component={Link}
-              href="/"
-              sx={{
-                fontFamily: 'var(--font-newsreader), serif',
-                fontStyle: 'italic',
-                color: 'primary.main',
-                fontSize: '1.5rem',
-                textDecoration: 'none',
-              }}
-            >
-              Heard Again
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-              <Button
-                component={Link}
-                href="/pricing"
-                variant="text"
-                sx={{ color: 'secondary.main', fontWeight: 600 }}
-              >
-                Pricing
-              </Button>
-              <Button
-                component={Link}
-                href="/privacy"
-                variant="text"
-                sx={{ color: 'secondary.main', fontWeight: 600 }}
-              >
-                Privacy
-              </Button>
-              <Button
-                component={Link}
-                href="/terms"
-                variant="text"
-                sx={{ color: 'secondary.main', fontWeight: 600 }}
-              >
-                Terms & Conditions
-              </Button>
-              <Button
-                component={Link}
-                href="/login"
-                variant="text"
-                sx={{ color: 'secondary.main' }}
-              >
-                Sign In
-              </Button>
-              <Button
-                component={Link}
-                href="/signup"
-                variant="contained"
-              >
-                Start Story
-              </Button>
-            </Box>
-          </Box>
-        </Container>
-      </Box>
+      <PublicHeader />
 
       {/* Main Content */}
       <Box component="main" sx={{ py: { xs: 8, md: 12 }, flexGrow: 1 }}>
@@ -111,7 +34,7 @@ export default function TermsOfLegacyPage() {
               fontSize: { xs: '2.5rem', md: '3.5rem' },
             }}
           >
-            Terms of Legacy
+            Terms of Service
           </Typography>
           <Typography variant="body1" sx={{ color: 'secondary.main', mb: 6, fontSize: '1.125rem' }}>
             Last updated: May 9, 2026
@@ -123,7 +46,7 @@ export default function TermsOfLegacyPage() {
                 Welcome to Heard Again
               </Typography>
               <Typography variant="body1" sx={{ color: 'text.primary', lineHeight: 1.8 }}>
-                By using Heard Again, you are entering into a partnership with us to preserve your family's history. These "Terms of Legacy" govern your use of our platform and services.
+                By using Heard Again, you are entering into a partnership with us to preserve your family's history. These "Terms of Service" govern your use of our platform and services.
               </Typography>
             </Box>
 
@@ -244,7 +167,7 @@ export default function TermsOfLegacyPage() {
                     '&:hover': { color: 'primary.main' },
                   }}
                 >
-                  Terms of Legacy
+                  Terms of Service
                 </Typography>
               </Link>
               <Link href="/contact" style={{ textDecoration: 'none' }}>

@@ -22,6 +22,7 @@ import {
   Security,
 } from '@mui/icons-material'
 import Link from 'next/link'
+import { PublicHeader } from '@/components/layout/PublicHeader'
 
 export function LoginPage() {
   const theme = useTheme()
@@ -69,50 +70,7 @@ export function LoginPage() {
 
   return (
     <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* Header */}
-      <Box
-        component="header"
-        sx={{
-          bgcolor: 'background.default',
-          borderBottom: '1px solid',
-          borderColor: 'rgba(208, 227, 230, 0.5)',
-          position: 'sticky',
-          top: 0,
-          zIndex: 50,
-        }}
-      >
-        <Container maxWidth="lg">
-          <Box
-            sx={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              py: 2,
-            }}
-          >
-            <Typography
-              variant="h6"
-              sx={{
-                fontFamily: 'var(--font-newsreader), serif',
-                fontStyle: 'italic',
-                color: 'primary.main',
-                fontSize: '1.5rem',
-              }}
-            >
-              Heard Again
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              <Button
-                component={Link}
-                href="/signup"
-                variant="contained"
-              >
-                Start Story
-              </Button>
-            </Box>
-          </Box>
-        </Container>
-      </Box>
+      <PublicHeader />
 
       {/* Main Content */}
       <Box

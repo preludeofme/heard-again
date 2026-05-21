@@ -23,6 +23,7 @@ import {
   Security,
 } from '@mui/icons-material'
 import Link from 'next/link'
+import { PublicHeader } from '@/components/layout/PublicHeader'
 
 export function CreateAccountPage() {
   const theme = useTheme()
@@ -43,7 +44,7 @@ export function CreateAccountPage() {
     setIsLoading(true)
 
     try {
-      const response = await fetchWithCSRF('/api/auth/signup', {
+      const response = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -72,7 +73,8 @@ export function CreateAccountPage() {
       }
 
       // Force full page load so NextAuth session state is picked up immediately
-      window.location.href = '/onboarding'
+      const planQuery = router.query.plan ? `?plan=${router.query.plan}` : ''
+      window.location.href = `/onboarding${planQuery}`
     } catch (err: any) {
       setError(err.message || 'An error occurred')
     } finally {
@@ -86,58 +88,7 @@ export function CreateAccountPage() {
 
   return (
     <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* Header */}
-      <Box
-        component="header"
-        sx={{
-          bgcolor: 'background.default',
-          borderBottom: '1px solid',
-          borderColor: 'rgba(208, 227, 230, 0.5)',
-          position: 'sticky',
-          top: 0,
-          zIndex: 50,
-        }}
-      >
-        <Container maxWidth="lg">
-          <Box
-            sx={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              py: 2,
-            }}
-          >
-            <Typography
-              variant="h6"
-              sx={{
-                fontFamily: 'var(--font-newsreader), serif',
-                fontStyle: 'italic',
-                color: 'primary.main',
-                fontSize: '1.5rem',
-              }}
-            >
-              Heard Again
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              <Button
-                component={Link}
-                href="/login"
-                variant="text"
-                sx={{ color: 'secondary.main' }}
-              >
-                Sign In
-              </Button>
-              <Button
-                component={Link}
-                href="/signup"
-                variant="contained"
-              >
-                Start Story
-              </Button>
-            </Box>
-          </Box>
-        </Container>
-      </Box>
+      <PublicHeader />
 
       {/* Main Content */}
       <Box
@@ -231,17 +182,16 @@ export function CreateAccountPage() {
                 >
                   <Box
                     component="img"
-                    src="https://images.unsplash.com/photo-1551818255-e6e10975bc17?w=600&h=300&fit=crop"
-                    alt="Family looking at memories"
+                    src="/images/signup-heirloom-sepia.png"
+                    alt="Grandmother and grandchild looking at digital heirloom"
                     sx={{
                       width: '100%',
                       height: '100%',
                       objectFit: 'cover',
-                      filter: 'grayscale(100%)',
-                      mixBlendMode: 'multiply',
-                      opacity: 0.8,
+                      opacity: 0.9,
                       '&:hover': {
-                        filter: 'grayscale(0%)',
+                        opacity: 1,
+                        transform: 'scale(1.02)',
                       },
                       transition: 'all 0.7s',
                     }}
@@ -347,7 +297,7 @@ export function CreateAccountPage() {
 
                 {/* Email Form */}
                 <Box component="form" onSubmit={handleSubmit} sx={{ spaceY: 3 }}>
-                  <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+                  <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2, mb: 3 }}>
                     <TextField
                       fullWidth
                       required
@@ -428,7 +378,7 @@ export function CreateAccountPage() {
                     {isLoading ? (
                       <CircularProgress size={24} sx={{ color: 'white' }} />
                     ) : (
-                      'Start My Living Story'
+                      'Create Account'
                     )}
                   </Button>
 
@@ -447,7 +397,7 @@ export function CreateAccountPage() {
                       href="/terms"
                       style={{ color: theme.palette.primary.main, textDecoration: 'underline' }}
                     >
-                      Terms of Legacy
+                      Terms of Service
                     </Link>{' '}
                     and{' '}
                     <Link

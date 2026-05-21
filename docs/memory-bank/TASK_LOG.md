@@ -77,3 +77,21 @@ No product code changes were made in this pass. Validation for this pass is limi
   - Trigger.dev CLI profile/project mismatch for `proj_pcwbloaahiyfikeyicmv`.
   - TTS model startup import error: `cannot import name 'auto_docstring' from 'transformers.utils'`.
 - These did not block the main login UI render test.
+
+## 2026-05-20 — Usability and Wayfinding Audit
+
+### Completed
+
+- Conducted Desktop and Mobile Usability and Wayfinding Audit on public-facing pages.
+- Identified multiple Navigation Friction points, Mobile UX breaks, and Critical Blockers.
+- Generated `usability_audit_report.md` artifact with full findings.
+
+### Recommended next tasks (from Audit)
+
+- **Auth Blocker**: Fix CSRF / 403 Forbidden blocker on the Sign In and Sign Up routes.
+- **Routing**: Fix `/pricing` route forcefully redirecting to `/login` for unauthenticated users.
+- **Accessibility**: Add `aria-label`s to the unlabeled circular buttons in the footer.
+- **Wayfinding**: Standardize header navigation links across all public routes (Landing, Privacy, Terms, Login, Signup) to prevent dead ends.
+- **Mobile UX**: Implement responsive hamburger menu or proper layout collapsing for horizontal nav on mobile viewports.
+- **Mobile UX**: Stack registration form inputs vertically on mobile viewports.
+- **Taxonomy**: Standardize action terminology (e.g. replace "Start Your Story" / "Start Story" / "Start My Living Story" with "Get Started" and "Create Account").

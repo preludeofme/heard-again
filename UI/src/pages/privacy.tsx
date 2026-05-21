@@ -18,6 +18,7 @@ import {
   Download as ExportIcon,
   DeleteForever as DeleteIcon,
 } from '@mui/icons-material'
+import { PublicHeader } from '../components/layout/PublicHeader'
 
 export default function PrivacyPolicyPage() {
   const theme = useTheme()
@@ -28,85 +29,7 @@ export default function PrivacyPolicyPage() {
         <title>Privacy Policy - Heard Again</title>
       </Head>
 
-      {/* Header */}
-      <Box
-        component="header"
-        sx={{
-          bgcolor: 'background.default',
-          borderBottom: '1px solid',
-          borderColor: 'rgba(208, 227, 230, 0.5)',
-          position: 'sticky',
-          top: 0,
-          zIndex: 50,
-        }}
-      >
-        <Container maxWidth="lg">
-          <Box
-            sx={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              py: 2,
-            }}
-          >
-            <Typography
-              variant="h6"
-              component={Link}
-              href="/"
-              sx={{
-                fontFamily: 'var(--font-newsreader), serif',
-                fontStyle: 'italic',
-                color: 'primary.main',
-                fontSize: '1.5rem',
-                textDecoration: 'none',
-              }}
-            >
-              Heard Again
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-              <Button
-                component={Link}
-                href="/pricing"
-                variant="text"
-                sx={{ color: 'secondary.main', fontWeight: 600 }}
-              >
-                Pricing
-              </Button>
-              <Button
-                component={Link}
-                href="/privacy"
-                variant="text"
-                sx={{ color: 'secondary.main', fontWeight: 600 }}
-              >
-                Privacy
-              </Button>
-              <Button
-                component={Link}
-                href="/terms"
-                variant="text"
-                sx={{ color: 'secondary.main', fontWeight: 600 }}
-              >
-                Terms & Conditions
-              </Button>
-              <Button
-                component={Link}
-                href="/login"
-                variant="text"
-                sx={{ color: 'secondary.main' }}
-              >
-                Sign In
-              </Button>
-              <Button
-                component={Link}
-                href="/signup"
-                variant="contained"
-              >
-                Start Story
-              </Button>
-            </Box>
-          </Box>
-        </Container>
-      </Box>
+      <PublicHeader />
 
       {/* Main Content */}
       <Box component="main" sx={{ py: { xs: 8, md: 12 }, flexGrow: 1 }}>
@@ -486,7 +409,7 @@ export default function PrivacyPolicyPage() {
                     '&:hover': { color: 'primary.main' },
                   }}
                 >
-                  Terms & Conditions
+                  Terms of Service
                 </Typography>
               </Link>
               <Link href="/contact" style={{ textDecoration: 'none' }}>

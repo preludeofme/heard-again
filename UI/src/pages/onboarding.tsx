@@ -318,7 +318,7 @@ export default function OnboardingPage() {
                 {isLoading ? (
                   <CircularProgress size={24} sx={{ color: 'white' }} />
                 ) : activeStep === steps.length - 1 ? (
-                  'Start Your Story'
+                  'Get Started'
                 ) : (
                   'Continue'
                 )}

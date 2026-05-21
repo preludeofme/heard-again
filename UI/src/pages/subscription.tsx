@@ -211,7 +211,7 @@ export default function SubscriptionPage() {
                 </Box>
                 <Button
                   variant="outlined"
-                  onClick={() => router.push('/pricing')}
+                  onClick={() => router.push('/#pricing')}
                   endIcon={<ArrowForward />}
                   sx={{
                     borderColor: '#16334a',

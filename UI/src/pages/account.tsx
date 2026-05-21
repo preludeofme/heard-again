@@ -583,7 +583,7 @@ export default function AccountPage() {
                       </Alert>
                       <Button
                         variant="contained"
-                        onClick={() => router.push('/pricing')}
+                        onClick={() => router.push('/#pricing')}
                       >
                         View Plans
                       </Button>

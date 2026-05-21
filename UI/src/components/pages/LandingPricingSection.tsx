@@ -109,7 +109,7 @@ export function LandingPricingSection() {
   ]
 
   return (
-    <Box component="section" sx={{ py: 16, px: { xs: 4, md: 8 }, bgcolor: '#fcf9f4' }}>
+    <Box id="pricing" component="section" sx={{ py: 16, px: { xs: 4, md: 8 }, bgcolor: '#fcf9f4' }}>
       <Box sx={{ maxWidth: 1200, mx: 'auto', textAlign: 'center', mb: 8 }}>
         <Typography variant="h2" sx={{ color: '#16334a', fontFamily: 'var(--font-newsreader), serif', mb: 2 }}>
           Simple, Transparent Pricing
@@ -145,7 +145,7 @@ export function LandingPricingSection() {
                     {plan.bestFor}
                   </Typography>
                 </Box>
-                <Button component={Link} href="/signup" variant={plan.isCloud ? 'contained' : 'outlined'} fullWidth sx={{ py: 1.5, borderRadius: 3, textTransform: 'none', fontSize: '1rem', ...(plan.isCloud ? { backgroundColor: '#16334a', '&:hover': { backgroundColor: '#2e4a62' } } : { borderColor: '#16334a', color: '#16334a' }) }}>
+                <Button component={Link} href={`/signup?plan=${plan.id}`} variant={plan.isCloud ? 'contained' : 'outlined'} fullWidth sx={{ py: 1.5, borderRadius: 3, textTransform: 'none', fontSize: '1rem', ...(plan.isCloud ? { backgroundColor: '#16334a', '&:hover': { backgroundColor: '#2e4a62' } } : { borderColor: '#16334a', color: '#16334a' }) }}>
                   Get Started
                 </Button>
               </Card>

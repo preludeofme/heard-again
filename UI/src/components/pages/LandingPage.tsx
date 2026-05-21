@@ -16,6 +16,7 @@ import {
 } from '@mui/icons-material'
 import Link from 'next/link'
 import { LandingPricingSection } from './LandingPricingSection'
+import { PublicHeader } from '../layout/PublicHeader'
 
 // Material Symbols Icon component
 const MaterialSymbol = ({ icon, sx }: { icon: string; sx?: any }) => (
@@ -82,6 +83,7 @@ export function LandingPage() {
 
   return (
     <Box sx={{ overflow: 'hidden' }}>
+      <PublicHeader />
       {/* Hero Section */}
       <Box
         component="section"
@@ -94,71 +96,6 @@ export function LandingPage() {
           mx: 'auto',
         }}
       >
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 8 }}>
-          <Typography
-            variant="h5"
-            sx={{
-              fontFamily: 'var(--font-newsreader), serif',
-              fontStyle: 'italic',
-              color: 'primary.main',
-              fontWeight: 700,
-            }}
-          >
-            Heard Again
-          </Typography>
-          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-            <Button
-              component={Link}
-              href="/pricing"
-              variant="text"
-              sx={{
-                color: 'primary.main',
-                fontWeight: 600,
-                fontSize: '0.9rem',
-              }}
-            >
-              Pricing
-            </Button>
-            <Button
-              component={Link}
-              href="/privacy"
-              variant="text"
-              sx={{
-                color: 'primary.main',
-                fontWeight: 600,
-                fontSize: '0.9rem',
-              }}
-            >
-              Privacy
-            </Button>
-            <Button
-              component={Link}
-              href="/terms"
-              variant="text"
-              sx={{
-                color: 'primary.main',
-                fontWeight: 600,
-                fontSize: '0.9rem',
-              }}
-            >
-              Terms & Conditions
-            </Button>
-            <Button
-              component={Link}
-              href="/login"
-              variant="contained"
-              sx={{
-                ml: 1,
-                borderRadius: '999px',
-                px: 3,
-                textTransform: 'none',
-                fontWeight: 600,
-              }}
-            >
-              Sign In
-            </Button>
-          </Box>
-        </Box>
         <Grid container spacing={8} alignItems="center">
           <Grid size={{ xs: 12, lg: 6 }} sx={{ position: 'relative', zIndex: 10 }}>
             <Typography
@@ -200,7 +137,7 @@ export function LandingPage() {
                   borderRadius: 3,
                 }}
               >
-                Start Your Story
+                Get Started
               </Button>
             </Box>
           </Grid>
@@ -560,7 +497,8 @@ export function LandingPage() {
         component="footer"
         sx={{
           bgcolor: 'rgba(208, 227, 230, 0.3)',
-          py: 6,
+          pt: 6,
+          pb: { xs: 12, md: 6 },
           px: { xs: 4, md: 8 },
           mt: 10,
         }}
@@ -620,7 +558,7 @@ export function LandingPage() {
                     transition: 'color 0.2s',
                   }}
                 >
-                  Terms of Legacy
+                  Terms of Service
                 </Typography>
               </Link>
               <Link href="/contact" style={{ textDecoration: 'none' }}>
@@ -639,6 +577,7 @@ export function LandingPage() {
             <Box sx={{ display: 'flex', gap: 2 }}>
               <Button
                 variant="outlined"
+                aria-label="Share"
                 sx={{
                   minWidth: 0,
                   width: 40,
@@ -658,6 +597,7 @@ export function LandingPage() {
               </Button>
               <Button
                 variant="outlined"
+                aria-label="Favorite"
                 sx={{
                   minWidth: 0,
                   width: 40,

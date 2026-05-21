@@ -13,6 +13,7 @@ import {
 } from '@mui/material'
 import { ArrowBack, Email } from '@mui/icons-material'
 import Link from 'next/link'
+import { PublicHeader } from '@/components/layout/PublicHeader'
 
 export default function ForgotPasswordPage() {
   const theme = useTheme()
@@ -50,50 +51,7 @@ export default function ForgotPasswordPage() {
 
   return (
     <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* Header */}
-      <Box
-        component="header"
-        sx={{
-          bgcolor: 'background.default',
-          borderBottom: '1px solid',
-          borderColor: 'rgba(208, 227, 230, 0.5)',
-          position: 'sticky',
-          top: 0,
-          zIndex: 50,
-        }}
-      >
-        <Container maxWidth="lg">
-          <Box
-            sx={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              py: 2,
-            }}
-          >
-            <Typography
-              variant="h6"
-              sx={{
-                fontFamily: 'var(--font-newsreader), serif',
-                fontStyle: 'italic',
-                color: 'primary.main',
-                fontSize: '1.5rem',
-              }}
-            >
-              Heard Again
-            </Typography>
-            <Button
-              component={Link}
-              href="/login"
-              variant="text"
-              startIcon={<ArrowBack />}
-              sx={{ color: 'secondary.main' }}
-            >
-              Back to Sign In
-            </Button>
-          </Box>
-        </Container>
-      </Box>
+      <PublicHeader />
 
       {/* Main Content */}
       <Box

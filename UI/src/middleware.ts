@@ -33,7 +33,7 @@ function addCorsHeaders(response: NextResponse, request: NextRequest): NextRespo
   return response
 }
 
-export async function proxy(request: NextRequest) {
+export default async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   
   // Handle CORS preflight requests
@@ -43,7 +43,7 @@ export async function proxy(request: NextRequest) {
   }
   
   // Public paths that don't require authentication
-  const publicPaths = ['/', '/login', '/signup', '/api/auth', '/forgot-password', '/reset-password', '/onboarding', '/pricing', '/self-hosting', '/privacy', '/terms']
+  const publicPaths = ['/', '/login', '/signup', '/api/auth', '/forgot-password', '/reset-password', '/onboarding', '/self-hosting', '/privacy', '/terms', '/images', '/manifest.json']
   const isPublicPath = publicPaths.some((path) => pathname === path || pathname.startsWith(`${path}/`))
   
   // Static files, API routes (API routes handle their own auth), and auth routes
