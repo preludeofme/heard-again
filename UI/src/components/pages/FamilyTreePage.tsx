@@ -32,6 +32,7 @@ import {
   AccountTree,
   Image as ImageIcon,
   PictureAsPdf,
+  Polyline as SvgIcon,
 } from '@mui/icons-material'
 import { PersonDetailModal } from '@/components/modals/PersonDetailModal'
 import { AddEditPersonModal, PersonFormData } from '@/components/modals/AddEditPersonModal'
@@ -442,8 +443,14 @@ export function FamilyTreePage({
 
   // ─── Export controls ─────────────────────────────────────────────────────────
 
-  const handleExportPng = useCallback(async () => {
-    await canvasRef.current?.exportPng()
+  const [isExportingPng, setIsExportingPng] = useState(false)
+
+  const handleExportPng = useCallback(() => {
+    canvasRef.current?.exportPng()
+  }, [])
+
+  const handleExportSvg = useCallback(() => {
+    canvasRef.current?.exportSvg()
   }, [])
 
   const handleExportPdf = useCallback(() => {
@@ -623,15 +630,37 @@ export function FamilyTreePage({
                   </>
                 )}
                 <Divider orientation="vertical" flexItem sx={{ mx: 0.5, borderColor: 'rgba(208, 227, 230, 0.6)' }} />
-                <Tooltip title="Export as PNG image. For large trees, export may be slow." arrow>
-                  <Button
-                    startIcon={<ImageIcon sx={{ fontSize: 18 }} />}
-                    size="small"
-                    onClick={handleExportPng}
-                    sx={{ color: 'primary.main', textTransform: 'none' }}
-                  >
-                    PNG
-                  </Button>
+                <Tooltip title={isExportingPng ? 'Generating export…' : 'Download PNG'} arrow>
+                  <span>
+                    <Button
+                      startIcon={isExportingPng
+                        ? <CircularProgress size={16} sx={{ color: 'primary.main' }} />
+                        : <ImageIcon sx={{ fontSize: 18 }} />
+                      }
+                      size="small"
+                      onClick={handleExportPng}
+                      disabled={isExportingPng}
+                      sx={{ color: 'primary.main', textTransform: 'none' }}
+                    >
+                      {isExportingPng ? 'Exporting…' : 'PNG'}
+                    </Button>
+                  </span>
+                </Tooltip>
+                <Tooltip title={isExportingPng ? 'Generating export…' : 'Download SVG (print quality)'} arrow>
+                  <span>
+                    <Button
+                      startIcon={isExportingPng
+                        ? <CircularProgress size={16} sx={{ color: 'primary.main' }} />
+                        : <SvgIcon sx={{ fontSize: 18 }} />
+                      }
+                      size="small"
+                      onClick={handleExportSvg}
+                      disabled={isExportingPng}
+                      sx={{ color: 'primary.main', textTransform: 'none' }}
+                    >
+                      {isExportingPng ? 'Exporting…' : 'SVG'}
+                    </Button>
+                  </span>
                 </Tooltip>
                 <Tooltip title="Export as PDF (print dialog). For large trees, export may be slow." arrow>
                   <Button
@@ -760,6 +789,7 @@ export function FamilyTreePage({
             onEditRelationships={handleAddRelationship}
             isPanMode={true}
             fitViewTrigger={fitViewTrigger}
+            onExportingChange={setIsExportingPng}
           />
         ) : (
           /* Empty state */

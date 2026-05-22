@@ -459,6 +459,7 @@ model Story {
   deletedAt             DateTime?
   authorRelationship    String?
   isPublic              Boolean              @default(false)
+  visibility            StoryVisibility      @default(FAMILY_ONLY)
   shareToken            String?              @unique
   transcript            String?
   transcriptionStatus   TranscriptionStatus  @default(NONE)
@@ -1182,6 +1183,12 @@ enum StoryStatus {
   REVIEW
   PUBLISHED
   ARCHIVED
+}
+
+enum StoryVisibility {
+  PUBLIC
+  FAMILY_ONLY
+  FRIENDS_AND_FAMILY
 }
 
 enum TranscriptionStatus {

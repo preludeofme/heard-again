@@ -71,6 +71,16 @@ export default apiHandler({
       where: { planType: 'FREE', isActive: true },
     })
 
+    // Resolve the creator's name for the root Person record
+    const userRecord = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { displayName: true, name: true, email: true, linkedPersonId: true },
+    })
+    const rawName = userRecord?.displayName || userRecord?.name || ''
+    const nameParts = rawName.trim().split(/\s+/)
+    const firstName = nameParts[0] || userRecord?.email?.split('@')[0] || 'Unknown'
+    const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : null
+
     const familyspace = await prisma.$transaction(async (tx) => {
       const ws = await tx.familyspace.create({
         data: {
@@ -100,6 +110,27 @@ export default apiHandler({
           },
         })
       }
+
+      // Create the root Person record for the creator
+      const rootPerson = await tx.person.create({
+        data: {
+          familyspaceId: ws.id,
+          firstName,
+          lastName,
+          personType: 'FAMILY',
+          createdById: user.id,
+        },
+      })
+
+      // Link the User to their Person record only if not already linked (unique constraint guard).
+      // Always update defaultFamilyspaceId regardless.
+      await tx.user.update({
+        where: { id: user.id },
+        data: {
+          ...(userRecord?.linkedPersonId === null ? { linkedPersonId: rootPerson.id } : {}),
+          defaultFamilyspaceId: ws.id,
+        },
+      })
 
       return ws
     })

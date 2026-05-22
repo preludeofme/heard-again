@@ -47,9 +47,16 @@ export const DatePrecision = {
   APPROXIMATE: 'APPROXIMATE',
 } as const
 
+export const StoryVisibility = {
+  PUBLIC: 'PUBLIC',
+  FAMILY_ONLY: 'FAMILY_ONLY',
+  FRIENDS_AND_FAMILY: 'FRIENDS_AND_FAMILY',
+} as const
+
 export type StoryStatus = typeof StoryStatus[keyof typeof StoryStatus]
 export type StoryType = typeof StoryType[keyof typeof StoryType]
 export type DatePrecision = typeof DatePrecision[keyof typeof DatePrecision]
+export type StoryVisibility = typeof StoryVisibility[keyof typeof StoryVisibility]
 
 export interface StoryCounts {
   comments: number

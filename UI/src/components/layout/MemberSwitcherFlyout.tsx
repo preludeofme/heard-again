@@ -109,6 +109,7 @@ export function MemberSwitcherFlyout({ anchorEl, onClose, onMemberSelect }: Memb
   const [allMembers, setAllMembers] = useState<PersonOption[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const searchRef = useRef<HTMLInputElement>(null)
+  const hasFetchedRef = useRef(false)
   const open = Boolean(anchorEl)
 
   useEffect(() => {
@@ -120,13 +121,17 @@ export function MemberSwitcherFlyout({ anchorEl, onClose, onMemberSelect }: Memb
     // Focus search on open
     const timer = setTimeout(() => searchRef.current?.focus(), 50)
 
-    // Fetch all members once when flyout opens
-    if (allMembers.length === 0) {
+    // Fetch all members once per mount; retry if previous fetch failed (hasFetchedRef stays false on failure)
+    // limit=500 ensures the full family is loaded rather than the API default of 20
+    if (!hasFetchedRef.current) {
       setIsLoading(true)
-      fetch('/api/people', { credentials: 'include' })
+      fetch('/api/people?limit=500', { credentials: 'include' })
         .then((r) => r.json())
         .then((data) => {
-          if (data.success) setAllMembers(data.data || [])
+          if (data.success && Array.isArray(data.data)) {
+            setAllMembers(data.data)
+            hasFetchedRef.current = true
+          }
         })
         .catch(() => {})
         .finally(() => setIsLoading(false))

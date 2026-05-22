@@ -1,9 +1,34 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { getServerSession } from 'next-auth/next'
+import { z } from 'zod'
 import { authOptions } from '@/lib/auth'
+import { getAuthUserWithFamilyspace } from '@/lib/auth-helpers'
 import { auth } from '@trigger.dev/sdk/v3'
+import type { MachinePresetName } from '@trigger.dev/core/v3'
 import { exportTreeTask } from '@/trigger/export-tree-task'
 import { logger } from '@/lib/logger'
+import { prisma } from '@/lib/prisma'
+
+const TRIGGER_CONNECT_TIMEOUT_MS = 3_000
+
+// Node count thresholds that determine what machine Trigger.dev provisions for the task.
+// Using at least medium-1x (1 vCPU, 2 GB) for all exports; large-1x (4 vCPU, 8 GB) for
+// large trees where Sharp may need to rasterize a very wide canvas.
+const LARGE_TREE_THRESHOLD = 500
+
+const RequestSchema = z.object({
+  rootId: z.string().optional(),
+  format: z.enum(['svg', 'png']).default('png'),
+})
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Trigger.dev connection timed out')), ms),
+    ),
+  ])
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -15,52 +40,53 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(401).json({ success: false, error: 'Unauthorized' })
   }
 
-  if (!process.env.RUNPOD_ENDPOINT_ID) {
-    return res.status(500).json({
-      success: false,
-      error: 'Export is not configured. Missing RUNPOD_ENDPOINT_ID.',
-    })
+  const parsed = RequestSchema.safeParse(req.body)
+  if (!parsed.success) {
+    return res.status(400).json({ success: false, error: parsed.error.flatten() })
   }
 
-  const isLocal = process.env.RUNPOD_ENDPOINT_ID === 'local'
+  const { rootId, format } = parsed.data
 
-  const { rootId } = req.body as { rootId?: string }
+  let user: Awaited<ReturnType<typeof getAuthUserWithFamilyspace>>
+  try {
+    user = await getAuthUserWithFamilyspace(req, res)
+  } catch (authErr: unknown) {
+    const message = authErr instanceof Error ? authErr.message : 'Unauthorized'
+    return res.status(403).json({ success: false, error: message })
+  }
+
+  // Quick count so we can provision the right machine size before dispatching the task.
+  // This is a fast index-only query and does not add meaningful latency.
+  const nodeCount = await prisma.person.count({ where: { familyspaceId: user.familyspaceId } })
+  const machinePreset: MachinePresetName = nodeCount > LARGE_TREE_THRESHOLD ? 'large-1x' : 'medium-1x'
+
+  logger.info({ nodeCount, machinePreset, format }, 'Dispatching export task')
 
   try {
-    // Render URL: the hidden export-tree page Puppeteer will visit.
-    // Local: bypass Caddy (HTTPS/4777) and hit Next.js directly on its HTTP port.
-    const nextjsPort = process.env.NEXTJS_INTERNAL_PORT ?? '4776'
-    const renderUrl = isLocal
-      ? `http://host.docker.internal:${nextjsPort}/export-tree?rootId=${rootId ?? ''}`
-      : `https://${req.headers.host ?? ''}/export-tree?rootId=${rootId ?? ''}`
-
-    // Forward the user's session cookie so Puppeteer can authenticate API calls.
-    // NextAuth uses "__Secure-next-auth.session-token" over HTTPS and the plain
-    // "next-auth.session-token" over HTTP — check both.
-    const cookies = (req.headers.cookie ?? '').split(';').map((c) => c.trim())
-    const sessionCookie =
-      cookies.find((c) => c.startsWith('__Secure-next-auth.session-token=')) ??
-      cookies.find((c) => c.startsWith('next-auth.session-token=')) ??
-      ''
-
-    // Public base URL the browser will use to download the finished PNG.
-    const forwardedProto = (req.headers['x-forwarded-proto'] as string | undefined)
-      ?.split(',')[0]
-      .trim()
-    const publicBaseUrl = `${forwardedProto ?? 'https'}://${req.headers.host ?? 'localhost:4777'}`
-
-    const run = await exportTreeTask.trigger(
-      { renderUrl, sessionCookie, publicBaseUrl, isLocal },
-      { tags: [`export:tree`] }
+    const run = await withTimeout(
+      exportTreeTask.trigger(
+        {
+          familyspaceId: user.familyspaceId,
+          rootPersonId: rootId,
+          userId: user.id,
+          format,
+        },
+        {
+          machine: machinePreset,
+          tags: ['export:tree'],
+        },
+      ),
+      TRIGGER_CONNECT_TIMEOUT_MS,
     )
 
-    const publicAccessToken = await auth.createPublicToken({
-      scopes: { read: { runs: [run.id] } },
-      expirationTime: '1h',
-    })
+    const publicAccessToken = await withTimeout(
+      auth.createPublicToken({
+        scopes: { read: { runs: [run.id] } },
+        expirationTime: '1h',
+      }),
+      TRIGGER_CONNECT_TIMEOUT_MS,
+    )
 
-    // Include the platform URL so the client-side useRealtimeRun hook connects to the
-    // correct server (self-hosted local instance vs cloud).
     const triggerApiUrl = process.env.TRIGGER_API_URL ?? 'https://api.trigger.dev'
 
     return res.status(200).json({
@@ -71,7 +97,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error)
-    logger.error({ message }, 'Failed to trigger export task')
-    return res.status(500).json({ success: false, error: 'Internal Server Error' })
+    const isConnectError = message.includes('timed out') || message.includes('Connection error')
+    if (isConnectError) {
+      logger.warn({ message }, 'Trigger.dev unavailable — client will use local export fallback')
+    } else {
+      logger.error({ message }, 'Failed to trigger export task')
+    }
+    return res.status(503).json({ success: false, error: message })
   }
 }

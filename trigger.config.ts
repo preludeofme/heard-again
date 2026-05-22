@@ -3,7 +3,7 @@ import { prismaExtension } from "@trigger.dev/build/extensions/prisma";
 import { syncEnvVars } from "@trigger.dev/build/extensions/core";
 
 export default defineConfig({
-  project: "proj_tmgbtzgspjocfgztdorx",
+  project: "proj_ohiqsvyollrtuyknsxil",
   runtime: "node",
   logLevel: "log",
   // The max compute seconds a task is allowed to run. If the task run exceeds this duration, it will be stopped.
@@ -22,6 +22,8 @@ export default defineConfig({
   },
   dirs: ["UI/src/trigger"],
   build: {
+    // sharp is a native module — mark as external so the bundler doesn't try to inline it
+    external: ["sharp"],
     extensions: [
       prismaExtension({
         schema: "prisma/schema.prisma",
@@ -51,6 +53,10 @@ export default defineConfig({
         if (storageMode) {
           vars.push({ name: "STORAGE_MODE", value: storageMode });
         }
+        // NEXTAUTH_URL is the app base URL — used by export task for local download links.
+        const nextAuthUrl = ctx.env.NEXTAUTH_URL;
+        if (nextAuthUrl) vars.push({ name: "NEXTAUTH_URL", value: nextAuthUrl });
+
         for (const key of [
           "R2_BUCKET_NAME",
           "R2_REGION",
@@ -58,6 +64,8 @@ export default defineConfig({
           "R2_SECRET_ACCESS_KEY",
           "R2_ENDPOINT",
           "R2_PUBLIC_URL_BASE",
+          "R2_PUBLIC_DOMAIN",
+          "CLOUDFLARE_ACCOUNT_ID",
         ]) {
           const value = ctx.env[key];
           if (value) vars.push({ name: key, value });

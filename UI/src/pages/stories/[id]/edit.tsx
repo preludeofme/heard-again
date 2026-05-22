@@ -13,6 +13,7 @@ import { RichTextEditor } from '@/components/editor/RichTextEditor'
 import { ConfirmDialog } from '@/components/modals/ConfirmDialog'
 
 type NarrationStatus = 'NONE' | 'PENDING' | 'READY' | 'APPROVED' | 'STALE' | 'FAILED'
+type StoryVisibility = 'PUBLIC' | 'FAMILY_ONLY' | 'FRIENDS_AND_FAMILY'
 
 const C = {
   primary: '#16334a',
@@ -31,6 +32,7 @@ interface StoryEditData {
   storyDate: string | null
   location: string | null
   status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'
+  visibility: StoryVisibility
   subject?: { id: string; firstName: string; lastName?: string | null } | null
   narratedContent?: string | null
   narrationStatus?: NarrationStatus
@@ -54,6 +56,7 @@ export default function StoryEditPage() {
   const [storyDate, setStoryDate] = useState('')
   const [location, setLocation] = useState('')
   const [status, setStatus] = useState<'DRAFT' | 'PUBLISHED'>('PUBLISHED')
+  const [visibility, setVisibility] = useState<StoryVisibility>('FAMILY_ONLY')
   const [showOptional, setShowOptional] = useState(false)
   const [narrationPromptOpen, setNarrationPromptOpen] = useState(false)
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
@@ -74,6 +77,7 @@ export default function StoryEditPage() {
       setStoryDate(s.storyDate ? new Date(s.storyDate).toISOString().split('T')[0] : '')
       setLocation(s.location || '')
       setStatus((s.status === 'DRAFT' ? 'DRAFT' : 'PUBLISHED') as 'DRAFT' | 'PUBLISHED')
+      setVisibility(s.visibility ?? 'FAMILY_ONLY')
       if (s.storyDate || s.location) setShowOptional(true)
     } catch (err: any) {
       setError(err.message)
@@ -105,6 +109,7 @@ export default function StoryEditPage() {
           storyDate: storyDate || null,
           location: location.trim() || null,
           status,
+          visibility,
           regenerateNarration,
         }),
       })
@@ -312,7 +317,7 @@ export default function StoryEditPage() {
               {/* Status toggle */}
               <Box>
                 <Typography variant="caption" sx={{ color: C.onSecondaryContainer, mb: 1, display: 'block', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                  Visibility
+                  Status
                 </Typography>
                 <ToggleButtonGroup
                   value={status}
@@ -350,6 +355,65 @@ export default function StoryEditPage() {
                 </ToggleButtonGroup>
                 <Typography variant="caption" sx={{ color: C.onSecondaryContainer, display: 'block', mt: 1 }}>
                   {status === 'PUBLISHED' ? 'Visible on the profile and story.' : 'Only visible to familyspace editors.'}
+                </Typography>
+              </Box>
+
+              {/* Visibility picker */}
+              <Box>
+                <Typography variant="caption" sx={{ color: C.onSecondaryContainer, mb: 1, display: 'block', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                  Who can see this story?
+                </Typography>
+                <ToggleButtonGroup
+                  value={visibility}
+                  exclusive
+                  onChange={(_, val) => { if (val) setVisibility(val) }}
+                  size="small"
+                  sx={{ gap: 1, flexWrap: 'wrap' }}
+                >
+                  <ToggleButton
+                    value="FAMILY_ONLY"
+                    sx={{
+                      borderRadius: '20px !important',
+                      border: `1px solid ${C.outlineVariant} !important`,
+                      px: 2.5,
+                      textTransform: 'none',
+                      fontWeight: 600,
+                      '&.Mui-selected': { bgcolor: '#e8f4f8', color: C.primary, borderColor: '#90caf9 !important' },
+                    }}
+                  >
+                    Family Only
+                  </ToggleButton>
+                  <ToggleButton
+                    value="FRIENDS_AND_FAMILY"
+                    sx={{
+                      borderRadius: '20px !important',
+                      border: `1px solid ${C.outlineVariant} !important`,
+                      px: 2.5,
+                      textTransform: 'none',
+                      fontWeight: 600,
+                      '&.Mui-selected': { bgcolor: '#f3e5f5', color: '#6a1b9a', borderColor: '#ce93d8 !important' },
+                    }}
+                  >
+                    Friends &amp; Family
+                  </ToggleButton>
+                  <ToggleButton
+                    value="PUBLIC"
+                    sx={{
+                      borderRadius: '20px !important',
+                      border: `1px solid ${C.outlineVariant} !important`,
+                      px: 2.5,
+                      textTransform: 'none',
+                      fontWeight: 600,
+                      '&.Mui-selected': { bgcolor: '#e8f5e9', color: '#2e7d32', borderColor: '#a5d6a7 !important' },
+                    }}
+                  >
+                    Public
+                  </ToggleButton>
+                </ToggleButtonGroup>
+                <Typography variant="caption" sx={{ color: C.onSecondaryContainer, display: 'block', mt: 1 }}>
+                  {visibility === 'FAMILY_ONLY' && 'Only family members can see this story.'}
+                  {visibility === 'FRIENDS_AND_FAMILY' && 'Friends and family members can see this story.'}
+                  {visibility === 'PUBLIC' && 'Anyone can discover and view this story.'}
                 </Typography>
               </Box>
 

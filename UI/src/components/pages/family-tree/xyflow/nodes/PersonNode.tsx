@@ -253,6 +253,7 @@ export function PersonNode({ data }: NodeProps): React.JSX.Element {
           level={d.level}
           isSelf={d.isSelf}
           isSelected={d.isSelected}
+          isInLaw={d.isInLaw}
           levelIndex={d.levelIndex}
           cardWidth={d.person.width}
           isMobile={d.isMobile}

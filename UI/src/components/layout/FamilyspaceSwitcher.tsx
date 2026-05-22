@@ -20,9 +20,11 @@ import {
   Check as CheckIcon,
   Add as AddIcon,
   Settings as SettingsIcon,
+  PersonAdd as PersonAddIcon,
 } from '@mui/icons-material'
 import { useApi } from '@/hooks/useApi'
 import { useSelectedFamilyMember } from '@/contexts/SelectedFamilyMemberContext'
+import { fetchWithCSRF } from '@/lib/api-client'
 import Link from 'next/link'
 
 interface Familyspace {
@@ -70,9 +72,8 @@ export function FamilyspaceSwitcher() {
     setIsSwitching(familyspaceId)
 
     try {
-      const response = await fetch(`/api/familyspaces/${familyspaceId}/switch`, {
+      const response = await fetchWithCSRF(`/api/familyspaces/${familyspaceId}/switch`, {
         method: 'POST',
-        credentials: 'include',
       })
 
       if (!response.ok) {
@@ -320,17 +321,30 @@ export function FamilyspaceSwitcher() {
         </MenuItem>
 
         {currentFamilyspace?.role === 'OWNER' || currentFamilyspace?.role === 'ADMIN' ? (
-          <MenuItem
-            component={Link}
-            href={`/familyspaces/${currentFamilyspace?.id}/settings`}
-            onClick={handleClose}
-            sx={{ py: 1.5 }}
-          >
-            <ListItemIcon>
-              <SettingsIcon fontSize="small" />
-            </ListItemIcon>
-            <ListItemText primary="Familyspace settings" />
-          </MenuItem>
+          <>
+            <MenuItem
+              component={Link}
+              href="/invite"
+              onClick={handleClose}
+              sx={{ py: 1.5 }}
+            >
+              <ListItemIcon>
+                <PersonAddIcon fontSize="small" />
+              </ListItemIcon>
+              <ListItemText primary="Invite a member" />
+            </MenuItem>
+            <MenuItem
+              component={Link}
+              href={`/familyspaces/${currentFamilyspace?.id}/settings`}
+              onClick={handleClose}
+              sx={{ py: 1.5 }}
+            >
+              <ListItemIcon>
+                <SettingsIcon fontSize="small" />
+              </ListItemIcon>
+              <ListItemText primary="Familyspace settings" />
+            </MenuItem>
+          </>
         ) : null}
       </Menu>
     </>

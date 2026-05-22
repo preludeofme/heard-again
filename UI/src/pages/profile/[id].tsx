@@ -1,8 +1,8 @@
 import Head from 'next/head'
 import { useRouter } from 'next/router'
-import { useEffect, useRef, useState } from 'react'
-import { Box, CircularProgress, IconButton, Tab, Tabs, Tooltip, Typography } from '@mui/material'
-import { PhotoCamera as PhotoCameraIcon } from '@mui/icons-material'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Box, Button, CircularProgress, IconButton, Paper, Tab, Tabs, Tooltip, Typography } from '@mui/material'
+import { PhotoCamera as PhotoCameraIcon, Timeline as TimelineIcon } from '@mui/icons-material'
 import { Layout } from '@/components/layout/Layout'
 import { useSelectedFamilyMember } from '@/contexts/SelectedFamilyMemberContext'
 import { ProfileColors } from '@/components/profile/ProfileConstants'
@@ -49,6 +49,54 @@ interface DocItem {
   asset?: { id: string; storagePath: string; mimeType: string }
 }
 
+interface TimelineEvent {
+  id: string
+  type: 'birth' | 'death' | 'marriage' | 'divorce' | 'story' | 'document' | 'custom'
+  date: string | null
+  datePrecision: string
+  title: string
+  description?: string
+  people: Array<{
+    id: string
+    firstName: string
+    lastName?: string
+    displayName?: string
+    avatarAssetId?: string
+    role?: string
+  }>
+  metadata?: Record<string, unknown>
+  sourceId: string
+  sourceType: string
+}
+
+type TimelineFilter = 'all' | 'events' | 'stories' | 'milestones'
+
+const FILTER_OPTIONS: Array<{ label: string; value: TimelineFilter; types: TimelineEvent['type'][] }> = [
+  { label: 'All', value: 'all', types: [] },
+  { label: 'Events', value: 'events', types: ['birth', 'death', 'marriage', 'divorce', 'custom'] },
+  { label: 'Stories', value: 'stories', types: ['story'] },
+  { label: 'Milestones', value: 'milestones', types: ['custom'] },
+]
+
+function formatEventDate(date: string | null, precision: string): string {
+  if (!date) return 'Unknown date'
+  const d = new Date(date)
+  switch (precision) {
+    case 'EXACT':
+      return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+    case 'YEAR_MONTH':
+      return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long' })
+    case 'YEAR':
+      return d.getFullYear().toString()
+    case 'DECADE':
+      return `${Math.floor(d.getFullYear() / 10) * 10}s`
+    case 'APPROXIMATE':
+      return `c. ${d.getFullYear()}`
+    default:
+      return d.toLocaleDateString()
+  }
+}
+
 const fullName = (p: { firstName?: string; lastName?: string | null; displayName?: string | null }) =>
   p.displayName || `${p.firstName || ''}${p.lastName ? ` ${p.lastName}` : ''}`.trim() || 'Unnamed'
 
@@ -64,6 +112,9 @@ export default function PersonProfilePage() {
   const [stories, setStories] = useState<Story[]>([])
   const [documents, setDocuments] = useState<DocItem[]>([])
   const [docTotal, setDocTotal] = useState(0)
+  const [timelineEvents, setTimelineEvents] = useState<TimelineEvent[]>([])
+  const [isTimelineLoading, setIsTimelineLoading] = useState(false)
+  const [timelineFilter, setTimelineFilter] = useState<TimelineFilter>('all')
   const [isLoading, setIsLoading] = useState(true)
   const [activeTab, setActiveTab] = useState(0)
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
@@ -170,6 +221,27 @@ export default function PersonProfilePage() {
 
     return () => { active = false }
   }, [personId])
+
+  useEffect(() => {
+    if (!personId) return
+    let active = true
+    setIsTimelineLoading(true)
+    fetch(`/api/timeline?personId=${personId}&limit=50`, { credentials: 'include' })
+      .then(r => r.json())
+      .then(data => {
+        if (!active) return
+        if (data.success) setTimelineEvents(data.data || [])
+      })
+      .catch(() => {})
+      .finally(() => { if (active) setIsTimelineLoading(false) })
+    return () => { active = false }
+  }, [personId])
+
+  const filteredTimelineEvents = useMemo(() => {
+    const filter = FILTER_OPTIONS.find(f => f.value === timelineFilter)
+    if (!filter || filter.value === 'all') return timelineEvents
+    return timelineEvents.filter(e => filter.types.includes(e.type))
+  }, [timelineEvents, timelineFilter])
 
   if (isLoading) {
     return (
@@ -435,10 +507,185 @@ export default function PersonProfilePage() {
               }}
             >
               <Tab label="Timeline" />
+              <Tab label="Narrative" />
               <Tab label="Memories" />
             </Tabs>
 
+            {/* ── Timeline Tab ── */}
             <Box hidden={activeTab !== 0}>
+              {/* Filter chips */}
+              <Paper
+                elevation={0}
+                sx={{
+                  display: 'flex',
+                  p: 0.75,
+                  mb: 5,
+                  borderRadius: '999px',
+                  backgroundColor: ProfileColors.surfaceContainerLow,
+                  border: `1px solid ${ProfileColors.outlineVariant}20`,
+                  width: 'fit-content',
+                  overflowX: 'auto',
+                  '&::-webkit-scrollbar': { display: 'none' },
+                }}
+              >
+                {FILTER_OPTIONS.map(opt => (
+                  <Button
+                    key={opt.value}
+                    onClick={() => setTimelineFilter(opt.value)}
+                    sx={{
+                      px: 3,
+                      py: 1,
+                      borderRadius: '999px',
+                      textTransform: 'none',
+                      fontFamily: 'var(--font-manrope), sans-serif',
+                      fontWeight: 600,
+                      fontSize: '0.9rem',
+                      whiteSpace: 'nowrap',
+                      color: timelineFilter === opt.value ? ProfileColors.primary : ProfileColors.onSurfaceVariant,
+                      backgroundColor: timelineFilter === opt.value ? ProfileColors.surfaceContainerLowest : 'transparent',
+                      boxShadow: timelineFilter === opt.value ? '0 2px 8px rgba(0,0,0,0.05)' : 'none',
+                      '&:hover': {
+                        backgroundColor: timelineFilter === opt.value
+                          ? ProfileColors.surfaceContainerLowest
+                          : 'rgba(0,0,0,0.03)',
+                      },
+                    }}
+                  >
+                    {opt.label}
+                  </Button>
+                ))}
+              </Paper>
+
+              {/* Timeline event list */}
+              {isTimelineLoading ? (
+                <Box sx={{ py: 6, display: 'flex', justifyContent: 'center' }}>
+                  <CircularProgress sx={{ color: ProfileColors.primary }} size={28} />
+                </Box>
+              ) : filteredTimelineEvents.length === 0 ? (
+                <Box sx={{ py: 10, textAlign: 'center', border: `2px dashed ${ProfileColors.outlineVariant}30`, borderRadius: 6 }}>
+                  <TimelineIcon sx={{ fontSize: 48, color: ProfileColors.outlineVariant, opacity: 0.4, mb: 1.5 }} />
+                  <Typography sx={{ fontFamily: 'var(--font-newsreader), serif', fontSize: '1.2rem', fontStyle: 'italic', color: ProfileColors.onSurfaceVariant }}>
+                    No {timelineFilter === 'all' ? 'timeline events' : timelineFilter} recorded yet.
+                  </Typography>
+                </Box>
+              ) : (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                  {filteredTimelineEvents.map(event => {
+                    const typeColors: Record<string, string> = {
+                      birth: '#4caf50',
+                      death: '#757575',
+                      marriage: '#e91e63',
+                      divorce: '#ff9800',
+                      story: ProfileColors.primary,
+                      document: '#adcae6',
+                      custom: '#9c27b0',
+                    }
+                    const color = typeColors[event.type] ?? ProfileColors.primary
+                    const typeLabel: Record<string, string> = {
+                      birth: 'Birth',
+                      death: 'Death',
+                      marriage: 'Marriage',
+                      divorce: 'Divorce',
+                      story: 'Story',
+                      document: 'Document',
+                      custom: 'Milestone',
+                    }
+                    return (
+                      <Box
+                        key={event.id}
+                        sx={{
+                          display: 'flex',
+                          gap: 3,
+                          alignItems: 'flex-start',
+                          p: 3.5,
+                          borderRadius: 5,
+                          bgcolor: ProfileColors.surfaceContainerLowest,
+                          border: `1px solid ${ProfileColors.outlineVariant}15`,
+                          boxShadow: '0 2px 12px rgba(0,0,0,0.03)',
+                          transition: 'box-shadow 0.2s, transform 0.2s',
+                          '&:hover': {
+                            boxShadow: '0 6px 24px rgba(0,0,0,0.07)',
+                            transform: 'translateY(-2px)',
+                          },
+                        }}
+                      >
+                        {/* Colored dot */}
+                        <Box
+                          sx={{
+                            width: 12,
+                            height: 12,
+                            borderRadius: '50%',
+                            bgcolor: color,
+                            flexShrink: 0,
+                            mt: '6px',
+                            boxShadow: `0 0 0 3px ${color}20`,
+                          }}
+                        />
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.5, flexWrap: 'wrap' }}>
+                            <Typography
+                              sx={{
+                                fontFamily: 'var(--font-manrope), sans-serif',
+                                fontSize: '0.72rem',
+                                fontWeight: 700,
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.1em',
+                                color,
+                              }}
+                            >
+                              {typeLabel[event.type] ?? 'Event'}
+                            </Typography>
+                            {event.date && (
+                              <Typography
+                                sx={{
+                                  fontFamily: 'var(--font-manrope), sans-serif',
+                                  fontSize: '0.72rem',
+                                  color: ProfileColors.onSurfaceVariant,
+                                  opacity: 0.7,
+                                }}
+                              >
+                                {formatEventDate(event.date, event.datePrecision)}
+                              </Typography>
+                            )}
+                          </Box>
+                          <Typography
+                            sx={{
+                              fontFamily: 'var(--font-newsreader), serif',
+                              fontSize: '1.1rem',
+                              fontWeight: 600,
+                              color: ProfileColors.primary,
+                              lineHeight: 1.3,
+                            }}
+                          >
+                            {event.title}
+                          </Typography>
+                          {event.description && (
+                            <Typography
+                              sx={{
+                                fontFamily: 'var(--font-manrope), sans-serif',
+                                fontSize: '0.88rem',
+                                color: ProfileColors.onSurfaceVariant,
+                                mt: 0.75,
+                                lineHeight: 1.6,
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden',
+                              }}
+                            >
+                              {event.description}
+                            </Typography>
+                          )}
+                        </Box>
+                      </Box>
+                    )
+                  })}
+                </Box>
+              )}
+            </Box>
+
+            {/* ── Narrative Tab ── */}
+            <Box hidden={activeTab !== 1}>
               <NarrativeTimeline
                 stories={stories}
                 personId={personId}
@@ -452,7 +699,8 @@ export default function PersonProfilePage() {
               />
             </Box>
 
-            <Box hidden={activeTab !== 1}>
+            {/* ── Memories Tab ── */}
+            <Box hidden={activeTab !== 2}>
               <MemoriesGrid
                 documents={documents}
                 docTotal={docTotal}

@@ -309,9 +309,11 @@ function sortGenerationRow(
       // Then enqueue siblings
       const siblings = siblingsByPerson.get(current)
       if (siblings) {
+        const inQueue = new Set(queue)
         Array.from(siblings).sort((a,b) => a.localeCompare(b)).forEach(siblingId => {
-          if (remaining.has(siblingId) && !queue.includes(siblingId)) {
+          if (remaining.has(siblingId) && !inQueue.has(siblingId)) {
             queue.push(siblingId)
+            inQueue.add(siblingId)
           }
         })
       }
@@ -641,6 +643,29 @@ export function buildFamilyTreeLayout(
     }
   }
 
+  // Compute blood-relative set via BFS through parent/child edges only.
+  // Everyone reachable from root through PARENT/CHILD connections is a blood relative;
+  // anyone whose only path to the tree is via a SPOUSE edge is an in-law.
+  const bloodRelativeIds = new Set<string>()
+  {
+    const bloodQueue: string[] = [rootPersonId]
+    bloodRelativeIds.add(rootPersonId)
+    while (bloodQueue.length > 0) {
+      const currentId = bloodQueue.shift()!
+      const current = peopleById.get(currentId)
+      if (!current) continue
+      for (const edge of current.relationshipEdges) {
+        const relId = edge.relatedPerson.id
+        if (bloodRelativeIds.has(relId)) continue
+        if (!personPositions.has(relId)) continue // not in visible tree
+        if (edge.type === 'PARENT' || edge.type === 'CHILD' || edge.type === 'SIBLING') {
+          bloodRelativeIds.add(relId)
+          bloodQueue.push(relId)
+        }
+      }
+    }
+  }
+
   // Build nodes
   const nodes: Node[] = []
   for (const [personId, pos] of personPositions) {
@@ -651,6 +676,8 @@ export function buildFamilyTreeLayout(
     const { width, height } = pos
     const level = levelFromGen(gen)
     const isSelf = personId === rootPersonId
+    // A person is an in-law when they are not reachable from the root via blood/sibling edges
+    const isInLaw = !bloodRelativeIds.has(personId)
 
     // Calculate missing relative flags
     let missingUp = false
@@ -693,6 +720,7 @@ export function buildFamilyTreeLayout(
       level,
       isSelf,
       isSelected: personId === selectedPersonId,
+      isInLaw,
       levelIndex: gen,
       isMobile: callbacks.isMobile,
       onPersonClick: callbacks.onPersonClick,

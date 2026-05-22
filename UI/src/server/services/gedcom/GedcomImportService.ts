@@ -80,7 +80,7 @@ export class GedcomImportService {
     },
     onProgress?: (done: number, total: number) => void | Promise<void>
   ): Promise<Record<string, unknown>> {
-    const { individuals, families } = GedcomParser.parse(fileContent)
+    const { individuals, families, standaloneNotes, standaloneSources } = GedcomParser.parse(fileContent)
 
     if (individuals.length === 0) {
       throw new Error('No GEDCOM individuals found in file')
@@ -95,6 +95,8 @@ export class GedcomImportService {
       parsedIndividuals: individuals.length,
       parsedFamilies: families.length,
       parsedFamilyLinks: families.reduce((acc, f) => acc + f.childXrefs.length, 0),
+      parsedStandaloneNotes: standaloneNotes.length,
+      parsedStandaloneSources: standaloneSources.length,
       personUpserts: 0,
       personNamesWritten: 0,
       personEventsWritten: 0,
@@ -104,6 +106,7 @@ export class GedcomImportService {
       familyUpserts: 0,
       familyChildLinksWritten: 0,
       skippedFamilyChildLinks: 0,
+      standaloneStoriesCreated: 0,
       idempotentUpsertEnabled: true,
     }
 
@@ -374,6 +377,58 @@ export class GedcomImportService {
             })
           }
         })
+      }
+
+      // Import standalone NOTE records as Stories (GEDCOM v7 / family-level notes)
+      const STANDALONE_NOTE_MIN_LENGTH = 20
+      for (const note of standaloneNotes) {
+        if (note.content.length <= STANDALONE_NOTE_MIN_LENGTH) continue
+        const title = note.content.length > 80
+          ? note.content.slice(0, 77).trimEnd() + '…'
+          : note.content
+        await prisma.story.create({
+          data: {
+            familyspaceId,
+            title: title || 'Family History Note',
+            content: note.content,
+            storyType: 'MEMORY',
+            status: 'PUBLISHED',
+            isPublic: false,
+            createdById: userId,
+            tags: ['gedcom-import', 'standalone-note'],
+          },
+        })
+        importStats.standaloneStoriesCreated += 1
+      }
+
+      // Import standalone SOUR records as Stories when they have meaningful content
+      for (const source of standaloneSources) {
+        const content = source.text ?? source.title
+        if (!content || content.length <= STANDALONE_NOTE_MIN_LENGTH) continue
+        const title = source.title
+          ? (source.title.length > 80 ? source.title.slice(0, 77).trimEnd() + '…' : source.title)
+          : 'Family History Source'
+        const fullContent = [
+          source.title ? `Source: ${source.title}` : null,
+          source.author ? `Author: ${source.author}` : null,
+          source.date ? `Date: ${source.date}` : null,
+          source.text ?? null,
+        ]
+          .filter(Boolean)
+          .join('\n\n')
+        await prisma.story.create({
+          data: {
+            familyspaceId,
+            title,
+            content: fullContent,
+            storyType: 'DOCUMENT',
+            status: 'PUBLISHED',
+            isPublic: false,
+            createdById: userId,
+            tags: ['gedcom-import', 'standalone-source'],
+          },
+        })
+        importStats.standaloneStoriesCreated += 1
       }
 
       await prisma.importJob.update({

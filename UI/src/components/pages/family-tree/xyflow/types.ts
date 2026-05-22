@@ -52,6 +52,8 @@ export interface PersonNodeData {
   level: TreeNodeLevel
   isSelf: boolean
   isSelected: boolean
+  /** True when the person joined the family by marriage (in-law), not by birth/adoption */
+  isInLaw: boolean
   levelIndex: number
   isMobile: boolean
   onPersonClick: (person: TreeLayoutPerson) => void

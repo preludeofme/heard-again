@@ -50,6 +50,7 @@ async function getDocuments(req: NextApiRequest, res: NextApiResponse, familyspa
 
   // Hide AI-generated narration audio and voice-training/voice-generation assets
   // — these get an Asset+Document row but aren't user-curated documents.
+  // Also hide GEDCOM/GED export files (familyspace-export-*.ged and any gedcom-named files).
   const where: any = {
     familyspaceId,
     isDeleted: includeDeleted === 'true' ? undefined : false,
@@ -60,6 +61,11 @@ async function getDocuments(req: NextApiRequest, res: NextApiResponse, familyspa
       modelArtifactFor: { none: {} },
       generatedAudioForStories: { none: {} },
       exportOutputs: { none: {} },
+      NOT: [
+        { filename: { endsWith: '.ged', mode: 'insensitive' } },
+        { filename: { endsWith: '.gedcom', mode: 'insensitive' } },
+        { filename: { contains: 'gedcom', mode: 'insensitive' } },
+      ],
     },
   }
 

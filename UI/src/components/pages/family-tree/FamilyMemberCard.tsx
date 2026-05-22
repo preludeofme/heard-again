@@ -26,6 +26,8 @@ interface FamilyMemberCardProps {
   level: TreeNodeLevel
   isSelf?: boolean
   isSelected?: boolean
+  /** When true, renders a visual treatment indicating a married-in family member */
+  isInLaw?: boolean
   levelIndex?: number
   cardWidth: number
   isMobile: boolean
@@ -45,6 +47,7 @@ export function FamilyMemberCard({
   level,
   isSelf,
   isSelected,
+  isInLaw = false,
   levelIndex = 0,
   cardWidth,
   isMobile,
@@ -61,7 +64,10 @@ export function FamilyMemberCard({
   const selfCardColor = '#1a6b5a'
   const selectedColor = '#7b1fa2' // Deep Purple for selected
   const levelColors = ['#16334a', '#445558', '#6d5f44']
-  
+  // In-law: desaturated, slightly lighter shade of the normal background so it reads
+  // as "related but different lineage" without clashing with the dark theme
+  const inLawLevelColors = ['#2c3e4a', '#3d4f52', '#5a5048']
+
   const selfCardOutline = 'rgba(26, 107, 90, 0.08)'
 
   const getLifeSpan = () => {
@@ -84,12 +90,19 @@ export function FamilyMemberCard({
 
   // Color logic - use a positive-only modulo to handle negative generations
   const colorIndex = ((levelIndex % 3) + 3) % 3
-  let cardBgColor = levelColors[colorIndex]
+  let cardBgColor = isInLaw ? inLawLevelColors[colorIndex] : levelColors[colorIndex]
   if (isSelf) cardBgColor = selfCardColor
   if (isSelected) cardBgColor = selectedColor
 
   // Compact mode: avatar, name, life span and icons
   if (compact) {
+    // Border: selected wins, then in-law dashed, then none
+    const compactBorder = isSelected
+      ? '2px solid white'
+      : isInLaw
+        ? '2px dashed rgba(255,255,255,0.45)'
+        : 'none'
+
     return (
       <Card
         tabIndex={0}
@@ -102,7 +115,7 @@ export function FamilyMemberCard({
           width: cardWidth,
           cursor: 'pointer',
           boxShadow: isSelected ? '0 0 0 4px rgba(123, 31, 162, 0.3), 0 12px 24px rgba(0,0,0,0.2)' : '0 8px 20px rgba(0,0,0,0.12)',
-          border: isSelected ? '2px solid white' : 'none',
+          border: compactBorder,
           outline: isSelf ? `4px solid ${selfCardOutline}` : 'none',
           overflow: 'hidden',
           display: 'flex',

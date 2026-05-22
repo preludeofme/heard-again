@@ -62,6 +62,11 @@ cleanup() {
         echo "  Stopping Exporter container..."
         docker stop exporter-dev >/dev/null 2>&1 || true
     fi
+    # Stop Trigger.dev stack if this script started it
+    if [ "${TRIGGER_STACK_STARTED:-false}" = "true" ]; then
+        echo "  Stopping Trigger.dev stack..."
+        docker compose -f "$MAIN_APP_DIR/docker-compose.trigger.yml" down >/dev/null 2>&1 || true
+    fi
     echo -e "${GREEN}All services stopped.${NC}"
     exit 0
 }
@@ -517,20 +522,73 @@ else
     TTS_STARTED=false
 fi
 
-# Start Trigger.dev dev worker (handles narration-render and gedcom-import tasks locally)
-echo "  Starting Trigger.dev dev worker..."
-cd "$MAIN_APP_DIR"
-if [ "$LOG_MODE" = "live" ]; then
-    npx trigger.dev@latest dev 2>&1 | tee "$MAIN_APP_DIR/logs/trigger-dev.log" &
+# ── Trigger.dev self-hosted stack ──────────────────────────────────────────
+echo "  Checking Trigger.dev server (port 3030)..."
+TRIGGER_STACK_STARTED=false
+if ! check_port 3030; then
+    echo -e "  ${GREEN}✓ Trigger.dev server already running on port 3030${NC}"
 else
-    npx trigger.dev@latest dev > "$MAIN_APP_DIR/logs/trigger-dev.log" 2>&1 &
+    if command -v docker &> /dev/null && [ -f "$MAIN_APP_DIR/docker-compose.trigger.yml" ]; then
+        echo "  Starting Trigger.dev stack (first pull may take a few minutes)..."
+        if [ "$LOG_MODE" = "live" ]; then
+            docker compose -f "$MAIN_APP_DIR/docker-compose.trigger.yml" up -d 2>&1 | tee "$MAIN_APP_DIR/logs/trigger-app.log"
+        else
+            docker compose -f "$MAIN_APP_DIR/docker-compose.trigger.yml" up -d > "$MAIN_APP_DIR/logs/trigger-app.log" 2>&1
+        fi
+        TRIGGER_STACK_STARTED=true
+        # Wait for the Trigger.dev app to become healthy (up to 3 minutes)
+        echo -n "  Waiting for Trigger.dev server..."
+        _TRIGGER_WAIT=0
+        until curl -sf http://localhost:3030/healthcheck 2>/dev/null | grep -qi ok; do
+            if [ $_TRIGGER_WAIT -ge 180 ]; then
+                echo -e " ${YELLOW}⚠ Timeout — check logs/trigger-app.log${NC}"
+                break
+            fi
+            echo -n "."
+            sleep 3
+            _TRIGGER_WAIT=$((_TRIGGER_WAIT + 3))
+        done
+        if curl -sf http://localhost:3030/healthcheck 2>/dev/null | grep -qi ok; then
+            echo -e " ${GREEN}✓ Ready${NC}"
+            echo -e "  ${BLUE}  First run? Visit http://localhost:3030 to create an account.${NC}"
+            echo -e "  ${BLUE}  (magic-link login URL will appear in logs/trigger-app.log)${NC}"
+        fi
+    else
+        echo -e "  ${YELLOW}⚠ Docker not found or docker-compose.trigger.yml missing — skipping Trigger.dev stack${NC}"
+    fi
 fi
-TRIGGER_PID=$!
-echo $TRIGGER_PID >> "$PIDS_FILE"
-echo -e "    ${GREEN}✓ Trigger.dev worker started (PID: $TRIGGER_PID)${NC}"
-echo -e "    ${BLUE}  API: https://api.trigger.dev${NC}"
-if [ "$LOG_MODE" != "live" ]; then
-    echo -e "    ${BLUE}  Logs: $MAIN_APP_DIR/logs/trigger-dev.log${NC}"
+
+# Load TRIGGER_API_URL from .env files; default to self-hosted localhost if not set
+_TRIGGER_API_URL=$(grep '^TRIGGER_API_URL=' "$MAIN_APP_DIR/.env" 2>/dev/null | cut -d'=' -f2- | tr -d '"')
+_TRIGGER_API_URL="${_TRIGGER_API_URL:-$(grep '^TRIGGER_API_URL=' "$UI_DIR/.env" 2>/dev/null | cut -d'=' -f2- | tr -d '"')}"
+_TRIGGER_API_URL="${_TRIGGER_API_URL:-http://localhost:3030}"
+export TRIGGER_API_URL="$_TRIGGER_API_URL"
+
+# Check if a secret key is configured before starting the dev worker
+_TRIGGER_KEY=$(grep '^TRIGGER_SECRET_KEY=' "$MAIN_APP_DIR/.env" 2>/dev/null | cut -d'=' -f2- | tr -d '"')
+_TRIGGER_KEY="${_TRIGGER_KEY:-$(grep '^TRIGGER_SECRET_KEY=' "$UI_DIR/.env" 2>/dev/null | cut -d'=' -f2- | tr -d '"')}"
+export TRIGGER_SECRET_KEY="$_TRIGGER_KEY"
+
+# Start Trigger.dev dev worker (handles export-tree, narration-render, and gedcom-import tasks locally)
+if [ -z "$_TRIGGER_KEY" ]; then
+    echo -e "  ${YELLOW}⚠ TRIGGER_SECRET_KEY not set — Trigger.dev dev worker skipped${NC}"
+    echo -e "    ${BLUE}Visit http://localhost:3030, create a project, and add the token to .env${NC}"
+    TRIGGER_PID=""
+else
+    echo "  Starting Trigger.dev dev worker..."
+    cd "$MAIN_APP_DIR"
+    if [ "$LOG_MODE" = "live" ]; then
+        npx trigger.dev@latest dev --api-url "$TRIGGER_API_URL" 2>&1 | tee "$MAIN_APP_DIR/logs/trigger-dev.log" &
+    else
+        npx trigger.dev@latest dev --api-url "$TRIGGER_API_URL" > "$MAIN_APP_DIR/logs/trigger-dev.log" 2>&1 &
+    fi
+    TRIGGER_PID=$!
+    echo $TRIGGER_PID >> "$PIDS_FILE"
+    echo -e "    ${GREEN}✓ Trigger.dev worker started (PID: $TRIGGER_PID)${NC}"
+    echo -e "    ${BLUE}  API: $TRIGGER_API_URL${NC}"
+    if [ "$LOG_MODE" != "live" ]; then
+        echo -e "    ${BLUE}  Logs: $MAIN_APP_DIR/logs/trigger-dev.log${NC}"
+    fi
 fi
 
 echo ""
@@ -595,7 +653,11 @@ echo -e "  ${BLUE}Main App:${NC}      https://localhost:$MAIN_APP_PORT"
 if [ "$TTS_STARTED" = true ]; then
     echo -e "  ${BLUE}TTS Service:${NC}   http://localhost:$TTS_SERVICE_PORT"
 fi
-echo -e "  ${BLUE}Trigger.dev:${NC}   cloud worker (proj_tmgbtzgspjocfgztdorx) — PID: $TRIGGER_PID"
+if [ -n "$TRIGGER_PID" ]; then
+    echo -e "  ${BLUE}Trigger.dev:${NC}   $TRIGGER_API_URL — PID: $TRIGGER_PID"
+else
+    echo -e "  ${BLUE}Trigger.dev:${NC}   $TRIGGER_API_URL (worker not started — set TRIGGER_SECRET_KEY)"
+fi
 if [ "$EXPORTER_STARTED" = true ]; then
     echo -e "  ${BLUE}Exporter:${NC}      http://localhost:8001/run (Docker)"
 fi

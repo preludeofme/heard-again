@@ -20,6 +20,7 @@ import { PersonNode } from './nodes/PersonNode'
 import { FamilyNode } from './nodes/FamilyNode'
 import { StubNode } from './nodes/StubNode'
 import { buildFamilyTreeLayout } from './layout'
+import { buildTreeSvg, COMPACT_NODE_THRESHOLD } from '@/lib/export/tree-svg-renderer'
 import type { ApiPersonWithEdges, TreeLayoutPerson } from './types'
 import type { exportTreeTask } from '@/trigger/export-tree-task'
 
@@ -36,6 +37,9 @@ export interface ReactFlowTreeCanvasHandle {
   fitView: (options?: { duration?: number; padding?: number }) => void
   centerOnNode: (nodeId: string, options?: { duration?: number; zoom?: number }) => void
   exportPng: () => Promise<void>
+  exportSvg: () => Promise<void>
+  exportPngLocal: () => Promise<void>
+  isExporting: boolean
 }
 
 interface ReactFlowTreeCanvasProps {
@@ -55,6 +59,8 @@ interface ReactFlowTreeCanvasProps {
   isPanMode?: boolean
   fitViewTrigger?: number
   forExport?: boolean
+  /** Called whenever the export-in-progress state changes so parent can update toolbar */
+  onExportingChange?: (isExporting: boolean) => void
 }
 
 // Inner component — must be inside ReactFlowProvider to use useReactFlow
@@ -75,7 +81,10 @@ function ReactFlowTreeCanvasInner({
   isPanMode = true,
   fitViewTrigger,
   forExport = false,
+  onExportingChange,
 }: ReactFlowTreeCanvasProps): React.JSX.Element {
+  const LOCAL_EXPORT_NODE_LIMIT = 150
+
   const { zoomIn, zoomOut, fitView, setCenter, getNodes } = useReactFlow()
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([])
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
@@ -86,21 +95,162 @@ function ReactFlowTreeCanvasInner({
   const [exportTriggerApiUrl, setExportTriggerApiUrl] = useState<string | null>(null)
   const flowContainerRef = useRef<HTMLDivElement>(null)
 
+  // Shared local-capture logic used by both exportPngLocal and the server-export fallback
+  const doLocalExport = React.useCallback(async () => {
+    fitView({ duration: 0, padding: 0.08 })
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+    const viewport = flowContainerRef.current?.querySelector<HTMLElement>('.react-flow__viewport')
+    if (!viewport) throw new Error('ReactFlow viewport element not found.')
+    const date = new Date().toISOString().slice(0, 10)
+    const dataUrl = await toPng(viewport, {
+      backgroundColor: 'rgb(246, 243, 238)',
+      pixelRatio: 2,
+      cacheBust: true,
+      skipFonts: true,
+    })
+    const link = document.createElement('a')
+    link.href = dataUrl
+    link.download = `family-tree-${date}.png`
+    link.click()
+  }, [fitView])
+
+  // Browser-side SVG export. Runs fully client-side — uses the current React Flow node/edge state,
+  // fetches avatars via browser fetch (session cookies work here), calls the shared renderer.
+  const doLocalSvgExport = React.useCallback(async () => {
+    const currentNodes = getNodes()
+    const currentEdges = edges
+
+    const personNodes = currentNodes.filter(n => n.type === 'personNode')
+    const compact = personNodes.length > COMPACT_NODE_THRESHOLD
+
+    // Fetch avatar data URLs in the browser. Browser fetch sends session cookies automatically,
+    // so the auth-protected asset serve route works here (unlike the Trigger.dev task).
+    const avatarDataUrls = new Map<string, string>()
+    if (!compact) {
+      // Throttle to 10 concurrent — browser connection pool is typically 6 per origin
+      const nodesWithAvatars = personNodes.filter(n => {
+        const avatar = (n.data as Record<string, unknown> & { person?: { avatar?: string } })?.person?.avatar
+        return typeof avatar === 'string' && avatar.startsWith('/')
+      })
+
+      let index = 0
+      const fetchWorker = async () => {
+        while (index < nodesWithAvatars.length) {
+          const i = index++
+          const n = nodesWithAvatars[i]!
+          const url = (n.data as Record<string, unknown> & { person?: { avatar?: string } })?.person?.avatar as string
+          try {
+            const res = await fetch(url)
+            if (!res.ok) continue
+            const blob = await res.blob()
+            await new Promise<void>((resolve) => {
+              const reader = new FileReader()
+              reader.onload = () => {
+                if (typeof reader.result === 'string') avatarDataUrls.set(n.id, reader.result)
+                resolve()
+              }
+              reader.readAsDataURL(blob)
+            })
+          } catch { /* non-fatal */ }
+        }
+      }
+      await Promise.all(Array.from({ length: Math.min(10, nodesWithAvatars.length) }, fetchWorker))
+    }
+
+    const svg = buildTreeSvg(currentNodes, currentEdges, { avatarDataUrls, compact })
+    const blob = new Blob([svg], { type: 'image/svg+xml' })
+    const url = URL.createObjectURL(blob)
+    const date = new Date().toISOString().slice(0, 10)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `family-tree-${date}.svg`
+    link.click()
+    setTimeout(() => URL.revokeObjectURL(url), 5000)
+  }, [getNodes, edges])
+
+  // Shared server-export flow. SVG falls back to client-side generation when server is unavailable.
+  // PNG falls back to local html-to-image capture when the server is unavailable.
+  const triggerServerExport = React.useCallback(async (format: 'png' | 'svg') => {
+    if (isExporting) return
+    setIsExporting(true)
+    try {
+      const res = await fetch('/api/export', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rootId: rootPersonId, format }),
+      })
+
+      if (res.ok) {
+        const data = await res.json() as { success: boolean; runId?: string; publicAccessToken?: string; triggerApiUrl?: string }
+        if (data.success && data.runId && data.publicAccessToken) {
+          setExportRunId(data.runId)
+          setExportPublicToken(data.publicAccessToken)
+          if (data.triggerApiUrl) setExportTriggerApiUrl(data.triggerApiUrl)
+          // isExporting stays true — the useRealtimeRun effect below clears it when the run settles
+          return
+        }
+      }
+
+      // Server unavailable — fall back locally for both formats
+      console.warn(`Server export unavailable (${res.status}), falling back to local ${format.toUpperCase()} capture`)
+      setIsExporting(false)
+
+      if (format === 'svg') {
+        setIsExporting(true)
+        try { await doLocalSvgExport() } catch (e) { console.error('Local SVG export failed:', e) } finally { setIsExporting(false) }
+        return
+      }
+
+      const personNodeCount = getNodes().filter(n => n.type === 'personNode').length
+      if (personNodeCount > LOCAL_EXPORT_NODE_LIMIT) {
+        alert(`This tree has ${personNodeCount} members. Local PNG export is only supported for trees up to ${LOCAL_EXPORT_NODE_LIMIT} members. Please ensure the export service is running and try again.`)
+        return
+      }
+      await doLocalExport()
+    } catch (err) {
+      console.warn('Server export failed, falling back locally:', err)
+      setIsExporting(false)
+
+      if (format === 'svg') {
+        setIsExporting(true)
+        try { await doLocalSvgExport() } catch (e) { console.error('Local SVG export failed:', e) } finally { setIsExporting(false) }
+        return
+      }
+
+      const personNodeCount = getNodes().filter(n => n.type === 'personNode').length
+      if (personNodeCount > LOCAL_EXPORT_NODE_LIMIT) {
+        alert(`This tree has ${personNodeCount} members. Local PNG export is only supported for trees up to ${LOCAL_EXPORT_NODE_LIMIT} members. Please ensure the export service is running and try again.`)
+        return
+      }
+      try { await doLocalExport() } catch { /* already logged */ }
+    }
+  }, [isExporting, rootPersonId, getNodes, doLocalExport, doLocalSvgExport])
+
   const { run: exportRun } = useRealtimeRun<typeof exportTreeTask>(exportRunId ?? '', {
     accessToken: exportPublicToken ?? '',
     baseURL: exportTriggerApiUrl ?? undefined,
     enabled: !!exportRunId && !!exportPublicToken,
   })
 
+  // Notify parent whenever export state changes so toolbar button stays in sync
+  const onExportingChangeRef = React.useRef(onExportingChange)
+  onExportingChangeRef.current = onExportingChange
+  useEffect(() => {
+    onExportingChangeRef.current?.(isExporting)
+  }, [isExporting])
+
   useEffect(() => {
     if (!exportRun) return
 
     if (exportRun.status === 'COMPLETED') {
-      const url = (exportRun.output as { downloadUrl?: string } | undefined)?.downloadUrl
+      const output = exportRun.output as { downloadUrl?: string; format?: string } | undefined
+      const url = output?.downloadUrl
       if (url) {
+        const ext = output?.format === 'svg' ? 'svg' : 'png'
+        const date = new Date().toISOString().slice(0, 10)
         const link = document.createElement('a')
         link.href = url
-        link.download = 'family-tree.png'
+        link.download = `family-tree-${date}.${ext}`
         link.click()
       }
       setIsExporting(false)
@@ -250,30 +400,28 @@ function ReactFlowTreeCanvasInner({
           setCenter(x, y, { duration: options?.duration ?? 300, zoom: options?.zoom ?? 1 })
         }
       },
-      exportPng: async () => {
+      isExporting,
+      exportPngLocal: async () => {
+        if (isExporting) return
+        const personNodeCount = getNodes().filter(n => n.type === 'personNode').length
+        if (personNodeCount > LOCAL_EXPORT_NODE_LIMIT) {
+          alert(`This tree has ${personNodeCount} members. Local export is only supported for trees up to ${LOCAL_EXPORT_NODE_LIMIT} members. Use the server export option instead.`)
+          return
+        }
         setIsExporting(true)
         try {
-          const res = await fetch('/api/export', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ rootId: rootPersonId }),
-          })
-          const data = await res.json() as { success: boolean; runId?: string; publicAccessToken?: string; triggerApiUrl?: string; error?: string }
-          if (!data.success || !data.runId || !data.publicAccessToken) {
-            throw new Error(data.error ?? 'Failed to queue export.')
-          }
-          setExportRunId(data.runId)
-          setExportPublicToken(data.publicAccessToken)
-          if (data.triggerApiUrl) setExportTriggerApiUrl(data.triggerApiUrl)
-          // isExporting stays true — useRealtimeRun effect clears it when the run finishes
+          await doLocalExport()
         } catch (err) {
-          console.error('Failed to export PNG:', err)
-          alert('Failed to export PNG. Please try again.')
+          console.error('Failed to export PNG locally:', err)
+          alert('Export failed. Please try again.')
+        } finally {
           setIsExporting(false)
         }
       },
+      exportPng: () => triggerServerExport('png'),
+      exportSvg: () => triggerServerExport('svg'),
     }),
-    [zoomIn, zoomOut, fitView, setCenter, getNodes],
+    [zoomIn, zoomOut, fitView, setCenter, getNodes, isExporting, rootPersonId, doLocalExport, triggerServerExport],
   )
 
   // Fit view when explicitly triggered (e.g. after GEDCOM import loads new nodes)

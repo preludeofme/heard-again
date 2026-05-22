@@ -1,0 +1,235 @@
+# Trigger.dev v4 — self-hosted local dev stack
+#
+# Managed automatically by Scripts/start-dev.sh.
+# Run `npm run dev` — the script starts this stack when port 3030 is not already in use.
+#
+# First-time / after-wipe setup:
+#   1. Start `npm run dev`
+#   2. Visit http://localhost:3030 — request a magic link (appears in `docker logs heard-again-trigger-app-1 --tail 20`)
+#   3. Create a project, copy the dev Secret Key into .env as TRIGGER_SECRET_KEY
+#   4. Re-run `npm run dev` — the dev worker will connect and tasks will execute locally
+#
+# Manual management:
+#   docker compose -f docker-compose.trigger.yml up -d
+#   docker compose -f docker-compose.trigger.yml down
+#   docker compose -f docker-compose.trigger.yml down -v   # wipe all data (full reset)
+#
+# ClickHouse migration notes:
+#   trigger-clickhouse-init runs before trigger-app and pre-applies all ClickHouse migrations.
+#   Migrations 003 and 004 are patched to remove CREATE VIEW blocks (tmp_eric_* debug views)
+#   that ClickHouse 25.x rejects for JSON-typed columns in Views.
+#   SKIP_CLICKHOUSE_MIGRATIONS=1 tells trigger-app to skip its own migration step.
+#
+#   If migrations ever get into a bad partial state, wipe ClickHouse volumes and restart:
+#     docker volume rm heard-again_trigger-clickhouse-data heard-again_trigger-clickhouse-logs
+#     docker compose -f docker-compose.trigger.yml up -d
+
+services:
+  trigger-app:
+    image: ghcr.io/triggerdotdev/trigger.dev:v4-beta
+    ports:
+      - "3030:3030"
+    environment:
+      - NODE_ENV=development
+      - PORT=3030
+      - APP_ORIGIN=http://localhost:3030
+      - LOGIN_ORIGIN=http://localhost:3030
+      - API_ORIGIN=http://localhost:3030
+      - DEV_OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:3030/otel
+      - DATABASE_URL=postgresql://postgres:postgres@trigger-db:5432/trigger?schema=public&sslmode=disable
+      - DIRECT_URL=postgresql://postgres:postgres@trigger-db:5432/trigger?schema=public&sslmode=disable
+      - REDIS_HOST=trigger-redis
+      - REDIS_PORT=6379
+      - REDIS_TLS_DISABLED=true
+      - ELECTRIC_ORIGIN=http://trigger-electric:3000
+      - CLICKHOUSE_URL=http://default:password@trigger-clickhouse:8123?secure=false
+      # trigger-clickhouse-init pre-applies all ClickHouse migrations (with patches for VIEW incompatibility)
+      - SKIP_CLICKHOUSE_MIGRATIONS=1
+      - RUN_REPLICATION_ENABLED=0
+      # Required by v4 Zod env validation; used only when deploying tasks (not local dev mode)
+      - DEPLOY_REGISTRY_HOST=trigger-registry:5000
+      - V4_DEPLOY_REGISTRY_HOST=trigger-registry:5000
+      - SESSION_SECRET=heard-again-trigger-session-secret-32b
+      - MAGIC_LINK_SECRET=heard-again-trigger-magic-link-secret32
+      - ENCRYPTION_KEY=heard-again-trigger-encrypt-key-
+      - MANAGED_WORKER_SECRET=heard-again-trigger-worker-secret
+      - OBJECT_STORE_BASE_URL=http://trigger-minio:9000
+      - OBJECT_STORE_ACCESS_KEY_ID=minioadmin
+      - OBJECT_STORE_SECRET_ACCESS_KEY=minioadmin
+      - AUTH_GITHUB_CLIENT_ID=${AUTH_GITHUB_CLIENT_ID:-}
+      - AUTH_GITHUB_CLIENT_SECRET=${AUTH_GITHUB_CLIENT_SECRET:-}
+    depends_on:
+      trigger-db:
+        condition: service_healthy
+      trigger-redis:
+        condition: service_healthy
+      trigger-minio:
+        condition: service_healthy
+      trigger-clickhouse-init:
+        condition: service_completed_successfully
+    networks:
+      - trigger-network
+    restart: unless-stopped
+    volumes:
+      - trigger-app-data:/app/.trigger
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3030/healthcheck', r => { let d=''; r.on('data', c=>d+=c); r.on('end', () => process.exit(d.toLowerCase().includes('ok') ? 0 : 1)); }).on('error', () => process.exit(1))\""]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+      start_period: 120s
+
+  trigger-db:
+    image: postgres:14-alpine
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=trigger
+    command: postgres -c wal_level=logical -c max_replication_slots=10 -c max_wal_senders=10
+    volumes:
+      - trigger-postgres-data:/var/lib/postgresql/data
+    networks:
+      - trigger-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d trigger"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  trigger-redis:
+    image: redis:7-alpine
+    volumes:
+      - trigger-redis-data:/data
+    networks:
+      - trigger-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  trigger-clickhouse:
+    image: clickhouse/clickhouse-server:25.1
+    environment:
+      - CLICKHOUSE_DB=default
+      - CLICKHOUSE_USER=default
+      - CLICKHOUSE_PASSWORD=password
+      - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
+    volumes:
+      - trigger-clickhouse-data:/var/lib/clickhouse
+      - trigger-clickhouse-logs:/var/log/clickhouse-server
+    networks:
+      - trigger-network
+    restart: unless-stopped
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8123/ping 2>/dev/null | grep -q Ok || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # Applies all ClickHouse migrations before trigger-app starts.
+  # Patches migrations 003 and 004 to remove CREATE VIEW blocks that ClickHouse 25.x
+  # rejects when the view references JSON-typed columns (dynamic subcolumns unsupported in Views).
+  trigger-clickhouse-init:
+    image: ghcr.io/triggerdotdev/trigger.dev:v4-beta
+    depends_on:
+      trigger-clickhouse:
+        condition: service_healthy
+    networks:
+      - trigger-network
+    restart: "no"
+    environment:
+      - GOOSE_DRIVER=clickhouse
+      - GOOSE_DBSTRING=http://default:password@trigger-clickhouse:8123?secure=false
+      - GOOSE_MIGRATION_DIR=/tmp/ch-migrations
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        cp -r /triggerdotdev/internal-packages/clickhouse/schema /tmp/ch-migrations
+        node -e '
+          const fs = require("fs"), d = "/tmp/ch-migrations";
+          ["003_create_task_runs_v1.sql","004_create_task_runs_v2.sql"].forEach(f => {
+            const p = d+"/"+f;
+            fs.writeFileSync(p, fs.readFileSync(p,"utf8").replace(/CREATE VIEW[\s\S]*?SETTINGS enable_json_type = 1;/g,""));
+            console.log("Patched (removed VIEW):", f);
+          });
+          ["007_add_task_events_v1.sql","010_add_task_events_v2.sql","019_create_metrics_v1.sql"].forEach(f => {
+            const p = d+"/"+f;
+            fs.writeFileSync(p, fs.readFileSync(p,"utf8").replace(/SETTINGS ttl_only_drop_parts = 1;/g,"SETTINGS ttl_only_drop_parts = 1, enable_json_type = 1;"));
+            console.log("Patched (enable_json_type):", f);
+          });
+        '
+        /usr/local/bin/goose up
+
+  trigger-electric:
+    image: electricsql/electric:1.2.4
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@trigger-db:5432/trigger?sslmode=disable
+      - ELECTRIC_INSECURE=true
+    depends_on:
+      trigger-db:
+        condition: service_healthy
+    networks:
+      - trigger-network
+    restart: unless-stopped
+
+  trigger-minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+    volumes:
+      - trigger-minio-data:/data
+    networks:
+      - trigger-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9000/minio/health/live || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # Creates the MinIO bucket trigger.dev needs on first start
+  trigger-minio-init:
+    image: minio/mc:latest
+    depends_on:
+      trigger-minio:
+        condition: service_healthy
+    networks:
+      - trigger-network
+    restart: "no"
+    entrypoint: >
+      /bin/sh -c "
+        mc alias set local http://trigger-minio:9000 minioadmin minioadmin &&
+        mc mb local/trigger-dev --ignore-existing &&
+        echo 'MinIO bucket ready'
+      "
+
+  # Docker registry required by V4_DEPLOY_REGISTRY_HOST (used when deploying tasks, not local dev)
+  trigger-registry:
+    image: registry:2
+    networks:
+      - trigger-network
+    restart: unless-stopped
+
+networks:
+  trigger-network:
+    driver: bridge
+
+volumes:
+  trigger-app-data:
+  trigger-postgres-data:
+  trigger-redis-data:
+  trigger-clickhouse-data:
+  trigger-clickhouse-logs:
+  trigger-minio-data:

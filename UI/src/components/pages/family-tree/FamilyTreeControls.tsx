@@ -1,6 +1,7 @@
 import React from 'react'
 import {
   Box,
+  CircularProgress,
   Divider,
   IconButton,
   Button,
@@ -22,6 +23,7 @@ import {
   AccountTree,
   Image as ImageIcon,
   PictureAsPdf,
+  Polyline as SvgIcon,
 } from '@mui/icons-material'
 
 interface FamilyTreeControlsProps {
@@ -41,7 +43,9 @@ interface FamilyTreeControlsProps {
   includeSiblings?: boolean
   onLoadAll?: () => void
   onExportPng?: () => void
+  onExportSvg?: () => void
   onExportPdf?: () => void
+  isExportingPng?: boolean
 }
 
 export function FamilyTreeControls({
@@ -61,7 +65,9 @@ export function FamilyTreeControls({
   includeSiblings = false,
   onLoadAll,
   onExportPng,
+  onExportSvg,
   onExportPdf,
+  isExportingPng = false,
 }: FamilyTreeControlsProps) {
   return (
     <Box
@@ -249,18 +255,41 @@ export function FamilyTreeControls({
             </>
           )}
 
-          {(onExportPng || onExportPdf) && (
+          {(onExportPng || onExportSvg || onExportPdf) && (
             <>
               <Divider orientation="vertical" flexItem sx={{ mx: 0.5, borderColor: 'rgba(208, 227, 230, 0.6)' }} />
               {onExportPng && (
-                <Tooltip title="Export as PNG image. For large trees, export may be slow." arrow>
-                  <IconButton
-                    size="small"
-                    onClick={onExportPng}
-                    sx={{ color: 'primary.main' }}
-                  >
-                    <ImageIcon sx={{ fontSize: 18 }} />
-                  </IconButton>
+                <Tooltip title={isExportingPng ? 'Generating export…' : 'Download PNG'} arrow>
+                  <span>
+                    <IconButton
+                      size="small"
+                      onClick={onExportPng}
+                      disabled={isExportingPng}
+                      sx={{ color: 'primary.main', position: 'relative' }}
+                    >
+                      {isExportingPng
+                        ? <CircularProgress size={18} sx={{ color: 'primary.main' }} />
+                        : <ImageIcon sx={{ fontSize: 18 }} />
+                      }
+                    </IconButton>
+                  </span>
+                </Tooltip>
+              )}
+              {onExportSvg && (
+                <Tooltip title={isExportingPng ? 'Generating export…' : 'Download SVG (print quality)'} arrow>
+                  <span>
+                    <IconButton
+                      size="small"
+                      onClick={onExportSvg}
+                      disabled={isExportingPng}
+                      sx={{ color: 'primary.main' }}
+                    >
+                      {isExportingPng
+                        ? <CircularProgress size={18} sx={{ color: 'primary.main' }} />
+                        : <SvgIcon sx={{ fontSize: 18 }} />
+                      }
+                    </IconButton>
+                  </span>
                 </Tooltip>
               )}
               {onExportPdf && (

@@ -9,6 +9,7 @@ import {
   StoryStatus,
   StoryType,
   DatePrecision,
+  StoryVisibility,
   PersonType,
   VoiceProfileStatus,
   GenerationJobStatus,
@@ -37,6 +38,8 @@ export const storyStatusSchema = z.nativeEnum(StoryStatus)
 
 export const storyTypeSchema = z.nativeEnum(StoryType)
 
+export const storyVisibilitySchema = z.nativeEnum(StoryVisibility)
+
 export const datePrecisionSchema = z.enum(['EXACT', 'YEAR_MONTH', 'YEAR', 'DECADE', 'APPROXIMATE'])
 
 export const createStorySchema = z.object({
@@ -54,6 +57,7 @@ export const createStorySchema = z.object({
   assetIds: z.array(z.string().uuid()).optional().nullable(),
   authorRelationship: z.string().max(100).optional().nullable(),
   isPublic: z.boolean().optional().nullable(),
+  visibility: storyVisibilitySchema.optional().nullable(),
 })
 
 export type CreateStoryInput = z.infer<typeof createStorySchema>

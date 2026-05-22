@@ -15,6 +15,20 @@ export interface ParsedNote {
   noteType: 'GENERAL' | 'RESEARCH' | 'OBITUARY' | 'SOURCE' | 'OTHER'
 }
 
+export interface StandaloneNote {
+  xref: string
+  content: string
+}
+
+export interface StandaloneSource {
+  xref: string
+  title: string | null
+  author: string | null
+  date: string | null
+  /** Full text content from SOUR TEXT subrecord, if present */
+  text: string | null
+}
+
 export interface ParsedSourceCitation {
   gedcomSRef: string | null
   page: string | null
@@ -41,6 +55,12 @@ export interface ParsedIndividual {
   notes: ParsedNote[]
   events: ParsedEvent[]
   sourceCitations: ParsedSourceCitation[]
+  /** GEDCOM v7: EXID tag value, if present */
+  externalId: string | null
+  /** GEDCOM v7: FAMS xrefs (family-as-spouse cross-references) */
+  familyAsSpouseXrefs: string[]
+  /** GEDCOM v7: FAMC entries with optional pedigree type */
+  familyAsChildLinks: Array<{ familyXref: string; pedigree: 'ADOPTED' | 'BIRTH' | 'FOSTER' | 'SEALING' | null }>
 }
 
 export interface ParsedFamily {
@@ -82,18 +102,35 @@ const TAG_TO_EVENT_TYPE: Record<string, string> = {
 const INLINE_VALUE_TAGS = new Set(['OCCU', 'TITL', 'EVEN', 'DSCR'])
 
 export class GedcomParser {
-  private static sourceDefs = new Map<string, { title: string | null; author: string | null; date: string | null }>()
+  private static sourceDefs = new Map<string, { title: string | null; author: string | null; date: string | null; text: string | null }>()
   private static noteDefs = new Map<string, string>()
 
-  static parse(content: string): { individuals: ParsedIndividual[]; families: ParsedFamily[] } {
+  static parse(content: string): {
+    individuals: ParsedIndividual[]
+    families: ParsedFamily[]
+    standaloneNotes: StandaloneNote[]
+    standaloneSources: StandaloneSource[]
+  } {
     const lines = content.split(/\r?\n/)
     this.sourceDefs.clear()
     this.noteDefs.clear()
+
+    const standaloneNotes: StandaloneNote[] = []
+    const standaloneSources: StandaloneSource[] = []
 
     // First pass: collect SOUR and NOTE record definitions
     let index = 0
     while (index < lines.length) {
       const line = lines[index].trim()
+
+      // GEDCOM v7: silently skip SCHMA records
+      if (/^0\s+SCHMA$/.test(line)) {
+        index += 1
+        while (index < lines.length && !/^0\s+/.test(lines[index].trim())) {
+          index += 1
+        }
+        continue
+      }
 
       const sourRecordMatch = line.match(/^0\s+(@[^@]+@)\s+SOUR$/)
       if (sourRecordMatch) {
@@ -107,15 +144,31 @@ export class GedcomParser {
         let title: string | null = null
         let author: string | null = null
         let date: string | null = null
-        for (const entry of block) {
+        const textParts: string[] = []
+        for (let bi = 0; bi < block.length; bi++) {
+          const entry = block[bi]
           const m = entry.match(/^1\s+TITL\s+(.+)$/)
           if (m) title = m[1].trim()
           const a = entry.match(/^1\s+AUTH\s+(.+)$/)
           if (a) author = a[1].trim()
           const d = entry.match(/^1\s+DATE\s+(.+)$/)
           if (d) date = d[1].trim()
+          const t = entry.match(/^1\s+TEXT\s*(.*)$/)
+          if (t) {
+            textParts.push(t[1])
+            for (let ti = bi + 1; ti < block.length; ti++) {
+              const tsub = block[ti]
+              if (/^1\s+/.test(tsub)) break
+              const cont = tsub.match(/^2\s+CONT\s*(.*)$/)
+              const conc = tsub.match(/^2\s+CONC\s*(.*)$/)
+              if (cont) textParts.push('\n' + cont[1])
+              else if (conc) textParts.push(conc[1])
+            }
+          }
         }
-        this.sourceDefs.set(sref, { title, author, date })
+        const text = textParts.length > 0 ? textParts.join('').trim() || null : null
+        this.sourceDefs.set(sref, { title, author, date, text })
+        standaloneSources.push({ xref: sref, title, author, date, text })
         continue
       }
 
@@ -126,13 +179,16 @@ export class GedcomParser {
         index += 1
         while (index < lines.length && !/^0\s+/.test(lines[index].trim())) {
           const sub = lines[index].trim()
-          const cont = sub.match(/^1\s+CONT\s*(.*)$/)
+          // GEDCOM v7: CONT with no trailing value (empty continuation line)
+          const cont = sub.match(/^1\s+CONT(.*)$/)
           const conc = sub.match(/^1\s+CONC\s*(.*)$/)
-          if (cont) parts.push('\n' + cont[1])
+          if (cont) parts.push('\n' + (cont[1].startsWith(' ') ? cont[1].slice(1) : cont[1]))
           else if (conc) parts.push(conc[1])
           index += 1
         }
-        this.noteDefs.set(nref, parts.join('').trim())
+        const noteContent = parts.join('').trim()
+        this.noteDefs.set(nref, noteContent)
+        standaloneNotes.push({ xref: nref, content: noteContent })
         continue
       }
 
@@ -169,7 +225,7 @@ export class GedcomParser {
       }
     }
 
-    return { individuals, families }
+    return { individuals, families, standaloneNotes, standaloneSources }
   }
 
   private static parseIndividual(xref: string, block: string[]): ParsedIndividual {
@@ -184,6 +240,9 @@ export class GedcomParser {
     let deathPlace: string | null = null
     let causeOfDeath: string | null = null
     let isDeceased = false
+    let externalId: string | null = null
+    const familyAsSpouseXrefs: string[] = []
+    const familyAsChildLinks: Array<{ familyXref: string; pedigree: 'ADOPTED' | 'BIRTH' | 'FOSTER' | 'SEALING' | null }> = []
     const notes: ParsedNote[] = []
     const events: ParsedEvent[] = []
     const sourceCitations: ParsedSourceCitation[] = []
@@ -236,6 +295,54 @@ export class GedcomParser {
         continue
       }
 
+      // GEDCOM v7: EXID — store as external reference identifier
+      if (tag === 'EXID') {
+        const exidMatch = entry.match(/^1\s+EXID\s+(.+)$/)
+        if (exidMatch && !externalId) externalId = exidMatch[1].trim()
+        continue
+      }
+
+      // GEDCOM v7: FAMS — family-as-spouse cross-reference
+      if (tag === 'FAMS') {
+        const famsMatch = entry.match(/^1\s+FAMS\s+(@[^@]+@)$/)
+        if (famsMatch) familyAsSpouseXrefs.push(famsMatch[1])
+        continue
+      }
+
+      // GEDCOM v7: FAMC — family-as-child with optional PEDI subrecord
+      if (tag === 'FAMC') {
+        const famcMatch = entry.match(/^1\s+FAMC\s+(@[^@]+@)$/)
+        if (famcMatch) {
+          const familyXref = famcMatch[1]
+          let pedigree: 'ADOPTED' | 'BIRTH' | 'FOSTER' | 'SEALING' | null = null
+          for (let j = i + 1; j < block.length; j++) {
+            if (/^1\s+/.test(block[j])) break
+            const pediMatch = block[j].match(/^2\s+PEDI\s+(\S+)$/)
+            if (pediMatch) {
+              const raw = pediMatch[1].toUpperCase()
+              if (raw === 'ADOPTED' || raw === 'BIRTH' || raw === 'FOSTER' || raw === 'SEALING') {
+                pedigree = raw
+              }
+            }
+          }
+          familyAsChildLinks.push({ familyXref, pedigree })
+        }
+        continue
+      }
+
+      // GEDCOM v7: NO — "no event occurred" marker; record as a RESEARCH note
+      if (tag === 'NO') {
+        const noMatch = entry.match(/^1\s+NO\s+(\S+)/)
+        if (noMatch) {
+          const eventTag = noMatch[1].trim()
+          notes.push({
+            content: `No ${eventTag} event recorded (GEDCOM NO tag)`,
+            noteType: 'RESEARCH',
+          })
+        }
+        continue
+      }
+
       if (tag === 'NOTE') {
         const noteValMatch = entry.match(/^1\s+NOTE\s*(.*)$/)
         if (noteValMatch) {
@@ -248,9 +355,10 @@ export class GedcomParser {
             const parts = [val]
             for (let j = i + 1; j < block.length; j++) {
               if (/^1\s+/.test(block[j])) break
-              const cont = block[j].match(/^2\s+CONT\s*(.*)$/)
+              // GEDCOM v7: CONT may have no trailing space/value (empty continuation line)
+              const cont = block[j].match(/^2\s+CONT(.*)$/)
               const conc = block[j].match(/^2\s+CONC\s*(.*)$/)
-              if (cont) parts.push('\n' + cont[1])
+              if (cont) parts.push('\n' + (cont[1].startsWith(' ') ? cont[1].slice(1) : cont[1]))
               else if (conc) parts.push(conc[1])
             }
             content = parts.join('').trim()
@@ -373,6 +481,9 @@ export class GedcomParser {
       notes,
       events,
       sourceCitations,
+      externalId,
+      familyAsSpouseXrefs,
+      familyAsChildLinks,
     }
   }
 

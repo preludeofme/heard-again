@@ -3,10 +3,11 @@ import { useRouter } from 'next/router'
 import { useSession } from 'next-auth/react'
 import { fetchWithCSRF } from '@/lib/api-client'
 import Head from 'next/head'
-import { 
+import {
   Box, Typography, Card, CardContent, Button, TextField,
   IconButton, Avatar, CircularProgress, Alert, Container,
-  MenuItem, Select, FormControl, InputLabel, Divider
+  MenuItem, Select, FormControl, InputLabel, Divider,
+  ToggleButtonGroup, ToggleButton
 } from '@mui/material'
 import { 
   ArrowBack as ArrowBackIcon,
@@ -50,6 +51,7 @@ export default function PublicContributePage() {
   const [storyDate, setStoryDate] = useState('')
   const [location, setLocation] = useState('')
   const [authorRelationship, setAuthorRelationship] = useState('')
+  const [visibility, setVisibility] = useState<'PUBLIC' | 'FAMILY_ONLY' | 'FRIENDS_AND_FAMILY'>('FAMILY_ONLY')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
   const [showAudio, setShowAudio] = useState(false)
@@ -97,7 +99,8 @@ export default function PublicContributePage() {
           storyDate: storyDate || undefined,
           location: location || undefined,
           storyType: 'MEMORY',
-          status: 'PUBLISHED'
+          status: 'PUBLISHED',
+          visibility,
         })
       })
 
@@ -153,6 +156,7 @@ export default function PublicContributePage() {
           storyType: 'RECORDING',
           assetIds: [assetId],
           status: 'PUBLISHED',
+          visibility,
         }),
       })
 
@@ -352,6 +356,64 @@ export default function PublicContributePage() {
                         ))}
                       </Select>
                     </FormControl>
+
+                    <Box sx={{ mb: 3 }}>
+                      <Typography variant="caption" sx={{ color: '#546669', mb: 1, display: 'block', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                        Who can see this story?
+                      </Typography>
+                      <ToggleButtonGroup
+                        value={visibility}
+                        exclusive
+                        onChange={(_, val) => { if (val) setVisibility(val) }}
+                        size="small"
+                        sx={{ gap: 1, flexWrap: 'wrap' }}
+                      >
+                        <ToggleButton
+                          value="FAMILY_ONLY"
+                          sx={{
+                            borderRadius: '20px !important',
+                            border: '1px solid #c3c7cd !important',
+                            px: 2.5,
+                            textTransform: 'none',
+                            fontWeight: 600,
+                            '&.Mui-selected': { bgcolor: '#e8f4f8', color: '#16334a', borderColor: '#90caf9 !important' },
+                          }}
+                        >
+                          Family Only
+                        </ToggleButton>
+                        <ToggleButton
+                          value="FRIENDS_AND_FAMILY"
+                          sx={{
+                            borderRadius: '20px !important',
+                            border: '1px solid #c3c7cd !important',
+                            px: 2.5,
+                            textTransform: 'none',
+                            fontWeight: 600,
+                            '&.Mui-selected': { bgcolor: '#f3e5f5', color: '#6a1b9a', borderColor: '#ce93d8 !important' },
+                          }}
+                        >
+                          Friends &amp; Family
+                        </ToggleButton>
+                        <ToggleButton
+                          value="PUBLIC"
+                          sx={{
+                            borderRadius: '20px !important',
+                            border: '1px solid #c3c7cd !important',
+                            px: 2.5,
+                            textTransform: 'none',
+                            fontWeight: 600,
+                            '&.Mui-selected': { bgcolor: '#e8f5e9', color: '#2e7d32', borderColor: '#a5d6a7 !important' },
+                          }}
+                        >
+                          Public
+                        </ToggleButton>
+                      </ToggleButtonGroup>
+                      <Typography variant="caption" sx={{ color: '#546669', display: 'block', mt: 1 }}>
+                        {visibility === 'FAMILY_ONLY' && 'Only family members can see this story.'}
+                        {visibility === 'FRIENDS_AND_FAMILY' && 'Friends and family members can see this story.'}
+                        {visibility === 'PUBLIC' && 'Anyone can discover and view this story.'}
+                      </Typography>
+                    </Box>
 
                     <TextField
                       fullWidth

@@ -48,9 +48,8 @@ export default function NewFamilyspacePage() {
 
       const data = await res.json()
       // Switch to the new familyspace then go to dashboard
-      await fetch(`/api/familyspaces/${data.data?.id}/switch`, {
+      await fetchWithCSRF(`/api/familyspaces/${data.data?.id}/switch`, {
         method: 'POST',
-        credentials: 'include',
       })
       router.push('/')
     } catch (err) {
