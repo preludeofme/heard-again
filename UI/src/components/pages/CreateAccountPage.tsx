@@ -296,8 +296,9 @@ export function CreateAccountPage() {
                 </Divider>
 
                 {/* Email Form */}
-                <Box component="form" onSubmit={handleSubmit} sx={{ spaceY: 3 }}>
-                  <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2, mb: 3 }}>
+                <form onSubmit={handleSubmit}>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                  <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
                     <TextField
                       fullWidth
                       required
@@ -307,6 +308,7 @@ export function CreateAccountPage() {
                       onChange={(e) =>
                         setFormData({ ...formData, firstName: e.target.value })
                       }
+                      InputLabelProps={{ shrink: true }}
                     />
                     <TextField
                       fullWidth
@@ -316,6 +318,7 @@ export function CreateAccountPage() {
                       onChange={(e) =>
                         setFormData({ ...formData, lastName: e.target.value })
                       }
+                      InputLabelProps={{ shrink: true }}
                     />
                   </Box>
 
@@ -328,7 +331,7 @@ export function CreateAccountPage() {
                     onChange={(e) =>
                       setFormData({ ...formData, email: e.target.value })
                     }
-                    sx={{ mb: 3 }}
+                    InputLabelProps={{ shrink: true }}
                   />
 
                   <TextField
@@ -340,6 +343,7 @@ export function CreateAccountPage() {
                     onChange={(e) =>
                       setFormData({ ...formData, password: e.target.value })
                     }
+                    InputLabelProps={{ shrink: true }}
                     InputProps={{
                       endAdornment: (
                         <InputAdornment position="end">
@@ -352,11 +356,10 @@ export function CreateAccountPage() {
                         </InputAdornment>
                       ),
                     }}
-                    sx={{ mb: 1 }}
                   />
                   <Typography
                     variant="caption"
-                    sx={{ color: 'secondary.main', display: 'block', mb: 3 }}
+                    sx={{ color: 'secondary.main', display: 'block', mb: 1 }}
                   >
                     Must be at least 8 characters with a number.
                   </Typography>
@@ -388,7 +391,7 @@ export function CreateAccountPage() {
                       color: 'secondary.main',
                       textAlign: 'center',
                       display: 'block',
-                      mt: 3,
+                      mt: 2,
                       px: 2,
                     }}
                   >
@@ -409,6 +412,7 @@ export function CreateAccountPage() {
                     .
                   </Typography>
                 </Box>
+                </form>
               </Card>
             </Grid>
           </Grid>

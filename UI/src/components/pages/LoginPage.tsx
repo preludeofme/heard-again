@@ -279,42 +279,43 @@ export function LoginPage() {
                 </Divider>
 
                 {/* Email Form */}
-                <Box component="form" onSubmit={handleSubmit} sx={{ spaceY: 3 }}>
-                  <TextField
-                    fullWidth
-                    label="Email Address"
-                    type="email"
-                    placeholder="name@example.com"
-                    value={formData.email}
-                    onChange={(e) =>
-                      setFormData({ ...formData, email: e.target.value })
-                    }
-                    sx={{ mb: 3 }}
-                  />
+                <form onSubmit={handleSubmit}>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    <TextField
+                      fullWidth
+                      label="Email Address"
+                      type="email"
+                      placeholder="name@example.com"
+                      value={formData.email}
+                      onChange={(e) =>
+                        setFormData({ ...formData, email: e.target.value })
+                      }
+                      InputLabelProps={{ shrink: true }}
+                    />
 
-                  <TextField
-                    fullWidth
-                    label="Password"
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="••••••••"
-                    value={formData.password}
-                    onChange={(e) =>
-                      setFormData({ ...formData, password: e.target.value })
-                    }
-                    InputProps={{
-                      endAdornment: (
-                        <InputAdornment position="end">
-                          <IconButton
-                            onClick={() => setShowPassword(!showPassword)}
-                            edge="end"
-                          >
-                            {showPassword ? <VisibilityOff /> : <Visibility />}
-                          </IconButton>
-                        </InputAdornment>
-                      ),
-                    }}
-                    sx={{ mb: 2 }}
-                  />
+                    <TextField
+                      fullWidth
+                      label="Password"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="••••••••"
+                      value={formData.password}
+                      onChange={(e) =>
+                        setFormData({ ...formData, password: e.target.value })
+                      }
+                      InputLabelProps={{ shrink: true }}
+                      InputProps={{
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            <IconButton
+                              onClick={() => setShowPassword(!showPassword)}
+                              edge="end"
+                            >
+                              {showPassword ? <VisibilityOff /> : <Visibility />}
+                            </IconButton>
+                          </InputAdornment>
+                        ),
+                      }}
+                    />
 
                   <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 3 }}>
                     <Link
@@ -329,27 +330,28 @@ export function LoginPage() {
                     </Link>
                   </Box>
 
-                  <Button
-                    type="submit"
-                    fullWidth
-                    variant="contained"
-                    size="large"
-                    disabled={isLoading}
-                    sx={{
-                      py: 2,
-                      fontSize: '1.125rem',
-                      fontWeight: 700,
-                      borderRadius: 3,
-                      background: 'linear-gradient(135deg, #16334a 0%, #2e4a62 100%)',
-                    }}
-                  >
-                    {isLoading ? (
-                      <CircularProgress size={24} sx={{ color: 'white' }} />
-                    ) : (
-                      'Sign In'
-                    )}
-                  </Button>
-                </Box>
+                    <Button
+                      type="submit"
+                      fullWidth
+                      variant="contained"
+                      size="large"
+                      disabled={isLoading}
+                      sx={{
+                        py: 2,
+                        fontSize: '1.125rem',
+                        fontWeight: 700,
+                        borderRadius: 3,
+                        background: 'linear-gradient(135deg, #16334a 0%, #2e4a62 100%)',
+                      }}
+                    >
+                      {isLoading ? (
+                        <CircularProgress size={24} sx={{ color: 'white' }} />
+                      ) : (
+                        'Sign In'
+                      )}
+                    </Button>
+                  </Box>
+                </form>
               </Card>
             </Grid>
           </Grid>
