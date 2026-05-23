@@ -378,6 +378,7 @@ async function uploadToR2(
   const getObjectCommand = new GetObjectCommand({
     Bucket: r2.bucket,
     Key: key,
+    ResponseContentDisposition: `attachment; filename="${fileName}"`,
   });
   // Generate a pre-signed URL valid for 24 hours
   return await getSignedUrl(r2.client, getObjectCommand, {
