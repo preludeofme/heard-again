@@ -33,6 +33,10 @@ const nextConfig = {
     'stream-shift',
     'teeny-request',
     'google-auth-library',
+    // isomorphic-dompurify depends on jsdom which pulls in native-dependent and
+    // dynamic-require-heavy code that Turbopack cannot bundle. Load at runtime.
+    'isomorphic-dompurify',
+    'jsdom',
   ],
   // @trigger.dev/react-hooks is ESM-only and hoisted to workspace root
   // node_modules — transpilePackages tells Turbopack to bundle it rather than
