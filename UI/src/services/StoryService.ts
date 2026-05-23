@@ -1,4 +1,3 @@
-import DOMPurify from 'isomorphic-dompurify'
 import type {
   CreateStoryInput,
   ListStoriesQuery,
@@ -29,7 +28,10 @@ type StoryInclude = {
 const ALLOWED_STORY_TAGS = ['p', 'br', 'strong', 'em', 'ul', 'ol', 'li', 'blockquote', 'h2', 'h3', 'a', 'img']
 
 function sanitizeStoryContent(content: string): string {
-  return DOMPurify.sanitize(content, { ALLOWED_TAGS: ALLOWED_STORY_TAGS, ALLOWED_ATTR: ['href', 'src', 'alt', 'title'] })
+  // Lazy require avoids a top-level static import of jsdom (a heavy/un-bundleable dep).
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const dompurify = require('isomorphic-dompurify') as { sanitize: (html: string, opts: Record<string, unknown>) => string }
+  return dompurify.sanitize(content, { ALLOWED_TAGS: ALLOWED_STORY_TAGS, ALLOWED_ATTR: ['href', 'src', 'alt', 'title'] })
 }
 
 const STORY_INCLUDE: StoryInclude = {
