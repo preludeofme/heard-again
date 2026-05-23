@@ -533,7 +533,7 @@ export function LandingPage() {
                   letterSpacing: '0.05em',
                 }}
               >
-                Family stories, preserved with care. © 2026 Heard Again.
+                Family stories, preserved with care. &copy; {new Date().getFullYear()} Heard Again.
               </Typography>
             </Box>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 4, justifyContent: 'center' }}>

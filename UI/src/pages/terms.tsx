@@ -144,7 +144,7 @@ export default function TermsOfLegacyPage() {
                 variant="caption"
                 sx={{ color: 'secondary.main', display: 'block' }}
               >
-                © 2024 Heard Again. A sanctuary for identity.
+                © {new Date().getFullYear()} Heard Again. A sanctuary for identity.
               </Typography>
             </Box>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 4, justifyContent: 'center' }}>

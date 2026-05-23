@@ -100,6 +100,36 @@ export class PersonRepository extends BaseRepository {
       where: { familyspaceId },
     })
   }
+
+  async findFamilyUnits(personId: string, familyspaceId?: string) {
+    return this.prisma.familyUnit.findMany({
+      where: {
+        ...(familyspaceId ? { familyspaceId } : {}),
+        OR: [
+          { parents: { some: { parentId: personId } } },
+          { children: { some: { childId: personId } } },
+        ],
+      },
+      include: {
+        parents: {
+          include: {
+            parent: {
+              select: { id: true, firstName: true, lastName: true, avatarAssetId: true },
+            },
+          },
+          orderBy: { sortOrder: 'asc' },
+        },
+        children: {
+          include: {
+            child: {
+              select: { id: true, firstName: true, lastName: true, avatarAssetId: true },
+            },
+          },
+          orderBy: { sortOrder: 'asc' },
+        },
+      },
+    })
+  }
 }
 
 export const personRepository = new PersonRepository()

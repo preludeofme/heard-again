@@ -93,6 +93,8 @@ const RELATIONSHIP_KINDS = [
   { value: 'STEP', label: 'Step' },
 ]
 
+
+
 export function PersonModal({ open, personId, initialTab = 'overview', onClose, onSave, onDelete, onViewFullProfile, onPersonClick }: PersonModalProps) {
   const [person, setPerson] = useState<PersonData | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -336,7 +338,7 @@ export function PersonModal({ open, personId, initialTab = 'overview', onClose, 
 
   if (isLoading) {
     return (
-      <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
+      <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth keepMounted={false} slotProps={{ backdrop: { sx: { pointerEvents: open ? 'auto' : 'none' } } }}>
         <DialogContent sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
           <CircularProgress />
         </DialogContent>
@@ -346,7 +348,7 @@ export function PersonModal({ open, personId, initialTab = 'overview', onClose, 
 
   if (!person) {
     return (
-      <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
+      <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth keepMounted={false} slotProps={{ backdrop: { sx: { pointerEvents: open ? 'auto' : 'none' } } }}>
         <DialogContent>
           <Alert severity="error">{error || 'Person not found'}</Alert>
         </DialogContent>
@@ -358,7 +360,15 @@ export function PersonModal({ open, personId, initialTab = 'overview', onClose, 
   }
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+    <Dialog
+      open={open}
+      onClose={handleClose}
+      maxWidth="md"
+      fullWidth
+      keepMounted={false}
+      slotProps={{ backdrop: { sx: { pointerEvents: open ? 'auto' : 'none' } } }}
+      PaperProps={{ sx: { borderRadius: 3 } }}
+    >
       {/* Header with avatar and name */}
       <DialogTitle sx={{ px: 4, pt: 4, pb: 2 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>

@@ -172,110 +172,91 @@ export class PersonService {
     personId: string,
     familyspaceId?: string
   ): Promise<any> {
-    const person = await this.repo.findById(personId, familyspaceId, {
-      avatarAsset: {
-        select: { id: true, storagePath: true, mimeType: true },
-      },
-      voiceProfiles: {
-        where: { status: 'READY' },
-        select: {
-          id: true,
-          name: true,
-          isDefault: true,
-          isCloned: true,
-          sampleAudioUrl: true,
-          createdAt: true,
+    try {
+      const person = await this.repo.findById(personId, familyspaceId, {
+        avatarAsset: {
+          select: { id: true, storagePath: true, mimeType: true },
         },
-      },
-      _count: {
-        select: {
-          storiesAsSubject: true,
-          storiesAsSpeaker: true,
-          voiceProfiles: true,
-        },
-      },
-    })
-
-    if (!person) {
-      return null
-    }
-
-    const familyUnits = await (this.repo as any).prisma.familyUnit.findMany({
-      where: {
-        familyspaceId,
-        OR: [
-          { parents: { some: { parentId: personId } } },
-          { children: { some: { childId: personId } } },
-        ],
-      },
-      include: {
-        parents: {
-          include: {
-            parent: {
-              select: { id: true, firstName: true, lastName: true, avatarAssetId: true },
-            },
+        voiceProfiles: {
+          where: { status: 'READY' },
+          select: {
+            id: true,
+            name: true,
+            isDefault: true,
+            isCloned: true,
+            sampleAudioUrl: true,
+            createdAt: true,
           },
-          orderBy: { sortOrder: 'asc' },
         },
-        children: {
-          include: {
-            child: {
-              select: { id: true, firstName: true, lastName: true, avatarAssetId: true },
-            },
+        _count: {
+          select: {
+            storiesAsSubject: true,
+            storiesAsSpeaker: true,
+            voiceProfiles: true,
           },
-          orderBy: { sortOrder: 'asc' },
         },
-      },
-    })
+      })
 
-    const relationships: any[] = []
+      if (!person) {
+        return null
+      }
 
-    for (const family of familyUnits) {
-      const isParent = (family.parents as any[]).some((p) => p.parentId === personId)
-      const isChild = (family.children as any[]).some((c) => c.childId === personId)
+      const familyUnits = await this.repo.findFamilyUnits(personId, familyspaceId)
+      const relationships: any[] = []
 
-      if (isParent) {
-        for (const parentLink of (family.parents as any[])) {
-          if (parentLink.parentId !== personId) {
+      for (const family of familyUnits) {
+        const isParent = (family.parents as any[]).some((p) => p.parentId === personId)
+        const isChild = (family.children as any[]).some((c) => c.childId === personId)
+
+        if (isParent) {
+          for (const parentLink of (family.parents as any[])) {
+            if (parentLink.parentId !== personId) {
+              relationships.push({
+                id: `fam:${family.id}:spouse:${parentLink.parent.id}`,
+                type: 'SPOUSE',
+                direction: 'outgoing',
+                isBiological: parentLink.relationshipType === 'BIOLOGICAL',
+                person: parentLink.parent,
+              })
+            }
+          }
+          for (const childLink of (family.children as any[])) {
             relationships.push({
-              id: `fam:${family.id}:spouse:${parentLink.parent.id}`,
-              type: 'SPOUSE',
+              id: `fc:${family.id}:${childLink.childId}:child`,
+              type: 'CHILD',
               direction: 'outgoing',
+              isBiological: childLink.relationshipType === 'BIOLOGICAL',
+              person: childLink.child,
+            })
+          }
+        }
+
+        if (isChild) {
+          for (const parentLink of (family.parents as any[])) {
+            relationships.push({
+              id: `fc:${family.id}:${personId}:parent:${parentLink.parent.id}`,
+              type: 'PARENT',
+              direction: 'incoming',
               isBiological: parentLink.relationshipType === 'BIOLOGICAL',
               person: parentLink.parent,
             })
           }
         }
-        for (const childLink of (family.children as any[])) {
-          relationships.push({
-            id: `fc:${family.id}:${childLink.childId}:child`,
-            type: 'CHILD',
-            direction: 'outgoing',
-            isBiological: childLink.relationshipType === 'BIOLOGICAL',
-            person: childLink.child,
-          })
-        }
       }
 
-      if (isChild) {
-        for (const parentLink of (family.parents as any[])) {
-          relationships.push({
-            id: `fc:${family.id}:${personId}:parent:${parentLink.parent.id}`,
-            type: 'PARENT',
-            direction: 'incoming',
-            isBiological: parentLink.relationshipType === 'BIOLOGICAL',
-            person: parentLink.parent,
-          })
-        }
+      return {
+        ...person,
+        displayName: person.displayName || this.computeDisplayName(person),
+        avatarUrl: (person as any).avatarAsset ? `/api/assets/serve/${(person as any).avatarAsset.id}` : null,
+        relationships,
+        counts: (person as any)._count,
       }
-    }
-
-    return {
-      ...person,
-      displayName: person.displayName || this.computeDisplayName(person),
-      avatarUrl: (person as any).avatarAsset ? `/api/assets/serve/${(person as any).avatarAsset.id}` : null,
-      relationships,
-      counts: (person as any)._count,
+    } catch (error) {
+      console.error(
+        `[PersonService] getPersonDetail failed for personId=${personId} familyspaceId=${familyspaceId ?? 'none'}:`,
+        error
+      )
+      throw error
     }
   }
 

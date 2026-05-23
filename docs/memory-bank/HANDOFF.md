@@ -1,125 +1,127 @@
 # Heard Again Handoff
 
-Last updated: 2026-05-20 22:10:40 CDT
+Last updated: 2026-05-23 11:04:08 CDT
 
 ## Current goal
 
-Continue Heard Again development with project state preserved in repository docs so future Hermes/Codex sessions can resume without rediscovery.
+Resolve blockers documented in `docs/qa-blocker-resolution-guide.md` and keep project state preserved for follow-up QA/deploy work.
 
 ## Current state
-
-The project context has been rediscovered and summarized into project memory docs.
 
 Project root:
 
 `/home/trubuck-design/Projects/Personal/heard-again`
 
-Git state at discovery:
+Current branch: `main`
 
-- Branch: `main`
-- Recent HEAD: `35a6074 fix: cleaned up docs`
-- Only untracked `.claude/` existed before these docs were written.
+Important pre-existing working tree notes before this QA pass:
 
-## Files created in this handoff pass
+- `UI/next-env.d.ts` was already modified.
+- `UI/src/services/StoryService.ts` was already modified.
+- `.claude/`, `docs/qa-blocker-resolution-guide.md`, and `prisma/migrations/20260523000000_sync_production/` were already untracked.
+- This pass did not intentionally edit the pre-existing `StoryService.ts` or `next-env.d.ts` changes.
 
-- `docs/PROJECT_STATUS.md`
-- `docs/HANDOFF.md`
-- `docs/DECISIONS.md`
-- `docs/TASK_LOG.md`
+## Completed in 2026-05-23 QA blocker pass
 
-## Context read during discovery
+Implemented fixes for the blockers in `docs/qa-blocker-resolution-guide.md`:
 
-- `AGENTS.md`
-- `CLAUDE.md`
-- `GEMINI.md`
-- `README.md`
-- `package.json`
-- `UI/package.json`
-- `Chat/package.json`
-- `trigger.config.ts`
-- `todo.md`
-- `qa_validation_report.md`
-- `docs/archived-dev-docs/OUTSTANDING_TASKS.md`
-- `docs/archived-dev-docs/LOCAL_INFRA_GAP_ANALYSIS.md`
+1. People API / family tree node interactivity
+   - Verified Person Prisma relations exist in `prisma/schema.prisma`.
+   - Added `PersonRepository.findFamilyUnits()`.
+   - Updated `PersonService.getPersonDetail()` to use the repository method instead of `(this.repo as any).prisma.familyUnit`.
+   - Added service-level error logging and route-level JSON error propagation for `/api/people/[id]`.
 
-## Important implementation context
+2. MUI dialog backdrop blocking toolbar buttons
+   - Updated `PersonModal` dialogs with `keepMounted={false}` and backdrop slot props that disable pointer events for invisible backdrops.
+   - Delayed clearing `selectedPersonId` in `family-tree.tsx` until after close transition while still closing/refetching immediately.
 
-- UI is Next.js Pages Router.
-- UI depends heavily on `SelectedFamilyMemberContext`.
-- Prisma schema is shared at `prisma/schema.prisma`.
-- After Prisma schema edits, run Prisma generation.
-- Root package manager is npm workspaces, not pnpm/yarn.
-- Root scripts include:
-  - `npm run dev`
-  - `npm run build`
-  - `npm run type-check`
-  - `npm run verify`
-  - `npm run db:generate`
-  - `npm run db:migrate`
-- UI package scripts include:
-  - `npm run typecheck`
-  - `npm run test`
-  - `npm run build`
-  - `npm run db:generate`
-- Chat package scripts include:
-  - `npm run type-check`
-  - `npm run test`
-  - `npm run eval:release-candidate`
+3. PWA icons / static public assets
+   - Generated `UI/public/icon-192.png` and `UI/public/icon-512.png`.
+   - Updated existing Next.js 16 proxy file `UI/src/proxy.ts` to whitelist icon/static/legal routes.
+   - Note: an attempted `UI/src/middleware.ts` was removed because Next.js 16 rejects simultaneous `proxy.ts` and `middleware.ts`.
 
-## Known issues / blockers
+4. Reset password without token
+   - Updated `reset-password.tsx` to wait for `router.isReady`, normalize array tokens, and show an error when no token is provided instead of spinning forever.
+   - Reset submit now sends a string token only.
 
-### Product QA blockers
+5. `/terms-legacy`
+   - Added `UI/src/pages/terms-legacy.tsx` re-exporting the current terms page so the route renders content.
+   - Added `/terms-legacy` to public proxy paths.
+   - Updated the reset-password footer “Terms of Legacy” link to `/terms-legacy`.
 
-From `qa_validation_report.md`:
+6. Billing `/api/billing/usage`
+   - Confirmed the route is present in the production build route list.
+   - Moved `formatBytes` to shared `UI/src/lib/format.ts` and imported it from the billing usage API.
+   - Added a focused formatter unit test.
 
-1. Sign out redirects to a 404 route.
-2. Profile edit returns 400 when date fields are empty strings.
-3. Relative/person delete in profile preview is missing confirmation and can delete immediately.
-4. Media/document/audio flows need follow-up validation after blockers are fixed.
+7. Copyright year
+   - Replaced remaining `© 2024 Heard Again` footer strings with dynamic `{new Date().getFullYear()}` in public auth/legal pages.
 
-### Infrastructure / deployment status
+8. Date-field validation regression coverage
+   - Added `UI/src/__tests__/schemas/person.test.ts` to document that cleared optional date fields must be `null`, while empty strings remain rejected by schema validation.
 
-- Manual infrastructure tasks are completed per Ryan on 2026-05-20:
-  - Production Google OAuth credentials updated.
-  - Vercel `TTS_PROVIDER=runpod_serverless` and `RUNPOD_TTS_ENDPOINT_ID=gjtkiwlc3ja3y3` set.
-  - Vercel `CHAT_SYSTEM_URL` fixed to bare chat-service base URL, not `/api/chat` suffixed URL.
-  - Cloudflare R2 CORS configured for direct browser PUT uploads.
-- Remaining code-side deployment item: missing RunPod serverless Python worker at `RunPod/worker/handler.py` if RunPod serverless is still required by the current architecture.
+## Files changed by this pass
+
+- `UI/public/icon-192.png`
+- `UI/public/icon-512.png`
+- `UI/src/__tests__/format.test.ts`
+- `UI/src/__tests__/schemas/person.test.ts`
+- `UI/src/components/modals/PersonModal.tsx`
+- `UI/src/components/pages/CreateAccountPage.tsx`
+- `UI/src/components/pages/LoginPage.tsx`
+- `UI/src/lib/format.ts`
+- `UI/src/pages/api/billing/usage.ts`
+- `UI/src/pages/api/people/[id].ts`
+- `UI/src/pages/family-tree.tsx`
+- `UI/src/pages/forgot-password.tsx`
+- `UI/src/pages/reset-password.tsx`
+- `UI/src/pages/terms.tsx`
+- `UI/src/pages/terms-legacy.tsx`
+- `UI/src/proxy.ts`
+- `UI/src/server/repositories/PersonRepository.ts`
+- `UI/src/services/PersonService.ts`
+- `docs/memory-bank/HANDOFF.md`
+- `docs/memory-bank/TASK_LOG.md`
+
+## Validation run
+
+- `npx jest src/__tests__/format.test.ts src/__tests__/schemas/person.test.ts --runInBand`
+  - Passed: 2 suites, 4 tests.
+  - Warning observed: Jest haste-map naming collision with `.next/standalone/UI/package.json`; tests still passed.
+- `npm --workspace UI run typecheck`
+  - Passed.
+- `npm --workspace UI run build`
+  - Initially failed because a new `middleware.ts` conflicted with existing Next.js 16 `proxy.ts`.
+  - Fixed by deleting `middleware.ts` and updating `proxy.ts`.
+- `npm --workspace UI run typecheck && npm --workspace UI run build`
+  - Passed.
+  - Build warning remains: Turbopack NFT trace warning from `UI/next.config.js` via `UI/src/pages/api/assets/[id]/download.ts`.
+  - Build route list includes `/api/billing/usage` and `/terms-legacy`.
+
+## Known issues / follow-up
+
+- Browser/manual QA against an authenticated local or production session was not run in this pass.
+- Existing handoff items from `qa_validation_report.md` are still separate from this guide:
+  - Sign out redirect to 404.
+  - Relative/person delete confirmation in profile-preview flow.
+  - Media/document/audio flows need follow-up validation.
+- Pre-existing local working tree changes in `UI/next-env.d.ts` and `UI/src/services/StoryService.ts` remain and should be reviewed before commit.
+- Jest warning about `.next/standalone` package naming collision can be cleaned by removing stale build output or adjusting Jest ignore config.
 
 ## Recommended next action
 
-Fix the profile edit 400 error first.
+Run browser QA with an authenticated session for:
 
-Target behavior:
+1. Family tree node buttons: STORY, EDIT, FOCUS, KIN, ADD.
+2. Open/close person modal, then click toolbar export/import buttons.
+3. `/icon-192.png`, `/icon-512.png`, `/manifest.json`, `/terms-legacy`, and `/reset-password` without token.
+4. Dashboard/subscription page usage cards backed by `/api/billing/usage`.
 
-- Empty date form fields should not be sent as empty strings.
-- Convert `""` to `null`, or omit the key, before sending the PUT request.
-- Confirm the affected flow works for both family tree relative editing and relative profile editing.
-
-Suggested search terms:
-
-- `birthDate`
-- `deathDate`
-- `Save Changes`
-- profile edit components
-- family tree edit modal/sidebar components
-
-Validation after fix:
-
-- Run targeted UI typecheck if feasible: `npm --workspace UI run typecheck`
-- Run any nearest related tests if present.
-- Manually verify the edit flow if the dev app is running.
-
-## Next queue after recommended task
-
-1. Fix sign-out callback URL to redirect to `/login` or a known valid route.
-2. Add shared `ConfirmDialog` around destructive person/relative deletion in the preview modal.
-3. Re-run relevant QA flows from `qa_validation_report.md`.
-4. Reassess whether the RunPod worker is still needed after current infrastructure completion; if yes, implement/scaffold it after user-facing QA blockers are handled unless deployment becomes the priority.
+Then review/commit the intended QA blocker diff separately from pre-existing unrelated modifications.
 
 ## Notes for future agents
 
-- Do not assume archived docs are stale; many recent outstanding items were generated from archived migration docs and are still relevant.
+- UI uses Next.js Pages Router with Next.js 16 `proxy.ts`; do not add `middleware.ts` unless `proxy.ts` is removed/renamed.
+- Prisma schema changes require `npm run db:generate`; no Prisma schema changes were made in this pass.
 - Do not print secrets from `.env`, Vercel, Trigger.dev, RunPod, or R2.
 - Avoid broad rewrites. Prefer small focused diffs and targeted validation.
-- Keep this file and `docs/PROJECT_STATUS.md` updated after each completed task.

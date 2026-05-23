@@ -386,7 +386,7 @@ export default function PrivacyPolicyPage() {
                 variant="caption"
                 sx={{ color: 'secondary.main', display: 'block' }}
               >
-                © 2026 Heard Again. A sanctuary for identity.
+                &copy; {new Date().getFullYear()} Heard Again. A sanctuary for identity.
               </Typography>
             </Box>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 4, justifyContent: 'center' }}>

@@ -647,7 +647,6 @@ export default function FamilyTree() {
         initialTab={personModalInitialTab}
         onClose={() => {
           setIsPersonModalOpen(false)
-          setSelectedPersonId(null)
           fetchPeople()
         }}
         onPersonClick={(id) => {

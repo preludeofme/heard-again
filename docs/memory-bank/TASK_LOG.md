@@ -1,8 +1,65 @@
 # Heard Again Task Log
 
-Last updated: 2026-05-20 22:29:29 CDT
+Last updated: 2026-05-23 11:04:08 CDT
 
 This is an append-oriented log for project work. Keep entries concise and factual.
+
+## 2026-05-23 — QA blocker resolution guide implementation
+
+### Completed
+
+Worked through `docs/qa-blocker-resolution-guide.md` and implemented the documented blocker fixes:
+
+- People API / family tree node interactivity:
+  - Verified the required Person relations exist in `prisma/schema.prisma`.
+  - Added `PersonRepository.findFamilyUnits()`.
+  - Updated `PersonService.getPersonDetail()` to use the repository method instead of `(this.repo as any).prisma.familyUnit`.
+  - Added service-level error logging and route-level JSON error propagation for `/api/people/[id]`.
+- MUI dialog backdrop:
+  - Added `keepMounted={false}` and invisible-backdrop pointer-event protection to `PersonModal` dialogs.
+  - Delayed clearing selected person state in `family-tree.tsx` until after close transition.
+- PWA/static public assets:
+  - Generated `UI/public/icon-192.png` and `UI/public/icon-512.png`.
+  - Updated existing Next.js 16 `UI/src/proxy.ts` public routes for icons/static/legal assets.
+  - Removed attempted `UI/src/middleware.ts` after build showed Next.js 16 requires `proxy.ts` only when both exist.
+- Reset password without token:
+  - Updated `reset-password.tsx` to wait for `router.isReady`, normalize token arrays, and show an error for missing tokens instead of an infinite spinner.
+- `/terms-legacy`:
+  - Added `UI/src/pages/terms-legacy.tsx` and allowed it through proxy public routes.
+  - Updated reset-password footer Terms of Legacy link to `/terms-legacy`.
+- Billing usage:
+  - Moved `formatBytes` to `UI/src/lib/format.ts` and imported it from `/api/billing/usage`.
+  - Confirmed `/api/billing/usage` appears in the Next build route list.
+- Copyright year:
+  - Replaced hardcoded `© 2024 Heard Again` strings with dynamic `{new Date().getFullYear()}` in public auth/legal pages.
+- Added focused regression tests for formatter behavior and person date schema normalization expectations.
+
+### Commands/checks run
+
+- `npx jest src/__tests__/format.test.ts src/__tests__/schemas/person.test.ts --runInBand`
+  - Passed: 2 suites, 4 tests.
+  - Warning: Jest haste-map naming collision with `.next/standalone/UI/package.json`; tests still passed.
+- `npm --workspace UI run typecheck`
+  - Passed.
+- `npm --workspace UI run build`
+  - Initially failed due to simultaneous `middleware.ts` and `proxy.ts`.
+- `npm --workspace UI run typecheck && npm --workspace UI run build`
+  - Passed after moving the static-route whitelist into `proxy.ts`.
+  - Build warning remains: Turbopack NFT trace warning from `UI/next.config.js` via `UI/src/pages/api/assets/[id]/download.ts`.
+
+### Working tree notes
+
+Pre-existing before this pass:
+
+- `UI/next-env.d.ts` modified.
+- `UI/src/services/StoryService.ts` modified.
+- `.claude/`, `docs/qa-blocker-resolution-guide.md`, and `prisma/migrations/20260523000000_sync_production/` untracked.
+
+This pass intentionally changed/added the QA blocker files listed in `docs/memory-bank/HANDOFF.md`.
+
+### Recommended next task
+
+Run authenticated browser QA for the fixed flows, especially family tree node actions and post-modal toolbar clicks, then review/commit the QA blocker diff separately from the pre-existing unrelated modifications.
 
 ## 2026-05-20 — Project rediscovery and memory docs
 

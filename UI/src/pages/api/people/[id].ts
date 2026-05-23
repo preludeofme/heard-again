@@ -15,7 +15,13 @@ export default apiHandler({
       // Not authenticated
     }
 
-    const result = await personService.getPersonDetail(personId, user?.familyspaceId)
+    let result
+    try {
+      result = await personService.getPersonDetail(personId, user?.familyspaceId)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to get person details'
+      return res.status(500).json({ success: false, error: message })
+    }
 
     if (!result) {
       throw Errors.notFound('Person')

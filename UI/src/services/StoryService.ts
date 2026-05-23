@@ -10,7 +10,6 @@ import type {
 import {
   StoryType,
   StoryStatus,
-  StoryVisibility,
   DatePrecision,
 } from '@/contracts'
 import { storyRepository, StoryRepository } from '@/server/repositories/StoryRepository'
@@ -127,7 +126,6 @@ export class StoryService {
       status: data.status ?? StoryStatus.PUBLISHED,
       authorRelationship: data.authorRelationship ?? null,
       isPublic: data.isPublic ?? false,
-      visibility: data.visibility ?? StoryVisibility.FAMILY_ONLY,
     }, userId)
 
     // Link other assets if any
@@ -178,7 +176,6 @@ export class StoryService {
     if (data.status !== undefined) updateData.status = data.status
     if (data.authorRelationship !== undefined) updateData.authorRelationship = data.authorRelationship ?? null
     if (data.isPublic !== undefined) updateData.isPublic = data.isPublic ?? false
-    if (data.visibility !== undefined) updateData.visibility = data.visibility ?? StoryVisibility.FAMILY_ONLY
 
     // Handle audio asset for recordings if provided
     if (data.assetIds?.length) {

@@ -36,14 +36,22 @@ export default function ResetPasswordPage() {
 
   // Verify token on page load
   useEffect(() => {
-    if (!token) return
+    if (!router.isReady) return
+
+    const resetToken = Array.isArray(token) ? token[0] : token
+
+    if (!resetToken) {
+      setError('No reset token provided. Please use the link from your password reset email.')
+      setIsVerifying(false)
+      return
+    }
 
     const verifyToken = async () => {
       try {
         const response = await fetch('/api/auth/verify-reset-token', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token }),
+          body: JSON.stringify({ token: resetToken }),
         })
 
         const data = await response.json()
@@ -61,7 +69,7 @@ export default function ResetPasswordPage() {
     }
 
     verifyToken()
-  }, [token])
+  }, [router.isReady, token])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -79,6 +87,12 @@ export default function ResetPasswordPage() {
       return
     }
 
+    const resetToken = Array.isArray(token) ? token[0] : token
+    if (!resetToken) {
+      setError('No reset token provided. Please use the link from your password reset email.')
+      return
+    }
+
     setIsLoading(true)
 
     try {
@@ -86,7 +100,7 @@ export default function ResetPasswordPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          token,
+          token: resetToken,
           password: formData.password,
         }),
       })
@@ -398,7 +412,7 @@ export default function ResetPasswordPage() {
                 variant="caption"
                 sx={{ color: 'secondary.main', display: 'block' }}
               >
-                © 2024 Heard Again. A sanctuary for identity.
+                © {new Date().getFullYear()} Heard Again. A sanctuary for identity.
               </Typography>
             </Box>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 4, justifyContent: 'center' }}>
@@ -413,7 +427,7 @@ export default function ResetPasswordPage() {
                   Privacy Policy
                 </Typography>
               </Link>
-              <Link href="/terms" style={{ textDecoration: 'none' }}>
+              <Link href="/terms-legacy" style={{ textDecoration: 'none' }}>
                 <Typography
                   variant="body2"
                   sx={{
