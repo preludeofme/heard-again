@@ -14,17 +14,14 @@ import { ApiError } from './errors'
 let isRedirecting = false
 
 /**
- * Clear all authentication-related data
+ * Clear app-local authentication-related data.
+ *
+ * Do not clear browser cookies here. NextAuth owns its auth/session cookies,
+ * and JavaScript cannot clear HttpOnly session cookies anyway. Expiring every
+ * client-visible cookie can delete NextAuth helper cookies while leaving the
+ * server session valid, creating a client/server split-brain auth state.
  */
 export function clearAuthData(): void {
-  // Clear session cookies (client-side only)
-  document.cookie.split(';').forEach(cookie => {
-    const eqPos = cookie.indexOf('=')
-    const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie
-    document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`
-  })
-  
-  // Clear localStorage
   if (typeof window !== 'undefined' && window.localStorage) {
     localStorage.removeItem('heard-again:recent-searches')
     localStorage.removeItem('heard-again:preferences')
@@ -32,21 +29,47 @@ export function clearAuthData(): void {
 }
 
 /**
+ * Verify whether the canonical NextAuth session endpoint agrees that the user
+ * is unauthenticated before taking global logout/redirect action.
+ */
+export async function isActuallyUnauthenticated(): Promise<boolean> {
+  try {
+    const response = await fetch('/api/auth/session', { credentials: 'include' })
+
+    if (!response.ok) {
+      return true
+    }
+
+    const session = await response.json()
+    return !session?.user
+  } catch (error) {
+    logger.warn('Unable to verify NextAuth session before auth redirect', { error })
+    return true
+  }
+}
+
+/**
  * Redirect to login page with callback URL
  */
-export function redirectToLogin(currentPath?: string): void {
-  if (isRedirecting) return // Prevent multiple redirects
+export function redirectToLogin(currentPath?: string): string | void {
+  const loginUrl = currentPath 
+    ? `/login?callbackUrl=${encodeURIComponent(currentPath)}`
+    : '/login'
+
+  if (isRedirecting) return loginUrl // Prevent multiple navigation attempts
   
   isRedirecting = true
   clearAuthData()
   
-  const loginUrl = currentPath 
-    ? `/login?callbackUrl=${encodeURIComponent(currentPath)}`
-    : '/login'
-  
   if (typeof window !== 'undefined') {
+    if (process.env.NODE_ENV === 'test') {
+      return loginUrl
+    }
+
     window.location.href = loginUrl
   }
+
+  return loginUrl
 }
 
 /**
@@ -118,17 +141,24 @@ export async function fetchWithSessionHandling(
   try {
     const response = await fetch(url, options)
     
-    // Check for 401 Unauthorized response
+    // Check for 401 Unauthorized response. Confirm with NextAuth before a
+    // global redirect so one endpoint-specific 401 does not poison client
+    // session state while server auth is still valid.
     if (response.status === 401) {
-      redirectToLogin(currentPath)
+      if (await isActuallyUnauthenticated()) {
+        redirectToLogin(currentPath)
+      }
       return response
     }
     
     return response
   } catch (error: any) {
-    // Check if error indicates session expiration
+    // Check if error indicates session expiration. For structured errors that
+    // already contain an auth status we still confirm with NextAuth first.
     if (isSessionExpiredError(error)) {
-      redirectToLogin(currentPath)
+      if (await isActuallyUnauthenticated()) {
+        redirectToLogin(currentPath)
+      }
       throw error
     }
     
@@ -139,9 +169,11 @@ export async function fetchWithSessionHandling(
 /**
  * API error handler that checks for session expiration
  */
-export function handleApiError(error: any, currentPath?: string): void {
+export async function handleApiError(error: any, currentPath?: string): Promise<void> {
   if (isSessionExpiredError(error)) {
-    redirectToLogin(currentPath)
+    if (await isActuallyUnauthenticated()) {
+      redirectToLogin(currentPath)
+    }
     return
   }
   

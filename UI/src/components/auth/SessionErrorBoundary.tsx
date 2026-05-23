@@ -1,7 +1,7 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react'
 import { Box, Typography, Button, Alert, CircularProgress } from '@mui/material'
 import { NextRouter, useRouter } from 'next/router'
-import { isSessionExpiredError, redirectToLogin } from '@/lib/session-handler'
+import { isActuallyUnauthenticated, isSessionExpiredError, redirectToLogin } from '@/lib/session-handler'
 
 interface Props {
   children: ReactNode
@@ -38,10 +38,16 @@ export class ErrorBoundaryInner extends Component<Props, State> {
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('SessionErrorBoundary caught an error:', error, errorInfo)
     
-    // Check if this is a session expiration error
+    // Check if this is a session expiration error. Confirm the canonical
+    // NextAuth session before redirecting so component-level 401-shaped
+    // errors do not force logout while server auth is still valid.
     if (isSessionExpiredError(error)) {
-      this.setState({ isRedirecting: true })
-      redirectToLogin()
+      void isActuallyUnauthenticated().then((unauthenticated) => {
+        if (!unauthenticated) return
+
+        this.setState({ isRedirecting: true })
+        redirectToLogin()
+      })
     }
   }
 
