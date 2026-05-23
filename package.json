@@ -53,16 +53,14 @@
     "archiver": "^8.0.0",
     "isomorphic-dompurify": "^3.14.0",
     "next-auth": "^4.24.13",
-    "react": "^19.2.6",
-    "react-dom": "^19.2.6"
+    "react": "19.2.6",
+    "react-dom": "19.2.6"
   },
   "workspaces": [
     "UI",
     "Chat"
   ],
   "overrides": {
-    "react": "^19.2.6",
-    "react-dom": "^19.2.6",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "systeminformation": "^5.31.6",
