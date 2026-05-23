@@ -27,6 +27,27 @@ function memberLabel(p: PersonOption | SelectedFamilyMember): string {
   return [p.firstName, (p as any).middleName, p.lastName].filter(Boolean).join(' ') || 'Unnamed'
 }
 
+function getSearchableNameParts(member: PersonOption | SelectedFamilyMember): string[] {
+  const p = member as PersonOption
+  return [
+    p.firstName,
+    p.middleName,
+    p.lastName,
+    p.displayName,
+  ].filter((value): value is string => Boolean(value))
+}
+
+function memberMatchesSearch(member: PersonOption | SelectedFamilyMember, query: string): boolean {
+  const tokens = query.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean)
+  if (tokens.length === 0) return true
+
+  const searchableText = getSearchableNameParts(member)
+    .join(' ')
+    .toLocaleLowerCase()
+
+  return tokens.every(token => searchableText.includes(token))
+}
+
 interface MemberRowProps {
   member: PersonOption | SelectedFamilyMember
   isSelected: boolean
@@ -171,10 +192,7 @@ export function MemberSwitcherFlyout({ anchorEl, onClose, onMemberSelect }: Memb
     onClose()
   }, [clearSelectedFamilyMember, onClose])
 
-  const lowerQuery = searchQuery.toLowerCase()
-  const filteredMembers = allMembers.filter((m) =>
-    memberLabel(m).toLowerCase().includes(lowerQuery),
-  )
+  const filteredMembers = allMembers.filter((m) => memberMatchesSearch(m, searchQuery))
 
   // Recent members scoped to the current familyspace — exclude selected and any cross-space leftovers
   const allMemberIds = new Set(allMembers.map((m) => m.id))

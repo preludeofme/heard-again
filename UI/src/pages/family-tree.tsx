@@ -344,8 +344,8 @@ export default function FamilyTree() {
     try {
       const res = await fetch('/api/people?limit=500', { credentials: 'include' })
       const data = await res.json()
-      if (data.success && data.data?.people) {
-        setAllSearchablePeople(data.data.people)
+      if (data.success && Array.isArray(data.data)) {
+        setAllSearchablePeople(data.data)
       }
     } catch (err) {
       console.error('Failed to fetch searchable people:', err)
