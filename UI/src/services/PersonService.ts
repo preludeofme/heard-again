@@ -2,39 +2,10 @@ import type { CreatePersonInput, ListPeopleQuery } from '@/schemas'
 import type { PersonListItem, CreatePersonResponse, PersonType } from '@/contracts'
 import { personRepository, PersonRepository } from '@/server/repositories/PersonRepository'
 import { prisma } from '@/lib/prisma'
-import type { Prisma } from '@prisma/client'
+import { buildPersonNameSearchWhere, getPersonSearchTokens } from '@/lib/person-search'
 
 export type TrimScope = 'person' | 'children' | 'all'
 export type TrimAction = 'detach' | 'delete'
-
-type PersonNameSearchField =
-  | 'firstName'
-  | 'middleName'
-  | 'lastName'
-  | 'maidenName'
-  | 'displayName'
-  | 'nickname'
-
-const PERSON_NAME_SEARCH_FIELDS: PersonNameSearchField[] = [
-  'firstName',
-  'middleName',
-  'lastName',
-  'maidenName',
-  'displayName',
-  'nickname',
-]
-
-function getSearchTokens(search?: string | null): string[] {
-  return search?.trim().split(/\s+/).filter(Boolean) ?? []
-}
-
-function buildPersonNameSearchWhere(tokens: string[]): Prisma.PersonWhereInput[] {
-  return tokens.map(token => ({
-    OR: PERSON_NAME_SEARCH_FIELDS.map(field => ({
-      [field]: { contains: token, mode: 'insensitive' as const },
-    })),
-  }))
-}
 
 export interface BranchPreviewPerson {
   id: string
@@ -78,7 +49,7 @@ export class PersonService {
   ): Promise<PersonListItem[]> {
     const { search, type, page = 1, limit = 50 } = query
     const skip = (page - 1) * limit
-    const tokens = getSearchTokens(search)
+    const tokens = getPersonSearchTokens(search)
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: any = { familyspaceId }
@@ -295,7 +266,9 @@ export class PersonService {
     return {
       id: person.id,
       firstName: person.firstName,
+      middleName: person.middleName ?? null,
       lastName: person.lastName,
+      maidenName: person.maidenName ?? null,
       displayName: person.displayName || this.computeDisplayName(person),
       nickname: person.nickname ?? null,
       personType: person.personType as PersonType,

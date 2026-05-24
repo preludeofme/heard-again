@@ -334,6 +334,7 @@ export default function SearchPage() {
                     {filteredPeople.map((person) => (
                       <Grid key={person.id} size={{ xs: 12, sm: 6 }}>
                         <Card
+                          onClick={() => router.push(`/profile/${person.id}`)}
                           sx={{
                             p: 3, borderRadius: 3, cursor: 'pointer',
                             transition: 'transform 0.2s',

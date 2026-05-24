@@ -12,11 +12,15 @@ The family member search flyout could show no results for partial, case-insensit
 - The member switcher filtered only the displayed label, which can miss alternate name fields when display names differ from first/middle/last names.
 
 ## Solution
-- Centralized the people-name search field list in `PersonService` and kept the Prisma query as case-insensitive `contains` across first, middle, last, maiden, display, and nickname.
+- Centralized the people-name search field list in `UI/src/lib/person-search.ts` and kept the Prisma query as case-insensitive `contains` across first, middle, last, maiden, display, and nickname.
 - Corrected `/api/people` consumers touched by this fix to read the real response shape: `Array.isArray(data.data) ? data.data : no update`.
-- Updated the member switcher local filter to search across first, middle, last, and display name fields, not only the rendered label.
-- Added a regression test that asserts `PersonService.listPeople` sends the expected case-insensitive `contains` query for `rya` across all name fields.
+- Replaced the family-tree member switcher’s 500-person local search cap with debounced remote `/api/people?search=...&limit=50` lookups, while keeping a small default browse list for the open state.
+- Added `middleName` and `maidenName` to the person list DTO so every server-searchable name field can be represented on clients that need it.
+- Removed the unused `FamilyTreeSearchOverlay` path and stale family-tree searchable-people loader/props so there is no second, capped search implementation.
+- Reused the shared person-search helper from global people search paths to reduce field/semantics drift.
+- Added regression tests that assert the shared name-field list and `PersonService.listPeople` case-insensitive `contains` query for `rya` across all name fields.
 
 ## Verification
-- `npm test -- --runInBand src/__tests__/services/PersonService.search.test.ts`
-- `npm run typecheck`
+- `npm --workspace UI test -- --runInBand src/__tests__/services/PersonService.search.test.ts src/__tests__/lib/person-search.test.ts`
+- `npm --workspace UI run typecheck`
+- `npm --workspace UI run build` — passed with the pre-existing Turbopack NFT trace warning from `UI/next.config.js` via `UI/src/pages/api/assets/[id]/download.ts`.

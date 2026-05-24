@@ -19,13 +19,14 @@ const makePerson = (id: string, overrides: Record<string, unknown> = {}) => ({
 })
 
 describe('PersonService.listPeople search', () => {
-  it('queries people with case-insensitive contains matching across name fields', async () => {
+  it('queries people with case-insensitive contains matching across shared name fields', async () => {
     const rows = [
       makePerson('1', { firstName: 'Bryan' }),
       makePerson('2', { firstName: 'Ryan' }),
       makePerson('3', { firstName: 'Enryan' }),
       makePerson('4', { firstName: 'MARYA' }),
       makePerson('5', { firstName: 'NoMatch', nickname: 'RyAn nickname' }),
+      makePerson('6', { firstName: 'Mary', maidenName: 'Bryant' }),
     ]
 
     const repo = {
@@ -57,12 +58,18 @@ describe('PersonService.listPeople search', () => {
         take: 500,
       })
     )
-    expect(result.map((person) => person.displayName)).toEqual([
-      'Bryan',
-      'Ryan',
-      'Enryan',
-      'MARYA',
-      'NoMatch',
+    expect(result.map((person) => ({
+      displayName: person.displayName,
+      middleName: person.middleName,
+      maidenName: person.maidenName,
+      nickname: person.nickname,
+    }))).toEqual([
+      { displayName: 'Bryan', middleName: null, maidenName: null, nickname: null },
+      { displayName: 'Ryan', middleName: null, maidenName: null, nickname: null },
+      { displayName: 'Enryan', middleName: null, maidenName: null, nickname: null },
+      { displayName: 'MARYA', middleName: null, maidenName: null, nickname: null },
+      { displayName: 'NoMatch', middleName: null, maidenName: null, nickname: 'RyAn nickname' },
+      { displayName: 'Mary', middleName: null, maidenName: 'Bryant', nickname: null },
     ])
   })
 })

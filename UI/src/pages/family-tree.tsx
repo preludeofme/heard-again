@@ -274,15 +274,10 @@ export default function FamilyTree() {
 
   const { setSelectedFamilyMember } = useSelectedFamilyMember()
   const selectedPersonIdFromQuery = typeof router.query.personId === 'string' ? router.query.personId : undefined
-  const initialSearchExpanded =
-    router.query.expandSearch === '1'
-    || router.query.expandSearch === 'true'
-  const initialSearchQuery = typeof router.query.search === 'string' ? router.query.search : ''
   const [treeData, setTreeData] = useState<FamilyTreeData | null>(null)
   const [people, setPeople] = useState<ApiPerson[]>([])
   const [rawPeople, setRawPeople] = useState<ApiPersonWithEdges[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [allSearchablePeople, setAllSearchablePeople] = useState<any[]>([])
   
   // Family Bio state
   const [familyBio, setFamilyBio] = useState<string | null>(null)
@@ -340,18 +335,6 @@ export default function FamilyTree() {
     }
   }, [familyspaceId, fetchFamilyBio])
 
-  const fetchSearchablePeople = useCallback(async () => {
-    try {
-      const res = await fetch('/api/people?limit=500', { credentials: 'include' })
-      const data = await res.json()
-      if (data.success && Array.isArray(data.data)) {
-        setAllSearchablePeople(data.data)
-      }
-    } catch (err) {
-      console.error('Failed to fetch searchable people:', err)
-    }
-  }, [])
-
   const fetchPeople = useCallback(async (depths = { up: 2, down: 2 }, rootId?: string, siblings = true, expandIds?: { up: Set<string>; down: Set<string>; siblings: Set<string> }) => {
     try {
       const rootParam = rootId ? `&rootPersonId=${rootId}` : ''
@@ -384,8 +367,7 @@ export default function FamilyTree() {
 
   useEffect(() => {
     fetchPeople({ up: 2, down: 2 }, undefined, false)
-    fetchSearchablePeople()
-  }, [fetchPeople, fetchSearchablePeople])
+  }, [fetchPeople])
 
   const handlePersonAvatarUpdated = useCallback((personId: string, avatarUrl: string) => {
     setRawPeople(prev => prev.map(p => p.id === personId ? { ...p, avatarUrl } : p))
@@ -603,7 +585,6 @@ export default function FamilyTree() {
       <FamilyTreePage
         people={treeData ?? undefined}
         rawPeople={rawPeople}
-        searchablePeople={allSearchablePeople}
         rootPersonId={treeData?.rootPersonId}
         onPersonClick={handlePersonClick}
         onAddPerson={onAddPersonCallback}
@@ -614,8 +595,6 @@ export default function FamilyTree() {
         onToggleFullscreen={handleToggleFullscreen}
         onImportGedcom={handleImportGedcom}
         onExportGedcom={handleExportGedcom}
-        initialSearchExpanded={initialSearchExpanded}
-        initialSearchQuery={initialSearchQuery}
         onLoadMore={handleLoadMore}
         onToggleSiblings={handleToggleSiblings}
         onExpandDepth={handleExpandDepth}

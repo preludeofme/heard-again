@@ -4,12 +4,43 @@ Last updated: 2026-05-23 11:04:08 CDT
 
 This is an append-oriented log for project work. Keep entries concise and factual.
 
+## 2026-05-24 — Server-side family member search overhaul
+
+### Completed
+
+Reworked the family-member search flow so large familyspaces are searched by the server instead of by a capped client-side list:
+
+- Added shared person-search helper `UI/src/lib/person-search.ts` for tokenization and name-field Prisma where clauses.
+- Updated `PersonService.listPeople()`, global people search, search suggestions, and `/api/search/people` to reuse the shared name-field helper and avoid duplicated field lists.
+- Added `middleName` and `maidenName` to the `PersonListItem` DTO and mapper.
+- Updated `MemberSwitcherFlyout` to:
+  - load only a small default browse page (`limit=50`) when opened;
+  - perform debounced remote `/api/people?search=...&limit=50` searches for typed queries;
+  - abort stale fetches and merge selected search results into the local cache for recent-member scoping.
+- Removed the stale `family-tree.tsx` `/api/people?limit=500` searchable-people load and unused `FamilyTreeSearchOverlay.tsx` component.
+- Removed unused `searchablePeople` / initial search props from `FamilyTreePage`.
+- Made global `/search` people result cards navigate to `/profile/[id]` when clicked.
+
+### Commands/checks run
+
+- `npm --workspace UI test -- --runInBand src/__tests__/services/PersonService.search.test.ts src/__tests__/lib/person-search.test.ts`
+  - Passed: 2 suites, 4 tests.
+- `npm --workspace UI run typecheck`
+  - Passed.
+- `npm --workspace UI run build`
+  - Passed.
+  - Existing warning remains: Turbopack NFT trace warning from `UI/next.config.js` via `UI/src/pages/api/assets/[id]/download.ts`.
+
+### Working tree notes
+
+- `UI/next-env.d.ts` was already modified before this search pass and was not intentionally changed here.
+- `.claude/` remains untracked from prior local agent state.
+
 ## 2026-05-23 — QA blocker resolution guide implementation
 
 ### Completed
 
 Worked through `docs/qa-blocker-resolution-guide.md` and implemented the documented blocker fixes:
-
 - People API / family tree node interactivity:
   - Verified the required Person relations exist in `prisma/schema.prisma`.
   - Added `PersonRepository.findFamilyUnits()`.

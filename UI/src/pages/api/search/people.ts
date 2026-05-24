@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse } from '@/lib/api-helpers'
 import { getAuthUserWithFamilyspace } from '@/lib/auth-helpers'
+import { buildPersonNameSearchWhere, getPersonSearchTokens } from '@/lib/person-search'
 
 export default apiHandler({
   // GET /api/search/people?q=... - Search people subset endpoint
@@ -13,21 +14,11 @@ export default apiHandler({
       return successResponse(res, { people: [], totalResults: 0 })
     }
 
-    const tokens = query.split(/\s+/).filter(Boolean)
+    const tokens = getPersonSearchTokens(query)
     const where: any = { familyspaceId: user.familyspaceId }
 
     if (tokens.length > 0) {
-      where.AND = tokens.map(token => ({
-        OR: [
-          { firstName: { contains: token, mode: 'insensitive' } },
-          { middleName: { contains: token, mode: 'insensitive' } },
-          { lastName: { contains: token, mode: 'insensitive' } },
-          { maidenName: { contains: token, mode: 'insensitive' } },
-          { displayName: { contains: token, mode: 'insensitive' } },
-          { nickname: { contains: token, mode: 'insensitive' } },
-          { bio: { contains: token, mode: 'insensitive' } },
-        ],
-      }))
+      where.AND = buildPersonNameSearchWhere(tokens)
     }
 
     const people = await prisma.person.findMany({

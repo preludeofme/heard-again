@@ -4,6 +4,7 @@
  */
 
 import type { PrismaClient } from '@prisma/client'
+import { buildPersonNameSearchWhere, getPersonSearchTokens } from '@/lib/person-search'
 
 export interface SearchQuery {
   familyspaceId: string
@@ -125,21 +126,11 @@ export class SearchService {
     query: string,
     limit: number
   ): Promise<SearchResult['people']> {
-    const tokens = query.split(/\s+/).filter(Boolean)
+    const tokens = getPersonSearchTokens(query)
     return this.prisma.person.findMany({
       where: {
         familyspaceId,
-        AND: tokens.map(token => ({
-          OR: [
-            { firstName: { contains: token, mode: 'insensitive' } },
-            { middleName: { contains: token, mode: 'insensitive' } },
-            { lastName: { contains: token, mode: 'insensitive' } },
-            { maidenName: { contains: token, mode: 'insensitive' } },
-            { displayName: { contains: token, mode: 'insensitive' } },
-            { nickname: { contains: token, mode: 'insensitive' } },
-            { bio: { contains: token, mode: 'insensitive' } },
-          ],
-        }))
+        AND: buildPersonNameSearchWhere(tokens),
       },
       select: {
         id: true,
@@ -196,22 +187,13 @@ export class SearchService {
     limit: number = 5
   ): Promise<SearchSuggestion[]> {
     if (!query.trim()) return []
-    const tokens = query.split(/\s+/).filter(Boolean)
+    const tokens = getPersonSearchTokens(query)
 
     const [people, stories, assets] = await Promise.all([
       this.prisma.person.findMany({
         where: {
           familyspaceId,
-          AND: tokens.map(token => ({
-            OR: [
-              { firstName: { contains: token, mode: 'insensitive' } },
-              { middleName: { contains: token, mode: 'insensitive' } },
-              { lastName: { contains: token, mode: 'insensitive' } },
-              { maidenName: { contains: token, mode: 'insensitive' } },
-              { displayName: { contains: token, mode: 'insensitive' } },
-              { nickname: { contains: token, mode: 'insensitive' } },
-            ],
-          }))
+          AND: buildPersonNameSearchWhere(tokens),
         },
         select: {
           id: true,

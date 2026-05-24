@@ -18,34 +18,35 @@ interface PersonOption {
   firstName: string
   middleName?: string | null
   lastName?: string | null
+  maidenName?: string | null
   displayName?: string | null
+  nickname?: string | null
   avatarUrl?: string | null
 }
 
+const DEFAULT_MEMBER_LIMIT = 50
+const SEARCH_MEMBER_LIMIT = 50
+const SEARCH_DEBOUNCE_MS = 250
+
 function memberLabel(p: PersonOption | SelectedFamilyMember): string {
   if (p.displayName) return p.displayName
-  return [p.firstName, (p as any).middleName, p.lastName].filter(Boolean).join(' ') || 'Unnamed'
+  return [p.firstName, (p as PersonOption).middleName, p.lastName].filter(Boolean).join(' ') || 'Unnamed'
 }
 
-function getSearchableNameParts(member: PersonOption | SelectedFamilyMember): string[] {
-  const p = member as PersonOption
-  return [
-    p.firstName,
-    p.middleName,
-    p.lastName,
-    p.displayName,
-  ].filter((value): value is string => Boolean(value))
+function normalizePeopleResponse(data: unknown): PersonOption[] {
+  const envelope = data as { success?: unknown; data?: unknown }
+  if (envelope.success === true && Array.isArray(envelope.data)) {
+    return envelope.data as PersonOption[]
+  }
+  return []
 }
 
-function memberMatchesSearch(member: PersonOption | SelectedFamilyMember, query: string): boolean {
-  const tokens = query.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean)
-  if (tokens.length === 0) return true
-
-  const searchableText = getSearchableNameParts(member)
-    .join(' ')
-    .toLocaleLowerCase()
-
-  return tokens.every(token => searchableText.includes(token))
+function mergeUniqueMembers(existing: PersonOption[], incoming: PersonOption[]): PersonOption[] {
+  const byId = new Map(existing.map((member) => [member.id, member]))
+  for (const member of incoming) {
+    byId.set(member.id, member)
+  }
+  return Array.from(byId.values())
 }
 
 interface MemberRowProps {
@@ -119,47 +120,105 @@ interface MemberSwitcherFlyoutProps {
   onClose: () => void
   /** When provided, called instead of the default context-set + navigate behavior */
   onMemberSelect?: (member: PersonOption) => void
+  /** Optional query to pre-populate and execute when the flyout opens */
+  initialSearchQuery?: string
 }
 
-export function MemberSwitcherFlyout({ anchorEl, onClose, onMemberSelect }: MemberSwitcherFlyoutProps) {
+export function MemberSwitcherFlyout({ anchorEl, onClose, onMemberSelect, initialSearchQuery = '' }: MemberSwitcherFlyoutProps) {
   const router = useRouter()
   const { selectedFamilyMember, recentlyViewedMembers, setSelectedFamilyMember, clearSelectedFamilyMember } =
     useSelectedFamilyMember()
 
   const [searchQuery, setSearchQuery] = useState('')
-  const [allMembers, setAllMembers] = useState<PersonOption[]>([])
-  const [isLoading, setIsLoading] = useState(false)
+  const [defaultMembers, setDefaultMembers] = useState<PersonOption[]>([])
+  const [searchResults, setSearchResults] = useState<PersonOption[]>([])
+  const [isLoadingDefault, setIsLoadingDefault] = useState(false)
+  const [isSearching, setIsSearching] = useState(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const searchRef = useRef<HTMLInputElement>(null)
-  const hasFetchedRef = useRef(false)
+  const hasFetchedDefaultRef = useRef(false)
   const open = Boolean(anchorEl)
+  const trimmedSearchQuery = searchQuery.trim()
+  const activeMembers = trimmedSearchQuery ? searchResults : defaultMembers
 
   useEffect(() => {
     if (!open) {
       setSearchQuery('')
+      setSearchResults([])
+      setLoadError(null)
       return
     }
 
-    // Focus search on open
+    setSearchQuery(initialSearchQuery)
     const timer = setTimeout(() => searchRef.current?.focus(), 50)
 
-    // Fetch all members once per mount; retry if previous fetch failed (hasFetchedRef stays false on failure)
-    // limit=500 ensures the full family is loaded rather than the API default of 20
-    if (!hasFetchedRef.current) {
-      setIsLoading(true)
-      fetch('/api/people?limit=500', { credentials: 'include' })
+    if (!hasFetchedDefaultRef.current) {
+      const controller = new AbortController()
+      setIsLoadingDefault(true)
+      setLoadError(null)
+      fetch(`/api/people?limit=${DEFAULT_MEMBER_LIMIT}`, {
+        credentials: 'include',
+        signal: controller.signal,
+      })
         .then((r) => r.json())
         .then((data) => {
-          if (data.success && Array.isArray(data.data)) {
-            setAllMembers(data.data)
-            hasFetchedRef.current = true
+          const members = normalizePeopleResponse(data)
+          setDefaultMembers(members)
+          hasFetchedDefaultRef.current = true
+        })
+        .catch((error) => {
+          if ((error as { name?: string }).name !== 'AbortError') {
+            setLoadError('Unable to load family members.')
           }
         })
-        .catch(() => {})
-        .finally(() => setIsLoading(false))
+        .finally(() => setIsLoadingDefault(false))
+
+      return () => {
+        clearTimeout(timer)
+        controller.abort()
+      }
     }
 
     return () => clearTimeout(timer)
-  }, [open])
+  }, [open, initialSearchQuery])
+
+  useEffect(() => {
+    if (!open) return
+
+    const query = searchQuery.trim()
+    if (!query) {
+      setSearchResults([])
+      setIsSearching(false)
+      return
+    }
+
+    const controller = new AbortController()
+    const timer = setTimeout(() => {
+      setIsSearching(true)
+      setLoadError(null)
+      fetch(`/api/people?search=${encodeURIComponent(query)}&limit=${SEARCH_MEMBER_LIMIT}`, {
+        credentials: 'include',
+        signal: controller.signal,
+      })
+        .then((r) => r.json())
+        .then((data) => {
+          const members = normalizePeopleResponse(data)
+          setSearchResults(members)
+          setDefaultMembers((current) => mergeUniqueMembers(current, members))
+        })
+        .catch((error) => {
+          if ((error as { name?: string }).name !== 'AbortError') {
+            setLoadError('Unable to search family members.')
+          }
+        })
+        .finally(() => setIsSearching(false))
+    }, SEARCH_DEBOUNCE_MS)
+
+    return () => {
+      clearTimeout(timer)
+      controller.abort()
+    }
+  }, [open, searchQuery])
 
   const handleSelect = useCallback(
     (member: PersonOption | SelectedFamilyMember) => {
@@ -192,13 +251,13 @@ export function MemberSwitcherFlyout({ anchorEl, onClose, onMemberSelect }: Memb
     onClose()
   }, [clearSelectedFamilyMember, onClose])
 
-  const filteredMembers = allMembers.filter((m) => memberMatchesSearch(m, searchQuery))
-
   // Recent members scoped to the current familyspace — exclude selected and any cross-space leftovers
-  const allMemberIds = new Set(allMembers.map((m) => m.id))
+  const activeMemberIds = new Set(defaultMembers.map((m) => m.id))
   const recentToShow = recentlyViewedMembers.filter(
-    (r) => r.id !== selectedFamilyMember?.id && (!isLoading && allMembers.length > 0 ? allMemberIds.has(r.id) : true),
+    (r) => r.id !== selectedFamilyMember?.id && (!isLoadingDefault && defaultMembers.length > 0 ? activeMemberIds.has(r.id) : true),
   )
+
+  const isLoading = trimmedSearchQuery ? isSearching : isLoadingDefault
 
   return (
     <Popover
@@ -237,7 +296,7 @@ export function MemberSwitcherFlyout({ anchorEl, onClose, onMemberSelect }: Memb
           inputRef={searchRef}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search family members…"
+          placeholder="Search all family members…"
           fullWidth
           sx={{ fontSize: '0.875rem' }}
         />
@@ -254,7 +313,11 @@ export function MemberSwitcherFlyout({ anchorEl, onClose, onMemberSelect }: Memb
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
             <CircularProgress size={24} />
           </Box>
-        ) : searchQuery ? (
+        ) : loadError ? (
+          <Typography variant="body2" sx={{ px: 2, py: 2, color: 'text.secondary', fontStyle: 'italic' }}>
+            {loadError}
+          </Typography>
+        ) : trimmedSearchQuery ? (
           /* Search results */
           <>
             <Typography
@@ -263,12 +326,12 @@ export function MemberSwitcherFlyout({ anchorEl, onClose, onMemberSelect }: Memb
             >
               Results
             </Typography>
-            {filteredMembers.length === 0 ? (
+            {activeMembers.length === 0 ? (
               <Typography variant="body2" sx={{ px: 2, py: 2, color: 'text.secondary', fontStyle: 'italic' }}>
                 No members match "{searchQuery}"
               </Typography>
             ) : (
-              filteredMembers.map((m) => (
+              activeMembers.map((m) => (
                 <MemberRow
                   key={m.id}
                   member={m}
@@ -279,7 +342,7 @@ export function MemberSwitcherFlyout({ anchorEl, onClose, onMemberSelect }: Memb
             )}
           </>
         ) : (
-          /* Default view: currently selected + recent + all */
+          /* Default view: currently selected + recent + initial member page */
           <>
             {selectedFamilyMember ? (
               <>
@@ -388,14 +451,14 @@ export function MemberSwitcherFlyout({ anchorEl, onClose, onMemberSelect }: Memb
               variant="caption"
               sx={{ px: 2, py: 0.5, display: 'block', color: 'text.secondary', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}
             >
-              All members
+              Browse members
             </Typography>
-            {allMembers.length === 0 ? (
+            {defaultMembers.length === 0 ? (
               <Typography variant="body2" sx={{ px: 2, py: 2, color: 'text.secondary', fontStyle: 'italic' }}>
                 No family members added yet.
               </Typography>
             ) : (
-              allMembers.map((m) => (
+              defaultMembers.map((m) => (
                 <MemberRow
                   key={m.id}
                   member={m}

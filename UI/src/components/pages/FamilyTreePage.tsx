@@ -63,8 +63,6 @@ interface FamilyTreePageProps {
   people?: unknown
   /** Raw API data — drives the @xyflow/react canvas and search overlay */
   rawPeople?: ApiPersonWithEdges[]
-  /** All people in the familyspace for global search */
-  searchablePeople?: any[]
   rootPersonId?: string
   onPersonClick?: (person: { id: string | number; name: string; avatar: string }) => void
   onAddPerson?: (personId?: string) => void
@@ -82,8 +80,6 @@ interface FamilyTreePageProps {
   includeSiblings?: boolean
   loadedDepths?: { up: number; down: number }
   isLoadingMore?: boolean
-  initialSearchExpanded?: boolean
-  initialSearchQuery?: string
   fitViewTrigger?: number
   familyBio?: string | null
   onGenerateBio?: () => Promise<void>
@@ -99,7 +95,6 @@ interface FamilyTreePageProps {
 export function FamilyTreePage({
   people: _people,
   rawPeople = [],
-  searchablePeople = [],
   rootPersonId,
   onPeopleChanged: _onPeopleChanged,
   onPersonAvatarUpdated,
@@ -117,7 +112,6 @@ export function FamilyTreePage({
   onEditRelationships,
   isFullscreen = false,
   onToggleFullscreen,
-  initialSearchExpanded = false,
   fitViewTrigger,
   familyBio,
   onGenerateBio,

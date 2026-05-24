@@ -165,7 +165,9 @@ export interface PersonCounts {
 export interface PersonListItem {
   id: string
   firstName: string
+  middleName: string | null
   lastName: string | null
+  maidenName: string | null
   displayName: string
   nickname: string | null
   personType: PersonType
