@@ -11,6 +11,7 @@ import { voiceConsentRepository, VoiceConsentRepository } from '@/server/reposit
 import { assetRepository, AssetRepository } from '@/server/repositories/AssetRepository'
 import { prisma } from '@/lib/prisma'
 import { consentTokenService } from '@/server/services/voice/ConsentTokenService'
+import { getTTSProvider } from '@/lib/tts'
 
 export interface SynthesizeRequest {
   familyspaceId: string
@@ -304,46 +305,24 @@ export class VoiceService {
       // Mark as processing
       await this.markJobProcessing(jobId, language, resolvedLanguage)
 
-      // Call TTS service - include the consent token
-      const ttsData = await ttsRequest<{
-        audioId: string
-        duration?: number
-        synthesisTime?: number
-      }>('/api/tts/synthesize', {
-        method: 'POST',
-        authToken: request.authToken,
+      // Call TTS service via the provider wrapper (supports RunPod Serverless)
+      const ttsProvider = getTTSProvider()
+      
+      const ttsData = await ttsProvider.synthesizeBatch(
+        profile.externalId || profile.name, // Use externalId if available (for RunPod compat)
+        text,
         familyspaceId,
-        body: {
-          profileId: profile.name,
-          text,
-          language: resolvedLanguage,
-          familyspaceId,
-          consentToken, // Pass the signed token
-        },
-      })
-
-      // Fetch audio with appropriate auth
-      // Use provided token or fallback to service-to-service token
-      const authHeader = request.authToken 
-        ? `Bearer ${request.authToken}`
-        : `Bearer ${process.env.TTS_SERVICE_TOKEN}`
-
-      const audioResponse = await fetch(
-        `${TTS_SERVICE_URL}/api/tts/audio/${ttsData.audioId}`,
-        {
-          headers: {
-            'Authorization': authHeader,
-            'X-Familyspace-Id': familyspaceId,
-          },
+        null, // No reference text needed for clone playback
+        async (progress) => {
+          // Progress callbacks ignored for simple sample generation
         }
       )
-      
-      if (!audioResponse.ok) {
-        const errorText = await audioResponse.text()
-        throw new AppError(`Synthesized audio retrieval failed (${audioResponse.status}): ${errorText}`, 503, 'TTS_AUDIO_FETCH_FAILED')
-      }
 
-      const audioBuffer = Buffer.from(await audioResponse.arrayBuffer())
+      // Download the audio buffer
+      const audioBuffer = await ttsProvider.downloadAudio(
+        ttsData.audioId,
+        familyspaceId
+      )
 
       // Complete job and save asset
       const { assetId } = await this.completeJob(

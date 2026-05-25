@@ -571,6 +571,32 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
         isTraining: false,
       }))
 
+      // Generate and store a sample audio in the background
+      const persistedModelId = result.profileId || result.dbProfileId
+      if (persistedModelId) {
+        fetch('/api/voice/synthesize', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken },
+          credentials: 'include',
+          body: JSON.stringify({
+            modelId: persistedModelId,
+            text: 'Hello, this is a sample of my digital voice. Thank you for preserving my story.',
+          }),
+        })
+          .then(r => r.ok ? r.json() : null)
+          .then(data => {
+            const audioUrl = data?.data?.audioUrl || data?.audioUrl
+            if (!audioUrl) return
+            return fetch(`/api/voice/profiles/${persistedModelId}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken },
+              credentials: 'include',
+              body: JSON.stringify({ sampleAudioUrl: audioUrl }),
+            })
+          })
+          .catch(() => undefined)
+      }
+
       enqueueSnackbar(`Voice "${profileName}" designed and saved!`)
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to design voice'
