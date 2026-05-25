@@ -1,0 +1,2 @@
+#!/bin/bash
+docker run --rm -v $(pwd)/requirements.txt:/requirements.txt runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04 /bin/bash -c "pip install --upgrade pip setuptools wheel && pip install -r /requirements.txt && pip install runpod boto3 requests flash-attn && git clone --depth 1 https://github.com/QwenLM/Qwen3-TTS.git /tmp/qwen3-tts && echo '=== qwen3-tts pinned commit: \$(git -C /tmp/qwen3-tts rev-parse HEAD) ===' && pip install /tmp/qwen3-tts && rm -rf /tmp/qwen3-tts"
