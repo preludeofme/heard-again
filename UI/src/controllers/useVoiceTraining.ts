@@ -372,31 +372,6 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
         trainingSamples: [],
       }))
 
-      // Generate and store a sample audio in the background
-      if (persistedModelId) {
-        fetch('/api/voice/synthesize', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken },
-          credentials: 'include',
-          body: JSON.stringify({
-            modelId: persistedModelId,
-            text: 'Hello, this is a sample of my digital voice. Thank you for preserving my story.',
-          }),
-        })
-          .then(r => r.ok ? r.json() : null)
-          .then(data => {
-            const audioUrl = data?.data?.audioUrl || data?.audioUrl
-            if (!audioUrl) return
-            return fetch(`/api/voice/profiles/${persistedModelId}`, {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken },
-              credentials: 'include',
-              body: JSON.stringify({ sampleAudioUrl: audioUrl }),
-            })
-          })
-          .catch(() => undefined)
-      }
-
       enqueueSnackbar('Voice profile created! You can now use it in Talk.', { variant: 'success' })
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to create voice profile'
@@ -571,30 +546,16 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
         isTraining: false,
       }))
 
-      // Generate and store a sample audio in the background
+      // Store design audio as the sample if the API returned one
       const persistedModelId = result.profileId || result.dbProfileId
-      if (persistedModelId) {
-        fetch('/api/voice/synthesize', {
-          method: 'POST',
+      const designAudioUrl = result.designAudioUrl as string | undefined
+      if (persistedModelId && designAudioUrl) {
+        fetch(`/api/voice/profiles/${persistedModelId}`, {
+          method: 'PUT',
           headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken },
           credentials: 'include',
-          body: JSON.stringify({
-            modelId: persistedModelId,
-            text: 'Hello, this is a sample of my digital voice. Thank you for preserving my story.',
-          }),
-        })
-          .then(r => r.ok ? r.json() : null)
-          .then(data => {
-            const audioUrl = data?.data?.audioUrl || data?.audioUrl
-            if (!audioUrl) return
-            return fetch(`/api/voice/profiles/${persistedModelId}`, {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken },
-              credentials: 'include',
-              body: JSON.stringify({ sampleAudioUrl: audioUrl }),
-            })
-          })
-          .catch(() => undefined)
+          body: JSON.stringify({ sampleAudioUrl: designAudioUrl }),
+        }).catch(() => undefined)
       }
 
       enqueueSnackbar(`Voice "${profileName}" designed and saved!`)

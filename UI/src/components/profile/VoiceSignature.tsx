@@ -1,9 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { Box, Typography, IconButton, CircularProgress, Alert } from '@mui/material'
+import { Box, Typography, IconButton, Alert, Tooltip } from '@mui/material'
 import { Replay10, Forward30, PlayArrow, Stop, ChevronLeft, ChevronRight } from '@mui/icons-material'
 import Link from 'next/link'
 import { ProfileColors, WAVEFORM_HEIGHTS } from './ProfileConstants'
-import { fetchWithCSRFAndJSON } from '@/lib/api-client'
 
 interface VoiceSignatureProps {
   personId?: string
@@ -38,9 +37,9 @@ export function VoiceSignature({
   const currentVoice = voiceProfiles?.[currentIndex] ?? null
   const hasClonedVoice = !!currentVoice?.isCloned
   const hasAnyVoice = voiceProfiles && voiceProfiles.length > 0
+  const hasSample = !!currentVoice?.sampleAudioUrl
   
   const [isPlaying, setIsPlaying] = useState(false)
-  const [isSynthesizing, setIsSynthesizing] = useState(false)
   const [playError, setPlayError] = useState<string | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
@@ -62,7 +61,7 @@ export function VoiceSignature({
     }
   }
 
-  const handlePlaySample = async () => {
+  const handlePlaySample = () => {
     if (isPlaying) {
       if (audioRef.current) {
         audioRef.current.pause()
@@ -72,50 +71,18 @@ export function VoiceSignature({
       return
     }
 
-    if (!currentVoice) return
-
-    setPlayError(null)
-
-    let audioUrl: string | null = currentVoice.sampleAudioUrl ?? null
-
-    if (!audioUrl) {
-      setIsSynthesizing(true)
-      try {
-        const response = await fetchWithCSRFAndJSON('/api/voice/synthesize', {
-          modelId: currentVoice.id,
-          text: `Hello, this is a sample of my digital voice clone for ${firstName || 'the family story'}.`,
-        })
-
-        if (!response.ok) {
-          const errData = await response.json().catch(() => ({}))
-          throw new Error((errData as any).error || 'Failed to synthesize')
-        }
-
-        const result = await response.json()
-        audioUrl = result.data?.audioUrl || result.audioUrl || null
-
-        if (!audioUrl) {
-          throw new Error('No audio URL in response')
-        }
-      } catch (err) {
-        setIsSynthesizing(false)
-        const msg = err instanceof Error ? err.message : 'Playback failed'
-        if (msg.toLowerCase().includes('consent') || msg.toLowerCase().includes('blocked')) {
-          setPlayError('Consent required — record consent in Voice Lab before playing.')
-        } else {
-          setPlayError('Playback failed. Please try again.')
-        }
-        return
-      } finally {
-        setIsSynthesizing(false)
-      }
-    }
-
+    const audioUrl = currentVoice?.sampleAudioUrl ?? null
     if (!audioUrl) return
 
+    setPlayError(null)
     const audio = new Audio(audioUrl)
     audioRef.current = audio
 
+    audio.onerror = () => {
+      setIsPlaying(false)
+      audioRef.current = null
+      setPlayError('Playback failed. Please try again.')
+    }
     audio.onended = () => {
       setIsPlaying(false)
       audioRef.current = null
@@ -214,34 +181,34 @@ export function VoiceSignature({
           <IconButton sx={{ color: ProfileColors.primary, opacity: 0.35 }} aria-label="Replay 10 seconds">
             <Replay10 sx={{ fontSize: 28 }} />
           </IconButton>
-          <Box
-            onClick={hasAnyVoice ? handlePlaySample : undefined}
-            sx={{
-              width: 60,
-              height: 60,
-              bgcolor: hasAnyVoice ? ProfileColors.primary : '#dcdad5',
-              color: '#fff',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              textDecoration: 'none',
-              boxShadow: hasAnyVoice ? '0 6px 24px rgba(22,51,74,0.3)' : 'none',
-              transition: 'transform 0.15s, opacity 0.15s',
-              cursor: hasAnyVoice ? 'pointer' : 'default',
-              '&:hover': hasAnyVoice ? { opacity: 0.9 } : {},
-              '&:active': hasAnyVoice ? { transform: 'scale(0.92)' } : {},
-            }}
-            aria-label="Play voice sample"
-          >
-            {isSynthesizing ? (
-              <CircularProgress size={24} color="inherit" />
-            ) : isPlaying ? (
-              <Stop sx={{ fontSize: 34 }} />
-            ) : (
-              <PlayArrow sx={{ fontSize: 34 }} />
-            )}
-          </Box>
+          <Tooltip title={hasAnyVoice && !hasSample ? 'Sample not yet available — check back shortly' : ''} disableHoverListener={!hasAnyVoice || hasSample}>
+            <Box
+              onClick={hasSample ? handlePlaySample : undefined}
+              sx={{
+                width: 60,
+                height: 60,
+                bgcolor: hasSample ? ProfileColors.primary : '#dcdad5',
+                color: '#fff',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                textDecoration: 'none',
+                boxShadow: hasSample ? '0 6px 24px rgba(22,51,74,0.3)' : 'none',
+                transition: 'transform 0.15s, opacity 0.15s',
+                cursor: hasSample ? 'pointer' : 'default',
+                '&:hover': hasSample ? { opacity: 0.9 } : {},
+                '&:active': hasSample ? { transform: 'scale(0.92)' } : {},
+              }}
+              aria-label={hasSample ? 'Play voice sample' : 'Sample not yet available'}
+            >
+              {isPlaying ? (
+                <Stop sx={{ fontSize: 34 }} />
+              ) : (
+                <PlayArrow sx={{ fontSize: 34 }} />
+              )}
+            </Box>
+          </Tooltip>
           <IconButton sx={{ color: ProfileColors.primary, opacity: 0.35 }} aria-label="Forward 30 seconds">
             <Forward30 sx={{ fontSize: 28 }} />
           </IconButton>

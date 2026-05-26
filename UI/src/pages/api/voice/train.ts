@@ -4,6 +4,65 @@ import { prisma } from '@/lib/prisma'
 import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 import { withMFAProtection, SENSITIVE_OPERATIONS } from '@/lib/security/mfa'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
+import { getTTSProvider } from '@/lib/tts'
+import { storageService } from '@/services/StorageService'
+
+const SAMPLE_TEXT = 'Hello, this is a sample of my digital voice. Thank you for preserving my story.'
+
+async function generateVoiceSample(
+  profileId: string,
+  externalId: string,
+  familyspaceId: string,
+  userId: string
+): Promise<void> {
+  const ttsProvider = getTTSProvider()
+  const ttsData = await ttsProvider.synthesizeBatch(
+    externalId,
+    SAMPLE_TEXT,
+    familyspaceId,
+    null,
+    async () => {}
+  )
+
+  const audioBuffer = await ttsProvider.downloadAudio(ttsData.audioId, familyspaceId)
+
+  const stored = await storageService.saveAudio(familyspaceId, ttsData.audioId, audioBuffer, {
+    mimeType: 'audio/wav',
+    extension: 'wav',
+  })
+
+  const fileName = ttsData.audioId.split('/').pop() ?? `${ttsData.audioId}.wav`
+
+  const asset = await prisma.asset.create({
+    data: {
+      familyspaceId,
+      filename: fileName,
+      originalName: fileName,
+      mimeType: 'audio/wav',
+      sizeBytes: BigInt(audioBuffer.byteLength),
+      storageType: 'LOCAL',
+      storagePath: stored.path,
+      assetType: 'GENERATED_AUDIO',
+      isAISynthesized: true,
+      processingStatus: 'COMPLETED',
+      uploadedById: userId,
+      durationSeconds: ttsData.duration ?? null,
+      metadata: {
+        source: 'voice.profile.sample',
+        ttsAudioId: ttsData.audioId,
+        voiceProfileId: profileId,
+      },
+    },
+    select: { id: true },
+  })
+
+  await prisma.voiceProfile.update({
+    where: { id: profileId },
+    data: { sampleAudioUrl: `/api/assets/${asset.id}/download` },
+  })
+
+  logger.info('[API] train: sample audio generated', { profileId, assetId: asset.id })
+}
 
 async function trainVoiceHandler(req: NextApiRequest, res: NextApiResponse) {
   const user = await getAuthUserWithFamilyspace(req, res)
@@ -81,6 +140,10 @@ async function trainVoiceHandler(req: NextApiRequest, res: NextApiResponse) {
   })
 
   logger.info('[API] train: voice profile created', { profileId: profile.id, ttsFileId, assetId: asset.id })
+
+  generateVoiceSample(profile.id, ttsFileId, user.familyspaceId, user.id).catch((err) => {
+    logger.warn('[API] train: background sample generation failed', { profileId: profile.id, err })
+  })
 
   return successResponse(res, {
     jobId: ttsFileId,

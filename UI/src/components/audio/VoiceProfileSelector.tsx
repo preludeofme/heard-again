@@ -1,13 +1,11 @@
 
 import { useState } from 'react'
-import { fetchWithCSRFAndJSON } from '@/lib/api-client'
 import {
   Box,
   Typography,
   Button,
   Card,
   CardContent,
-  Avatar,
   Chip,
   Radio,
   FormControlLabel,
@@ -23,7 +21,6 @@ import {
   CheckCircle as CheckCircleIcon,
   Add as AddIcon,
   PlayArrow as PlayIcon,
-  Warning as WarningIcon,
 } from '@mui/icons-material'
 import { useApi } from '@/hooks/useApi'
 
@@ -36,6 +33,7 @@ interface VoiceProfile {
   status: 'TRAINING' | 'READY' | 'ERROR' | 'DISABLED'
   personId: string | null
   personName: string | null
+  sampleAudioUrl: string | null
   createdAt: string
 }
 
@@ -60,28 +58,13 @@ export function VoiceProfileSelector({
     url: personId ? `/api/voice/profiles?personId=${personId}` : '/api/voice/profiles',
   })
 
-  const handlePreview = async (profileId: string) => {
-    setPreviewingId(profileId)
-    try {
-      // Call synthesis API with sample text
-      const response = await fetchWithCSRFAndJSON('/api/voice/synthesize', {
-        profileId,
-        text: 'Hello, this is a preview of my voice.',
-      })
-
-      const result = await response.json()
-
-      if (response.ok && result.audioUrl) {
-        const audio = new Audio(result.audioUrl)
-        audio.play()
-        audio.onended = () => setPreviewingId(null)
-      } else {
-        setPreviewingId(null)
-      }
-    } catch (err) {
-      console.error('Preview failed:', err)
-      setPreviewingId(null)
-    }
+  const handlePreview = (profile: VoiceProfile) => {
+    if (!profile.sampleAudioUrl) return
+    setPreviewingId(profile.id)
+    const audio = new Audio(profile.sampleAudioUrl)
+    audio.play()
+    audio.onended = () => setPreviewingId(null)
+    audio.onerror = () => setPreviewingId(null)
   }
 
   const getStatusColor = (status: string) => {
@@ -235,21 +218,23 @@ export function VoiceProfileSelector({
                 />
 
                 {showPreview && profile.status === 'READY' && (
-                  <Tooltip title="Preview voice">
-                    <IconButton
-                      size="small"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handlePreview(profile.id)
-                      }}
-                      disabled={previewingId === profile.id}
-                    >
-                      {previewingId === profile.id ? (
-                        <CircularProgress size={20} />
-                      ) : (
-                        <PlayIcon fontSize="small" />
-                      )}
-                    </IconButton>
+                  <Tooltip title={profile.sampleAudioUrl ? 'Preview voice' : 'Sample not yet available'}>
+                    <span>
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handlePreview(profile)
+                        }}
+                        disabled={previewingId === profile.id || !profile.sampleAudioUrl}
+                      >
+                        {previewingId === profile.id ? (
+                          <CircularProgress size={20} />
+                        ) : (
+                          <PlayIcon fontSize="small" />
+                        )}
+                      </IconButton>
+                    </span>
                   </Tooltip>
                 )}
               </Box>
