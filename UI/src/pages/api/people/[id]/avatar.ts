@@ -148,7 +148,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           originalName: file.originalFilename || 'avatar',
           mimeType: validationResult.detectedType!,
           sizeBytes: BigInt(fileBuffer.length),
-          storageType: storageMode.toUpperCase() as any,
+          storageType: storageMode === 'r2' ? 'CLOUDFLARE_R2'
+            : storageMode === 'gcs' || storageMode === 'gcp' ? 'GOOGLE_CLOUD'
+            : storageMode === 's3' ? 'S3'
+            : 'LOCAL',
           storagePath: uploadResult.storagePath,
           assetType: 'IMAGE',
           processingStatus: 'COMPLETED',
