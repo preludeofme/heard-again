@@ -43,6 +43,7 @@ import Link from 'next/link'
 import { ProfileColors } from '@/components/profile/ProfileConstants'
 import { useSelectedFamilyMember } from '@/contexts/SelectedFamilyMemberContext'
 import { useDashboardController } from '@/controllers/useDashboardController'
+import { OnboardingChecklist } from '@/components/dashboard/OnboardingChecklist'
 import { fetchWithCSRF, fetchWithCSRFAndFormData } from '@/lib/api-client'
 
 export type MemoriesLens = 'journey' | 'stories' | 'keepsakes' | 'voices'
@@ -124,6 +125,14 @@ export function MemoriesShell({ lens, onLensChange, children }: MemoriesShellPro
 
   const isLoading = dashboard.isLoading || isPeopleLoading
   const hasError = dashboard.hasError
+
+  const role = dashboard.userContext?.role ?? 'VIEWER'
+  const allOnboardingDone =
+    dashboard.onboardingState.hasFirstPerson &&
+    dashboard.onboardingState.hasFirstStory &&
+    dashboard.onboardingState.hasFirstDocument &&
+    dashboard.onboardingState.hasFirstVoice &&
+    (role !== 'OWNER' && role !== 'ADMIN' ? true : dashboard.onboardingState.hasInvitedMember)
 
   const selectedPerson = useMemo(() => {
     if (!selectedFamilyMember?.id) return null
@@ -573,6 +582,17 @@ export function MemoriesShell({ lens, onLensChange, children }: MemoriesShellPro
           )}
         </Box>
       </Box>
+
+      {/* Onboarding Checklist */}
+      {!allOnboardingDone && (
+        <Box sx={{ maxWidth: 1280, mx: 'auto', px: { xs: 3, md: 8 }, mt: 4 }}>
+          <OnboardingChecklist
+            state={dashboard.onboardingState}
+            role={role as 'OWNER' | 'ADMIN' | 'EDITOR' | 'VIEWER' | 'LEGACY'}
+            familyspaceId={dashboard.familyspace?.id ?? null}
+          />
+        </Box>
+      )}
 
       {/* Lens switcher */}
       <Box
