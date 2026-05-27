@@ -1,4 +1,4 @@
-FROM nvcr.io/nvidia/pytorch:24.10-py3
+FROM nvcr.io/nvidia/pytorch:25.12-py3
 
 ENV PYTHONUNBUFFERED=1
 ENV PIP_NO_CACHE_DIR=1
@@ -24,7 +24,7 @@ COPY requirements.txt .
 # flash-attn is pre-installed in the NGC base image, so we skip it to prevent build errors
 RUN pip install --upgrade pip setuptools wheel \
     && pip install -r requirements.txt \
-    && pip install runpod boto3 requests \
+    && pip install runpod boto3 requests nvidia-ml-py \
     && git clone --depth 1 https://github.com/QwenLM/Qwen3-TTS.git /tmp/qwen3-tts \
     && echo "=== qwen3-tts pinned commit: $(git -C /tmp/qwen3-tts rev-parse HEAD) ===" \
     && pip install /tmp/qwen3-tts \

@@ -2,6 +2,7 @@ import base64
 import logging
 import re
 import shutil
+import sys
 import tempfile
 import time
 import uuid
@@ -13,6 +14,7 @@ import runpod
 import soundfile as sf
 from pydantic import ValidationError
 
+from app.gpu_compat_check import exit_if_incompatible
 from app.runpod_callback_client import post_callback
 from app.runpod_config import DEFAULT_AUDIO_FORMAT, TEMP_DIR, TTS_STUB_MODE, ensure_runtime_dirs
 from app.runpod_r2_client import R2Client
@@ -32,6 +34,12 @@ from app.runpod_tts_service import generate_tts_audio
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# ── GPU compatibility gate ─────────────────────────────────────────────────────
+# Fail fast before any model loading or job dispatch: if the allocated GPU is
+# not compatible with the installed PyTorch, print a clear error and exit.
+# RunPod will auto-restart the worker, hopefully on a compatible GPU next time.
+exit_if_incompatible()
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────
