@@ -27,7 +27,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     return res.status(503).json({
       success: false,
       error: error.message,
-      hint: 'Is the TTS service running? Start with: cd tts-service && ./start.sh',
+      hint: 'Is the TTS service running? Start with: cd TTS/tts-service && ./start.sh',
     })
   }
 }

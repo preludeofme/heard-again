@@ -26,8 +26,8 @@ fi
 pip install -q -r requirements.txt 2>/dev/null || true
 
 # Start the service
-echo "Starting Qwen3-TTS service on port ${TTS_PORT:-8101}..."
+echo "Starting Qwen3-TTS service on port ${TTS_PORT:-4779}..."
 python -m uvicorn app.main:app \
     --host "${TTS_HOST:-0.0.0.0}" \
-    --port "${TTS_PORT:-8101}" \
+    --port "${TTS_PORT:-4779}" \
     --reload
