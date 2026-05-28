@@ -16,6 +16,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
+  // RunPod serverless workers spin up on demand — there is no persistent
+  // process to pre-warm, so warmup is a no-op in this mode.
+  if (process.env.TTS_PROVIDER === 'runpod_serverless') {
+    return res.status(200).json({ success: true, message: 'Warmup not applicable for RunPod serverless', warmed: false })
+  }
+
   try {
     const user = await getAuthUserWithFamilyspace(req, res)
     const data = await ttsRequest('/api/tts/warmup', {
