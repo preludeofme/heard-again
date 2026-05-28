@@ -21,3 +21,9 @@
     [x] need to create a parameter routing for /familyspace/[familyid]/settings?tab=overview|members|settings|data
     [x] make sure invite family member goes to the members parameter route
 [x] Replace the "Start your Living Legacy" with the new collapsible Get Started component. Do not need the duplicate component
+[ ] add location lookup service (open source if possible) so that we can track specific locations and not just have free-form locations that could be "walmart parkinglot" or something like that.
+    [ ] once we have locations fully enabled, we could add a map component to show where families have migrated over time with an animation and then a heatmap
+    [ ] probably need to adjust the schema to allow for locations maybe gps coordinates 
+    [ ] connect to google maps api for this (make sure location fields have an autocomplete functionality so it validates the entry). just use city/state nothing more complicated than that
+    [ ] check the gedcom if there's already location data that we can use and import
+    
