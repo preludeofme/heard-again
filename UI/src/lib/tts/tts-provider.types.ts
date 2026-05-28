@@ -67,6 +67,13 @@ export interface TTSProvider {
 
   checkUploadJob?(jobId: string): Promise<UploadReferenceJob>
 
+  /** Create a .pt voice profile from a previously uploaded reference file. REST-only; RunPod handles this internally. */
+  createVoiceProfile?(
+    fileId: string,
+    profileName: string,
+    styleInstruct?: string | null
+  ): Promise<{ profileId: string; profilePath: string }>
+
   uploadReference(
     audioBuffer: Buffer,
     filename: string,

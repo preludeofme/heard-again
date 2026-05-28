@@ -11,6 +11,35 @@ const TTS_SERVICE_URL = process.env.TTS_SERVICE_URL ?? 'http://127.0.0.1:4779'
 const TTS_SERVICE_TOKEN = process.env.TTS_SERVICE_TOKEN
 
 export class RestTTSProvider implements TTSProvider {
+  async createVoiceProfile(
+    fileId: string,
+    profileName: string,
+    styleInstruct?: string | null
+  ): Promise<{ profileId: string; profilePath: string }> {
+    const response = await fetch(`${TTS_SERVICE_URL}/api/tts/create-voice-profile`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${TTS_SERVICE_TOKEN}`,
+        'X-Familyspace-Id': 'system',
+      },
+      body: JSON.stringify({
+        fileId,
+        profileName,
+        styleInstruct: styleInstruct ?? undefined,
+      }),
+      signal: AbortSignal.timeout(120_000),
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => '')
+      throw new Error(`TTS create-voice-profile failed (${response.status}): ${errorText}`)
+    }
+
+    const data = await response.json() as { success: boolean; profileId: string; profilePath: string }
+    return { profileId: data.profileId, profilePath: data.profilePath }
+  }
+
   async uploadReference(
     audioBuffer: Buffer,
     filename: string,

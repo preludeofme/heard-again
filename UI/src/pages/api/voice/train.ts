@@ -116,9 +116,12 @@ async function trainVoiceHandler(req: NextApiRequest, res: NextApiResponse) {
     throw Errors.badRequest('Audio sample is missing voice reference data — please re-upload the sample')
   }
 
+  const ttsProvider = getTTSProvider()
+
   // On RunPod, upload_reference stores the audio at voice-profiles/{familyspaceId}/{fileId}/.
   // synthesize_batch looks it up by profileName matching that same fileId.
-  // No separate "create profile" call is needed — the upload IS the profile creation.
+  // On REST/local, we call createVoiceProfile() below to generate the .pt file,
+  // then use the sanitized profileId for synthesize_batch.
   const profileName = modelName || `voice_${Date.now()}`
 
   const profile = await prisma.voiceProfile.create({
@@ -139,9 +142,27 @@ async function trainVoiceHandler(req: NextApiRequest, res: NextApiResponse) {
     },
   })
 
+  // Create the .pt voice profile on the TTS service (REST path only).
+  // RunPod handles this internally during upload_reference.
+  let ttsProfileName = ttsFileId
+  if (ttsProvider.createVoiceProfile) {
+    try {
+      const { profileId } = await ttsProvider.createVoiceProfile(
+        ttsFileId,
+        profileName,
+        styleInstruct
+      )
+      ttsProfileName = profileId
+      logger.info('[API] train: .pt voice profile created', { profileId, ttsFileId })
+    } catch (err) {
+      logger.error('[API] train: failed to create .pt voice profile', { ttsFileId, err })
+      throw err
+    }
+  }
+
   logger.info('[API] train: voice profile created', { profileId: profile.id, ttsFileId, assetId: asset.id })
 
-  generateVoiceSample(profile.id, ttsFileId, user.familyspaceId, user.id).catch((err) => {
+  generateVoiceSample(profile.id, ttsProfileName, user.familyspaceId, user.id).catch((err) => {
     logger.warn('[API] train: background sample generation failed', { profileId: profile.id, err })
   })
 
