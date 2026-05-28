@@ -38,6 +38,12 @@ const nextConfig = {
     'isomorphic-dompurify',
     'jsdom',
   ],
+  // NFT tracing: the download API route does fs/path operations to serve local
+  // uploads. This tells Turbopack to include the uploads directory in the trace
+  // so the NFT warning doesn't fire.
+  outputFileTracingIncludes: {
+    '/api/assets/**': ['./uploads/**'],
+  },
   // @trigger.dev/react-hooks is ESM-only and hoisted to workspace root
   // node_modules — transpilePackages tells Turbopack to bundle it rather than
   // try to resolve it as an external CJS module.

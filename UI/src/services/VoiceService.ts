@@ -71,7 +71,7 @@ export class VoiceService {
   async getVoiceProfile(
     familyspaceId: string,
     profileId: string
-  ): Promise<{ id: string; personId: string | null; name: string }> {
+  ): Promise<{ id: string; personId: string | null; name: string; externalId: string | null }> {
     const profile = await this.voiceProfileRepo.findById(profileId, familyspaceId)
 
     if (!profile || profile.status !== 'READY') {
@@ -86,6 +86,7 @@ export class VoiceService {
       id: profile.id,
       personId: profile.personId,
       name: profile.name,
+      externalId: profile.externalId,
     }
   }
 

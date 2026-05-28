@@ -19,10 +19,13 @@ export default function TermsLegacyPage() {
             Terms of Legacy
           </Typography>
           <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
-            [Legacy terms of service content goes here]
+            The previous version of our Terms of Service has been superseded.
           </Typography>
-          <Link href="/terms" style={{ color: '#1a6b5a' }}>
-            View Current Terms of Service
+          <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
+            Please refer to our current Terms of Service for the most up-to-date information about your rights and responsibilities when using Heard Again.
+          </Typography>
+          <Link href="/terms" style={{ color: '#1a6b5a', fontSize: '1.125rem' }}>
+            View Current Terms of Service →
           </Link>
         </Container>
       </Box>
