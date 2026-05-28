@@ -1,10 +1,34 @@
 import { task, logger } from '@trigger.dev/sdk/v3'
 
+// RunPod GPU pool IDs — fixed set defined by RunPod's API.
+// https://docs.runpod.io/references/gpu-types#gpu-pools
+const ALL_GPU_POOLS = [
+  'AMPERE_16',
+  'AMPERE_24',
+  'ADA_24',
+  'ADA_32_PRO',
+  'AMPERE_48',
+  'ADA_48_PRO',
+  'AMPERE_80',
+  'ADA_80_PRO',
+  'BLACKWELL_96',
+  'HOPPER_141',
+  'BLACKWELL_180',
+] as const
+
+type GpuPool = (typeof ALL_GPU_POOLS)[number]
+
+const BLACKWELL_POOLS: readonly GpuPool[] = ['BLACKWELL_96', 'BLACKWELL_180']
+
+const NON_BLACKWELL_POOLS = ALL_GPU_POOLS.filter(
+  (p): p is GpuPool => !BLACKWELL_POOLS.includes(p as GpuPool)
+)
+
 export interface RestrictRunpodGpusPayload {
   /** When true, log the planned change but do not apply it. */
   dryRun?: boolean
   /**
-   * When true, remove the GPU restriction (revert to RunPod defaults).
+   * When true, remove the Blackwell restriction (restores all GPU pools).
    * Use after deploying a Blackwell-compatible image.
    */
   allowAll?: boolean
@@ -14,21 +38,11 @@ export interface RestrictRunpodGpusOutput {
   endpointId: string
   previousGpuIds: string
   newGpuIds: string
-  excludedGpus: Array<{ id: string; displayName: string; memoryInGb: number }>
+  excludedPools: string[]
   applied: boolean
 }
 
 const RUNPOD_GRAPHQL_URL = 'https://api.runpod.io/graphql'
-
-const QUERY_GPU_TYPES = `
-  query GpuTypes {
-    gpuTypes {
-      id
-      displayName
-      memoryInGb
-    }
-  }
-`
 
 const QUERY_ENDPOINTS = `
   query Query {
@@ -127,23 +141,25 @@ export const restrictRunpodGpus = task({
     if (!apiKey) throw new Error('RUNPOD_API_KEY is not set in environment')
     if (!endpointId) throw new Error('RUNPOD_TTS_ENDPOINT_ID is not set in environment')
 
-    // ── 1. Fetch endpoint config ──────────────────────────────────────────────
+    // ── 1. Fetch current endpoint config ─────────────────────────────────────
     logger.info('Fetching RunPod endpoint config', { endpointId })
 
     const endpointsData = await runpodGraphQL<{
-      myself: { endpoints: Array<{
-        id: string
-        name: string
-        templateId: string
-        gpuIds: string
-        workersMin: number
-        workersMax: number
-        idleTimeout: number
-        scalerType: string
-        scalerValue: number
-        networkVolumeId: string | null
-        locations: string | null
-      }> }
+      myself: {
+        endpoints: Array<{
+          id: string
+          name: string
+          templateId: string
+          gpuIds: string
+          workersMin: number
+          workersMax: number
+          idleTimeout: number
+          scalerType: string
+          scalerValue: number
+          networkVolumeId: string | null
+          locations: string | null
+        }>
+      }
     }>(QUERY_ENDPOINTS, apiKey)
 
     const endpoint = endpointsData.myself.endpoints.find((e) => e.id === endpointId)
@@ -159,71 +175,45 @@ export const restrictRunpodGpus = task({
       gpuIds: endpoint.gpuIds,
     })
 
-    // ── 2. Determine new GPU IDs ──────────────────────────────────────────────
-    let newGpuIds: string
-    let excludedGpus: Array<{ id: string; displayName: string; memoryInGb: number }> = []
+    // ── 2. Determine target pool IDs ─────────────────────────────────────────
+    const newGpuIds = allowAll
+      ? ALL_GPU_POOLS.join(',')
+      : NON_BLACKWELL_POOLS.join(',')
 
-    if (allowAll) {
-      // RunPod's default — effectively no restriction
-      newGpuIds = 'AMPERE_16'
-      logger.info('allowAll: resetting GPU constraint to RunPod default')
-    } else {
-      logger.info('Fetching RunPod GPU types')
+    const excludedPools = allowAll ? [] : [...BLACKWELL_POOLS]
 
-      const gpuData = await runpodGraphQL<{
-        gpuTypes: Array<{ id: string; displayName: string; memoryInGb: number }>
-      }>(QUERY_GPU_TYPES, apiKey)
-
-      excludedGpus = gpuData.gpuTypes.filter((g) =>
-        g.displayName.toLowerCase().includes('blackwell')
-      )
-      const allowedGpus = gpuData.gpuTypes.filter(
-        (g) => !g.displayName.toLowerCase().includes('blackwell')
-      )
-
-      logger.info('GPU classification', {
-        total: gpuData.gpuTypes.length,
-        allowed: allowedGpus.length,
-        excluded: excludedGpus.map((g) => `${g.id} (${g.displayName})`),
-      })
-
-      if (allowedGpus.length === 0) {
-        throw new Error('No non-Blackwell GPUs found — cannot restrict')
-      }
-
-      newGpuIds = allowedGpus.map((g) => g.id).join(',')
-    }
+    logger.info('Target GPU pools', { newGpuIds, excludedPools, allowAll })
 
     const output: RestrictRunpodGpusOutput = {
       endpointId: endpoint.id,
       previousGpuIds: endpoint.gpuIds,
       newGpuIds,
-      excludedGpus,
+      excludedPools,
       applied: false,
     }
 
     if (endpoint.gpuIds === newGpuIds) {
-      logger.info('No change needed — GPU IDs already match target')
+      logger.info('No change needed — GPU pool IDs already match target')
       return { ...output, applied: true }
     }
 
-    // ── 3. Apply ──────────────────────────────────────────────────────────────
+    // ── 3. Apply or dry-run ───────────────────────────────────────────────────
     if (dryRun) {
-      logger.info('dryRun: would update GPU IDs', {
+      logger.info('dryRun: would update GPU pool IDs', {
         from: endpoint.gpuIds,
         to: newGpuIds,
       })
       return output
     }
 
-    logger.info('Applying GPU constraint update', { from: endpoint.gpuIds, to: newGpuIds })
+    logger.info('Applying GPU pool constraint', { from: endpoint.gpuIds, to: newGpuIds })
 
     const mutation = buildSaveEndpointMutation({ ...endpoint, gpuIds: newGpuIds })
     const result = await runpodGraphQL<{
       saveEndpoint: { id: string; name: string; gpuIds: string }
     }>(mutation, apiKey)
 
-    logger.info('Endpoint updated', result.saveEndpoint)
+    logger.info('Endpoint updated successfully', result.saveEndpoint)
 
     return { ...output, applied: true }
   },
