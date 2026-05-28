@@ -153,6 +153,23 @@ async def startup():
         logger.error(f"Design model failed to load on startup: {e}")
         logger.info("Voice design will be unavailable — use /api/tts/load-design-model to retry.")
 
+    # Pay the CUDA kernel compile cost up front by warming through any existing
+    # voice profile. Without this, the first user-facing render is ~30s slower.
+    if model_manager.base_loaded:
+        warmup_profile = _find_warmup_profile()
+        if warmup_profile is not None:
+            try:
+                ok = model_manager.warmup(str(warmup_profile))
+                if ok:
+                    logger.info(f"Warmup synth ran via {warmup_profile}")
+                else:
+                    logger.info("Warmup synth did not run (non-fatal).")
+            except Exception as e:
+                logger.warning(f"Warmup synth failed (non-fatal): {e}")
+        else:
+            logger.info("No existing voice profiles found; skipping warmup. "
+                        "First user render will absorb the kernel-compile cost.")
+
 
 @app.on_event("shutdown")
 async def shutdown():
@@ -184,6 +201,52 @@ async def detailed_health_check():
         "design_model_name": model_manager.design_model_name,
         "gpu": model_manager.get_gpu_info(),
     }
+
+
+def _find_warmup_profile() -> Optional[Path]:
+    """Pick any existing .pt voice profile across all familyspaces for warmup.
+
+    The warmup synthesis is throwaway — we only need the prompt to be valid
+    and from this VOICE_PROFILES_DIR. Returns None if none are found.
+    """
+    if not VOICE_PROFILES_DIR.exists():
+        return None
+    for pt_path in VOICE_PROFILES_DIR.rglob("*.pt"):
+        if pt_path.is_file():
+            return pt_path
+    return None
+
+
+@app.post("/api/tts/warmup")
+async def warmup():
+    """Trigger a throwaway synthesis to pay CUDA kernel compile cost.
+
+    Idempotent — safe to call repeatedly. Finds any available voice profile
+    and runs a single warmup synthesis. If no profiles exist yet, attempts
+    to load the base model only so the first real request is faster.
+    """
+    if model_manager.base_loaded and getattr(model_manager, "_warmed_up", False):
+        return {"success": True, "message": "Already warmed up", "warmed": True}
+
+    if not model_manager.base_loaded:
+        try:
+            model_manager.load_model()
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to load base model: {e}")
+
+    warmup_profile = _find_warmup_profile()
+    if warmup_profile is not None:
+        try:
+            ok = model_manager.warmup(str(warmup_profile))
+            if ok:
+                return {"success": True, "message": "Warmup synthesis completed", "warmed": True}
+            else:
+                return {"success": True, "message": "Warmup attempted but did not complete (non-fatal)", "warmed": False}
+        except Exception as e:
+            logger.warning(f"Warmup synth failed (non-fatal): {e}")
+            return {"success": True, "message": f"Warmup failed (non-fatal): {e}", "warmed": False}
+    else:
+        return {"success": True, "message": "No voice profiles found; base model loaded", "warmed": False}
 
 
 @app.post("/api/tts/load-model")

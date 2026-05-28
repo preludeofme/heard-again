@@ -639,6 +639,14 @@ fi
 if [ "$TTS_STARTED" = true ]; then
     if wait_for_service "TTS Service" "http://localhost:$TTS_SERVICE_PORT/api/tts/health" 90; then
         echo -e "  ${GREEN}✓ TTS Service is healthy${NC}"
+        # Fire a warmup request so CUDA kernels are compiled before the first user hits TTS.
+        # This is a fire-and-forget best-effort call — failures are non-fatal.
+        echo -n "  Warming TTS GPU…"
+        if curl -sf -X POST "http://localhost:$TTS_SERVICE_PORT/api/tts/warmup" -m 60 >/dev/null 2>&1; then
+            echo -e " ${GREEN}✓ GPU warm${NC}"
+        else
+            echo -e " ${YELLOW}⚠ Warmup skipped (may not have profiles yet)${NC}"
+        fi
     else
         echo -e "  ${YELLOW}⚠ TTS Service may still be loading models (check logs)${NC}"
     fi

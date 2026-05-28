@@ -397,6 +397,35 @@ class TTSModelManager:
             wavs, sr = self.base_model.generate_voice_clone(**kwargs)
             return wavs[0], sr
 
+    def warmup(self, profile_path: Optional[str] = None) -> bool:
+        """Run a single throwaway synth to pay CUDA kernel compile cost once.
+
+        If a profile_path is given, warms via that profile. Otherwise no-op
+        (base model needs a voice prompt to generate).
+
+        Idempotent — safe to call repeatedly; only runs the first time.
+        """
+        if getattr(self, "_warmed_up", False):
+            return True
+        if not self.base_loaded:
+            return False
+        if not profile_path or not Path(profile_path).exists():
+            return False
+        try:
+            logger.info(f"Warming CUDA kernels via profile {profile_path}…")
+            start = time.time()
+            self.synthesize_from_profile(
+                profile_path=profile_path,
+                text="Hello there.",
+                language="English",
+            )
+            logger.info(f"Warmup complete in {time.time() - start:.1f}s")
+            self._warmed_up = True
+            return True
+        except Exception as e:
+            logger.warning(f"Warmup synth failed (non-fatal): {e}")
+            return False
+
     # ------------------------------------------------------------------
     # Utility
     # ------------------------------------------------------------------
