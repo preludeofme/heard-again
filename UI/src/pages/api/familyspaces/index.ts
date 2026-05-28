@@ -122,12 +122,13 @@ export default apiHandler({
         },
       })
 
-      // Link the User to their Person record only if not already linked (unique constraint guard).
-      // Always update defaultFamilyspaceId regardless.
+      // Link the User to their Person record in this familyspace.
+      // Always update both linkedPersonId AND defaultFamilyspaceId so the user's
+      // node is discoverable when viewing the family tree for this space.
       await tx.user.update({
         where: { id: user.id },
         data: {
-          ...(userRecord?.linkedPersonId === null ? { linkedPersonId: rootPerson.id } : {}),
+          linkedPersonId: rootPerson.id,
           defaultFamilyspaceId: ws.id,
         },
       })

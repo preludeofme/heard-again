@@ -35,7 +35,7 @@ export default function App({ Component, pageProps, router }: CustomAppProps) {
   return (
     <div className={`${manrope.variable} ${newsreader.variable}`}>
       <AuthProvider session={session}>
-        <SelectedFamilyMemberProvider router={router}>
+        <SelectedFamilyMemberProvider router={router} familyspaceId={session?.user?.defaultFamilyspaceId ?? null}>
           <SnackbarProvider maxSnack={3} anchorOrigin={{ vertical: 'top', horizontal: 'right' }}>
             <ThemeProvider theme={theme}>
               <CssBaseline />

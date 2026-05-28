@@ -25,8 +25,16 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>Heard Again | Preserve the Voices That Matter Most</title>
-        <meta name="description" content="A collaborative sanctuary for your family's identity. Invite loved ones to share memories and build a collective portrait of a legacy that lasts forever." />
+        <title>Heard Again — Preserve Family Voices, Stories &amp; Memories | Open Source Legacy Preservation</title>
+        <meta name="description" content="Preserve your family's voices, stories, and memories before they fade. Heard Again is an open-source platform for recording, transcribing, and narrating family history with AI voice synthesis. Start preserving your legacy today — free and open source." />
+        <meta name="keywords" content="family history, legacy preservation, voice preservation, family stories, genealogy, oral history, AI voice cloning, family memories, open source genealogy" />
+        <meta property="og:title" content="Heard Again — Preserve Family Voices, Stories &amp; Memories" />
+        <meta property="og:description" content="An open-source platform for preserving your family's voices, stories, and memories with AI voice synthesis. Your family's legacy, preserved with care." />
+        <meta property="og:type" content="website" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Heard Again — Preserve Family Voices &amp; Stories" />
+        <meta name="twitter:description" content="Open-source family legacy preservation. Record, transcribe, and narrate family history with AI voice synthesis." />
+        <link rel="canonical" href="https://heardagain.com" />
       </Head>
       <LandingPage />
     </>

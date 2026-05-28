@@ -1,5 +1,6 @@
 import { useMemo, useEffect, useRef, useState, useCallback, ReactNode } from 'react'
 import { useRouter } from 'next/router'
+import { useTTSWarmup } from '@/hooks/useTTSWarmup'
 import {
   Box,
   Typography,
@@ -95,6 +96,10 @@ export function MemoriesShell({ lens, onLensChange, children }: MemoriesShellPro
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const router = useRouter()
   const { selectedFamilyMember, setSelectedFamilyMember, clearSelectedFamilyMember } = useSelectedFamilyMember()
+
+  // Pre-warm TTS container when viewing the Voices lens
+  useTTSWarmup(lens === 'voices')
+
   const dashboard = useDashboardController()
   const [people, setPeople] = useState<PersonOption[]>([])
   const [isPeopleLoading, setIsPeopleLoading] = useState(true)
@@ -127,12 +132,6 @@ export function MemoriesShell({ lens, onLensChange, children }: MemoriesShellPro
   const hasError = dashboard.hasError
 
   const role = dashboard.userContext?.role ?? 'VIEWER'
-  const allOnboardingDone =
-    dashboard.onboardingState.hasFirstPerson &&
-    dashboard.onboardingState.hasFirstStory &&
-    dashboard.onboardingState.hasFirstDocument &&
-    dashboard.onboardingState.hasFirstVoice &&
-    (role !== 'OWNER' && role !== 'ADMIN' ? true : dashboard.onboardingState.hasInvitedMember)
 
   const selectedPerson = useMemo(() => {
     if (!selectedFamilyMember?.id) return null
@@ -551,48 +550,16 @@ export function MemoriesShell({ lens, onLensChange, children }: MemoriesShellPro
             ))}
           </Box>
           ) : (
-          <Box sx={{ mt: { xs: 4, md: 6 }, p: { xs: 3, md: 4 }, borderRadius: 5, backgroundColor: ProfileColors.surfaceContainerLowest, border: `1px solid ${ProfileColors.outlineVariant}26` }}>
-            <Typography sx={{ fontFamily: 'var(--font-newsreader), serif', fontSize: { xs: '1.6rem', md: '2rem' }, color: ProfileColors.primary, mb: 1 }}>
-              Start your Living Legacy
-            </Typography>
-            <Typography sx={{ fontFamily: 'var(--font-newsreader), serif', color: ProfileColors.onSurfaceVariant, mb: 3 }}>
-              Begin with one person, one story, one photo, or one voice memory. You do not need to build everything today.
-            </Typography>
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' }, gap: 2 }}>
-              {[
-                { title: 'Add a Family Member', desc: 'Start with someone your family wants to remember.', href: '/family-tree?add=1', icon: <GenerationsIcon /> },
-                { title: 'Write a Story', desc: 'Capture a memory, tradition, saying, or moment.', href: '/contribute', icon: <StoriesIcon /> },
-                { title: 'Record a Voice Memory', desc: 'Save a spoken story or upload an old recording.', href: '/legacy?lens=voices', icon: <VoiceIcon /> },
-                { title: 'Upload a Keepsake', desc: 'Add a photo, letter, recipe, document, or meaningful item.', href: '/legacy?lens=keepsakes', icon: <UploadIcon /> },
-              ].map((item) => (
-                <Card key={item.title} variant="outlined" sx={{ borderRadius: 3, borderColor: `${ProfileColors.outlineVariant}33` }}>
-                  <CardActionArea component={Link} href={item.href} sx={{ height: '100%' }}>
-                    <CardContent sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
-                      <Box sx={{ color: ProfileColors.primary, mt: 0.5 }}>{item.icon}</Box>
-                      <Box>
-                        <Typography sx={{ fontWeight: 600, color: ProfileColors.primary, mb: 0.5 }}>{item.title}</Typography>
-                        <Typography sx={{ color: ProfileColors.onSurfaceVariant, fontSize: '0.9rem' }}>{item.desc}</Typography>
-                      </Box>
-                    </CardContent>
-                  </CardActionArea>
-                </Card>
-              ))}
-            </Box>
+          <Box sx={{ maxWidth: 1280, mx: 'auto', mt: { xs: 4, md: 6 } }}>
+            <OnboardingChecklist
+              state={dashboard.onboardingState}
+              role={role as 'OWNER' | 'ADMIN' | 'EDITOR' | 'VIEWER' | 'LEGACY'}
+              familyspaceId={dashboard.familyspace?.id ?? null}
+            />
           </Box>
           )}
         </Box>
       </Box>
-
-      {/* Onboarding Checklist */}
-      {!allOnboardingDone && (
-        <Box sx={{ maxWidth: 1280, mx: 'auto', px: { xs: 3, md: 8 }, mt: 4 }}>
-          <OnboardingChecklist
-            state={dashboard.onboardingState}
-            role={role as 'OWNER' | 'ADMIN' | 'EDITOR' | 'VIEWER' | 'LEGACY'}
-            familyspaceId={dashboard.familyspace?.id ?? null}
-          />
-        </Box>
-      )}
 
       {/* Lens switcher */}
       <Box

@@ -12,6 +12,7 @@ import { NarrativeTimeline } from '@/components/profile/NarrativeTimeline'
 import { fetchWithCSRF } from '@/lib/api-client'
 import { resizeImageFile } from '@/lib/resize-image'
 import { MemoriesGrid } from '@/components/profile/MemoriesGrid'
+import { useTTSWarmup } from '@/hooks/useTTSWarmup'
 
 interface PersonDetails {
   id: string
@@ -108,6 +109,9 @@ export default function PersonProfilePage() {
   const personId = typeof id === 'string' ? id : ''
   const { selectedFamilyMember, setSelectedFamilyMember } = useSelectedFamilyMember()
 
+  // Pre-warm TTS container when entering profile (voice signature feature)
+  useTTSWarmup()
+
   const [person, setPerson] = useState<PersonDetails | null>(null)
   const [stories, setStories] = useState<Story[]>([])
   const [documents, setDocuments] = useState<DocItem[]>([])
@@ -157,9 +161,10 @@ export default function PersonProfilePage() {
     }
   }
 
-  // 1. URL -> State Sync: When a profile is loaded, update the global selection
+  // 1. URL -> State Sync: When a profile is loaded, update the global selection.
+  // Only sync when the URL personId still matches the loaded person (prevents fighting with navigation away).
   useEffect(() => {
-    if (person && selectedFamilyMember?.id !== person.id) {
+    if (person && selectedFamilyMember?.id !== person.id && personId === person.id) {
       setSelectedFamilyMember({
         id: person.id,
         firstName: person.firstName,
@@ -168,15 +173,21 @@ export default function PersonProfilePage() {
         avatarUrl: person.avatarUrl,
       })
     }
-  }, [person, selectedFamilyMember?.id, setSelectedFamilyMember])
+  }, [person, selectedFamilyMember?.id, setSelectedFamilyMember, personId])
 
   // 2. State -> URL Sync: When the active member changes via the header switcher, navigate to their profile.
-  // We only trigger this when selectedFamilyMember changes to avoid fighting direct URL navigation.
+  // Only trigger this when selectedFamilyMember changes externally (not from effect #1 syncing).
+  const prevSelectedIdRef = useRef<string | null>(null)
   useEffect(() => {
-    if (selectedFamilyMember && selectedFamilyMember.id !== personId && personId) {
-      router.push(`/profile/${selectedFamilyMember.id}`)
+    const currentId = selectedFamilyMember?.id ?? null
+    const prevId = prevSelectedIdRef.current
+
+    // Only navigate if the change came from outside (not from effect #1 syncing to the already-loaded person)
+    if (currentId && currentId !== personId && currentId !== prevId && personId) {
+      router.push(`/profile/${currentId}`)
     }
-  }, [selectedFamilyMember?.id, router]) // Removed personId from dependencies
+    prevSelectedIdRef.current = currentId
+  }, [selectedFamilyMember?.id, router]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const timelineRef = useRef<HTMLDivElement>(null)
   const [isDragging, setIsDragging] = useState(false)

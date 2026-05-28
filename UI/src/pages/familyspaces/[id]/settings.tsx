@@ -101,11 +101,20 @@ const roleLabels: Record<string, string> = {
 
 const roleHierarchy = ['OWNER', 'ADMIN', 'EDITOR', 'VIEWER', 'LEGACY']
 
+const TAB_NAMES = ['overview', 'members', 'settings', 'data'] as const
+type TabName = (typeof TAB_NAMES)[number]
+
+function tabNameToIndex(name: string | undefined | null): number {
+  if (!name) return 0
+  const idx = TAB_NAMES.indexOf(name as TabName)
+  return idx >= 0 ? idx : 0
+}
+
 export default function FamilyspaceSettingsPage() {
   const router = useRouter()
-  const { id } = router.query
+  const { id, tab: tabParam } = router.query
   const { data: session } = useSession()
-  const [tabValue, setTabValue] = useState(0)
+  const [tabValue, setTabValue] = useState(() => tabNameToIndex(tabParam as string | undefined))
   const [isEditing, setIsEditing] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -138,7 +147,24 @@ export default function FamilyspaceSettingsPage() {
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue)
+    // Sync tab to URL query parameter
+    const tabName = TAB_NAMES[newValue]
+    if (tabName) {
+      router.replace(
+        { pathname: router.pathname, query: { ...router.query, tab: tabName } },
+        undefined,
+        { shallow: true }
+      )
+    }
   }
+
+  // Sync tab from URL when query param changes (back/forward navigation)
+  useEffect(() => {
+    if (router.isReady) {
+      const idx = tabNameToIndex(tabParam as string | undefined)
+      if (idx !== tabValue) setTabValue(idx)
+    }
+  }, [tabParam]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleEdit = () => {
     setEditName(familyspace?.name || '')

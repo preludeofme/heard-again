@@ -20,6 +20,7 @@ import { NarrationPreparationBanner } from '@/components/stories/NarrationPrepar
 import { NarrationReviewPanel } from '@/components/stories/NarrationReviewPanel'
 import { StoryNarrationPlayer, type SavedNarration } from '@/components/stories/StoryNarrationPlayer'
 import { fetchWithCSRF } from '@/lib/api-client'
+import { useTTSWarmup } from '@/hooks/useTTSWarmup'
 
 type NarrationStatus = 'NONE' | 'PENDING' | 'READY' | 'APPROVED' | 'STALE' | 'FAILED'
 type TranscriptionStatus = 'NONE' | 'PENDING' | 'COMPLETED' | 'FAILED'
@@ -91,6 +92,10 @@ interface StoryDetail {
 export default function StoryDetailPage() {
   const router = useRouter()
   const { id } = router.query
+
+  // Pre-warm TTS container when entering story page (narration feature)
+  useTTSWarmup()
+
   const [story, setStory] = useState<StoryDetail | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -134,6 +139,17 @@ export default function StoryDetailPage() {
         })
       } else {
         setSavedNarration(null)
+      }
+      // Check if current user has favorited this story
+      try {
+        const favRes = await fetch('/api/favorites', { credentials: 'include' })
+        const favData = await favRes.json()
+        if (favData.success) {
+          const isFav = favData.data.stories?.some((s: any) => s.id === id) ?? false
+          setIsFavorited(isFav)
+        }
+      } catch {
+        // Silently ignore — favorite state just won't highlight
       }
     } catch (err: any) {
       setError(err.message)
@@ -962,7 +978,7 @@ export default function StoryDetailPage() {
                             variant="body2"
                             sx={{ fontWeight: 600, color: '#16334a', textDecorationColor: '#16334a' }}
                           >
-                            {comment.person.displayName || `${comment.person.firstName}${comment.person.lastName ? ' ' + comment.person.lastName : ''}`}
+                            {comment.person.displayName || `${comment.person.firstName}${comment.person.lastName ? ' ' + comment.person.lastName : ''}`} (Family Member)
                           </MuiLink>
                         ) : (
                           <Typography variant="body2" sx={{ fontWeight: 600, color: '#16334a' }}>
@@ -989,7 +1005,7 @@ export default function StoryDetailPage() {
                                     variant="caption"
                                     sx={{ fontWeight: 600, color: '#16334a', textDecorationColor: '#16334a' }}
                                   >
-                                    {reply.person.displayName || `${reply.person.firstName}${reply.person.lastName ? ' ' + reply.person.lastName : ''}`}
+                                    {reply.person.displayName || `${reply.person.firstName}${reply.person.lastName ? ' ' + reply.person.lastName : ''}`} (Family Member)
                                   </MuiLink>
                                 ) : (
                                   <Typography variant="caption" sx={{ fontWeight: 600, color: '#16334a' }}>

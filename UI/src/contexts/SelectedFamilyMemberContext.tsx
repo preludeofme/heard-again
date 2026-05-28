@@ -18,7 +18,7 @@ interface SelectedFamilyMemberContextValue {
 }
 
 const STORAGE_KEY = 'heard-again:selected-member'
-const RECENT_KEY = 'heard-again:recent-members'
+const RECENT_KEY_PREFIX = 'heard-again:recent-members'
 const MAX_RECENT = 8
 
 // Pages that should maintain the personId in the URL
@@ -76,10 +76,12 @@ const SelectedFamilyMemberContext = createContext<SelectedFamilyMemberContextVal
 
 export function SelectedFamilyMemberProvider({ 
   children,
-  router: propRouter 
+  router: propRouter,
+  familyspaceId,
 }: { 
   children: ReactNode,
-  router?: NextRouter
+  router?: NextRouter,
+  familyspaceId?: string | null,
 }) {
   // Use propRouter if provided, otherwise fallback to hook (but handle potential failure)
   let hookRouter: NextRouter | null = null
@@ -98,14 +100,17 @@ export function SelectedFamilyMemberProvider({
   const [recentlyViewedMembers, setRecentlyViewedMembers] = useState<SelectedFamilyMember[]>([])
   const [isInitialized, setIsInitialized] = useState(false)
 
+  // Scope recent members to the current familyspace to prevent leaking
+  const recentKey = familyspaceId ? `${RECENT_KEY_PREFIX}:${familyspaceId}` : RECENT_KEY_PREFIX
+
   // Hydrate from localStorage after mount (client-only, runs one render after SSR)
   useEffect(() => {
     const stored = readStorage<SelectedFamilyMember>(STORAGE_KEY)
     if (stored) setSelectedFamilyMemberState(stored)
 
-    const storedRecent = readStorage<SelectedFamilyMember[]>(RECENT_KEY)
+    const storedRecent = readStorage<SelectedFamilyMember[]>(recentKey)
     if (storedRecent?.length) setRecentlyViewedMembers(storedRecent)
-  }, [])
+  }, [recentKey])
 
   // 1. URL and async hydration
   useEffect(() => {
@@ -193,21 +198,21 @@ export function SelectedFamilyMemberProvider({
       writeStorage(STORAGE_KEY, person)
       setRecentlyViewedMembers((prev) => {
         const updated = addToRecent(person, prev)
-        writeStorage(RECENT_KEY, updated)
+        writeStorage(recentKey, updated)
         return updated
       })
     } else {
       removeStorage(STORAGE_KEY)
     }
-  }, [])
+  }, [recentKey])
 
   const clearSelectedFamilyMember = useCallback(() => {
     setSelectedFamilyMemberState(null)
     removeStorage(STORAGE_KEY)
     // Also clear recently-viewed list so members from the old space don't bleed into the new space's flyout
     setRecentlyViewedMembers([])
-    removeStorage(RECENT_KEY)
-  }, [])
+    removeStorage(recentKey)
+  }, [recentKey])
 
   const value: SelectedFamilyMemberContextValue = {
     selectedFamilyMember,

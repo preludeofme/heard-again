@@ -122,7 +122,7 @@ export function LandingPage() {
             >
               Preserve the voices, stories, and memories of the people who shaped your family. Heard Again gives your family a private place to collect recordings, photos, letters, and personal stories — and, when you choose, hear those memories narrated in a familiar voice again.
               <br /><br />
-              <b>Your family&apos;s memories are never sold</b>, never used to train public models, and never shared with third parties. Cloud-host with us, or self-host it yourself. Your family&apos;s legacy stays your way.
+              <b>Your family&apos;s memories are never sold</b>, never used to train public models, and never shared with third parties. Cloud-host with us, or self-host it yourself — Heard Again is <b>100% open source</b>. Your family&apos;s legacy stays your way.
             </Typography>
             <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
               <Button

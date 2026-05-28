@@ -250,6 +250,38 @@ async def detailed_health_check():
     }
 
 
+@app.post("/api/tts/warmup")
+async def warmup():
+    """Trigger a throwaway synthesis to pay CUDA kernel compile cost.
+
+    Idempotent — safe to call repeatedly. Finds any available voice profile
+    and runs a single warmup synthesis. If no profiles exist yet, attempts
+    to load the base model only so the first real request is faster.
+    """
+    if model_manager.base_loaded and getattr(model_manager, "_warmed_up", False):
+        return {"success": True, "message": "Already warmed up", "warmed": True}
+
+    if not model_manager.base_loaded:
+        try:
+            await to_thread.run_sync(model_manager.load_model)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to load base model: {e}")
+
+    warmup_profile = _find_warmup_profile()
+    if warmup_profile is not None:
+        try:
+            ok = await to_thread.run_sync(model_manager.warmup, str(warmup_profile))
+            if ok:
+                return {"success": True, "message": "Warmup synthesis completed", "warmed": True}
+            else:
+                return {"success": True, "message": "Warmup attempted but did not complete (non-fatal)", "warmed": False}
+        except Exception as e:
+            logger.warning(f"Warmup synth failed (non-fatal): {e}")
+            return {"success": True, "message": f"Warmup failed (non-fatal): {e}", "warmed": False}
+    else:
+        return {"success": True, "message": "No voice profiles found; base model loaded", "warmed": False}
+
+
 @app.post("/api/tts/load-model")
 async def load_model():
     """Manually trigger base model loading."""

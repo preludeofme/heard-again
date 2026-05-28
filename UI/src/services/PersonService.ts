@@ -208,7 +208,7 @@ export class PersonService {
                 type: 'SPOUSE',
                 direction: 'outgoing',
                 isBiological: parentLink.relationshipType === 'BIOLOGICAL',
-                person: parentLink.parent,
+                person: this.mapRelationshipPerson(parentLink.parent),
               })
             }
           }
@@ -218,7 +218,7 @@ export class PersonService {
               type: 'CHILD',
               direction: 'outgoing',
               isBiological: childLink.relationshipType === 'BIOLOGICAL',
-              person: childLink.child,
+              person: this.mapRelationshipPerson(childLink.child),
             })
           }
         }
@@ -230,7 +230,7 @@ export class PersonService {
               type: 'PARENT',
               direction: 'incoming',
               isBiological: parentLink.relationshipType === 'BIOLOGICAL',
-              person: parentLink.parent,
+              person: this.mapRelationshipPerson(parentLink.parent),
             })
           }
         }
@@ -469,5 +469,17 @@ export class PersonService {
     ].filter(Boolean)
     
     return parts.join(' ') || 'Unnamed person'
+  }
+
+  /**
+   * Map a Prisma relationship person to include avatarUrl
+   */
+  private mapRelationshipPerson(person: any): { id: string; firstName: string; lastName?: string | null; avatarUrl?: string | null } {
+    return {
+      id: person.id,
+      firstName: person.firstName,
+      lastName: person.lastName ?? null,
+      avatarUrl: person.avatarAssetId ? `/api/assets/serve/${person.avatarAssetId}` : null,
+    }
   }
 }

@@ -7,7 +7,7 @@ import { useSelectedFamilyMember } from '@/contexts/SelectedFamilyMemberContext'
 interface Relationship {
   id: string
   type: 'PARENT' | 'CHILD' | 'SPOUSE'
-  person: { id: string; firstName: string; lastName?: string | null }
+  person: { id: string; firstName: string; lastName?: string | null; avatarUrl?: string | null }
 }
 
 interface MiniFamilyTreeProps {
@@ -125,8 +125,8 @@ export function MiniFamilyTree({
                   onClick={() => handleSelect(spouse.person)}
                   sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75, textDecoration: 'none' }}
                 >
-                  <Avatar sx={{ width: 54, height: 54, bgcolor: '#adcae6', border: `2px solid ${ProfileColors.primaryContainer}`, transition: 'transform 0.2s', '&:hover': { transform: 'scale(1.06)' } }}>
-                    {spouse.person.firstName[0]}
+                  <Avatar src={spouse.person.avatarUrl || undefined} sx={{ width: 54, height: 54, bgcolor: '#adcae6', border: `2px solid ${ProfileColors.primaryContainer}`, transition: 'transform 0.2s', '&:hover': { transform: 'scale(1.06)' } }}>
+                    {!spouse.person.avatarUrl && spouse.person.firstName[0]}
                   </Avatar>
                   <Typography sx={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: ProfileColors.onSurfaceVariant }}>
                     {spouse.person.firstName}
@@ -141,8 +141,8 @@ export function MiniFamilyTree({
                   onClick={() => handleSelect(r.person)}
                   sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75, textDecoration: 'none' }}
                 >
-                  <Avatar sx={{ width: 54, height: 54, bgcolor: '#adcae6', border: `2px solid ${ProfileColors.primaryContainer}`, transition: 'transform 0.2s', '&:hover': { transform: 'scale(1.06)' } }}>
-                    {r.person.firstName[0]}
+                  <Avatar src={r.person.avatarUrl || undefined} sx={{ width: 54, height: 54, bgcolor: '#adcae6', border: `2px solid ${ProfileColors.primaryContainer}`, transition: 'transform 0.2s', '&:hover': { transform: 'scale(1.06)' } }}>
+                    {!r.person.avatarUrl && r.person.firstName[0]}
                   </Avatar>
                   <Typography sx={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: ProfileColors.onSurfaceVariant }}>
                     {r.person.firstName}
@@ -196,8 +196,8 @@ export function MiniFamilyTree({
                   onClick={() => handleSelect(r.person)}
                   sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75, textDecoration: 'none' }}
                 >
-                  <Avatar sx={{ width: 42, height: 42, bgcolor: '#d3e6e9', transition: 'transform 0.2s', '&:hover': { transform: 'scale(1.06)' } }}>
-                    {r.person.firstName[0]}
+                  <Avatar src={r.person.avatarUrl || undefined} sx={{ width: 42, height: 42, bgcolor: '#d3e6e9', transition: 'transform 0.2s', '&:hover': { transform: 'scale(1.06)' } }}>
+                    {!r.person.avatarUrl && r.person.firstName[0]}
                   </Avatar>
                   <Typography sx={{ fontSize: '0.58rem', textTransform: 'uppercase', letterSpacing: '0.04em', color: ProfileColors.onSurfaceVariant }}>
                     {r.person.firstName}

@@ -23,6 +23,7 @@ interface StoriesPageProps {
     avatarUrl?: string | null
   } | null
   isLens?: boolean
+  familyspaceId?: string | null
 }
 
 const getDisplayName = (member: StoriesPageProps['selectedFamilyMember']) => {
@@ -33,7 +34,7 @@ const getDisplayName = (member: StoriesPageProps['selectedFamilyMember']) => {
 const contributeHref = (memberId?: string | null) =>
   memberId ? `/stories/contribute?subjectId=${memberId}` : '/stories/contribute'
 
-export function StoriesPage({ stories, selectedFamilyMember, isLens = false }: StoriesPageProps) {
+export function StoriesPage({ stories, selectedFamilyMember, isLens = false, familyspaceId }: StoriesPageProps) {
   const [activeFilter, setActiveFilter] = useState<'all' | 'written' | 'audio'>('all')
   const router = useRouter()
 
@@ -60,7 +61,13 @@ export function StoriesPage({ stories, selectedFamilyMember, isLens = false }: S
               <Typography variant="h6" sx={{ color: ProfileColors.onSurfaceVariant, maxWidth: 500, lineHeight: 1.6, fontFamily: 'var(--font-newsreader), serif', fontSize: '1.25rem', mb: 4 }}>
                 We are building a living story of {getDisplayName(selectedFamilyMember)}'s life. Your memories, voice, and stories keep this legacy vibrant for generations to come.
               </Typography>
-              <Button variant="contained" startIcon={<Share />} onClick={() => { navigator.clipboard.writeText(window.location.href); alert('Link copied!'); }} sx={{ backgroundColor: ProfileColors.primary, borderRadius: '999px', px: 3, py: 1.5 }}>
+              <Button
+                variant="contained"
+                startIcon={<Share />}
+                component={Link}
+                href={familyspaceId ? `/familyspaces/${familyspaceId}/settings?tab=members` : '/account'}
+                sx={{ backgroundColor: ProfileColors.primary, borderRadius: '999px', px: 3, py: 1.5 }}
+              >
                 Invite family to contribute
               </Button>
             </Grid>

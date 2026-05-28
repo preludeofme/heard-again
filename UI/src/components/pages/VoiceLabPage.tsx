@@ -16,6 +16,7 @@ import { useSnackbar } from 'notistack'
 import { VoiceTrainingModal } from '@/components/audio/VoiceTrainingModal'
 import { VoiceConsentModal } from '@/components/audio/VoiceConsentModal'
 import { useSelectedFamilyMember } from '@/contexts/SelectedFamilyMemberContext'
+import { useTTSWarmup } from '@/hooks/useTTSWarmup'
 import type { VoiceModel } from '@/types'
 import { ProfileColors } from '@/components/profile/ProfileConstants'
 
@@ -56,6 +57,9 @@ export function VoiceLabPage({ voiceModels, controller, autoCreate }: VoiceLabPa
     refreshData,
     resetTraining,
   } = controller
+
+  // Pre-warm the TTS GPU so voice synthesis is fast when the user needs it
+  useTTSWarmup()
 
   const { selectedFamilyMember } = useSelectedFamilyMember()
   const { enqueueSnackbar } = useSnackbar()

@@ -247,6 +247,17 @@ export function VoiceSignature({
             </Box>
           </Box>
         ) : null}
+        {hasAnyVoice && !isGlobal && (
+          <Box sx={{ textAlign: 'center', mt: 1.5 }}>
+            <Box
+              component={Link}
+              href={`/legacy?lens=voices&personId=${personId}&create=true`}
+              sx={{ fontFamily: 'var(--font-manrope), sans-serif', fontSize: '0.8rem', color: ProfileColors.onSurfaceVariant, textDecoration: 'none', borderBottom: `1px solid ${ProfileColors.outlineVariant}50`, pb: 0.25, '&:hover': { color: ProfileColors.primary } }}
+            >
+              + Create another voice
+            </Box>
+          </Box>
+        )}
       </Box>
     </Box>
   )

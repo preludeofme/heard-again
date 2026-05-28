@@ -3,6 +3,8 @@ import bcrypt from 'bcrypt'
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse, errorResponse, Errors } from '@/lib/api-helpers'
 import { validate, rules } from '@/lib/validation'
+import { EmailService } from '@/services/EmailService'
+import { logger } from '@/lib/logger'
 
 export default apiHandler({
   POST: async (req, res) => {
@@ -110,6 +112,16 @@ export default apiHandler({
           slug: familyspace.slug,
         },
       }
+    })
+
+    // Send welcome email (fire-and-forget — don't block signup response)
+    const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:4777'
+    EmailService.sendWelcomeEmail({
+      to: result.email,
+      userName: result.displayName || result.email.split('@')[0],
+      baseUrl,
+    }).catch((err) => {
+      logger.error('[auth/signup] Failed to send welcome email:', err)
     })
 
     return successResponse(res, {

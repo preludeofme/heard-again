@@ -5,6 +5,7 @@ import { useRouter } from 'next/router'
 import { StoriesPage } from '@/components/pages/StoriesPage'
 import { useStoriesController } from '@/controllers/useStoriesController'
 import { useSelectedFamilyMember } from '@/contexts/SelectedFamilyMemberContext'
+import { useDashboardController } from '@/controllers/useDashboardController'
 import { ProfileColors } from '@/components/profile/ProfileConstants'
 import type { StoryContribution } from '@/types'
 
@@ -12,6 +13,7 @@ export function StoriesLens() {
   const { selectedFamilyMember } = useSelectedFamilyMember()
   const selectedSubjectId = selectedFamilyMember?.id
   const controller = useStoriesController(selectedSubjectId)
+  const dashboard = useDashboardController()
   const router = useRouter()
 
   const addStoryHref = selectedSubjectId
@@ -76,6 +78,7 @@ export function StoriesLens() {
         stories={visibleStories}
         selectedFamilyMember={selectedFamilyMember}
         isLens
+        familyspaceId={dashboard.familyspace?.id ?? null}
       />
     </Box>
   )

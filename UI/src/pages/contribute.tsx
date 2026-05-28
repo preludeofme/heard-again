@@ -1,6 +1,7 @@
 import Head from 'next/head'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
+import { useSession } from 'next-auth/react'
 import { Box, Typography, Grid, Card, CardActionArea, CardContent, Button, Avatar, Chip } from '@mui/material'
 import {
   Mic as MicIcon,
@@ -26,6 +27,8 @@ interface ContributionOption {
 export default function ContributePage() {
   const router = useRouter()
   const { selectedFamilyMember } = useSelectedFamilyMember()
+  const { data: session } = useSession()
+  const familyspaceId = session?.user?.defaultFamilyspaceId
 
   const subjectName = selectedFamilyMember?.displayName
     || (selectedFamilyMember
@@ -77,7 +80,7 @@ export default function ContributePage() {
       description: 'Bring loved ones into the story so they can share their own memories.',
       icon: <PersonAddIcon sx={{ fontSize: 32 }} />,
       accent: ProfileColors.tertiaryFixedDim,
-      href: '/account#invite',
+      href: familyspaceId ? `/familyspaces/${familyspaceId}/settings?tab=members` : '/account',
     },
   ]
 

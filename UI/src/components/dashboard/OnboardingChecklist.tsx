@@ -1,5 +1,6 @@
-import { Box, Typography, LinearProgress } from '@mui/material'
-import { CheckCircleRounded, RadioButtonUncheckedRounded, ArrowForwardRounded } from '@mui/icons-material'
+import { useState } from 'react'
+import { Box, Typography, LinearProgress, Collapse, IconButton } from '@mui/material'
+import { CheckCircleRounded, RadioButtonUncheckedRounded, ArrowForwardRounded, ExpandMore, ExpandLess } from '@mui/icons-material'
 import { useRouter } from 'next/router'
 import { ProfileColors } from '@/components/profile/ProfileConstants'
 import type { OnboardingState, FamilyspaceRole } from '@/controllers/useDashboardController'
@@ -20,10 +21,11 @@ interface Step {
 
 export function OnboardingChecklist({ state, role, familyspaceId }: OnboardingChecklistProps) {
   const router = useRouter()
+  const [isExpanded, setIsExpanded] = useState(true)
 
   const steps: Step[] = [
     { key: 'hasFirstPerson', label: 'Who are you preserving this for?', hint: 'Start the story with a person\'s name.', href: '/family-tree', done: state.hasFirstPerson },
-    { key: 'hasFirstStory', label: 'Share the first memory', hint: 'One moment — written or spoken.', href: '/contribute', done: state.hasFirstStory },
+    { key: 'hasFirstStory', label: 'Share the first memory', hint: 'One moment — written or spoken.', href: '/stories/contribute', done: state.hasFirstStory },
     { key: 'hasFirstDocument', label: 'Add a keepsake', hint: 'A photo, a letter, or any artifact worth preserving.', href: '/legacy?lens=keepsakes', done: state.hasFirstDocument },
     { key: 'hasFirstVoice', label: 'Preserve their voice', hint: 'Upload a recording to create a voice that lasts.', href: '/legacy?lens=voices', done: state.hasFirstVoice },
   ]
@@ -33,7 +35,7 @@ export function OnboardingChecklist({ state, role, familyspaceId }: OnboardingCh
       key: 'hasInvitedMember',
       label: 'Invite family to contribute',
       hint: 'More voices make the story richer.',
-      href: `/familyspaces/${familyspaceId}/settings`,
+      href: `/familyspaces/${familyspaceId}/settings?tab=members`,
       done: state.hasInvitedMember,
     })
   }
@@ -55,16 +57,26 @@ export function OnboardingChecklist({ state, role, familyspaceId }: OnboardingCh
       }}
     >
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', mb: 1 }}>
-        <Typography
-          sx={{
-            fontFamily: 'var(--font-newsreader), serif',
-            fontSize: { xs: '1.5rem', md: '1.75rem' },
-            fontWeight: 700,
-            color: ProfileColors.primary,
-          }}
-        >
-          Get started
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <IconButton
+            size="small"
+            onClick={() => setIsExpanded(!isExpanded)}
+            sx={{ color: ProfileColors.primary, p: 0.5 }}
+            aria-label={isExpanded ? 'Collapse getting started' : 'Expand getting started'}
+          >
+            {isExpanded ? <ExpandLess /> : <ExpandMore />}
+          </IconButton>
+          <Typography
+            sx={{
+              fontFamily: 'var(--font-newsreader), serif',
+              fontSize: { xs: '1.5rem', md: '1.75rem' },
+              fontWeight: 700,
+              color: ProfileColors.primary,
+            }}
+          >
+            Get started
+          </Typography>
+        </Box>
         <Typography
           sx={{
             fontFamily: 'var(--font-manrope), sans-serif',
@@ -76,19 +88,20 @@ export function OnboardingChecklist({ state, role, familyspaceId }: OnboardingCh
           {completedCount} of {steps.length}
         </Typography>
       </Box>
-      <LinearProgress
-        variant="determinate"
-        value={percent}
-        sx={{
-          height: 6,
-          borderRadius: 3,
-          bgcolor: ProfileColors.surfaceContainer,
-          mb: 3,
-          '& .MuiLinearProgress-bar': { bgcolor: ProfileColors.primary, borderRadius: 3 },
-        }}
-      />
+      <Collapse in={isExpanded}>
+        <LinearProgress
+          variant="determinate"
+          value={percent}
+          sx={{
+            height: 6,
+            borderRadius: 3,
+            bgcolor: ProfileColors.surfaceContainer,
+            mb: 3,
+            '& .MuiLinearProgress-bar': { bgcolor: ProfileColors.primary, borderRadius: 3 },
+          }}
+        />
 
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
         {steps.map(step => (
           <Box
             key={step.key}
@@ -139,7 +152,8 @@ export function OnboardingChecklist({ state, role, familyspaceId }: OnboardingCh
             {!step.done && <ArrowForwardRounded sx={{ color: ProfileColors.primary, fontSize: 20 }} />}
           </Box>
         ))}
-      </Box>
+        </Box>
+      </Collapse>
     </Box>
   )
 }
