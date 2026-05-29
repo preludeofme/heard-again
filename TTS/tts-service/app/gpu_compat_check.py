@@ -154,9 +154,10 @@ def _get_gpu_info_via_nvidia_smi() -> tuple[str, str]:
         parts = result.stdout.strip().split(",")
         if len(parts) >= 2:
             name = parts[0].strip()
-            cap = parts[1].strip()  # e.g. "12.0"
-            major = cap.split(".")[0]  # "12"
-            return name, major
+            cap = parts[1].strip()  # e.g. "8.6" or "12.0"
+            cap_parts = cap.split(".")
+            cap_str = cap_parts[0] + (cap_parts[1] if len(cap_parts) > 1 else "0")  # "86" or "120"
+            return name, cap_str
         if len(parts) == 1:
             return parts[0].strip(), ""
         return "", ""
@@ -183,9 +184,9 @@ def _get_gpu_info_via_pynvml() -> tuple[str, str]:
         name = nvmlDeviceGetName(handle)
         if isinstance(name, bytes):
             name = name.decode("utf-8")
-        major, _ = nvmlDeviceGetCudaComputeCapability(handle)
+        major, minor = nvmlDeviceGetCudaComputeCapability(handle)
         nvmlShutdown()
-        return name, str(major)
+        return name, f"{major}{minor}"
     except Exception:
         return "", ""
 
@@ -230,7 +231,7 @@ def check_gpu_compatibility() -> GPUCheckResult:
     try:
         props = torch.cuda.get_device_properties(0)
         gpu_name = props.name
-        cap_major = str(props.major)  # e.g. "9" for sm_90, "12" for sm_120
+        cap_major = f"{props.major}{props.minor}"  # e.g. "90" for sm_90, "86" for sm_86, "120" for sm_120
     except Exception:
         pass
 
