@@ -23,19 +23,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY requirements.txt .
 
-# flash-attn is pre-installed in the NGC base image, so we skip it to prevent build errors
+# Install torchaudio with --no-deps to avoid pulling PyPI torch (which would replace
+# the NGC-optimized torch 2.10.0a0 with the standard PyPI build, breaking CUDA 13 support).
+# Then install qwen_tts with --no-deps for the same reason — it also pulls torchaudio.
+# transformers and accelerate are pinned in requirements.txt to match qwen_tts==0.1.1.
 RUN pip install --upgrade pip setuptools wheel \
     && pip install -r requirements.txt \
+    && pip install torchaudio==2.10.0 --no-deps \
     && pip install runpod boto3 requests nvidia-ml-py \
     && git clone --depth 1 https://github.com/QwenLM/Qwen3-TTS.git /tmp/qwen3-tts \
     && echo "=== qwen3-tts pinned commit: $(git -C /tmp/qwen3-tts rev-parse HEAD) ===" \
     && pip install --no-deps /tmp/qwen3-tts \
-    && pip install "transformers==4.57.3" "accelerate==1.12.0" "sox" "onnxruntime" "gradio" \
+    && pip install "sox" "onnxruntime" "gradio" \
     && rm -rf /tmp/qwen3-tts
-# qwen_tts is installed with --no-deps to prevent it from upgrading torchaudio.
-# NGC 25.12 ships torchaudio pre-installed at a version matched to its torch build.
-# Allowing qwen_tts to pull torchaudio from PyPI installs an incompatible version
-# (2.11.0 vs torch 2.10.0) causing undefined symbol errors at runtime.
 
 RUN mkdir -p /runpod-volume/models/huggingface /tmp/heard-again \
     && python -c "from huggingface_hub import snapshot_download; snapshot_download(repo_id='${MODEL_ID}', cache_dir='/runpod-volume/models/huggingface')" \
