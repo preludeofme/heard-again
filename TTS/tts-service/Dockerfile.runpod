@@ -29,10 +29,13 @@ RUN pip install --upgrade pip setuptools wheel \
     && pip install runpod boto3 requests nvidia-ml-py \
     && git clone --depth 1 https://github.com/QwenLM/Qwen3-TTS.git /tmp/qwen3-tts \
     && echo "=== qwen3-tts pinned commit: $(git -C /tmp/qwen3-tts rev-parse HEAD) ===" \
-    && pip install /tmp/qwen3-tts \
+    && pip install --no-deps /tmp/qwen3-tts \
+    && pip install "transformers==4.57.3" "accelerate==1.12.0" "sox" "onnxruntime" "gradio" \
     && rm -rf /tmp/qwen3-tts
-# NOTE: qwen_tts is installed from latest main. Once a known-good commit is confirmed,
-# pin it with: git -C /tmp/qwen3-tts checkout <COMMIT_HASH> before pip install.
+# qwen_tts is installed with --no-deps to prevent it from upgrading torchaudio.
+# NGC 25.12 ships torchaudio pre-installed at a version matched to its torch build.
+# Allowing qwen_tts to pull torchaudio from PyPI installs an incompatible version
+# (2.11.0 vs torch 2.10.0) causing undefined symbol errors at runtime.
 
 RUN mkdir -p /runpod-volume/models/huggingface /tmp/heard-again \
     && python -c "from huggingface_hub import snapshot_download; snapshot_download(repo_id='${MODEL_ID}', cache_dir='/runpod-volume/models/huggingface')" \
