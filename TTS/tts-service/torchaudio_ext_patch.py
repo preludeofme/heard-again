@@ -25,8 +25,18 @@ __all__ = [
 if os.name == "nt" and (3, 8) <= sys.version_info < (3, 9):
     _init_dll_path()
 
-_IS_TORCHAUDIO_EXT_AVAILABLE = _load_lib("_torchaudio")
+_IS_TORCHAUDIO_EXT_AVAILABLE = False
 _IS_ALIGN_AVAILABLE = False
+
+try:
+    _IS_TORCHAUDIO_EXT_AVAILABLE = _load_lib("_torchaudio")
+except (OSError, ImportError) as _e:
+    import warnings
+    warnings.warn(
+        f"torchaudio C extension could not be loaded ({_e}). "
+        "This is expected when using NGC torch. "
+        "Python-based features (torchaudio.compliance.kaldi etc.) still work."
+    )
 
 if _IS_TORCHAUDIO_EXT_AVAILABLE:
     try:

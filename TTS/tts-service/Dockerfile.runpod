@@ -1,6 +1,6 @@
 FROM nvcr.io/nvidia/pytorch:25.12-py3
 
-LABEL build.version="2026-05-29.4"
+LABEL build.version="2026-05-29.5"
 
 ENV PYTHONUNBUFFERED=1
 ENV PIP_NO_CACHE_DIR=1
