@@ -1,6 +1,6 @@
 FROM nvcr.io/nvidia/pytorch:25.12-py3
 
-LABEL build.version="2026-05-28.1"
+LABEL build.version="2026-05-29.4"
 
 ENV PYTHONUNBUFFERED=1
 ENV PIP_NO_CACHE_DIR=1
@@ -22,15 +22,25 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
+COPY torchaudio_ext_patch.py /tmp/torchaudio_ext_patch.py
 
 # Install torchaudio with --no-deps to avoid pulling PyPI torch (which would replace
-# the NGC-optimized torch 2.10.0a0 with the standard PyPI build, breaking CUDA 13 support).
-# Then install qwen_tts with --no-deps for the same reason — it also pulls torchaudio.
-# transformers and accelerate are pinned in requirements.txt to match qwen_tts==0.1.1.
+# NGC's CUDA 13.1 build with a CUDA 12.x build, breaking Blackwell support).
+# Then replace _extension/__init__.py with a patched version that makes C extension
+# loading non-fatal — PyPI libtorchaudio.so is CUDA 12.x-compiled and ABI-incompatible
+# with NGC's CUDA 13.1 torch. qwen_tts only uses torchaudio.compliance.kaldi (pure
+# Python/torch), so skipping the C extension is safe.
 RUN pip install --upgrade pip setuptools wheel \
     && pip install -r requirements.txt \
     && pip install torchaudio==2.10.0 --no-deps \
-    && pip install runpod boto3 requests nvidia-ml-py \
+    && python3 -c "\
+import site, os, shutil;\
+[shutil.copy('/tmp/torchaudio_ext_patch.py', p) or print('Patched', p)\
+ for sp in site.getsitepackages()\
+ for p in [os.path.join(sp, 'torchaudio', '_extension', '__init__.py')]\
+ if os.path.exists(p)]"
+
+RUN pip install runpod boto3 requests nvidia-ml-py \
     && git clone --depth 1 https://github.com/QwenLM/Qwen3-TTS.git /tmp/qwen3-tts \
     && echo "=== qwen3-tts pinned commit: $(git -C /tmp/qwen3-tts rev-parse HEAD) ===" \
     && pip install --no-deps /tmp/qwen3-tts \
