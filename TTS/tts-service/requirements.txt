@@ -4,8 +4,8 @@ python-multipart==0.0.9
 soundfile==0.12.1
 librosa==0.10.2
 numpy>=1.26.0,<2.0.0
-torch>=2.1.0
-torchaudio>=2.1.0
+# torch and torchaudio are pre-installed by the NGC base image at matched versions.
+# Do not add them here — pip will upgrade torchaudio past the torch version, breaking ABI.
 transformers>=4.44.0,<4.52.0
 accelerate>=0.30.0
 pydantic>=2.0.0
