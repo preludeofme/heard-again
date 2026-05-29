@@ -23,7 +23,7 @@ GCS_TTS_MODELS_BUCKET = os.getenv("GCS_TTS_MODELS_BUCKET", "")
 
 # Server configuration
 HOST = os.getenv("TTS_HOST", "0.0.0.0")
-PORT = int(os.getenv("TTS_PORT", "8101"))
+PORT = int(os.getenv("TTS_PORT", "4779"))
 
 # Audio settings
 SAMPLE_RATE = 24000

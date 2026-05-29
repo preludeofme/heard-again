@@ -4,8 +4,12 @@ python-multipart==0.0.9
 soundfile==0.12.1
 librosa==0.10.2
 numpy>=1.26.0
-torch>=2.1.0
-torchaudio>=2.1.0
+# ⚠️ torch / torchaudio: DO NOT install from PyPI when using NGC base images.
+# NGC provides a CUDA 13.x-compiled build. Installing from PyPI will replace it
+# with a CUDA 12.x build, breaking Blackwell (sm_120) support.
+# For non-NGC builds (e.g. RunPod pytorch base), uncomment the next two lines:
+# torch>=2.1.0
+# torchaudio>=2.1.0
 transformers>=4.40.0
 accelerate>=0.30.0
 pydantic>=2.0.0

@@ -5,7 +5,11 @@ soundfile==0.12.1
 librosa==0.10.2
 numpy>=1.26.0,<2.0.0
 # torch: NGC base image provides a CUDA 13.1-compiled build — do not install from PyPI.
-# torchaudio: installed in Dockerfile from PyTorch nightly cu131 index (ABI-compatible with NGC torch).
+# torchaudio: installed in Dockerfile from PyPI 2.10.0 with --no-deps to avoid
+# pulling a PyPI torch that would replace NGC's CUDA 13.1 build. The C extension
+# (.so) is ABI-incompatible with NGC torch, so it is patched to load non-fatally.
+# qwen_tts only uses torchaudio.compliance.kaldi (pure Python/torch), so the C
+# extension is not needed.
 # transformers/accelerate pinned to match qwen_tts==0.1.1 requirements.
 transformers==4.57.3
 accelerate==1.12.0
