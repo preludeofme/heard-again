@@ -36,6 +36,7 @@ TTS/app/__pycache__/
 venv/
 generated/
 generated/**
+!UI/generated/.gitkeep
 data
 data/
 Chat/temp-ingestion/
