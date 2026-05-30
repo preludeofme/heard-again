@@ -3,7 +3,7 @@
  * Finding 5.1: Create Service Layer - Extracted from /api/voice/synthesize.ts
  */
 
-import { storageService } from './StorageService'
+import { createCloudStorageService, storageService as localStorageService } from './StorageService'
 import { ttsRequest, TTS_SERVICE_URL } from '@/lib/tts-client'
 import { AppError } from '@/lib/api-helpers'
 import { voiceProfileRepository, VoiceProfileRepository } from '@/server/repositories/VoiceProfileRepository'
@@ -12,6 +12,11 @@ import { assetRepository, AssetRepository } from '@/server/repositories/AssetRep
 import { prisma } from '@/lib/prisma'
 import { consentTokenService } from '@/server/services/voice/ConsentTokenService'
 import { getTTSProvider } from '@/lib/tts'
+
+// Use cloud (R2) storage when environment is configured, fall back to local
+const storageService = process.env.R2_ENDPOINT && process.env.R2_ACCESS_KEY_ID && process.env.R2_SECRET_ACCESS_KEY && process.env.R2_BUCKET
+  ? createCloudStorageService('R2')
+  : localStorageService
 
 export interface SynthesizeRequest {
   familyspaceId: string

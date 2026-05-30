@@ -20,7 +20,16 @@ _LG = logging.getLogger(__name__)
 __all__ = [
     "_check_cuda_version",
     "_IS_TORCHAUDIO_EXT_AVAILABLE",
+    "lazy_import_sox_ext",
 ]
+
+
+def lazy_import_sox_ext():
+    """Stub: NGC torch does not ship with libtorchaudio, so sox_effects
+    cannot use the C extension. Returns a dummy no-op so callers that
+    only check for the import (not actually use sox_effects) will work."""
+    pass
+
 
 if os.name == "nt" and (3, 8) <= sys.version_info < (3, 9):
     _init_dll_path()
