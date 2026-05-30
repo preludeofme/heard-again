@@ -347,7 +347,7 @@ export class VoiceService {
 
       return {
         jobId,
-        audioUrl: `/api/voice/audio/${ttsData.audioId}`,
+        audioUrl: `/api/voice/audio/${assetId}`,
         outputAssetId: assetId,
         outputAssetDownloadUrl: `/api/assets/${assetId}/download`,
         modelId,

@@ -2,9 +2,30 @@ import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { TTS_SERVICE_URL } from '@/lib/tts-client'
 import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
+import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3'
 import { prisma } from '@/lib/prisma'
 
 const TTS_SERVICE_TOKEN = process.env.TTS_SERVICE_TOKEN
+
+// Lazy S3/R2 client (init only when needed for cloud storage fetch)
+let _s3Client: S3Client | null = null
+function getS3Client(): S3Client | null {
+  if (_s3Client) return _s3Client
+  const endpoint = process.env.R2_ENDPOINT ?? process.env.S3_ENDPOINT
+  const accessKey = process.env.R2_ACCESS_KEY_ID ?? process.env.S3_ACCESS_KEY
+  const secretKey = process.env.R2_SECRET_ACCESS_KEY ?? process.env.S3_SECRET_KEY
+  const bucket = process.env.R2_BUCKET_NAME ?? process.env.R2_BUCKET ?? process.env.S3_BUCKET
+  if (!endpoint || !accessKey || !secretKey || !bucket) {
+    return null
+  }
+  _s3Client = new S3Client({
+    region: process.env.R2_REGION ?? 'auto',
+    endpoint,
+    credentials: { accessKeyId: accessKey, secretAccessKey: secretKey },
+    forcePathStyle: true,
+  })
+  return _s3Client
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -37,6 +58,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       select: {
         id: true,
         metadata: true,
+        storagePath: true,
       }
     })
 
@@ -48,7 +70,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     } else {
       // 2. If no asset found by ID, maybe the caller passed the ttsAudioId directly
-      // Verify this ttsAudioId belongs to an asset in the user's familyspace
       audioAsset = await prisma.asset.findFirst({
         where: {
           familyspaceId: user.familyspaceId,
@@ -60,7 +81,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         },
         select: {
           id: true,
-          metadata: true
+          metadata: true,
+          storagePath: true,
         }
       })
       
@@ -75,8 +97,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
-    // Proxy to TTS service using Service-to-Service authentication
-    // This is more reliable than passing the user's session token
+    // When the asset has a storage path (from R2/cloud storage), serve from there directly
+    if (audioAsset && audioAsset.storagePath) {
+      const s3 = getS3Client()
+      if (s3) {
+        try {
+          const bucket = process.env.R2_BUCKET_NAME ?? process.env.R2_BUCKET ?? process.env.S3_BUCKET ?? ''
+          const command = new GetObjectCommand({ Bucket: bucket, Key: audioAsset.storagePath })
+          const response = await s3.send(command)
+
+          if (response.Body) {
+            const chunks: any[] = []
+            for await (const chunk of response.Body as any) {
+              chunks.push(chunk)
+            }
+            const buffer = Buffer.concat(chunks)
+
+            res.setHeader('Content-Type', response.ContentType ?? 'audio/wav')
+            res.setHeader('Content-Length', buffer.length)
+            res.setHeader('Cache-Control', 'private, max-age=3600')
+            res.setHeader('X-Content-Type-Options', 'nosniff')
+
+            return res.send(buffer)
+          }
+        } catch (storageErr) {
+          logger.warn('[AUDIO_PROXY] Cloud storage fetch failed, falling back to TTS proxy:', storageErr)
+        }
+      }
+    }
+
+    // Fallback: proxy to TTS service
     const response = await fetch(`${TTS_SERVICE_URL}/api/tts/audio/${audioId}`, {
       method: 'GET',
       headers: {
@@ -86,39 +136,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
 
     if (!response.ok) {
-      // Log security-relevant failures
       logger.error('[AUDIO_PROXY] TTS service error:', {
         status: response.status,
         audioId,
         familyspaceId: user.familyspaceId,
         userId: user.id
       })
-      
+
       if (response.status === 404) {
         return res.status(404).json({ error: 'Audio file not found' })
       }
-      
+
       return res.status(503).json({ error: 'TTS service unavailable' })
     }
 
-    // Get content type from TTS service
     const contentType = response.headers.get('content-type') || 'audio/wav'
-    
+
     const arrayBuffer = await response.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
 
-    // Secure response headers
     res.setHeader('Content-Type', contentType)
     res.setHeader('Content-Length', buffer.length)
-    res.setHeader('Cache-Control', 'private, max-age=3600') // Private cache
+    res.setHeader('Cache-Control', 'private, max-age=3600')
     res.setHeader('X-Content-Type-Options', 'nosniff')
-    
+
     return res.send(buffer)
 
   } catch (error: any) {
     logger.error('[AUDIO_PROXY] Error:', error)
     
-    // Handle authorization errors specifically
     if (error.statusCode === 401 || error.statusCode === 403) {
       return res.status(error.statusCode).json({ 
         error: error.message || 'Access denied' 
