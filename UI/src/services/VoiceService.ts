@@ -3,7 +3,6 @@
  * Finding 5.1: Create Service Layer - Extracted from /api/voice/synthesize.ts
  */
 
-import { createCloudStorageService, storageService as localStorageService } from './StorageService'
 import { ttsRequest, TTS_SERVICE_URL } from '@/lib/tts-client'
 import { AppError } from '@/lib/api-helpers'
 import { voiceProfileRepository, VoiceProfileRepository } from '@/server/repositories/VoiceProfileRepository'
@@ -12,11 +11,6 @@ import { assetRepository, AssetRepository } from '@/server/repositories/AssetRep
 import { prisma } from '@/lib/prisma'
 import { consentTokenService } from '@/server/services/voice/ConsentTokenService'
 import { getTTSProvider } from '@/lib/tts'
-
-// Use cloud (R2) storage when environment is configured, fall back to local
-const storageService = process.env.R2_ENDPOINT && process.env.R2_ACCESS_KEY_ID && process.env.R2_SECRET_ACCESS_KEY && (process.env.R2_BUCKET_NAME || process.env.R2_BUCKET)
-  ? createCloudStorageService('R2')
-  : localStorageService
 
 export interface SynthesizeRequest {
   familyspaceId: string
@@ -188,25 +182,23 @@ export class VoiceService {
     language: string,
     resolvedLanguage: string
   ): Promise<{ assetId: string; fileName: string }> {
-    const fileName = `${audioId}.wav`
+    // Extract just the filename from the R2 key (last segment after /)
+    const r2FileName = audioId.split('/').pop() ?? audioId
+    const fileName = `${r2FileName}`
 
-    // Save audio file via StorageService
-    const storedFile = await storageService.saveAudio(
-      familyspaceId,
-      audioId,
-      audioBuffer,
-      { mimeType: 'audio/wav', extension: 'wav' }
-    )
+    // The RunPod handler already uploaded the audio to R2 at audioId.
+    // Record the R2 key directly as the storage path rather than re-uploading.
+    const r2Key = audioId
 
-    // Create asset record
+    // Create asset record pointing to the existing R2 object
     const asset = await this.assetRepo.create({
       familyspaceId,
       filename: fileName,
       originalName: fileName,
       mimeType: 'audio/wav',
       sizeBytes: BigInt(audioBuffer.byteLength),
-      storageType: 'LOCAL',
-      storagePath: storedFile.path,
+      storageType: 'S3',
+      storagePath: r2Key,
       assetType: 'GENERATED_AUDIO',
       isAISynthesized: true, // Mark as AI synthesized
       processingStatus: 'COMPLETED',
