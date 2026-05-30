@@ -464,6 +464,10 @@ model Story {
   storyDate             DateTime?
   storyDatePrecision    DatePrecision        @default(EXACT)
   location              String?
+  locationCity          String?
+  locationState         String?
+  locationLat           Float?
+  locationLng           Float?
   tags                  String[]
   status                StoryStatus          @default(DRAFT)
   isPinned              Boolean              @default(false)

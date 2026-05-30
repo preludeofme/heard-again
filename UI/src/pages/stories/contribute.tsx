@@ -19,6 +19,8 @@ import { Layout } from '@/components/layout/Layout'
 import { AudioRecorder } from '@/components/audio/AudioRecorder'
 import { MemberSwitcherFlyout } from '@/components/layout/MemberSwitcherFlyout'
 import { RichTextEditor } from '@/components/editor/RichTextEditor'
+import { LocationAutocomplete } from '@/components/stories/LocationAutocomplete'
+import type { LocationValue } from '@/components/stories/LocationAutocomplete'
 
 const RELATIONSHIP_OPTIONS = [
   { value: 'Self', label: 'Self' },
@@ -49,7 +51,7 @@ export default function PublicContributePage() {
   const [storyTitle, setStoryTitle] = useState('')
   const [storyContent, setStoryContent] = useState('')
   const [storyDate, setStoryDate] = useState('')
-  const [location, setLocation] = useState('')
+  const [location, setLocation] = useState<LocationValue | null>(null)
   const [authorRelationship, setAuthorRelationship] = useState('')
   const [visibility, setVisibility] = useState<'PUBLIC' | 'FAMILY_ONLY' | 'FRIENDS_AND_FAMILY'>('FAMILY_ONLY')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -97,7 +99,11 @@ export default function PublicContributePage() {
           subjectId,
           authorRelationship,
           storyDate: storyDate || undefined,
-          location: location || undefined,
+          location: location?.displayText || undefined,
+          locationCity: location?.city || undefined,
+          locationState: location?.state || undefined,
+          locationLat: location?.lat || undefined,
+          locationLng: location?.lng || undefined,
           storyType: 'MEMORY',
           status: 'PUBLISHED',
           visibility,
@@ -152,7 +158,11 @@ export default function PublicContributePage() {
           subjectId,
           authorRelationship,
           storyDate: storyDate || undefined,
-          location: location || undefined,
+          location: location?.displayText || undefined,
+          locationCity: location?.city || undefined,
+          locationState: location?.state || undefined,
+          locationLat: location?.lat || undefined,
+          locationLng: location?.lng || undefined,
           storyType: 'RECORDING',
           assetIds: [assetId],
           status: 'PUBLISHED',
@@ -436,12 +446,10 @@ export default function PublicContributePage() {
                         />
                       </Box>
                       <Box>
-                        <TextField
-                          fullWidth
-                          label="Where did this happen? (Optional)"
-                          placeholder="City, state, or specific place"
+                        <LocationAutocomplete
                           value={location}
-                          onChange={(e) => setLocation(e.target.value)}
+                          onChange={setLocation}
+                          label="Where did this happen? (Optional)"
                         />
                       </Box>
                     </Box>

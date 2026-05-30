@@ -122,6 +122,10 @@ export class StoryService {
       storyDate: data.storyDate ? new Date(data.storyDate) : null,
       storyDatePrecision: data.storyDatePrecision ?? DatePrecision.EXACT,
       location: data.location ?? null,
+      locationCity: data.locationCity ?? null,
+      locationState: data.locationState ?? null,
+      locationLat: data.locationLat ?? null,
+      locationLng: data.locationLng ?? null,
       tags: data.tags ?? [],
       status: data.status ?? StoryStatus.PUBLISHED,
       authorRelationship: data.authorRelationship ?? null,
@@ -176,6 +180,11 @@ export class StoryService {
     if (data.status !== undefined) updateData.status = data.status
     if (data.authorRelationship !== undefined) updateData.authorRelationship = data.authorRelationship ?? null
     if (data.isPublic !== undefined) updateData.isPublic = data.isPublic ?? false
+    if (data.location !== undefined) updateData.location = data.location ?? null
+    if (data.locationCity !== undefined) updateData.locationCity = data.locationCity ?? null
+    if (data.locationState !== undefined) updateData.locationState = data.locationState ?? null
+    if (data.locationLat !== undefined) updateData.locationLat = data.locationLat ?? null
+    if (data.locationLng !== undefined) updateData.locationLng = data.locationLng ?? null
 
     // Handle audio asset for recordings if provided
     if (data.assetIds?.length) {

@@ -11,6 +11,8 @@ import { ArrowBack, Save, Delete, AutoFixHigh as RegenerateIcon } from '@mui/ico
 import { fetchWithCSRF } from '@/lib/api-client'
 import { RichTextEditor } from '@/components/editor/RichTextEditor'
 import { ConfirmDialog } from '@/components/modals/ConfirmDialog'
+import { LocationAutocomplete } from '@/components/stories/LocationAutocomplete'
+import type { LocationValue } from '@/components/stories/LocationAutocomplete'
 
 type NarrationStatus = 'NONE' | 'PENDING' | 'READY' | 'APPROVED' | 'STALE' | 'FAILED'
 type StoryVisibility = 'PUBLIC' | 'FAMILY_ONLY' | 'FRIENDS_AND_FAMILY'
@@ -54,7 +56,7 @@ export default function StoryEditPage() {
   const [content, setContent] = useState('')
   const [originalContent, setOriginalContent] = useState('')
   const [storyDate, setStoryDate] = useState('')
-  const [location, setLocation] = useState('')
+  const [location, setLocation] = useState<LocationValue | null>(null)
   const [status, setStatus] = useState<'DRAFT' | 'PUBLISHED'>('PUBLISHED')
   const [visibility, setVisibility] = useState<StoryVisibility>('FAMILY_ONLY')
   const [showOptional, setShowOptional] = useState(false)
@@ -75,7 +77,7 @@ export default function StoryEditPage() {
       setContent(s.content || '')
       setOriginalContent(s.content || '')
       setStoryDate(s.storyDate ? new Date(s.storyDate).toISOString().split('T')[0] : '')
-      setLocation(s.location || '')
+      setLocation(s.location ? { displayText: s.location, city: '', state: '' } : null)
       setStatus((s.status === 'DRAFT' ? 'DRAFT' : 'PUBLISHED') as 'DRAFT' | 'PUBLISHED')
       setVisibility(s.visibility ?? 'FAMILY_ONLY')
       if (s.storyDate || s.location) setShowOptional(true)
@@ -107,7 +109,11 @@ export default function StoryEditPage() {
           title: title.trim(),
           content: content.trim(),
           storyDate: storyDate || null,
-          location: location.trim() || null,
+          location: location?.displayText || null,
+          locationCity: location?.city || null,
+          locationState: location?.state || null,
+          locationLat: location?.lat ?? null,
+          locationLng: location?.lng ?? null,
           status,
           visibility,
           regenerateNarration,
@@ -302,13 +308,13 @@ export default function StoryEditPage() {
                       onChange={(e) => setStoryDate(e.target.value)}
                       sx={{ flex: 1, ...fieldSx }}
                     />
-                    <TextField
-                      size="small"
-                      label="Location"
-                      placeholder="e.g. Chicago, IL"
+                    <LocationAutocomplete
                       value={location}
-                      onChange={(e) => setLocation(e.target.value)}
-                      sx={{ flex: 1, ...fieldSx }}
+                      onChange={setLocation}
+                      label="Location"
+                      size="small"
+                      sx={{ flex: 1 }}
+                      inputSx={fieldSx}
                     />
                   </Box>
                 </Collapse>

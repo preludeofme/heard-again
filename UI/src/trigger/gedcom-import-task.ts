@@ -2,6 +2,7 @@ import { task, metadata, logger as triggerLogger } from '@trigger.dev/sdk/v3'
 import { prisma } from '@/lib/prisma'
 import { getStorageService } from '@/lib/storage/storage-service'
 import { gedcomImportService } from '@/server/services/gedcom/GedcomImportService'
+import { geocodePlacesTask } from '@/trigger/geocode-places-task'
 
 export interface GedcomImportTaskPayload {
   familyspaceId: string
@@ -69,6 +70,15 @@ export const gedcomImportTask = task({
     metadata.set('stats', JSON.stringify(stats))
 
     triggerLogger.info('GEDCOM import completed', { jobId, stats })
+
+    // Fire geocoding as a background task — non-blocking, does not affect import status
+    if (process.env.GOOGLE_MAPS_API_KEY) {
+      await geocodePlacesTask.trigger(
+        { familyspaceId },
+        { idempotencyKey: `geocode-places:${jobId}` }
+      )
+      triggerLogger.info('Triggered geocode-places task', { familyspaceId, jobId })
+    }
 
     return {
       personUpserts: (stats.personUpserts as number) ?? 0,

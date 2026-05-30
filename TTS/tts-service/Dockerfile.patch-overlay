@@ -1,0 +1,14 @@
+# Thin overlay: patches torchaudio _extension/__init__.py on top of the existing
+# Docker Hub image. Only this one file changes — the push is a few KB, not GB.
+FROM buc456/heard-again-qwen3-tts:latest
+
+COPY torchaudio_ext_patch.py /tmp/torchaudio_ext_patch.py
+
+RUN python3 -c "\
+import site, os, shutil;\
+[shutil.copy('/tmp/torchaudio_ext_patch.py', p) or print('Patched', p)\
+ for sp in site.getsitepackages()\
+ for p in [os.path.join(sp, 'torchaudio', '_extension', '__init__.py')]\
+ if os.path.exists(p)]"
+
+LABEL build.version="2026-05-29.5"
