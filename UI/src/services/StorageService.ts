@@ -249,7 +249,7 @@ export function createCloudStorageService(type: 'S3' | 'R2'): StorageService {
   const endpoint = process.env[`${prefix}_ENDPOINT`]
   const accessKeyId = process.env[`${prefix}_ACCESS_KEY_ID`]
   const secretAccessKey = process.env[`${prefix}_SECRET_ACCESS_KEY`]
-  const bucket = process.env[`${prefix}_BUCKET`]
+  const bucket = process.env[`${prefix}_BUCKET`] ?? process.env[`${prefix}_BUCKET_NAME`]
   const region = process.env[`${prefix}_REGION`]
   const publicUrlPrefix = process.env[`${prefix}_PUBLIC_URL`]
   
