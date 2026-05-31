@@ -36,10 +36,14 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # ── GPU compatibility gate ─────────────────────────────────────────────────────
-# Fail fast before any model loading or job dispatch: if the allocated GPU is
-# not compatible with the installed PyTorch, print a clear error and exit.
-# RunPod will auto-restart the worker, hopefully on a compatible GPU next time.
-exit_if_incompatible()
+# Check GPU compatibility at module level. Some GPU/host combinations may not
+# have a CUDA runtime compatible with the installed PyTorch (torch.cuda may be
+# None). Wrap in try/except so the worker still starts — RunPod will cycle
+# it to a different GPU on retry, or the first job will surface the real error.
+try:
+    exit_if_incompatible()
+except Exception:
+    logger.warning("GPU compat check failed (non-fatal) - worker will try anyway")
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────
@@ -337,21 +341,7 @@ def handler(event: dict[str, Any]) -> dict[str, Any]:
 
 
 if __name__ == "__main__":
-    # Pre-warm: load and initialise the model so library incompatibilities surface
-    # immediately rather than failing silently on the first real job.
-    # generate_voice_clone requires a reference audio, so we just force model load here.
-    if not TTS_STUB_MODE:
-        logger.info("Pre-warming TTS model (loading weights)...")
-        from app.runpod_tts_service import _get_model
-        try:
-            _get_model()
-            logger.info("TTS pre-warm complete — model loaded and verified.")
-        except Exception as exc:
-            logger.error(
-                "TTS pre-warm FAILED: %s\n"
-                "Worker will still start but the first job will likely fail with the same error. "
-                "Check transformers version compatibility with qwen_tts.",
-                exc,
-            )
-
+    # Skip pre-warm model loading to avoid startup timeout.
+    # The model loads lazily on the first job via _get_model().
+    logger.info("Starting RunPod handler (model loads lazily on first job)")
     runpod.serverless.start({"handler": handler})

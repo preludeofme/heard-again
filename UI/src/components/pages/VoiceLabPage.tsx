@@ -110,6 +110,19 @@ export function VoiceLabPage({ voiceModels, controller, autoCreate }: VoiceLabPa
       setPlayingAudioUrl(null)
     }
 
+    // If there's a pre-recorded sample audio, use it — no expensive synthesis needed
+    if (selectedVoice?.sampleAudioUrl) {
+      setPlayingAudioUrl(selectedVoice.sampleAudioUrl)
+      const audio = new Audio(selectedVoice.sampleAudioUrl)
+      audioRef.current = audio
+      audio.onended = () => {
+        setPlayingAudioUrl(null)
+        audioRef.current = null
+      }
+      audio.play()
+      return
+    }
+
     setIsSynthesizing(true)
     try {
       const audioUrl = await synthesizeSpeech(selectedVoiceId, testText.trim())

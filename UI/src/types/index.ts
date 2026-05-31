@@ -91,6 +91,7 @@ export interface VoiceModel {
   modelPath?: string
   similarityScore?: number
   hasConsent?: boolean
+  sampleAudioUrl?: string | null
   person?: {
     id: string
     firstName: string

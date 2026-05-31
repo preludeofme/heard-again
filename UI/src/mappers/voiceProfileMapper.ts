@@ -16,6 +16,7 @@ export interface VoiceProfileResponse {
   createdAt: string | Date
   modelPath?: string | null
   hasConsent?: boolean
+  sampleAudioUrl?: string | null
   person?: {
     id: string
     firstName: string
@@ -38,6 +39,7 @@ export function toVoiceModel(profile: VoiceProfileResponse): VoiceModel {
     createdAt: typeof profile.createdAt === 'string' ? profile.createdAt : profile.createdAt.toISOString(),
     modelPath: profile.modelPath ?? undefined,
     hasConsent: profile.hasConsent,
+    sampleAudioUrl: profile.sampleAudioUrl ?? null,
     person: profile.person ? {
       id: profile.person.id,
       firstName: profile.person.firstName,
