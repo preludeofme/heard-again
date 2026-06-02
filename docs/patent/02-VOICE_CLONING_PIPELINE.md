@@ -1,5 +1,7 @@
 # Invention #1 — Consent-First Voice Cloning Pipeline
 
+> **Draft status note:** This file contains invention notes and may mix implemented behavior with proposed embodiments. Review [`08-PATENT_REVIEW_CRITIQUE.md`](./08-PATENT_REVIEW_CRITIQUE.md) before relying on it for attorney handoff.
+
 > **Inventor:** Ryan Buck
 > **Category:** Voice Cloning / Biometric Synthesis with Privacy Controls
 > **Related Files:** `TTS/app/`, `UI/src/pages/api/voice/`, `TTS/app/services/`

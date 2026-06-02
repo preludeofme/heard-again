@@ -1,5 +1,7 @@
 # Invention #5 — Multi-Tenant Speech Consent Management
 
+> **Draft status note:** This file contains invention notes and may mix implemented behavior with proposed embodiments. Review [`08-PATENT_REVIEW_CRITIQUE.md`](./08-PATENT_REVIEW_CRITIQUE.md) before relying on it for attorney handoff.
+
 > **Inventor:** Ryan Buck
 > **Category:** Data Privacy / Biometric Consent Management
 > **Related Files:** `prisma/schema.prisma` (VoiceConsent, AuditLog, VoiceProfile), `TTS/app/services/`
