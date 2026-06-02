@@ -4,6 +4,7 @@
 > **Project:** Heard Again — Family Story Preservation Platform
 > **Date:** June 1, 2026
 > **Inventor:** Ryan Buck
+> **Draft status note:** This file contains invention notes and may mix implemented behavior with proposed embodiments. Review [`08-PATENT_REVIEW_CRITIQUE.md`](./08-PATENT_REVIEW_CRITIQUE.md) before relying on it for attorney handoff.
 
 ---
 
@@ -26,11 +27,11 @@ The platform operates as a hybrid on-premises/cloud system with GPU-accelerated 
 
 1. **Voice as a Connector**: Written obituaries and photo albums are static. Hearing a loved one's synthesized voice telling their own story creates a fundamentally deeper emotional connection that existing platforms (Ancestry.com, MyHeritage, FamilySearch) do not provide.
 
-2. **Consent-First Voice Cloning**: Existing voice cloning tools (ElevenLabs, Resemble AI) lack genealogical consent workflows. Heard Again invented a **multi-party consent system** where living relatives or estate representatives must explicitly grant permission (recorded via cryptographic attestation) before a deceased person's voice can be cloned from audio recordings.
+2. **Consent-First Voice Cloning**: Existing voice cloning tools (ElevenLabs, Resemble AI) lack genealogical consent workflows. Heard Again is evaluating a **policy-driven consent system** for synthetic voice use. The current repository demonstrates single-record explicit consent gating and granular permissions; multi-party approval and cryptographic enforcement are proposed embodiments that require implementation verification and prior-art review.
 
-3. **Persona Grounded in Documents**: Most AI chatbots hallucinate freely. Heard Again's **Evidence Gate** ensures every AI response about a family member is grounded in uploaded documents (letters, recordings, diaries) with a minimum evidence threshold before the persona can answer.
+3. **Persona Grounded in Documents**: Most AI chatbots hallucinate freely. Heard Again's **Evidence Gate** applies retrieval thresholds, refusal behavior, and post-generation validation to reduce unsupported persona responses. Stronger deterministic grounding guarantees require further implementation and evaluation.
 
-4. **Gigapixel Family Tree Export**: Large family trees (500+ members across 6+ generations) render poorly in browsers. Heard Again invented a **tile-and-stitch puppeteer pipeline** that captures vector-quality graph canvases and stitches them into gigapixel PNG files using Sharp image processing.
+4. **Gigapixel Family Tree Export**: Large family trees (500+ members across 6+ generations) render poorly in browsers. Heard Again implements a **tile-and-stitch Puppeteer pipeline** that captures browser-rendered tiles and stitches them into high-resolution raster PNG files using Sharp image processing. Patentability requires a prior-art search and a narrower technical distinction.
 
 5. **Hybrid Compute Model**: Heard Again's deployment architecture allows GPU-intensive voice synthesis to run locally while the web application serves from the cloud, with optional tunnel networking for remote access — a design that reduces cloud costs by 90%+ for families.
 

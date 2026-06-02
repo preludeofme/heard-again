@@ -1,5 +1,7 @@
 # Invention #3 — Tile-and-Stitch Gigapixel Family Tree Export
 
+> **Draft status note:** This file contains invention notes and may mix implemented behavior with proposed embodiments. Review [`08-PATENT_REVIEW_CRITIQUE.md`](./08-PATENT_REVIEW_CRITIQUE.md) before relying on it for attorney handoff.
+
 > **Inventor:** Ryan Buck
 > **Category:** Graph Visualization / High-Resolution Vector Export
 > **Related Files:** `Exporter/`, `UI/src/components/pages/family-tree/xyflow/`, `UI/src/pages/api/export/`

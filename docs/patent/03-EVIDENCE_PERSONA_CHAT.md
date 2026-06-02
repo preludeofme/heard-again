@@ -1,5 +1,7 @@
 # Invention #2 — Evidence-Gated AI Persona Chat
 
+> **Draft status note:** This file contains invention notes and may mix implemented behavior with proposed embodiments. Review [`08-PATENT_REVIEW_CRITIQUE.md`](./08-PATENT_REVIEW_CRITIQUE.md) before relying on it for attorney handoff.
+
 > **Inventor:** Ryan Buck
 > **Category:** Retrieval-Augmented Generation (RAG) / AI Persona Systems
 > **Related Files:** `Chat/src/services/chat/`, `Chat/src/services/persona/`, `Chat/src/services/retrieval/`

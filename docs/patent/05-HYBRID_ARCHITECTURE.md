@@ -1,5 +1,7 @@
 # Invention #4 — Hybrid Voice/Genealogy Graph + Multi-Service Architecture
 
+> **Draft status note:** This file contains invention notes and may mix implemented behavior with proposed embodiments. Review [`08-PATENT_REVIEW_CRITIQUE.md`](./08-PATENT_REVIEW_CRITIQUE.md) before relying on it for attorney handoff.
+
 > **Inventor:** Ryan Buck
 > **Category:** Systems Architecture / Distributed Computing
 > **Related Files:** `docker-compose.yml`, `UI/`, `Chat/`, `TTS/`, `Exporter/`, `Caddyfile`, `Scripts/`

@@ -1,5 +1,7 @@
 # Heard Again — Complete Tech Stack Reference
 
+> **Draft status note:** This reference is an inventory aid, not a verified patentability statement. Review [`08-PATENT_REVIEW_CRITIQUE.md`](./08-PATENT_REVIEW_CRITIQUE.md) before attorney handoff.
+
 > **For Patent Attorney Due Diligence**
 > **Date:** June 1, 2026
 
