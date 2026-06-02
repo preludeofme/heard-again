@@ -4,6 +4,7 @@ import { getAuthUser, requireFamilyspaceRole } from '@/lib/auth-helpers'
 import { validate, rules } from '@/lib/validation'
 import { v4 as uuidv4 } from 'uuid'
 import { EmailService } from '@/services/EmailService'
+import { checkQuota } from '@/lib/entitlements'
 
 export default apiHandler({
   // POST /api/familyspaces/[id]/invite - Invite a member
@@ -40,6 +41,17 @@ export default apiHandler({
       if (existingMembership && existingMembership.status === 'ACTIVE') {
         throw Errors.conflict('User is already a member of this familyspace')
       }
+    }
+
+    // Check member quota before inviting
+    const memberQuota = await checkQuota(familyspaceId, 'members')
+    if (!memberQuota.allowed) {
+      return res.status(402).json({
+        success: false,
+        error: memberQuota.reason,
+        code: 'QUOTA_EXCEEDED',
+        upgradeUrl: memberQuota.upgradeUrl,
+      })
     }
 
     // Check for existing pending invite

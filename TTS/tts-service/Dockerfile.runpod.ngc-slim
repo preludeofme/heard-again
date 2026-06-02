@@ -1,0 +1,44 @@
+FROM nvcr.io/nvidia/pytorch:25.12-py3
+
+LABEL build.version="2026-05-31-ngc-slim"
+
+ENV PYTHONUNBUFFERED=1
+ENV PIP_NO_CACHE_DIR=1
+ENV MODEL_ID=Qwen/Qwen3-TTS-12Hz-0.6B-Base
+ENV HF_HOME=/runpod-volume/models/huggingface
+ENV TRANSFORMERS_CACHE=/runpod-volume/models/huggingface
+ENV TORCH_HOME=/runpod-volume/models/torch
+ENV MODEL_CACHE_DIR=/runpod-volume/models
+ENV TEMP_DIR=/tmp/heard-again
+ENV DEFAULT_AUDIO_FORMAT=wav
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg \
+    libsndfile1 \
+    sox \
+    libsox-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+COPY torchaudio_ext_patch.py /tmp/torchaudio_ext_patch.py
+
+# Install python deps
+RUN pip install --upgrade pip setuptools wheel \
+    && pip install -r requirements.txt \
+    && pip install runpod boto3 requests nvidia-ml-py \
+    && git clone --depth 1 https://github.com/QwenLM/Qwen3-TTS.git /tmp/qwen3-tts \
+    && echo "=== qwen3-tts pinned commit: $(git -C /tmp/qwen3-tts rev-parse HEAD) ===" \
+    && pip install --no-deps /tmp/qwen3-tts \
+    && pip install "sox" "onnxruntime" \
+    && rm -rf /tmp/qwen3-tts \
+    && rm -rf /root/.cache/pip
+
+# Make volume dirs but skip model pre-download to save ~14GB
+RUN mkdir -p /runpod-volume/models/huggingface /tmp/heard-again \
+    && chmod -R 777 /runpod-volume /tmp/heard-again
+
+COPY app/ ./app/
+
+CMD ["python", "-m", "app.runpod_handler"]

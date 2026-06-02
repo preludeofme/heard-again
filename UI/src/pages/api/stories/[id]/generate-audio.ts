@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
 import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
+import { checkQuota } from '@/lib/entitlements'
 export default apiHandler({
   // POST /api/stories/[id]/generate-audio - Generate TTS audio for a story
   POST: async (req, res) => {
@@ -11,6 +12,17 @@ export default apiHandler({
     const user = await getAuthUserWithFamilyspace(req, res)
     const storyId = req.query.id as string
     await requireFamilyspaceRole(user.id, user.familyspaceId, 'EDITOR')
+
+    // Check generation quota before allowing the job
+    const quota = await checkQuota(user.familyspaceId, 'generation')
+    if (!quota.allowed) {
+      return res.status(402).json({
+        success: false,
+        error: quota.reason,
+        code: 'QUOTA_EXCEEDED',
+        upgradeUrl: quota.upgradeUrl,
+      })
+    }
 
     const story = await prisma.story.findFirst({
       where: { id: storyId, familyspaceId: user.familyspaceId },

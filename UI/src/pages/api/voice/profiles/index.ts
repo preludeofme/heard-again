@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
 import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
+import { checkQuota } from '@/lib/entitlements'
 
 export const config = {
   api: {
@@ -84,6 +85,17 @@ export default apiHandler({
 
     const user = await getAuthUserWithFamilyspace(req, res)
     await requireFamilyspaceRole(user.id, user.familyspaceId, 'EDITOR')
+
+    // Check voice profile quota before allowing creation
+    const quota = await checkQuota(user.familyspaceId, 'voiceProfiles')
+    if (!quota.allowed) {
+      return res.status(402).json({
+        success: false,
+        error: quota.reason,
+        code: 'QUOTA_EXCEEDED',
+        upgradeUrl: quota.upgradeUrl,
+      })
+    }
 
     const { name, description, personId, isCloned, modelType, styleParams, engineName, engineVersion } = req.body
 

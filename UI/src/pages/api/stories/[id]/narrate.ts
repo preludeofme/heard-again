@@ -4,6 +4,7 @@ import { getAuthUserWithFamilyspace } from '@/lib/auth-helpers'
 import { logger } from '@/lib/logger'
 import { narrationTask } from '@/trigger/narration-task'
 import { auth, runs } from '@trigger.dev/sdk/v3'
+import { checkQuota } from '@/lib/entitlements'
 
 const STALE_PROCESSING_TIMEOUT_MS = 20 * 60 * 1_000
 
@@ -133,6 +134,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(200).json(payload)
     }
     return res.redirect(302, `/api/assets/serve/${cachedAsset.id}`)
+  }
+
+  // Check generation quota before queuing a new job (skip for cached assets)
+  const quota = await checkQuota(user.familyspaceId, 'generation')
+  if (!quota.allowed) {
+    return res.status(402).json({
+      success: false,
+      error: quota.reason,
+      code: 'QUOTA_EXCEEDED',
+      upgradeUrl: quota.upgradeUrl,
+    })
   }
 
   const profile = await prisma.voiceProfile.findFirst({
