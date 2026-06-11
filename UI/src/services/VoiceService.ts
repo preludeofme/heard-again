@@ -339,7 +339,8 @@ export class VoiceService {
       )
 
       // Track usage: increment generation minutes for billing/quota
-      if (ttsData.duration) {
+      // Skip tracking for warmup jobs (modelId === '__warmup__')
+      if (ttsData.duration && modelId !== '__warmup__') {
         await incrementGenerationMinutes(familyspaceId, ttsData.duration).catch((err) => {
           console.warn('[VoiceService] Failed to increment generation minutes:', err)
           // Non-fatal — don't break the synthesis result

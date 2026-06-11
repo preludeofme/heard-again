@@ -37,7 +37,7 @@ async function main() {
         tunnelEnabled: true,
         cloudGpuEnabled: false,
         cloudStorageEnabled: false,
-        generationMinutesIncluded: 0,
+        generationMinutesIncluded: 20, // 20 minutes for basic voice testing
         storageQuotaBytes: BigInt(0),
         memberQuota: 10,
         voiceProfileQuota: 10,
