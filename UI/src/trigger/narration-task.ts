@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { getStorageService } from '@/lib/storage/storage-service'
 import { getTTSProvider } from '@/lib/tts'
 import { logger } from '@/lib/logger'
+import { incrementGenerationMinutes } from '@/lib/entitlements'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -364,6 +365,13 @@ export const narrationTask = task({
       voiceProfileId,
       keepAssetId: assetId,
     })
+
+    // Track usage on the subscription
+    if (completeEvent.duration) {
+      await incrementGenerationMinutes(familyspaceId, completeEvent.duration).catch((err) =>
+        logger.warn('[narrationTask] failed to increment generation minutes', { storyId, err })
+      )
+    }
 
     await updateProgress({
       phase: 'complete',
