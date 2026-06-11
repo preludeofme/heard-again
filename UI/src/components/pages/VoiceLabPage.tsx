@@ -58,8 +58,8 @@ export function VoiceLabPage({ voiceModels, controller, autoCreate }: VoiceLabPa
     resetTraining,
   } = controller
 
-  // Pre-warm the TTS GPU so voice synthesis is fast when the user needs it
-  useTTSWarmup()
+  // Pre-warm the TTS GPU with high intent — user is actively in Voice Lab
+  useTTSWarmup(true, 'high')
 
   const { selectedFamilyMember } = useSelectedFamilyMember()
   const { enqueueSnackbar } = useSnackbar()
