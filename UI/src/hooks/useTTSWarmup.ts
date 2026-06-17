@@ -45,4 +45,36 @@ function pingTTSWarmup(): void {
     })
 }
 
-/**\n * Hook: pre-warms the TTS container when a component mounts.\n * Use on pages/components that are entry points to TTS features:\n * - Voice Lab (voice cloning, profile creation)\n * - Story pages without existing narration\n * - Profile pages with voice signature CTAs\n *\n * Smart intent triggers:\n * 1. Voice Lab: instant warm (high intent)\n * 2. Story page: warm if no narration yet (medium intent)\n * 3. Profile: warm on scroll to voice section (low intent)\n *\n * Debounced to once per 5 minutes across the entire session —\n * rapid navigation won't trigger redundant warmup calls.\n */\nexport function useTTSWarmup(enabled = true, intent: 'high' | 'medium' | 'low' = 'medium'): void {\n  const firedRef = useRef(false)\n\n  useEffect(() => {\n    if (!enabled || firedRef.current) return\n    firedRef.current = true\n\n    // Delay based on intent level:\n    // - high: immediate (200ms) — user is actively engaging with TTS\n    // - medium: moderate (500ms) — user might use TTS\n    // - low: delayed (1500ms) — only warm if user lingers on page\n    const delays = { high: 200, medium: 500, low: 1500 }\n    const delay = delays[intent]\n\n    const timer = setTimeout(() => pingTTSWarmup(), delay)\n    return () => clearTimeout(timer)\n  }, [enabled, intent])\n}
+/**
+ * Hook: pre-warms the TTS container when a component mounts.
+ * Use on pages/components that are entry points to TTS features:
+ * - Voice Lab (voice cloning, profile creation)
+ * - Story pages without existing narration
+ * - Profile pages with voice signature CTAs
+ *
+ * Smart intent triggers:
+ * 1. Voice Lab: instant warm (high intent)
+ * 2. Story page: warm if no narration yet (medium intent)
+ * 3. Profile: warm on scroll to voice section (low intent)
+ *
+ * Debounced to once per 5 minutes across the entire session —
+ * rapid navigation won't trigger redundant warmup calls.
+ */
+export function useTTSWarmup(enabled = true, intent: 'high' | 'medium' | 'low' = 'medium'): void {
+  const firedRef = useRef(false)
+
+  useEffect(() => {
+    if (!enabled || firedRef.current) return
+    firedRef.current = true
+
+    // Delay based on intent level:
+    // - high: immediate (200ms) — user is actively engaging with TTS
+    // - medium: moderate (500ms) — user might use TTS
+    // - low: delayed (1500ms) — only warm if user lingers on page
+    const delays = { high: 200, medium: 500, low: 1500 }
+    const delay = delays[intent]
+
+    const timer = setTimeout(() => pingTTSWarmup(), delay)
+    return () => clearTimeout(timer)
+  }, [enabled, intent])
+}
