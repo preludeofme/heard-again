@@ -723,6 +723,16 @@ async def design_and_clone(
         )
         elapsed = time.time() - start
 
+        # Organize voice profiles by familyspace for tenant isolation
+        familyspace_profiles_dir = VOICE_PROFILES_DIR / auth_data['familyspace_id']
+        familyspace_profiles_dir.mkdir(exist_ok=True)
+
+        # Move profile to familyspace directory if it's not already there
+        familyspace_profile_path = familyspace_profiles_dir / f"{safe_name}.pt"
+        if profile_path.exists() and profile_path != familyspace_profile_path:
+            profile_path.rename(familyspace_profile_path)
+            profile_path = familyspace_profile_path
+
         # Get the design audio ID for preview
         design_audio_id = Path(design_audio_path).stem.replace("design_", "")
         
@@ -739,6 +749,7 @@ async def design_and_clone(
             "designAudioUrl": f"/api/tts/audio/design_{design_audio_id}",
             "processingTime": round(elapsed, 2),
             "instruct": req.instruct,
+            "familyspaceId": auth_data['familyspace_id'],
         }
     except Exception as e:
         logger.error(f"Design-and-clone failed: {e}")

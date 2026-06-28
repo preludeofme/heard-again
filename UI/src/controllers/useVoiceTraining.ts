@@ -546,19 +546,17 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
         isTraining: false,
       }))
 
-      // Store design audio as the sample if the API returned one
-      const persistedModelId = result.profileId || result.dbProfileId
-      const designAudioUrl = result.designAudioUrl as string | undefined
-      if (persistedModelId && designAudioUrl) {
-        fetch(`/api/voice/profiles/${persistedModelId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken },
-          credentials: 'include',
-          body: JSON.stringify({ sampleAudioUrl: designAudioUrl }),
-        }).catch(() => undefined)
+      // The API handler now creates the Prisma record and generates a true
+      // cloned voice sample automatically. sampleAudioUrl is set on the
+      // profile in the API — no need for a separate PUT call.
+      if (!result.sampleGenerated) {
+        enqueueSnackbar(
+          `Voice "${profileName}" saved, but sample generation is pending. Try playing the voice in the listening room.`,
+          { variant: 'warning' },
+        )
+      } else {
+        enqueueSnackbar(`Voice "${profileName}" designed and saved!`)
       }
-
-      enqueueSnackbar(`Voice "${profileName}" designed and saved!`)
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to design voice'
       setState(prev => ({ ...prev, isTraining: false }))

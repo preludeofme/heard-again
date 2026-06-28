@@ -5,32 +5,33 @@ import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-h
 import { withMFAProtection, SENSITIVE_OPERATIONS } from '@/lib/security/mfa'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
 import { getTTSProvider } from '@/lib/tts'
-import { createCloudStorageService, storageService as localStorageService } from '@/services/StorageService'
-
-// Use cloud (R2) storage when environment is configured, fall back to local
-const storageService = process.env.R2_ENDPOINT && process.env.R2_ACCESS_KEY_ID && process.env.R2_SECRET_ACCESS_KEY && (process.env.R2_BUCKET_NAME || process.env.R2_BUCKET)
-  ? createCloudStorageService('R2')
-  : localStorageService
+import { storageService } from '@/services/StorageService'
 
 const SAMPLE_TEXT = 'Hello, this is a sample of my digital voice. Thank you for preserving my story.'
 
 async function generateVoiceSample(
   profileId: string,
-  externalId: string,
+  ttsProfileName: string,
   familyspaceId: string,
   userId: string
-): Promise<void> {
+): Promise<{ assetId: string; url: string }> {
   const ttsProvider = getTTSProvider()
+
+  // Step 1: Synthesise a sample using the cloned voice profile (the .pt file
+  // on the TTS service). This produces audio from the actual cloned voice,
+  // not from the design reference clip.
   const ttsData = await ttsProvider.synthesizeBatch(
-    externalId,
+    ttsProfileName,
     SAMPLE_TEXT,
     familyspaceId,
     null,
     async () => {}
   )
 
+  // Step 2: Download the raw audio buffer from TTS
   const audioBuffer = await ttsProvider.downloadAudio(ttsData.audioId, familyspaceId)
 
+  // Step 3: Save to storage (local filesystem or R2)
   const stored = await storageService.saveAudio(familyspaceId, ttsData.audioId, audioBuffer, {
     mimeType: 'audio/wav',
     extension: 'wav',
@@ -38,6 +39,7 @@ async function generateVoiceSample(
 
   const fileName = ttsData.audioId.split('/').pop() ?? `${ttsData.audioId}.wav`
 
+  // Step 4: Create Prisma Asset record
   const asset = await prisma.asset.create({
     data: {
       familyspaceId,
@@ -61,12 +63,16 @@ async function generateVoiceSample(
     select: { id: true },
   })
 
+  // Step 5: Update VoiceProfile with sample URL pointing to the Asset API.
+  // Use /api/assets/serve which handles both local and cloud storage.
+  const sampleUrl = `/api/assets/serve/${asset.id}`
   await prisma.voiceProfile.update({
     where: { id: profileId },
-    data: { sampleAudioUrl: `/api/assets/${asset.id}/download` },
+    data: { sampleAudioUrl: sampleUrl },
   })
 
   logger.info('[API] train: sample audio generated', { profileId, assetId: asset.id })
+  return { assetId: asset.id, url: sampleUrl }
 }
 
 async function trainVoiceHandler(req: NextApiRequest, res: NextApiResponse) {
@@ -123,12 +129,9 @@ async function trainVoiceHandler(req: NextApiRequest, res: NextApiResponse) {
 
   const ttsProvider = getTTSProvider()
 
-  // On RunPod, upload_reference stores the audio at voice-profiles/{familyspaceId}/{fileId}/.
-  // synthesize_batch looks it up by profileName matching that same fileId.
-  // On REST/local, we call createVoiceProfile() below to generate the .pt file,
-  // then use the sanitized profileId for synthesize_batch.
   const profileName = modelName || `voice_${Date.now()}`
 
+  // ── Step A: Create Prisma VoiceProfile record ────────────────────────────
   const profile = await prisma.voiceProfile.create({
     data: {
       familyspaceId: user.familyspaceId,
@@ -147,8 +150,7 @@ async function trainVoiceHandler(req: NextApiRequest, res: NextApiResponse) {
     },
   })
 
-  // Create the .pt voice profile on the TTS service (REST path only).
-  // RunPod handles this internally during upload_reference.
+  // ── Step B: Create the .pt voice profile on the TTS service ─────────────
   let ttsProfileName = ttsFileId
   if (ttsProvider.createVoiceProfile) {
     try {
@@ -160,6 +162,8 @@ async function trainVoiceHandler(req: NextApiRequest, res: NextApiResponse) {
       ttsProfileName = profileId
       logger.info('[API] train: .pt voice profile created', { profileId, ttsFileId })
     } catch (err) {
+      // Clean up the prisma record if TTS fails
+      await prisma.voiceProfile.delete({ where: { id: profile.id } }).catch(() => {})
       logger.error('[API] train: failed to create .pt voice profile', { ttsFileId, err })
       throw err
     }
@@ -167,9 +171,18 @@ async function trainVoiceHandler(req: NextApiRequest, res: NextApiResponse) {
 
   logger.info('[API] train: voice profile created', { profileId: profile.id, ttsFileId, assetId: asset.id })
 
-  generateVoiceSample(profile.id, ttsProfileName, user.familyspaceId, user.id).catch((err) => {
-    logger.warn('[API] train: background sample generation failed', { profileId: profile.id, err })
-  })
+  // ── Step C: Generate voice sample synchronously ─────────────────────────
+  let sampleUrl: string | null = null
+  try {
+    const result = await generateVoiceSample(profile.id, ttsProfileName, user.familyspaceId, user.id)
+    sampleUrl = result.url
+    logger.info('[API] train: sample generated', { profileId: profile.id })
+  } catch (err) {
+    // Sample generation is critical but non-blocking — the profile was
+    // created successfully. Log and continue so the user doesn't lose
+    // their voice profile on a transient TTS issue.
+    logger.warn('[API] train: sample generation failed (non-fatal)', { profileId: profile.id, err })
+  }
 
   return successResponse(res, {
     jobId: ttsFileId,
@@ -177,6 +190,8 @@ async function trainVoiceHandler(req: NextApiRequest, res: NextApiResponse) {
     dbProfileId: profile.id,
     ttsProfileId: ttsFileId,
     status: 'completed',
+    sampleAudioUrl: sampleUrl,
+    sampleGenerated: sampleUrl !== null,
   })
 }
 
