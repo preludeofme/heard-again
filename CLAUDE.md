@@ -98,7 +98,7 @@ Key patterns:
 - `SelectedFamilyMemberContext` — central context driving which family member's data loads across all components
 - `UI/src/pages/api/` — all API routes; thin handlers delegating to services
 - `UI/src/lib/security/` — CSRF, rate limiting, file validation, MFA, security headers (all security primitives live here)
-- `UI/src/lib/storage/` — provider-based storage abstraction (local/S3/GCP, swapped via env)
+- `UI/src/lib/storage/` — provider-based storage abstraction (local/S3/R2, swapped via env)
 - `UI/src/lib/file-optimizer/` — per-type (audio/image/video/document) optimization pipeline before upload
 - NextAuth with custom session handler in `UI/src/lib/auth.ts` and `UI/src/lib/session-handler.ts`
 - Middleware (`UI/src/middleware.ts`) handles auth guard, rate limiting, and security header injection

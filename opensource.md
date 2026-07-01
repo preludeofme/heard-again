@@ -45,7 +45,7 @@ This document outlines the requirements and action items needed to transition **
 - [ ] **Deployment Guide**: Comprehensive guide for:
     - [ ] Bare metal / VPS setup.
     - [ ] Docker Compose (Self-hosted).
-    - [ ] Cloud (GCP/AWS/Azure).
+    - [ ] Cloud (AWS/Azure).
 - [ ] **API Documentation**: OpenAPI/Swagger specs for TTS and Chat services.
 
 ### 🤝 Contribution Guidelines

@@ -77,3 +77,13 @@ UI/tsconfig.tsbuildinfo
 
 .trigger
 UI/tsconfig.tsbuildinfo
+
+# Next.js auto-generated types (build artifact)
+UI/next-env.d.ts
+
+# Hermes agent artifacts
+.hermes/
+.memory/
+
+# Deep code review reports (ephemeral)
+deep-review-report*.md

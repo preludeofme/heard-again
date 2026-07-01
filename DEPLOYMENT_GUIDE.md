@@ -1,6 +1,6 @@
 # Production Deployment Guide
 
-Follow these steps to deploy a new change to the production environment (GCP).
+Follow these steps to deploy a new change to the production environment (Versail).
 
 ## 1. Verify (Pre-Flight)
 Run the automated quality gate to ensure the codebase is stable and builds correctly:
@@ -10,22 +10,22 @@ Run the automated quality gate to ensure the codebase is stable and builds corre
 *Note: This checks linting, types, unit tests, and production builds for all services.*
 
 ## 2. Deploy
-Trigger the GCP Cloud Build pipeline to build images and update services:
+Push to the production branch — the Versail platform handles the build and deployment automatically:
 ```bash
-gcloud builds submit --config cloudbuild.yaml \
-  --substitutions=_PROJECT_ID=heard-again,_REGION=us-central1,_ENV=prod
+git push origin main
 ```
+
 **Automated Actions:**
 - Builds Docker images for **UI**, **Worker**, and **TTS**.
 - Executes Prisma **database migrations**.
-- Deploys UI/Chat to **Cloud Run**.
-- Deploys TTS/Ollama/ChromaDB to **GKE**.
+- Deploys all services to the Versail infrastructure.
 
 ## 3. Validate
 Confirm all services are healthy by checking their endpoints:
 - **UI:** `https://heardagain.com/api/instance/health`
-- **Chat:** `https://[chat-url]/api/health`
-- **GKE Pods:** `kubectl get pods -n heard-again`
+- **TTS:** Check the RunPod endpoint health
+- **Background Jobs:** Trigger.dev dashboard
 
 ---
-*For detailed infrastructure setup or PCF-specific notes, refer to `GCP_DEPLOYMENT_PLAN.md` or `PCF_DEPLOYMENT.md`.*
+
+*For detailed infrastructure setup, refer to the project README.*
