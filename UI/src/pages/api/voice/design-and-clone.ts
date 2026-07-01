@@ -1,13 +1,15 @@
 import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { ttsRequest } from '@/lib/tts-client'
-import { getAuthUserWithFamilyspace } from '@/lib/auth-helpers'
+import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 import { prisma } from '@/lib/prisma'
 import { generateVoiceSample } from '@/lib/voice/generate-voice-sample'
 import { apiHandler, Errors } from '@/lib/api-helpers'
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   const user = await getAuthUserWithFamilyspace(req, res)
+  // Require EDITOR+ role — this also enforces MFA for OWNERs
+  await requireFamilyspaceRole(user.id, user.familyspaceId, 'EDITOR')
   const { refText, instruct, profileName, language = 'English' } = req.body
 
   if (!refText || !instruct || !profileName) {
