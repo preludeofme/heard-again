@@ -73,6 +73,33 @@ export async function getAuthUserWithFamilyspace(
  */
 const roleHierarchy = ['VIEWER', 'LEGACY', 'EDITOR', 'ADMIN', 'OWNER'] as const
 
+/**
+ * Require the user to have a global ADMIN role.
+ * Call this in admin-only API routes before processing the request.
+ * Throws AppError(401) if not authenticated, AppError(403) if not admin.
+ */
+export async function requireAdmin(
+  req: NextApiRequest,
+  res: NextApiResponse
+): Promise<AuthenticatedUser> {
+  const session = await getServerSession(req, res, authOptions)
+
+  if (!session?.user?.id) {
+    throw Errors.unauthorized()
+  }
+
+  if (session.user.userRole !== 'ADMIN') {
+    throw Errors.forbidden('Admin access required')
+  }
+
+  return {
+    id: session.user.id,
+    email: session.user.email || '',
+    displayName: session.user.displayName || null,
+    defaultFamilyspaceId: session.user.defaultFamilyspaceId || null,
+  }
+}
+
 export async function requireFamilyspaceRole(
   userId: string,
   familyspaceId: string,
@@ -97,9 +124,8 @@ export async function requireFamilyspaceRole(
 
   // ✅ SECURITY REQUIREMENT: Require MFA for OWNER role (S11)
   if (membership.role === 'OWNER' && !membership.user.mfaEnabled) {
-    // For now, only log a warning instead of blocking access so the owner can actually reach the settings page to enable it.
     logger.warn(`Owner ${userId} does not have MFA enabled in familyspace ${familyspaceId}`)
-    // throw Errors.forbidden('MFA is required for familyspace owners. Please enable MFA in your profile settings.')
+    throw Errors.forbidden('MFA is required for familyspace owners. Please enable MFA in your profile settings.')
   }
 
   const userRoleIndex = roleHierarchy.indexOf(membership.role as any)

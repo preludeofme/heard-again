@@ -5,75 +5,7 @@ import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-h
 import { withMFAProtection, SENSITIVE_OPERATIONS } from '@/lib/security/mfa'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
 import { getTTSProvider } from '@/lib/tts'
-import { storageService } from '@/services/StorageService'
-
-const SAMPLE_TEXT = 'Hello, this is a sample of my digital voice. Thank you for preserving my story.'
-
-async function generateVoiceSample(
-  profileId: string,
-  ttsProfileName: string,
-  familyspaceId: string,
-  userId: string
-): Promise<{ assetId: string; url: string }> {
-  const ttsProvider = getTTSProvider()
-
-  // Step 1: Synthesise a sample using the cloned voice profile (the .pt file
-  // on the TTS service). This produces audio from the actual cloned voice,
-  // not from the design reference clip.
-  const ttsData = await ttsProvider.synthesizeBatch(
-    ttsProfileName,
-    SAMPLE_TEXT,
-    familyspaceId,
-    null,
-    async () => {}
-  )
-
-  // Step 2: Download the raw audio buffer from TTS
-  const audioBuffer = await ttsProvider.downloadAudio(ttsData.audioId, familyspaceId)
-
-  // Step 3: Save to storage (local filesystem or R2)
-  const stored = await storageService.saveAudio(familyspaceId, ttsData.audioId, audioBuffer, {
-    mimeType: 'audio/wav',
-    extension: 'wav',
-  })
-
-  const fileName = ttsData.audioId.split('/').pop() ?? `${ttsData.audioId}.wav`
-
-  // Step 4: Create Prisma Asset record
-  const asset = await prisma.asset.create({
-    data: {
-      familyspaceId,
-      filename: fileName,
-      originalName: fileName,
-      mimeType: 'audio/wav',
-      sizeBytes: BigInt(audioBuffer.byteLength),
-      storageType: 'LOCAL',
-      storagePath: stored.path,
-      assetType: 'GENERATED_AUDIO',
-      isAISynthesized: true,
-      processingStatus: 'COMPLETED',
-      uploadedById: userId,
-      durationSeconds: ttsData.duration ?? null,
-      metadata: {
-        source: 'voice.profile.sample',
-        ttsAudioId: ttsData.audioId,
-        voiceProfileId: profileId,
-      },
-    },
-    select: { id: true },
-  })
-
-  // Step 5: Update VoiceProfile with sample URL pointing to the Asset API.
-  // Use /api/assets/serve which handles both local and cloud storage.
-  const sampleUrl = `/api/assets/serve/${asset.id}`
-  await prisma.voiceProfile.update({
-    where: { id: profileId },
-    data: { sampleAudioUrl: sampleUrl },
-  })
-
-  logger.info('[API] train: sample audio generated', { profileId, assetId: asset.id })
-  return { assetId: asset.id, url: sampleUrl }
-}
+import { generateVoiceSample } from '@/lib/voice/generate-voice-sample'
 
 async function trainVoiceHandler(req: NextApiRequest, res: NextApiResponse) {
   const user = await getAuthUserWithFamilyspace(req, res)

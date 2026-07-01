@@ -13,6 +13,7 @@ declare module 'next-auth' {
       defaultFamilyspaceId?: string | null
       linkedPersonId?: string | null
       role?: string | null
+      userRole?: string | null
     }
   }
 
@@ -32,5 +33,6 @@ declare module 'next-auth/jwt' {
     defaultFamilyspaceId?: string | null
     linkedPersonId?: string | null
     role?: string | null
+    userRole?: string | null
   }
 }

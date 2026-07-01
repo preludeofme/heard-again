@@ -22,10 +22,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const { profileName } = req.query
     const baseDir = process.env.VOICE_TRAINING_DATA_DIR || './tts-service/training_data'
+    const resolvedBase = path.resolve(baseDir)
 
     // If profileName specified, return details for that training data
     if (profileName && typeof profileName === 'string') {
-      const trainingDir = path.join(baseDir, profileName)
+      // 🔒 Path traversal protection: reject names with directory separators
+      if (profileName.includes('/') || profileName.includes('\\') || profileName === '..') {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid profile name',
+        })
+      }
+      const trainingDir = path.join(resolvedBase, profileName)
+      // 🔒 Ensure the resolved path stays within the base directory
+      if (!trainingDir.startsWith(resolvedBase + path.sep)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid profile name',
+        })
+      }
       const listPath = path.join(trainingDir, 'train.list')
       const metadataPath = path.join(trainingDir, 'metadata.json')
 

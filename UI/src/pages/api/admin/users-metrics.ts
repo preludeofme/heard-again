@@ -1,6 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/lib/auth'
+import { requireAdmin } from '@/lib/auth-helpers'
 import prisma from '@/lib/prisma'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -8,10 +7,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  const session = await getServerSession(req, res, authOptions)
-  if (!session?.user?.id) {
-    return res.status(401).json({ error: 'Unauthorized' })
-  }
+  // Require ADMIN role — only admins can view user metrics
+  await requireAdmin(req, res)
 
   const [total, users] = await Promise.all([
     prisma.user.count(),

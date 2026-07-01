@@ -79,6 +79,8 @@ export const authOptions: NextAuthOptions = {
         token.avatarUrl = (user as any).avatarUrl || (user as any).image || null
         token.defaultFamilyspaceId = (user as any).defaultFamilyspaceId || null
         token.linkedPersonId = (user as any).linkedPersonId || null
+        // Persist the user's global role (USER/ADMIN) for admin access control
+        token.userRole = (user as any).role || 'USER'
       }
 
       // On session update (e.g. after switching familyspace), always refresh from DB
@@ -136,6 +138,7 @@ export const authOptions: NextAuthOptions = {
         session.user.defaultFamilyspaceId = (token.defaultFamilyspaceId as string) || null
         session.user.linkedPersonId = (token.linkedPersonId as string) || null
         session.user.role = (token.role as string) || 'VIEWER'
+        session.user.userRole = (token.userRole as string) || 'USER'
       }
       return session
     },

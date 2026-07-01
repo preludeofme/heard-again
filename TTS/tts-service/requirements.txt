@@ -13,7 +13,6 @@ numpy>=1.26.0,<2.0.0
 # transformers/accelerate pinned to match qwen_tts==0.1.1 requirements.
 transformers==4.57.3
 accelerate==1.12.0
-accelerate>=0.30.0
 pydantic>=2.0.0
 aiofiles==24.1.0
 PyJWT>=2.8.0

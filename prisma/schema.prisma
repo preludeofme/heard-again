@@ -41,6 +41,7 @@ model User {
   mfaEnabled                Boolean               @default(false)
   mfaSecret                 String?
   linkedPersonId            String?               @unique
+  role                      UserRole              @default(USER)
   uploadedAssets            Asset[]
   collections               Collection[]
   collectionStories       CollectionStory[]
@@ -991,6 +992,11 @@ enum FamilyspaceStatus {
   ACTIVE
   SUSPENDED
   CANCELLED
+}
+
+enum UserRole {
+  USER
+  ADMIN
 }
 
 enum FamilyspaceRole {
