@@ -28,10 +28,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       success: true,
       profileId: data.profileId,
       profilePath: data.profilePath,
-      designAudioUrl: `/api/voice/audio/${data.designAudioUrl?.split('/').pop()}`,
+      designAudioUrl: null, // Deprecated: use /api/assets/serve endpoint after profile created
       processingTime: data.processingTime,
       instruct: data.instruct,
       blendMode: data.blendMode,
+      familyspaceId: data.familyspaceId || user.familyspaceId,
     })
   } catch (error: any) {
     logger.error('[API] Blend-voice error:', error.message)

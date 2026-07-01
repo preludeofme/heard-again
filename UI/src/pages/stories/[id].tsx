@@ -93,9 +93,6 @@ export default function StoryDetailPage() {
   const router = useRouter()
   const { id } = router.query
 
-  // Pre-warm TTS container when entering story page (narration feature)
-  useTTSWarmup()
-
   const [story, setStory] = useState<StoryDetail | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -112,6 +109,17 @@ export default function StoryDetailPage() {
   const [narratorDialogOpen, setNarratorDialogOpen] = useState(false)
   const [narratorName, setNarratorName] = useState('')
   const [textSource, setTextSource] = useState<'original' | 'narrated'>('narrated')
+
+  // Pre-warm TTS with medium intent after story loads
+  // Only warm if no approved narration exists (user likely to generate)
+  useEffect(() => {
+    if (!isLoading && story && (story.narrationStatus !== 'APPROVED' || !story.narratedContent)) {
+      // Warm when user is on story page but hasn't generated narration yet
+      setTimeout(() => {
+        fetch('/api/voice/warmup', { method: 'POST' }).catch(() => {})
+      }, 500)
+    }
+  }, [isLoading, story])
 
   const fetchStory = useCallback(async () => {
     if (!id) return

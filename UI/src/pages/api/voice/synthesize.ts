@@ -4,6 +4,8 @@ import { apiHandler, successResponse, errorResponse } from '@/lib/api-helpers'
 import { getAuthUserWithFamilyspace } from '@/lib/auth-helpers'
 import { voiceService } from '@/services'
 import { AppError } from '@/lib/api-helpers'
+import { checkQuota } from '@/lib/entitlements'
+
 export default apiHandler({
   POST: async (req: NextApiRequest, res: NextApiResponse) => {
     const user = await getAuthUserWithFamilyspace(req, res)
@@ -11,6 +13,17 @@ export default apiHandler({
 
     if (!modelId || !text) {
       return errorResponse(res, 'modelId and text are required', 400, 'VALIDATION_ERROR')
+    }
+
+    // Check generation quota before synthesizing
+    const quota = await checkQuota(user.familyspaceId, 'generation')
+    if (!quota.allowed) {
+      return res.status(402).json({
+        success: false,
+        error: quota.reason,
+        code: 'QUOTA_EXCEEDED',
+        upgradeUrl: quota.upgradeUrl,
+      })
     }
 
     try {

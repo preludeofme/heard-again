@@ -1,18 +1,6 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react'
-import {
-  Box,
-  Typography,
-  Chip,
-  CircularProgress,
-  MenuItem,
-  Select,
-  FormControl,
-  InputLabel,
-  Button,
-  Alert,
-  LinearProgress,
-} from '@mui/material'
+import { Box, Typography, Chip, CircularProgress, MenuItem, Select, FormControl, InputLabel, Button, Alert, LinearProgress, } from '@mui/material'
 import {
   PlayArrow as PlayIcon,
   Download as DownloadIcon,
@@ -24,6 +12,7 @@ import {
 import { WaveformPlayer } from '@/components/audio/WaveformPlayer'
 import { fetchWithCSRF } from '@/lib/api-client'
 import { useRealtimeRun } from '@trigger.dev/react-hooks'
+import { UsageBar } from '@/components/billing/EntitlementGates'
 import type { NarrationTaskProgress } from '@/trigger/narration-task'
 
 interface VoiceProfileOption {
@@ -551,6 +540,10 @@ export function StoryNarrationPlayer({
           ? 'Reading the original story text.'
           : 'Reading the approved first-person narration.'}
       </Typography>
+
+      <Box sx={{ mt: 1 }}>
+        <UsageBar resource="generation" showLabel={true} size="small" />
+      </Box>
     </Box>
   )
 }

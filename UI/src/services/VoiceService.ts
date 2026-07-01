@@ -11,6 +11,7 @@ import { assetRepository, AssetRepository } from '@/server/repositories/AssetRep
 import { prisma } from '@/lib/prisma'
 import { consentTokenService } from '@/server/services/voice/ConsentTokenService'
 import { getTTSProvider } from '@/lib/tts'
+import { incrementGenerationMinutes } from '@/lib/entitlements'
 
 export interface SynthesizeRequest {
   familyspaceId: string
@@ -336,6 +337,15 @@ export class VoiceService {
         language,
         resolvedLanguage
       )
+
+      // Track usage: increment generation minutes for billing/quota
+      // Skip tracking for warmup jobs (modelId === '__warmup__')
+      if (ttsData.duration && modelId !== '__warmup__') {
+        await incrementGenerationMinutes(familyspaceId, ttsData.duration).catch((err) => {
+          console.warn('[VoiceService] Failed to increment generation minutes:', err)
+          // Non-fatal — don't break the synthesis result
+        })
+      }
 
       return {
         jobId,

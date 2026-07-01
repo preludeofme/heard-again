@@ -30,7 +30,13 @@ function sanitizeStoryContent(content: string): string {
   // Lazy require avoids a top-level static import of jsdom (a heavy/un-bundleable dep).
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const dompurify = require('isomorphic-dompurify') as { sanitize: (html: string, opts: Record<string, unknown>) => string }
-  return dompurify.sanitize(content, { ALLOWED_TAGS: ALLOWED_STORY_TAGS, ALLOWED_ATTR: ['href', 'src', 'alt', 'title'] })
+  return dompurify.sanitize(content, {
+    ALLOWED_TAGS: ALLOWED_STORY_TAGS,
+    ALLOWED_ATTR: ['href', 'src', 'alt', 'title'],
+    // 🔒 Restrict URI schemes to safe protocols only (defense-in-depth beyond
+    // DOMPurify's defaults, which already block javascript: URIs)
+    ALLOWED_URI_REGEXP: /^(?:(?:https?|ftp|mailto):|[^a-z]|[a-z+.-]+(?:[^a-z+.-]|$))/i,
+  })
 }
 
 const STORY_INCLUDE: StoryInclude = {

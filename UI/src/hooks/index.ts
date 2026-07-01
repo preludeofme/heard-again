@@ -1,5 +1,6 @@
 export { useApi } from './useApi'
 export { useDebounce } from './useDebounce'
+export { useEntitlements } from './useEntitlements'
 export { usePagination } from './usePagination'
 export { useToggle } from './useToggle'
 export { useTTSWarmup } from './useTTSWarmup'

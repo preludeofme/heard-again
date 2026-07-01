@@ -47,21 +47,34 @@ function pingTTSWarmup(): void {
 
 /**
  * Hook: pre-warms the TTS container when a component mounts.
- * Use on pages/components that are entry points to TTS features
- * (Voice Lab, story narration, voice signature on profile).
+ * Use on pages/components that are entry points to TTS features:
+ * - Voice Lab (voice cloning, profile creation)
+ * - Story pages without existing narration
+ * - Profile pages with voice signature CTAs
+ *
+ * Smart intent triggers:
+ * 1. Voice Lab: instant warm (high intent)
+ * 2. Story page: warm if no narration yet (medium intent)
+ * 3. Profile: warm on scroll to voice section (low intent)
  *
  * Debounced to once per 5 minutes across the entire session —
  * rapid navigation won't trigger redundant warmup calls.
  */
-export function useTTSWarmup(enabled = true): void {
+export function useTTSWarmup(enabled = true, intent: 'high' | 'medium' | 'low' = 'medium'): void {
   const firedRef = useRef(false)
 
   useEffect(() => {
     if (!enabled || firedRef.current) return
     firedRef.current = true
 
-    // Small delay so the page renders first, then fire warmup
-    const timer = setTimeout(() => pingTTSWarmup(), 300)
+    // Delay based on intent level:
+    // - high: immediate (200ms) — user is actively engaging with TTS
+    // - medium: moderate (500ms) — user might use TTS
+    // - low: delayed (1500ms) — only warm if user lingers on page
+    const delays = { high: 200, medium: 500, low: 1500 }
+    const delay = delays[intent]
+
+    const timer = setTimeout(() => pingTTSWarmup(), delay)
     return () => clearTimeout(timer)
-  }, [enabled])
+  }, [enabled, intent])
 }

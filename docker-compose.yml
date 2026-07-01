@@ -99,10 +99,8 @@ services:
       - NODE_ENV=production
       - AUDIO_GENERATION_ENABLED=false
       - NARRATION_WORKER_ENABLED=false
-      - STORAGE_MODE=gcs
-      - STORAGE_EMULATOR_HOST=http://fake-gcs:4443
-      - GCS_BUCKET_NAME=local-dev-bucket
-      - GOOGLE_CLOUD_PROJECT=local-dev
+      - STORAGE_MODE=local
+      - UPLOAD_DIR=/app/uploads
     networks:
       - internal
     depends_on:
@@ -334,8 +332,6 @@ services:
       - TTS_SERVICE_TOKEN=${TTS_SERVICE_TOKEN:?TTS_SERVICE_TOKEN must be set}
       - STORAGE_MODE=${STORAGE_MODE:-local}
       - UPLOAD_DIR=/app/uploads
-      - GCP_BUCKET_NAME=${GCP_BUCKET_NAME}
-      - GCP_PROJECT_ID=${GCP_PROJECT_ID}
       - NARRATION_WORKER_ENABLED=true
       - NARRATION_WORKER_CONCURRENCY=${NARRATION_WORKER_CONCURRENCY:-1}
     networks:
@@ -359,26 +355,6 @@ services:
       - ALL
 
   # Fake GCS server for local GCS emulation
-  fake-gcs:
-    image: fsouza/fake-gcs-server
-    ports:
-      - "4443:4443"
-    command:
-      - "-scheme"
-      - "http"
-      - "-port"
-      - "4443"
-      - "-external-url"
-      - "http://localhost:4443"
-    volumes:
-      - fake-gcs-data:/data
-    networks:
-      - internal
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:4443/storage/v1/b"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
 
 networks:
   internal:
@@ -395,4 +371,3 @@ volumes:
   clamav_db:
   chroma_data:
   ollama_data:
-  fake-gcs-data:

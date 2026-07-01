@@ -256,7 +256,7 @@ async def load_model():
         model_manager.load_model()
         return {"success": True, "message": "Base model loaded successfully"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail='Internal server error')
 
 
 @app.post("/api/tts/load-design-model")
@@ -266,7 +266,7 @@ async def load_design_model():
         model_manager.load_design_model()
         return {"success": True, "message": "VoiceDesign model loaded successfully"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail='Internal server error')
 
 
 # ---------------------------------------------------------------------------
@@ -523,7 +523,7 @@ async def create_voice_profile(
     except Exception as e:
         await log_auth_event('VOICE_PROFILE_ERROR', auth_data, {'error': str(e)})
         logger.error(f"Voice profile creation failed: {e}", extra={'user_context': user_context})
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail='Internal server error')
 
 
 @app.get("/api/tts/voice-profiles")
@@ -680,7 +680,7 @@ async def design_voice(
             'instruct': req.instruct,
             'error': str(e)
         })
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail='Internal server error')
 
 
 class DesignAndCloneRequest(BaseModel):
@@ -781,7 +781,7 @@ async def design_and_clone(
             'instruct': req.instruct,
             'error': str(e)
         })
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail='Internal server error')
 
 
 # ---------------------------------------------------------------------------
@@ -914,7 +914,7 @@ async def blend_voice(
             'profileName': safe_name,
             'error': str(e)
         })
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail='Internal server error')
 
 
 # ---------------------------------------------------------------------------
@@ -957,6 +957,18 @@ async def synthesize_speech(
     # Verify voice profile belongs to user's familyspace
     # Use explicit familyspaceId from request if provided, otherwise fall back to auth
     familyspace_id = req.familyspaceId or auth_data['familyspace_id']
+
+    # 🔒 Tenant isolation: if the client supplied a familyspaceId, verify it matches the
+    # authenticated user's familyspace. Prevents cross-tenant access via body override.
+    if req.familyspaceId and req.familyspaceId != auth_data['familyspace_id']:
+        await log_auth_event('TENANT_VIOLATION', auth_data, {
+            'requested_familyspace_id': req.familyspaceId,
+            'profile_id': req.profileId,
+        })
+        raise HTTPException(
+            status_code=403,
+            detail='Tenant access denied: familyspaceId mismatch'
+        )
 
     # R1 - Validate consent token
     if not req.consentToken:
@@ -1068,7 +1080,7 @@ async def synthesize_speech(
         }
     except Exception as e:
         logger.error(f"Synthesis failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail='Internal server error')
 
 
 class SynthesizeStreamRequest(BaseModel):
@@ -1106,6 +1118,17 @@ async def synthesize_speech_stream(
         )
 
     familyspace_id = req.familyspaceId or auth_data['familyspace_id']
+
+    # 🔒 Tenant isolation: if the client supplied a familyspaceId, verify it matches
+    if req.familyspaceId and req.familyspaceId != auth_data['familyspace_id']:
+        await log_auth_event('TENANT_VIOLATION', auth_data, {
+            'requested_familyspace_id': req.familyspaceId,
+            'profile_id': req.profileId,
+        })
+        raise HTTPException(
+            status_code=403,
+            detail='Tenant access denied: familyspaceId mismatch'
+        )
 
     # R1 - Validate consent token
     if not req.consentToken:
@@ -1288,7 +1311,7 @@ async def synthesize_direct(
         }
     except Exception as e:
         logger.error(f"Direct synthesis failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail='Internal server error')
 
 
 # ---------------------------------------------------------------------------

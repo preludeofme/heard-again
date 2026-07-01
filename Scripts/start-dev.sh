@@ -356,8 +356,6 @@ cd "$MAIN_APP_DIR"
 # These fallbacks are local-dev only and do not override explicitly provided values.
 export ALLOWED_ORIGINS="${ALLOWED_ORIGINS:-}"
 export STAGING_URL="${STAGING_URL:-}"
-export GCP_BUCKET_NAME="${GCP_BUCKET_NAME:-}"
-export GCP_PROJECT_ID="${GCP_PROJECT_ID:-}"
 export CHROMA_CREDENTIALS="${CHROMA_CREDENTIALS:-dev:dev}"
 
 # Start PostgreSQL via compose (it has no port conflict with host processes)

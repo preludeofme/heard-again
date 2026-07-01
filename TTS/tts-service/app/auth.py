@@ -54,14 +54,17 @@ async def validate_token(
                     detail="X-Familyspace-Id header is required for service-to-service authentication"
                 )
             
-            return {
+            auth_data = {
                 'user_id': 'system-service',
                 'familyspace_id': familyspace_id,
                 'email': 'service@heardagain.internal',
-                'role': 'ADMIN', # Service token has admin privileges
+                'role': 'ADMIN',
                 'token': bearer_token,
                 'is_service_token': True
             }
+            # Populate request.state so rate limiter and middleware can read it
+            request.state.auth_data = auth_data
+            return auth_data
 
         # 2. Validate with NextAuth session endpoint (User session)
         try:
@@ -122,7 +125,7 @@ async def validate_token(
                 headers={"WWW-Authenticate": "Bearer"},
             )
         
-        return {
+        auth_data = {
             'user_id': user_id,
             'familyspace_id': familyspace_id,
             'email': email,
@@ -130,6 +133,9 @@ async def validate_token(
             'token': bearer_token,
             'is_service_token': False
         }
+        # Populate request.state so rate limiter and middleware can read it
+        request.state.auth_data = auth_data
+        return auth_data
         
     except HTTPException:
         raise
