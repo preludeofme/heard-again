@@ -561,6 +561,18 @@ export function LandingPage() {
                   Terms of Service
                 </Typography>
               </Link>
+              <Link href="/faq" style={{ textDecoration: 'none' }}>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: 'secondary.main',
+                    '&:hover': { color: 'primary.main' },
+                    transition: 'color 0.2s',
+                  }}
+                >
+                  FAQ
+                </Typography>
+              </Link>
               <Link href="/contact" style={{ textDecoration: 'none' }}>
                 <Typography
                   variant="body2"

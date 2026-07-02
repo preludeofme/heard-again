@@ -24,6 +24,7 @@ export function PublicHeader() {
 
   const navLinks = [
     { label: 'Pricing', href: '/#pricing' },
+    { label: 'FAQ', href: '/faq' },
     { label: 'Privacy', href: '/privacy' },
     { label: 'Terms of Service', href: '/terms' },
     { label: 'Sign In', href: '/login' },

@@ -412,6 +412,17 @@ export default function PrivacyPolicyPage() {
                   Terms of Service
                 </Typography>
               </Link>
+              <Link href="/faq" style={{ textDecoration: 'none' }}>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: 'secondary.main',
+                    '&:hover': { color: 'primary.main' },
+                  }}
+                >
+                  FAQ
+                </Typography>
+              </Link>
               <Link href="/contact" style={{ textDecoration: 'none' }}>
                 <Typography
                   variant="body2"

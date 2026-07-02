@@ -529,12 +529,19 @@ export default function TunnelSetup() {
       </Head>
       <Layout>
         <Container maxWidth="md" sx={{ py: 6 }}>
-          <Typography variant="h4" className="serif-font" sx={{ color: '#16334a', mb: 2 }}>
-            Cloudflare Tunnel Setup
-          </Typography>
-          <Typography variant="body1" sx={{ color: '#546669', mb: 4 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap', mb: 2 }}>
+            <Typography variant="h4" className="serif-font" sx={{ color: '#16334a', mb: 0 }}>
+              Cloudflare Tunnel Setup
+            </Typography>
+            <Chip label="Coming Soon / Beta Preview" color="warning" size="small" sx={{ fontWeight: 600 }} />
+          </Box>
+          <Typography variant="body1" sx={{ color: '#546669', mb: 3 }}>
             Securely expose your local Heard Again instance to the internet without opening firewall ports.
           </Typography>
+
+          <Alert severity="info" sx={{ mb: 4 }}>
+            <strong>Coming Soon:</strong> This feature is currently in Beta / Coming Soon. You can still proceed to configure, test, and verify your tunnel to ensure it works correctly before public release.
+          </Alert>
 
           {error && (
             <Alert severity="error" sx={{ mb: 4 }} onClose={() => setError(null)}>

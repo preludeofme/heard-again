@@ -300,7 +300,10 @@ export default function SelfHostingPage() {
                       </Box>
                     </ToggleButton>
                     <ToggleButton value="HYBRID" sx={{ flex: 1, py: 2 }}>
-                      <Box sx={{ textAlign: 'center' }}>
+                      <Box sx={{ textAlign: 'center', position: 'relative', width: '100%' }}>
+                        <Box sx={{ position: 'absolute', top: -10, right: 0 }}>
+                          <Chip label="Coming Soon" color="warning" size="small" sx={{ height: 18, fontSize: '0.65rem', fontWeight: 600 }} />
+                        </Box>
                         <Cloud sx={{ fontSize: 32, mb: 1, color: '#16334a' }} />
                         <Typography variant="body1" sx={{ fontWeight: 500 }}>Connected</Typography>
                         <Typography variant="caption" sx={{ color: '#999' }}>
@@ -439,13 +442,16 @@ export default function SelfHostingPage() {
             {/* Step 3: Configure Tunnel */}
             {activeStep === 2 && instanceStatus?.registered && !instanceStatus.tunnel?.enabled && (
               <Card sx={{ p: 4, borderRadius: 4 }}>
-                <Typography variant="h6" sx={{ color: '#16334a', fontWeight: 600, mb: 3 }}>
-                  3. Configure Cloud Tunnel (Optional)
-                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+                  <Typography variant="h6" sx={{ color: '#16334a', fontWeight: 600, mb: 0 }}>
+                    3. Configure Cloud Tunnel (Optional)
+                  </Typography>
+                  <Chip label="Coming Soon / Beta Preview" color="warning" size="small" sx={{ fontWeight: 600 }} />
+                </Box>
 
                 <Alert severity="info" sx={{ mb: 3 }}>
-                  Enable a secure tunnel to access your instance from anywhere via{' '}
-                  <strong>https://your-subdomain.heardagain.com</strong>
+                  <strong>Coming Soon:</strong> Enable a secure tunnel to access your instance from anywhere via{' '}
+                  <strong>https://your-subdomain.heardagain.com</strong>. You can test and configure it now to verify it connects successfully.
                 </Alert>
 
                 <Typography variant="body1" sx={{ color: '#546669', mb: 3 }}>
@@ -498,9 +504,14 @@ export default function SelfHostingPage() {
             {/* Step 4: Verify Connection / Tunnel Active */}
             {((activeStep === 3) || (instanceStatus?.tunnel?.enabled)) && (
               <Card sx={{ p: 4, borderRadius: 4 }}>
-                <Typography variant="h6" sx={{ color: '#16334a', fontWeight: 600, mb: 3 }}>
-                  {instanceStatus?.tunnel?.enabled ? 'Tunnel Configuration' : 'Setup Complete'}
-                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+                  <Typography variant="h6" sx={{ color: '#16334a', fontWeight: 600, mb: 0 }}>
+                    {instanceStatus?.tunnel?.enabled ? 'Tunnel Configuration' : 'Setup Complete'}
+                  </Typography>
+                  {instanceStatus?.tunnel?.enabled && (
+                    <Chip label="Coming Soon / Beta Preview" color="warning" size="small" sx={{ fontWeight: 600 }} />
+                  )}
+                </Box>
 
                 {instanceStatus?.tunnel?.enabled && tunnelConfig && (
                   <>
