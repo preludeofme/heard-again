@@ -170,7 +170,7 @@ export default function TermsOfLegacyPage() {
                   Terms of Service
                 </Typography>
               </Link>
-              <Link href="/faq" style={{ textDecoration: 'none' }}>
+              <Link href="/#faq" style={{ textDecoration: 'none' }}>
                 <Typography
                   variant="body2"
                   sx={{

@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import {
   Box,
   Typography,
@@ -8,12 +8,19 @@ import {
   Card,
   Avatar,
   useTheme,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Chip,
+  Divider,
+  Stack,
 } from '@mui/material'
 import {
   PlayCircle,
   Share,
   Favorite,
 } from '@mui/icons-material'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import Link from 'next/link'
 import { LandingPricingSection } from './LandingPricingSection'
 import { PublicHeader } from '../layout/PublicHeader'
@@ -399,6 +406,205 @@ export function LandingPage() {
 
       {/* Pricing Section */}
       <LandingPricingSection />
+
+      {/* What We Provide & FAQ Section */}
+      <Box
+        id="faq"
+        component="section"
+        sx={{
+          bgcolor: 'rgba(208, 227, 230, 0.2)',
+          py: 16,
+          px: { xs: 4, md: 8 },
+          borderTop: '1px solid',
+          borderColor: 'rgba(208, 227, 230, 0.5)',
+          borderBottom: '1px solid',
+          borderColor: 'rgba(208, 227, 230, 0.5)',
+        }}
+      >
+        <Container maxWidth="md">
+          {/* What We Provide Header */}
+          <Box sx={{ textAlign: 'center', mb: 8 }}>
+            <Typography
+              variant="overline"
+              sx={{
+                color: 'primary.main',
+                fontWeight: 700,
+                letterSpacing: '0.15em',
+                mb: 2,
+                display: 'block',
+              }}
+            >
+              OUR MISSION & FEATURES
+            </Typography>
+            <Typography
+              variant="h2"
+              sx={{
+                fontSize: { xs: '2.5rem', md: '3.5rem' },
+                color: 'primary.main',
+                mb: 3,
+                fontFamily: 'var(--font-newsreader), serif',
+              }}
+            >
+              What We Provide
+            </Typography>
+            <Typography
+              variant="body1"
+              sx={{
+                fontSize: '1.25rem',
+                color: 'secondary.main',
+                maxWidth: 700,
+                mx: 'auto',
+                lineHeight: 1.7,
+              }}
+            >
+              Heard Again is a comprehensive family story preservation suite. We provide tools to convert physical memories into a private digital library, ensuring your family legacy is protected, organized, and accessible to future generations.
+            </Typography>
+          </Box>
+
+          {/* Service Cards / Details */}
+          <Grid container spacing={4} sx={{ mb: 10 }}>
+            {[
+              {
+                icon: 'settings_voice',
+                title: 'Private Voice Lab',
+                description: 'Safely clone and preserve a loved one\'s voice from old audio recordings. The synthesized voice profile is private, securely stored, and used exclusively to narrate written family stories in their familiar voice with family consent.',
+              },
+              {
+                icon: 'auto_stories',
+                title: 'Interactive Family Scrapbook',
+                description: 'Create a rich digital history repository. Upload photos, scanned letters, personal documents, and audio tracks, link them to specific individuals, and view them on an interactive family timeline.',
+              },
+              {
+                icon: 'keyboard_voice',
+                title: 'Smart Transcription Pipeline',
+                description: 'Convert cassette tapes, home video soundtracks, and oral interviews into clean, searchable, and formatted text. Our private, isolated processing ensures no third party hears your audio.',
+              },
+              {
+                icon: 'groups',
+                title: 'Collaborative Memories',
+                description: 'Invite family members and old friends as contributors. Each person can safely add their own perspective, voice notes, and stories, forming a multi-dimensional portrait of family history.',
+              },
+              {
+                icon: 'security',
+                title: 'Absolute Privacy & Control',
+                description: 'Choose how your data is hosted. Securely cloud-host with our encrypted SaaS app, or self-host Heard Again on your own hardware using our open-source codebase for 100% data custody.',
+              },
+            ].map((service, index) => (
+              <Grid size={{ xs: 12, md: 6 }} key={index}>
+                <Card
+                  elevation={0}
+                  sx={{
+                    p: 4,
+                    height: '100%',
+                    borderRadius: 4,
+                    bgcolor: 'background.paper',
+                    border: '1px solid rgba(22, 51, 74, 0.05)',
+                    transition: 'all 0.3s ease',
+                    '&:hover': {
+                      boxShadow: '0 12px 30px rgba(28, 28, 25, 0.05)',
+                      transform: 'translateY(-2px)',
+                    },
+                  }}
+                >
+                  <Box sx={{ display: 'flex', gap: 3, alignItems: 'flex-start' }}>
+                    <Box
+                      sx={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: 2,
+                        bgcolor: 'rgba(22, 51, 74, 0.08)',
+                        color: 'primary.main',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                      }}
+                    >
+                      <MaterialSymbol icon={service.icon} sx={{ fontSize: 24 }} />
+                    </Box>
+                    <Box>
+                      <Typography variant="h6" sx={{ color: 'primary.main', fontWeight: 600, mb: 1 }}>
+                        {service.title}
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: 'secondary.main', lineHeight: 1.6 }}>
+                        {service.description}
+                      </Typography>
+                    </Box>
+                  </Box>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+
+          <Divider sx={{ mb: 10, borderColor: 'rgba(22, 51, 74, 0.1)' }} />
+
+          {/* FAQ Section */}
+          <Box>
+            <Typography
+              variant="h3"
+              sx={{
+                fontSize: { xs: '2rem', md: '2.5rem' },
+                color: 'primary.main',
+                mb: 6,
+                textAlign: 'center',
+                fontFamily: 'var(--font-newsreader), serif',
+              }}
+            >
+              Frequently Asked Questions
+            </Typography>
+
+            <Stack spacing={2}>
+              {[
+                {
+                  q: 'What is Heard Again and what is it NOT?',
+                  a: 'Heard Again is a secure, private legacy preservation vault. It is NOT a public social media network or marketing platform. There are no public feeds, "likes," or open sharing. Your space is entirely private and restricted to the family members you explicitly invite. We do not sell user data, monetize relationship details, or use ads.',
+                },
+                {
+                  q: 'How does the Voice Lab protect user privacy?',
+                  a: 'Voice cloning is completely private and requires explicit consent. The custom voice profiles are strictly locked within your private family space and cannot be accessed externally. At any point, you can permanently delete a voice profile; doing so immediately and completely purges all audio samples, models, and voice vectors from our systems.',
+                },
+                {
+                  q: 'Do you train public AI models on my family recordings?',
+                  a: 'No. Our transcription and Text-to-Speech (TTS) models process all audio in isolated environments. Your family records, audio, and stories are never used to train public models (like those from OpenAI or Google) and are never shared with other customers.',
+                },
+                {
+                  q: 'Who owns the uploaded data and can I self-host?',
+                  a: 'Your family owns 100% of the data and media. You can download a complete archive of your family stories and recordings or delete them entirely at any time. Heard Again is also fully open-source. Technically inclined users can self-host the entire app on their own hardware to guarantee lifetime access and total data control.',
+                },
+                {
+                  q: 'What is the Cloud Tunnel / Connected Mode?',
+                  a: 'For self-hosted instances, the Cloud Tunnel (via Cloudflare) makes it easy to access your local home server securely from anywhere on the web (e.g. your-subdomain.heardagain.com) without open router ports. Note: This feature is currently in Beta / Coming Soon as we refine the auto-configuration steps, but it is fully active for pre-release testing.',
+                },
+              ].map((faq, index) => (
+                <Accordion
+                  key={index}
+                  elevation={0}
+                  sx={{
+                    border: '1px solid rgba(22, 51, 74, 0.08)',
+                    borderRadius: '8px !important',
+                    '&:before': { display: 'none' },
+                    bgcolor: 'background.paper',
+                  }}
+                >
+                  <AccordionSummary
+                    expandIcon={<ExpandMoreIcon sx={{ color: 'primary.main' }} />}
+                    sx={{ py: 1 }}
+                  >
+                    <Typography sx={{ fontWeight: 600, color: 'primary.main' }}>
+                      {faq.q}
+                    </Typography>
+                  </AccordionSummary>
+                  <AccordionDetails sx={{ pb: 3, px: 3 }}>
+                    <Typography sx={{ color: 'secondary.main', lineHeight: 1.7 }}>
+                      {faq.a}
+                    </Typography>
+                  </AccordionDetails>
+                </Accordion>
+              ))}
+            </Stack>
+          </Box>
+        </Container>
+      </Box>
 
       {/* Final CTA Banner */}
       <Box
