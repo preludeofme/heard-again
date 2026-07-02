@@ -6,7 +6,7 @@ import { authOptions } from '@/lib/auth'
 
 /**
  * One-shot admin endpoint to seed the Plan table.
- * Only callable by the site owner (preludeofme@gmail.com).
+ * Uses raw SQL per-plan to be resilient to schema drift between local and prod.
  * DELETE after use — do not leave in production.
  */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -22,149 +22,138 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { PlanType } = await import('@prisma/client')
-
-    // Step 1: Check current state
-    const existingCount = await prisma.plan.count()
-    logger.info(`[seed-plans] Existing plan count: ${existingCount}`)
-
-    // Step 2: Get available enum values from the DB introspection
-    const rawEnum = await prisma.$queryRawUnsafe<{enumlabel: string}[]>(
-      `SELECT e.enumlabel FROM pg_enum e JOIN pg_type t ON e.enumtypid = t.oid WHERE t.typname = 'PlanType'`
+    // Step 1: Introspect the Plan table columns on production DB
+    const columns = await prisma.$queryRawUnsafe<{column_name: string; data_type: string; is_nullable: string}[]>(
+      `SELECT column_name, data_type, is_nullable
+       FROM information_schema.columns
+       WHERE table_name = 'Plan'
+       ORDER BY ordinal_position`
     )
-    const planTypeValues = rawEnum.map(r => r.enumlabel)
-    logger.info(`[seed-plans] Available PlanType values: ${planTypeValues.join(', ')}`)
+    const colNames = columns.map(c => c.column_name)
+    logger.info(`[seed-plans] Plan table columns: ${colNames.join(', ')}`)
 
-    // Try to list any existing plans first so we can debug
-    const existingPlans = await prisma.plan.findMany({ select: { name: true, planType: true } })
-    logger.info(`[seed-plans] Existing plans: ${JSON.stringify(existingPlans)}`)
+    // Available PlanType enum values
+    let planTypeValues: string[] = []
+    try {
+      const rawEnum = await prisma.$queryRawUnsafe<{enumlabel: string}[]>(
+        `SELECT e.enumlabel FROM pg_enum e
+         JOIN pg_type t ON e.enumtypid = t.oid
+         WHERE t.typname = 'PlanType'`
+      )
+      planTypeValues = rawEnum.map(r => r.enumlabel)
+    } catch (_e) {
+      // enum might not exist
+    }
+    logger.info(`[seed-plans] PlanType values: ${planTypeValues.join(', ') || '(none found)'}`)
 
-    // Step 3: Build plans using raw ENUM values (avoids Prisma enum mismatch)
+    // Step 2: Create a simple insert/upsert per plan using raw SQL
     const plans = [
-      {
-        name: 'Free Local',
-        planType: 'FREE' as any,
-        priceMonthlyCents: 0,
-        priceYearlyCents: 0,
-        tunnelEnabled: false,
-        cloudGpuEnabled: false,
-        cloudStorageEnabled: false,
-        generationMinutesIncluded: 0,
-        storageQuotaBytes: BigInt(0),
-        memberQuota: 1,
-        voiceProfileQuota: 2,
-        prioritySupport: false,
-        advancedAnalytics: false,
-        isActive: true,
-      },
-      {
-        name: 'Connected',
-        planType: 'CONNECTED' as any,
-        priceMonthlyCents: 999,
-        priceYearlyCents: 9990,
-        tunnelEnabled: true,
-        cloudGpuEnabled: false,
-        cloudStorageEnabled: false,
-        generationMinutesIncluded: 20,
-        storageQuotaBytes: BigInt(0),
-        memberQuota: 10,
-        voiceProfileQuota: 10,
-        prioritySupport: false,
-        advancedAnalytics: false,
-        isActive: true,
-      },
-      {
-        name: 'Cloud Access — Starter',
-        planType: 'HYBRID' as any,
-        priceMonthlyCents: 1999,
-        priceYearlyCents: 19990,
-        tunnelEnabled: true,
-        cloudGpuEnabled: true,
-        cloudStorageEnabled: false,
-        generationMinutesIncluded: 60,
-        storageQuotaBytes: BigInt(0),
-        memberQuota: 10,
-        voiceProfileQuota: 20,
-        prioritySupport: true,
-        advancedAnalytics: false,
-        isActive: true,
-      },
-      {
-        name: 'Cloud Access — Legacy',
-        planType: 'CLOUD' as any,
-        priceMonthlyCents: 3999,
-        priceYearlyCents: 39990,
-        tunnelEnabled: false,
-        cloudGpuEnabled: true,
-        cloudStorageEnabled: true,
-        generationMinutesIncluded: 120,
-        storageQuotaBytes: BigInt(10 * 1024 * 1024 * 1024),
-        memberQuota: 20,
-        voiceProfileQuota: 50,
-        prioritySupport: true,
-        advancedAnalytics: true,
-        isActive: true,
-      },
+      { name: 'Free Local', planType: 'FREE', monthly: 0, yearly: 0 },
+      { name: 'Connected', planType: 'CONNECTED', monthly: 999, yearly: 9990 },
+      { name: 'Cloud Access — Starter', planType: 'HYBRID', monthly: 1999, yearly: 19990 },
+      { name: 'Cloud Access — Legacy', planType: 'CLOUD', monthly: 3999, yearly: 39990 },
     ]
 
-    const results: { name: string; planType: string }[] = []
-    for (const plan of plans) {
-      try {
-        const created = await prisma.plan.upsert({
-          where: { name: plan.name },
-          update: { isActive: true },
-          create: plan,
-        })
-        results.push({ name: created.name, planType: created.planType })
-        logger.info(`[seed-plans] Created/updated plan: ${created.name}`)
-      } catch (planErr) {
-        logger.error(`[seed-plans] Failed to upsert plan ${plan.name}:`, planErr)
+    // Determine which PlanType to use based on the DB enum
+    let planTypeForInsert: Record<string, string> = {}
+    for (const p of plans) {
+      if (planTypeValues.includes(p.planType)) {
+        planTypeForInsert[p.name] = p.planType
+      } else if (planTypeValues.includes(p.name.toUpperCase())) {
+        planTypeForInsert[p.name] = p.name.toUpperCase()
+      } else {
+        // Fallback: use the first available enum value or 'FREE'
+        planTypeForInsert[p.name] = planTypeValues.includes('FREE') ? 'FREE' : (planTypeValues[0] || 'FREE')
       }
     }
 
-    // Step 4: Backfill subscriptions for familyspaces without one
-    const freePlan = await prisma.plan.findFirst({ where: { planType: 'FREE' as any } })
-    let backfilled: { id: string; name: string }[] = []
+    const results: {name: string; planType: string; ok: boolean}[] = []
 
-    if (freePlan) {
-      const spacesWithoutSub = await prisma.familyspace.findMany({
-        where: {
-          subscription: { is: null },
-        },
-        select: { id: true, name: true },
-      })
+    for (const plan of plans) {
+      try {
+        // Check if plan already exists
+        const existing = await prisma.$queryRawUnsafe<{id: string; name: string}[]>(
+          `SELECT id, name FROM "Plan" WHERE name = $1 LIMIT 1`,
+          plan.name
+        )
 
-      for (const space of spacesWithoutSub) {
-        try {
-          await prisma.subscription.create({
-            data: {
-              familyspaceId: space.id,
-              planId: freePlan.id,
-              billingStatus: 'ACTIVE',
-            },
-          })
-          backfilled.push(space)
-          logger.info(`[seed-plans] Backfilled subscription for: ${space.name}`)
-        } catch (subErr) {
-          logger.error(`[seed-plans] Failed to create subscription for ${space.name}:`, subErr)
+        if (existing.length > 0) {
+          results.push({ name: plan.name, planType: plan.planType, ok: true })
+          logger.info(`[seed-plans] Plan "${plan.name}" already exists (id=${existing[0].id})`)
+          continue
+        }
+
+        // Insert new plan with only essential columns (schema-safe)
+        await prisma.$executeRawUnsafe(
+          `INSERT INTO "Plan" (id, name, "planType", "priceMonthlyCents", "priceYearlyCents", "createdAt", "updatedAt")
+           VALUES (gen_random_uuid(), $1, $2::"PlanType", $3, $4, NOW(), NOW())`,
+          plan.name,
+          planTypeForInsert[plan.name],
+          plan.monthly,
+          plan.yearly
+        )
+
+        results.push({ name: plan.name, planType: plan.planType, ok: true })
+        logger.info(`[seed-plans] Created plan: "${plan.name}"`)
+      } catch (planErr) {
+        const msg = planErr instanceof Error ? planErr.message : String(planErr)
+        results.push({ name: plan.name, planType: plan.planType, ok: false, error: msg })
+        logger.error(`[seed-plans] Failed for "${plan.name}": ${msg}`)
+      }
+    }
+
+    // Step 3: Backfill subscriptions for familyspaces without one
+    let backfilled: {id: string; name: string}[] = []
+
+    try {
+      const freePlan = await prisma.$queryRawUnsafe<{id: string}[]>(
+        `SELECT id FROM "Plan" WHERE name = 'Free Local' LIMIT 1`
+      )
+
+      if (freePlan.length > 0) {
+        const spacesWithoutSub = await prisma.$queryRawUnsafe<{id: string; name: string}[]>(
+          `SELECT f.id, f.name FROM "Familyspace" f
+           LEFT JOIN "Subscription" s ON s."familyspaceId" = f.id
+           WHERE s.id IS NULL`
+        )
+
+        for (const space of spacesWithoutSub) {
+          try {
+            await prisma.$executeRawUnsafe(
+              `INSERT INTO "Subscription" (id, "familyspaceId", "planId", "billingStatus", "createdAt", "updatedAt")
+               VALUES (gen_random_uuid(), $1, $2, 'ACTIVE', NOW(), NOW())`,
+              space.id,
+              freePlan[0].id
+            )
+            backfilled.push(space)
+            logger.info(`[seed-plans] Created subscription for: ${space.name}`)
+          } catch (subErr) {
+            logger.error(`[seed-plans] Sub backfill failed for ${space.name}: ${
+              subErr instanceof Error ? subErr.message : String(subErr)
+            }`)
+          }
         }
       }
+    } catch (backfillErr) {
+      logger.error(`[seed-plans] Backfill query failed: ${
+        backfillErr instanceof Error ? backfillErr.message : String(backfillErr)
+      }`)
     }
 
     return res.status(200).json({
       success: true,
       data: {
-        plans: results,
-        existingCount,
+        columns: colNames,
         planTypeValues,
-        existingPlans,
+        planTypeForInsert,
+        plans: results,
         backfilledFamilyspaces: backfilled,
       },
     })
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error)
     const stack = error instanceof Error ? error.stack : ''
-    logger.error('[seed-plans] Fatal error:', { message: msg, stack })
-    return res.status(500).json({ success: false, error: msg, stack })
+    logger.error(`[seed-plans] Fatal: ${msg} ${stack}`)
+    return res.status(500).json({ success: false, error: msg })
   }
 }
