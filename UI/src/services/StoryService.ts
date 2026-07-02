@@ -24,18 +24,19 @@ type StoryInclude = {
   _count: { select: { comments: true; assets: true; favorites: true } }
 }
 
-const ALLOWED_STORY_TAGS = ['p', 'br', 'strong', 'em', 'ul', 'ol', 'li', 'blockquote', 'h2', 'h3', 'a', 'img']
 
 function sanitizeStoryContent(content: string): string {
-  // Lazy require avoids a top-level static import of jsdom (a heavy/un-bundleable dep).
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const dompurify = require('isomorphic-dompurify') as { sanitize: (html: string, opts: Record<string, unknown>) => string }
-  return dompurify.sanitize(content, {
-    ALLOWED_TAGS: ALLOWED_STORY_TAGS,
-    ALLOWED_ATTR: ['href', 'src', 'alt', 'title'],
-    // 🔒 Restrict URI schemes to safe protocols only (defense-in-depth beyond
-    // DOMPurify's defaults, which already block javascript: URIs)
-    ALLOWED_URI_REGEXP: /^(?:(?:https?|ftp|mailto):|[^a-z]|[a-z+.-]+(?:[^a-z+.-]|$))/i,
+  // Using sanitize-html instead of isomorphic-dompurify because the latter
+  // pulls in jsdom → html-encoding-sniffer → @exodus/bytes (ESM-only),
+  // which crashes on Vercel serverless (CJS environment).
+  const sanitizeHtml = require('sanitize-html') as typeof import('sanitize-html')
+  return sanitizeHtml(content, {
+    allowedTags: sanitizeHtml.defaults.allowedTags.concat(['img']),
+    allowedAttributes: {
+      a: ['href'],
+      img: ['src', 'alt', 'title'],
+    },
+    allowedSchemes: ['http', 'https', 'ftp', 'mailto'],
   })
 }
 
