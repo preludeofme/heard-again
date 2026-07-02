@@ -1,7 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '@/lib/prisma'
 import { logger } from '@/lib/logger'
-import { PlanType } from '@prisma/client'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 
@@ -11,7 +10,6 @@ import { authOptions } from '@/lib/auth'
  * DELETE after use — do not leave in production.
  */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  // Hard guard: only the site owner can seed plans
   const session = await getServerSession(req, res, authOptions)
   const ownerEmail = process.env.OWNER_EMAIL || 'preludeofme@gmail.com'
 
@@ -24,10 +22,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
+    const { PlanType } = await import('@prisma/client')
+
+    // Step 1: Check current state
+    const existingCount = await prisma.plan.count()
+    logger.info(`[seed-plans] Existing plan count: ${existingCount}`)
+
+    // Step 2: Get available enum values from the DB introspection
+    const rawEnum = await prisma.$queryRawUnsafe<{enumlabel: string}[]>(
+      `SELECT e.enumlabel FROM pg_enum e JOIN pg_type t ON e.enumtypid = t.oid WHERE t.typname = 'PlanType'`
+    )
+    const planTypeValues = rawEnum.map(r => r.enumlabel)
+    logger.info(`[seed-plans] Available PlanType values: ${planTypeValues.join(', ')}`)
+
+    // Try to list any existing plans first so we can debug
+    const existingPlans = await prisma.plan.findMany({ select: { name: true, planType: true } })
+    logger.info(`[seed-plans] Existing plans: ${JSON.stringify(existingPlans)}`)
+
+    // Step 3: Build plans using raw ENUM values (avoids Prisma enum mismatch)
     const plans = [
       {
         name: 'Free Local',
-        planType: PlanType.FREE,
+        planType: 'FREE' as any,
         priceMonthlyCents: 0,
         priceYearlyCents: 0,
         tunnelEnabled: false,
@@ -39,12 +55,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         voiceProfileQuota: 2,
         prioritySupport: false,
         advancedAnalytics: false,
+        isActive: true,
       },
       {
         name: 'Connected',
-        planType: PlanType.CONNECTED,
-        priceMonthlyCents: 999,  // $9.99 — matches production pricing card
-        priceYearlyCents: 9990,  // $99.90 (~$8.33/mo)
+        planType: 'CONNECTED' as any,
+        priceMonthlyCents: 999,
+        priceYearlyCents: 9990,
         tunnelEnabled: true,
         cloudGpuEnabled: false,
         cloudStorageEnabled: false,
@@ -54,12 +71,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         voiceProfileQuota: 10,
         prioritySupport: false,
         advancedAnalytics: false,
+        isActive: true,
       },
       {
         name: 'Cloud Access — Starter',
-        planType: PlanType.HYBRID,
-        priceMonthlyCents: 1999,  // $19.99
-        priceYearlyCents: 19990,  // $199.90 (~$16.66/mo)
+        planType: 'HYBRID' as any,
+        priceMonthlyCents: 1999,
+        priceYearlyCents: 19990,
         tunnelEnabled: true,
         cloudGpuEnabled: true,
         cloudStorageEnabled: false,
@@ -69,70 +87,84 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         voiceProfileQuota: 20,
         prioritySupport: true,
         advancedAnalytics: false,
+        isActive: true,
       },
       {
         name: 'Cloud Access — Legacy',
-        planType: PlanType.CLOUD,
-        priceMonthlyCents: 3999,  // $39.99
-        priceYearlyCents: 39990,  // $399.90 (~$33.33/mo)
+        planType: 'CLOUD' as any,
+        priceMonthlyCents: 3999,
+        priceYearlyCents: 39990,
         tunnelEnabled: false,
         cloudGpuEnabled: true,
         cloudStorageEnabled: true,
         generationMinutesIncluded: 120,
-        storageQuotaBytes: BigInt(10 * 1024 * 1024 * 1024), // 10GB
+        storageQuotaBytes: BigInt(10 * 1024 * 1024 * 1024),
         memberQuota: 20,
         voiceProfileQuota: 50,
         prioritySupport: true,
         advancedAnalytics: true,
+        isActive: true,
       },
     ]
 
-    const results = []
+    const results: { name: string; planType: string }[] = []
     for (const plan of plans) {
-      const created = await prisma.plan.upsert({
-        where: { name: plan.name },
-        update: {},
-        create: plan,
-      })
-      results.push({ id: created.id, name: created.name, planType: created.planType })
+      try {
+        const created = await prisma.plan.upsert({
+          where: { name: plan.name },
+          update: { isActive: true },
+          create: plan,
+        })
+        results.push({ name: created.name, planType: created.planType })
+        logger.info(`[seed-plans] Created/updated plan: ${created.name}`)
+      } catch (planErr) {
+        logger.error(`[seed-plans] Failed to upsert plan ${plan.name}:`, planErr)
+      }
     }
 
-    // Also ensure every familyspace without a subscription gets the Free plan
-    const freePlan = await prisma.plan.findFirst({ where: { planType: PlanType.FREE } })
+    // Step 4: Backfill subscriptions for familyspaces without one
+    const freePlan = await prisma.plan.findFirst({ where: { planType: 'FREE' as any } })
+    let backfilled: { id: string; name: string }[] = []
+
     if (freePlan) {
       const spacesWithoutSub = await prisma.familyspace.findMany({
         where: {
-          subscriptions: { none: {} },
+          subscription: { is: null },
         },
         select: { id: true, name: true },
       })
 
       for (const space of spacesWithoutSub) {
-        await prisma.subscription.create({
-          data: {
-            familyspaceId: space.id,
-            planId: freePlan.id,
-            billingStatus: 'ACTIVE',
-          },
-        })
+        try {
+          await prisma.subscription.create({
+            data: {
+              familyspaceId: space.id,
+              planId: freePlan.id,
+              billingStatus: 'ACTIVE',
+            },
+          })
+          backfilled.push(space)
+          logger.info(`[seed-plans] Backfilled subscription for: ${space.name}`)
+        } catch (subErr) {
+          logger.error(`[seed-plans] Failed to create subscription for ${space.name}:`, subErr)
+        }
       }
-
-      logger.info(`[seed-plans] Created subscriptions for ${spacesWithoutSub.length} familyspaces without one`)
-      return res.status(200).json({
-        success: true,
-        data: {
-          plans: results,
-          backfilledFamilyspaces: spacesWithoutSub.map(s => ({ id: s.id, name: s.name })),
-        },
-      })
     }
 
     return res.status(200).json({
       success: true,
-      data: { plans: results },
+      data: {
+        plans: results,
+        existingCount,
+        planTypeValues,
+        existingPlans,
+        backfilledFamilyspaces: backfilled,
+      },
     })
   } catch (error) {
-    logger.error('[seed-plans] Failed to seed plans:', error)
-    return res.status(500).json({ success: false, error: 'Failed to seed plans' })
+    const msg = error instanceof Error ? error.message : String(error)
+    const stack = error instanceof Error ? error.stack : ''
+    logger.error('[seed-plans] Fatal error:', { message: msg, stack })
+    return res.status(500).json({ success: false, error: msg, stack })
   }
 }
