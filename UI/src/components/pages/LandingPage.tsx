@@ -557,11 +557,11 @@ export function LandingPage() {
               {[
                 {
                   q: 'What is Heard Again and what is it NOT?',
-                  a: 'Heard Again is a secure, private legacy preservation vault. It is NOT a public social media network or marketing platform. There are no public feeds, "likes," or open sharing. Your space is entirely private and restricted to the family members you explicitly invite. We do not sell user data, monetize relationship details, or use ads.',
+                  a: 'Heard Again is a secure and private legacy preservation vault, it is NOT a public social media network or marketing platform. There are no public feeds or open sharing unless you decide to share it broadly. Your space is fully customizable and can be open or closed, and you can specify who is allowed to see your family history/stories. We do not sell user data, monetize relationship details, or use ads.',
                 },
                 {
                   q: 'How does the Voice Lab protect user privacy?',
-                  a: 'Voice cloning is completely private and requires explicit consent. The custom voice profiles are strictly locked within your private family space and cannot be accessed externally. At any point, you can permanently delete a voice profile; doing so immediately and completely purges all audio samples, models, and voice vectors from our systems.',
+                  a: 'Voice cloning is completely private and requires active consent. When you upload voice samples, our system uses an isolated, temporary computer processor to build the voice profile. This processor does not save your original audio recordings—it only reads them once to create the voice clone, and then immediately and permanently deletes the raw files from the processing area. The created voice profile remains strictly locked in your private space, and you can permanently delete it at any time.',
                 },
                 {
                   q: 'Do you train public AI models on my family recordings?',
