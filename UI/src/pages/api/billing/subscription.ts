@@ -18,21 +18,19 @@ export default apiHandler({
     }
 
     return successResponse(res, {
-      subscription: {
-        id: subscription.id,
-        billingStatus: subscription.billingStatus,
-        renewalDate: subscription.renewalDate,
-        cancelledAt: subscription.cancelledAt,
-        stripeSubscriptionId: subscription.stripeSubscriptionId,
-        stripeCustomerId: subscription.stripeCustomerId,
-        usage: {
-          generationMinutesUsed: subscription.generationMinutesUsed,
-          storageBytesUsed: Number(subscription.storageBytesUsed),
-          lastBillingResetAt: subscription.lastBillingResetAt,
-        },
-        createdAt: subscription.createdAt,
-        updatedAt: subscription.updatedAt,
+      id: subscription.id,
+      billingStatus: subscription.billingStatus,
+      renewalDate: subscription.renewalDate,
+      cancelledAt: subscription.cancelledAt,
+      stripeSubscriptionId: subscription.stripeSubscriptionId,
+      stripeCustomerId: subscription.stripeCustomerId,
+      usage: {
+        generationMinutesUsed: subscription.generationMinutesUsed,
+        storageBytesUsed: Number(subscription.storageBytesUsed),
+        lastBillingResetAt: subscription.lastBillingResetAt,
       },
+      createdAt: subscription.createdAt,
+      updatedAt: subscription.updatedAt,
       plan: subscription.plan ? {
         id: subscription.plan.id,
         name: subscription.plan.name,
