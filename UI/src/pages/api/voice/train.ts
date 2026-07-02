@@ -2,7 +2,6 @@ import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '@/lib/prisma'
 import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
-import { withMFAProtection, SENSITIVE_OPERATIONS } from '@/lib/security/mfa'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
 import { getTTSProvider } from '@/lib/tts'
 import { generateVoiceSample } from '@/lib/voice/generate-voice-sample'
@@ -128,5 +127,5 @@ async function trainVoiceHandler(req: NextApiRequest, res: NextApiResponse) {
 }
 
 export default apiHandler({
-  POST: withMFAProtection(SENSITIVE_OPERATIONS.VOICE_TRAINING, trainVoiceHandler)
+  POST: trainVoiceHandler,
 })
