@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react'
 
 const WARMUP_COOLDOWN_MS = 5 * 60 * 1000 // 5 minutes between warmup pings
-const WARMUP_TIMEOUT_MS = 8_000 // Don't wait more than 8s for a warmup response
 
 let lastWarmupTime = 0
 let pendingWarmup: Promise<void> | null = null
@@ -10,6 +9,13 @@ let pendingWarmup: Promise<void> | null = null
  * Fire-and-forget warmup ping to the TTS service.
  * Uses module-level debounce so repeated page navigations within the
  * cooldown window don't stack up cold starts or costs.
+ *
+ * Warmup is intentionally fire-and-forget — it submits a minimal job to wake
+ * the GPU and returns immediately. There is no timeout or AbortController
+ * because waiting for GPU warmup would trigger ERR_NETWORK_CHANGED on cold
+ * RunPod endpoints (10-30s startup). The .catch() silently absorbs any
+ * network-level failures (page navigation, Vercel cold starts, etc.) since
+ * warmup is best-effort.
  */
 function pingTTSWarmup(): void {
   const now = Date.now()
@@ -20,27 +26,18 @@ function pingTTSWarmup(): void {
 
   lastWarmupTime = now
 
-  // Prefer the Next.js proxy route (handles auth via cookies) over a direct
-  // TTS service URL. The proxy is at /api/voice/warmup and forwards to the
-  // Python TTS service's /api/tts/warmup, which triggers a throwaway
-  // synthesis to pay the CUDA kernel compile cost.
   const warmupUrl = '/api/voice/warmup'
-
-  const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), WARMUP_TIMEOUT_MS)
 
   pendingWarmup = fetch(warmupUrl, {
     method: 'POST',
-    signal: controller.signal,
   })
     .then(() => {
-      // GPU is now warm — no action needed
+      // GPU is now warming — no action needed
     })
     .catch(() => {
       // Silently ignore — warmup is best-effort. The real request will retry.
     })
     .finally(() => {
-      clearTimeout(timeout)
       pendingWarmup = null
     })
 }

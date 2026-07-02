@@ -27,58 +27,34 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
   try {
     if (process.env.TTS_PROVIDER === 'runpod_serverless') {
-      // For RunPod serverless, predictive warmup: trigger a minimal 1-word job
-      // when user shows intent (navigates to voice features). This pays for first
-      // cold start, keeps GPU alive for 5 min via idleTimeout.
+      // For RunPod serverless, predictive warmup: fire a minimal 1-word job
+      // to wake the GPU, then return immediately. Do NOT wait for the job to
+      // complete — that would take 10-30s on a cold GPU and cause
+      // ERR_NETWORK_CHANGED (browser timeout) or Vercel 10s HFC timeout.
       //
       // Strategy:
-      // 1. User hits Voice Lab → call /api/voice/warmup (this)
-      // 2. We fire a tiny synthesis job (~$0.0002) to wake GPU
-      // 3. GPU stays warm for 5 min → all synthesis during that window is fast
-      // 4. If no activity for 5 min, GPU scales to zero → no idle cost
-      //
-      // Cost math: 50 free users × 1 warmup each = 50 jobs × $0.0002 = $0.01/month
-      // Plus actual synthesis: negligible for free tier (usage-gated)
+      // 1. User navigates to TTS-heavy page → /api/voice/warmup called
+      // 2. We POST a tiny synthesis job (~$0.0002) to RunPod's /run endpoint
+      // 3. Return 200 immediately; RunPod warms GPU in the background
+      // 4. GPU stays warm for 5 min via idleTimeout from any real job
+      // 5. If no activity for 5 min, GPU scales to zero → no idle cost
       
-      const { getTTSProvider } = await import('@/lib/tts')
-      const provider = getTTSProvider()
-
-      try {
-        // Minimal job: 1-word, no reference audio needed for warmup
-        await provider.synthesizeBatch(
-          'warmup',  // fake profile name (won't match, but triggers model load)
-          'Hi.',     // 1 word = fastest possible job
-          'system',  // system familyspace (won't save result)
-          null,
-          async () => {}, // no-op progress
-          async () => {}  // no-op job submitted
-        )
-        
-        // Mark cooldown
-        if (!globalThis.__warmupCooldowns) {
-          globalThis.__warmupCooldowns = new Map<string, number>()
-        }
-        globalThis.__warmupCooldowns.set(cooldownKey, Date.now())
-
-        return res.status(200).json({
-          success: true,
-          message: 'RunPod GPU warmed — ready for synthesis',
-          warmed: true,
-          provider: 'runpod_serverless',
-          costEstimate: '$0.0002',
-        })
-      } catch (warmupErr) {
-        // Warmup failures: GPU may be cold, but first real request will handle it
-        console.warn('[Warmup] Non-fatal warmup failure (GPU will warm on first real request):', warmupErr)
-        
-        return res.status(200).json({
-          success: true,
-          message: 'RunPod serverless ready — first request will trigger GPU warmup',
-          warmed: false,
-          provider: 'runpod_serverless',
-          hint: warmupErr instanceof Error ? warmupErr.message : 'Unknown error',
-        })
+      const jobId = await runpodWarmupJob()
+      
+      // Mark cooldown
+      if (!globalThis.__warmupCooldowns) {
+        globalThis.__warmupCooldowns = new Map<string, number>()
       }
+      globalThis.__warmupCooldowns.set(cooldownKey, Date.now())
+
+      return res.status(200).json({
+        success: true,
+        message: 'RunPod warmup submitted — GPU will warm in background',
+        warmed: true,
+        provider: 'runpod_serverless',
+        jobId,
+        costEstimate: '$0.0002',
+      })
     }
 
     // Fallback: local REST TTS service
@@ -103,6 +79,46 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 declare global {
   // eslint-disable-next-line no-var
   var __warmupCooldowns: Map<string, number> | undefined
+}
+
+/**
+ * Submit a tiny 1-word synthesis job to RunPod's async /run endpoint.
+ * Returns immediately after submission — does NOT wait for completion.
+ * This is intentional: waiting would trigger ERR_NETWORK_CHANGED on cold GPUs.
+ */
+async function runpodWarmupJob(): Promise<string> {
+  const apiKey = process.env.RUNPOD_API_KEY
+  const endpointId = process.env.RUNPOD_TTS_ENDPOINT_ID
+
+  if (!apiKey || !endpointId) {
+    throw new Error('RUNPOD_API_KEY and RUNPOD_TTS_ENDPOINT_ID must be set')
+  }
+
+  const res = await fetch(`https://api.runpod.ai/v2/${endpointId}/run`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      input: {
+        action: 'synthesize_batch',
+        profileName: 'warmup',
+        text: 'Hi.',
+        familyspaceId: 'system',
+        language: 'English',
+        silencePaddingMs: 200,
+      },
+    }),
+  })
+
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '')
+    throw new Error(`RunPod warmup submission failed (${res.status}): ${errText}`)
+  }
+
+  const data = await res.json()
+  return data.id
 }
 
 export default handler
