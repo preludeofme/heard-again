@@ -355,24 +355,72 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
         throw new Error(result.error || 'Voice profile creation failed')
       }
 
-      const persistedModelId = result.dbProfileId || result.modelId
+      const profileId = result.profileId as string
 
       setState(prev => ({
         ...prev,
         trainingJob: {
-          id: result.jobId || persistedModelId,
-          modelId: persistedModelId,
-          status: 'completed',
-          progress: 100,
-          currentStage: 'completed',
+          id: profileId,
+          modelId: profileId,
+          status: 'processing',
+          progress: 30,
+          currentStage: 'creating_profile',
           createdAt: new Date().toISOString(),
-          completedAt: new Date().toISOString(),
         },
-        isTraining: false,
-        trainingSamples: [],
       }))
 
-      enqueueSnackbar('Voice profile created! You can now use it in Talk.', { variant: 'success' })
+      enqueueSnackbar('Creating voice profile in the background — this may take a minute…', { variant: 'info' })
+
+      // Poll for completion — profile is READY when sampleAudioUrl is populated
+      let retries = 0
+      const maxRetries = 60 // 60 attempts × 3s = 3 minutes max wait
+
+      const pollInterval = setInterval(async () => {
+        retries++
+        try {
+          const pollResp = await fetch(`/api/voice/profiles/${profileId}`, { credentials: 'include' })
+          if (!pollResp.ok) return
+
+          const pollData = await pollResp.json()
+          const profile = pollData.data || pollData
+
+          if (profile?.status === 'READY' || profile?.sampleAudioUrl) {
+            clearInterval(pollInterval)
+            setState(prev => ({
+              ...prev,
+              trainingJob: {
+                id: profileId,
+                modelId: profileId,
+                status: 'completed',
+                progress: 100,
+                currentStage: 'completed',
+                createdAt: new Date().toISOString(),
+                completedAt: new Date().toISOString(),
+              },
+              isTraining: false,
+              trainingSamples: [],
+            }))
+            enqueueSnackbar('Voice profile created! You can now use it in Talk.', { variant: 'success' })
+          }
+
+          if (profile?.status === 'ERROR') {
+            clearInterval(pollInterval)
+            setState(prev => ({ ...prev, isTraining: false }))
+            enqueueSnackbar('Voice profile creation failed', { variant: 'error' })
+          }
+
+          if (retries >= maxRetries) {
+            clearInterval(pollInterval)
+            setState(prev => ({ ...prev, isTraining: false }))
+            enqueueSnackbar('Voice creation is still processing — check back soon.', { variant: 'warning' })
+          }
+        } catch {
+          if (retries >= maxRetries) {
+            clearInterval(pollInterval)
+            setState(prev => ({ ...prev, isTraining: false }))
+          }
+        }
+      }, 3000)
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to create voice profile'
       setState(prev => ({
