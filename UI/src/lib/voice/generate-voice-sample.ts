@@ -1,7 +1,7 @@
 import { logger } from '@/lib/logger'
 import { prisma } from '@/lib/prisma'
 import { getTTSProvider } from '@/lib/tts'
-import { storageService } from '@/services/StorageService'
+import { getStorageService } from '@/lib/storage/storage-service'
 
 const SAMPLE_TEXT =
   'Hello, this is a sample of my digital voice. Thank you for preserving my story.'
@@ -43,22 +43,24 @@ export async function generateVoiceSample(
   // Step 2: Download the raw audio buffer from TTS
   const audioBuffer = await ttsProvider.downloadAudio(ttsData.audioId, familyspaceId)
 
-  // Step 3: Save to storage (local filesystem or R2)
-  const stored = await storageService.saveAudio(familyspaceId, ttsData.audioId, audioBuffer, {
-    mimeType: 'audio/wav',
-    extension: 'wav',
-  })
+  // Step 3: Store in R2/S3 via cloud-native storage service
+  const storage = getStorageService()
+  const uploaded = await storage.uploadFile(
+    audioBuffer,
+    `sample-${ttsData.audioId.split('/').pop() ?? `${ttsData.audioId}.wav`}`,
+    ttsData.mimeType ?? 'audio/wav',
+    { folder: `${familyspaceId}/voice-samples` }
+  )
 
-  const fileName = ttsData.audioId.split('/').pop() ?? `${ttsData.audioId}.wav`
+  // Step 4: Determine the storage type enum value and the serving URL
+  const storageMode = storage.getMode()
+  const storageType: SampleResult['storageType'] =
+    storageMode === 'r2' ? 'CLOUDFLARE_R2'
+    : storageMode === 's3' ? 'S3'
+    : storageMode === 'gcs' || storageMode === 'gcp' ? 'GOOGLE_CLOUD'
+    : 'LOCAL'
 
-  // Step 4: Determine actual storage type from environment
-  const isCloudStorage =
-    !!process.env.R2_ENDPOINT &&
-    !!process.env.R2_ACCESS_KEY_ID &&
-    !!process.env.R2_SECRET_ACCESS_KEY &&
-    !!(process.env.R2_BUCKET_NAME || process.env.R2_BUCKET)
-
-  const storageType: SampleResult['storageType'] = isCloudStorage ? 'CLOUDFLARE_R2' : 'LOCAL'
+  const fileName = uploaded.filename
 
   // Step 5: Create Prisma Asset record
   const asset = await prisma.asset.create({
@@ -66,10 +68,10 @@ export async function generateVoiceSample(
       familyspaceId,
       filename: fileName,
       originalName: fileName,
-      mimeType: 'audio/wav',
+      mimeType: ttsData.mimeType ?? 'audio/wav',
       sizeBytes: BigInt(audioBuffer.byteLength),
       storageType,
-      storagePath: stored.path,
+      storagePath: uploaded.storagePath,
       assetType: 'GENERATED_AUDIO',
       isAISynthesized: true,
       processingStatus: 'COMPLETED',
