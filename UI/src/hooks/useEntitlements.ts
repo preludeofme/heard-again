@@ -43,23 +43,28 @@ interface SubscriptionInfo {
 }
 
 interface SubscriptionResponse {
-  subscription: {
-    id: string
-    billingStatus: string
-    renewalDate: string | null
-    cancelledAt: string | null
-    usage: {
-      generationMinutesUsed: number
-      storageBytesUsed: number
-    }
+  id: string
+  billingStatus: string
+  renewalDate: string | null
+  cancelledAt: string | null
+  stripeSubscriptionId: string | null
+  stripeCustomerId: string | null
+  usage: {
+    generationMinutesUsed: number
+    storageBytesUsed: number
+    lastBillingResetAt: string | null
   }
+  createdAt: string
+  updatedAt: string
   plan: {
     id: string
     name: string
     planType: string
     pricing: {
       monthlyCents: number
+      yearlyCents: number | null
       monthlyDisplay: string
+      yearlyDisplay: string | null
     }
     entitlements: {
       tunnelEnabled: boolean
@@ -74,7 +79,7 @@ interface SubscriptionResponse {
       prioritySupport: boolean
       advancedAnalytics: boolean
     }
-  }
+  } | null
 }
 
 interface UseEntitlementsReturn {
@@ -184,10 +189,40 @@ export function useEntitlements(): UseEntitlementsReturn {
       }
     }
 
-    const { subscription, plan } = data
-    const genUsed = subscription.usage.generationMinutesUsed
+    // The API returns usage + plan at the top level, NOT nested under "subscription"
+    // Shape: { id, billingStatus, usage: { generationMinutesUsed, ... }, plan: { ... } }
+    const billingStatus = data.billingStatus ?? null
+    const usage = data.usage ?? { generationMinutesUsed: 0, storageBytesUsed: 0 }
+    const plan = data.plan ?? null
+
+    // Gracefully fall back if plan is somehow null
+    if (!plan) {
+      return {
+        planType: null,
+        planName: null,
+        billingStatus,
+        tierName: 'Free',
+        canUseCloudGpu: false,
+        canUseTunnel: false,
+        canUseCloudStorage: false,
+        hasPrioritySupport: false,
+        hasAdvancedAnalytics: false,
+        generationMinutesUsed: usage.generationMinutesUsed ?? 0,
+        generationMinutesQuota: 0,
+        generationMinutesRemaining: 0,
+        generationAtLimit: false,
+        generationPercentUsed: 0,
+        storageBytesUsed: usage.storageBytesUsed ?? 0,
+        storageBytesQuota: 0,
+        storagePercentUsed: 0,
+        memberQuota: 1,
+        voiceProfileQuota: 0,
+      }
+    }
+
+    const genUsed = usage.generationMinutesUsed ?? 0
     const genQuota = plan.entitlements.generationMinutesIncluded
-    const storageUsed = subscription.usage.storageBytesUsed
+    const storageUsed = usage.storageBytesUsed ?? 0
     const storageQuota = Number(plan.entitlements.storageQuotaBytes)
     const freePlan = plan.planType === 'FREE'
 
@@ -198,7 +233,7 @@ export function useEntitlements(): UseEntitlementsReturn {
     return {
       planType: plan.planType,
       planName: plan.name,
-      billingStatus: subscription.billingStatus,
+      billingStatus,
       tierName: plan.planType === 'FREE' ? 'Self-Hosted' : plan.planType === 'CLOUD' ? 'Cloud' : plan.name,
       canUseCloudGpu: plan.entitlements.cloudGpuEnabled,
       canUseTunnel: plan.entitlements.tunnelEnabled,

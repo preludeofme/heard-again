@@ -112,7 +112,8 @@ export default function SubscriptionPage() {
       const usageData = await usageRes.json()
 
       if (subData.success) {
-        setSubscription(subData.data.subscription)
+        // API returns flat shape: { id, billingStatus, usage: {...}, plan: {...} }
+        setSubscription(subData.data)
         setPlan(subData.data.plan)
       }
       if (usageData.success) {
