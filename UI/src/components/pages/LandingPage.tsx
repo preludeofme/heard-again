@@ -25,6 +25,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import Link from 'next/link'
 import { LandingPricingSection } from './LandingPricingSection'
 import { PublicHeader } from '../layout/PublicHeader'
+import { AnimatedWaveform } from '../brand/AnimatedWaveform'
 
 // Material Symbols Icon component
 const MaterialSymbol = ({ icon, sx }: { icon: string; sx?: any }) => (
@@ -87,12 +88,7 @@ export function LandingPage() {
           <Grid size={{ xs: 12, lg: 6 }} sx={{ position: 'relative', zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
             {/* Logo/Header matching og-image */}
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 4, width: '100%' }}>
-              <Box
-                component="img"
-                src="/logo-large.png"
-                alt="Heard Again Waveform"
-                sx={{ height: 72, width: 'auto', mb: 2, mx: 'auto' }}
-              />
+              <AnimatedWaveform height={72} sx={{ mb: 2, mx: 'auto' }} />
               <Typography
                 variant="h1"
                 sx={{
@@ -387,6 +383,221 @@ export function LandingPage() {
                 </Card>
               </Grid>
             ))}
+          </Grid>
+        </Container>
+      </Box>
+
+      {/* A Fuller Picture Section */}
+      <Box
+        component="section"
+        sx={{
+          py: 16,
+          px: { xs: 4, md: 8 },
+          bgcolor: 'background.paper',
+          borderTop: '1px solid rgba(22, 51, 74, 0.05)',
+        }}
+      >
+        <Container maxWidth="lg">
+          <Box sx={{ mb: 10, textAlign: 'center' }}>
+            <Typography
+              variant="overline"
+              sx={{
+                color: 'primary.main',
+                fontWeight: 700,
+                letterSpacing: '0.15em',
+                mb: 2,
+                display: 'block',
+              }}
+            >
+              A FULLER PICTURE
+            </Typography>
+            <Typography
+              variant="h2"
+              sx={{
+                fontSize: { xs: '2.5rem', md: '3.5rem' },
+                color: 'primary.main',
+                mb: 3,
+                fontFamily: 'var(--font-newsreader), serif',
+                maxWidth: 800,
+                mx: 'auto',
+              }}
+            >
+              Pass Down More Than Just Names
+            </Typography>
+            <Typography
+              variant="body1"
+              sx={{
+                fontSize: '1.25rem',
+                color: 'secondary.main',
+                maxWidth: 800,
+                mx: 'auto',
+                lineHeight: 1.7,
+              }}
+            >
+              Every family history has gaps. Heard Again is designed to help you assemble a fuller, truer picture of your shared history. By gathering raw memories and collaborating across generations, your family heritage becomes alive.
+            </Typography>
+          </Box>
+
+          <Grid container spacing={8}>
+            {/* Save Their Voice Subsection */}
+            <Grid size={{ xs: 12, md: 6 }}>
+              <Box
+                sx={{
+                  p: 5,
+                  height: '100%',
+                  borderRadius: 6,
+                  bgcolor: 'rgba(208, 227, 230, 0.25)',
+                  border: '1px solid rgba(22, 51, 74, 0.05)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    boxShadow: '0 12px 30px rgba(28, 28, 25, 0.05)',
+                    transform: 'translateY(-4px)',
+                  },
+                }}
+              >
+                <Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+                    <Box sx={{ width: 48, height: 48, borderRadius: 3, bgcolor: 'primary.main', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <MaterialSymbol icon="keyboard_voice" sx={{ fontSize: 28 }} />
+                    </Box>
+                    <Typography
+                      variant="h3"
+                      sx={{
+                        fontSize: '1.75rem',
+                        fontWeight: 600,
+                        color: 'primary.main',
+                        fontFamily: 'var(--font-newsreader), serif',
+                      }}
+                    >
+                      Save Their Voice
+                    </Typography>
+                  </Box>
+                  <Typography
+                    variant="body1"
+                    sx={{
+                      color: 'secondary.main',
+                      lineHeight: 1.7,
+                      mb: 4,
+                      fontSize: '1.1rem',
+                    }}
+                  >
+                    Stop losing generations of memories to dead hard drives, broken phones, and aging tech. Before old cassette tapes degrade, voicemail files get deleted, or vintage home videos become unplayable, Heard Again lets you rescue, transcribe, and preserve the physical voices of your loved ones forever.
+                  </Typography>
+                  
+                  <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 700, color: 'primary.main' }}>
+                    Supported formats & aging media:
+                  </Typography>
+                  <Grid container spacing={2} sx={{ mb: 4 }}>
+                    {[
+                      { label: 'Cassette Tapes', icon: 'album' },
+                      { icon: 'settings_voice', label: 'Voicemail Files' },
+                      { icon: 'videocam', label: 'Home Videos (VHS, 8mm)' },
+                      { icon: 'phone_iphone', label: 'Voice Memos' },
+                    ].map((item, i) => (
+                      <Grid size={{ xs: 6 }} key={i}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                          <Box sx={{ color: 'primary.main', display: 'flex', alignItems: 'center' }}>
+                            <MaterialSymbol icon={item.icon} sx={{ fontSize: 20 }} />
+                          </Box>
+                          <Typography variant="body2" sx={{ fontWeight: 600, color: 'secondary.main' }}>
+                            {item.label}
+                          </Typography>
+                        </Box>
+                      </Grid>
+                    ))}
+                  </Grid>
+                </Box>
+                <Box
+                  component="img"
+                  src="https://images.unsplash.com/photo-1535478044878-3ed83d5456ef?w=600&auto=format&fit=crop"
+                  alt="Vintage cassette tape and recording"
+                  sx={{ width: '100%', height: 200, objectFit: 'cover', borderRadius: 4 }}
+                />
+              </Box>
+            </Grid>
+
+            {/* Collaborative Memories Subsection */}
+            <Grid size={{ xs: 12, md: 6 }}>
+              <Box
+                sx={{
+                  p: 5,
+                  height: '100%',
+                  borderRadius: 6,
+                  bgcolor: 'rgba(224, 194, 154, 0.15)',
+                  border: '1px solid rgba(22, 51, 74, 0.05)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    boxShadow: '0 12px 30px rgba(28, 28, 25, 0.05)',
+                    transform: 'translateY(-4px)',
+                  },
+                }}
+              >
+                <Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+                    <Box sx={{ width: 48, height: 48, borderRadius: 3, bgcolor: '#c19a6b', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <MaterialSymbol icon="groups" sx={{ fontSize: 28 }} />
+                    </Box>
+                    <Typography
+                      variant="h3"
+                      sx={{
+                        fontSize: '1.75rem',
+                        fontWeight: 600,
+                        color: 'primary.main',
+                        fontFamily: 'var(--font-newsreader), serif',
+                      }}
+                    >
+                      Memory is Better Together
+                    </Typography>
+                  </Box>
+                  <Typography
+                    variant="body1"
+                    sx={{
+                      color: 'secondary.main',
+                      lineHeight: 1.7,
+                      mb: 4,
+                      fontSize: '1.1rem',
+                    }}
+                  >
+                    Heard Again is built for that collaborative magic. Each family member brings their fragment, and together you assemble a fuller picture of your shared history. Add your version of the story, see what your siblings remember differently, and build something truer than any single person&apos;s recollection.
+                  </Typography>
+
+                  <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 700, color: 'primary.main' }}>
+                    Shared heritage benefits:
+                  </Typography>
+                  <Grid container spacing={2} sx={{ mb: 4 }}>
+                    {[
+                      { label: 'Multi-author stories', icon: 'history_edu' },
+                      { icon: 'diversity_1', label: 'Contributor invites' },
+                      { icon: 'forum', label: 'Comments & discussion' },
+                      { icon: 'family_history', label: 'Linked family trees' },
+                    ].map((item, i) => (
+                      <Grid size={{ xs: 6 }} key={i}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                          <Box sx={{ color: '#c19a6b', display: 'flex', alignItems: 'center' }}>
+                            <MaterialSymbol icon={item.icon} sx={{ fontSize: 20 }} />
+                          </Box>
+                          <Typography variant="body2" sx={{ fontWeight: 600, color: 'secondary.main' }}>
+                            {item.label}
+                          </Typography>
+                        </Box>
+                      </Grid>
+                    ))}
+                  </Grid>
+                </Box>
+                <Box
+                  component="img"
+                  src="https://images.unsplash.com/photo-1543269865-cbf427effbad?w=600&auto=format&fit=crop"
+                  alt="Family laughing and sharing memories together"
+                  sx={{ width: '100%', height: 200, objectFit: 'cover', borderRadius: 4 }}
+                />
+              </Box>
+            </Grid>
           </Grid>
         </Container>
       </Box>
@@ -701,12 +912,7 @@ export function LandingPage() {
                 textAlign: 'center',
               }}
             >
-              <Box
-                component="img"
-                src="/logo-med.png"
-                alt="Heard Again Waveform"
-                sx={{ height: 32, width: 'auto', mb: 1.5 }}
-              />
+              <AnimatedWaveform height={32} sx={{ mb: 1.5 }} />
               <Typography
                 variant="h6"
                 sx={{

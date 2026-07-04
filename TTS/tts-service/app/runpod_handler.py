@@ -183,16 +183,35 @@ def _handle_synthesize_batch(req: SynthesizeBatchInput) -> dict[str, Any]:
                 pass  # SDK version doesn't expose serverless.progress; client falls back to polling
 
         combined_path = job_dir / f"combined.{DEFAULT_AUDIO_FORMAT}"
-        all_audio: list[Any] = []
+        parts: list[np.ndarray] = []
         sample_rate = 24000
         for sp in sentence_paths:
             data, sr = sf.read(str(sp))
             sample_rate = sr
-            silence_samples = int(sr * req.silencePaddingMs / 1000)
-            all_audio.append(data)
-            all_audio.append(np.zeros(silence_samples, dtype=np.float32))
+            try:
+                import librosa
+                trimmed_arr, _ = librosa.effects.trim(data, top_db=20)
+                parts.append(trimmed_arr.astype(np.float32, copy=False))
+            except Exception as trim_err:
+                logger.warning(f"Failed to trim segment: {trim_err}")
+                parts.append(data.astype(np.float32, copy=False))
 
-        combined = np.concatenate(all_audio)
+        crossfade_samples = int(sample_rate * 0.008)
+        silence_samples = int(sample_rate * req.silencePaddingMs / 1000)
+        silence = np.zeros(silence_samples, dtype=np.float32) if silence_samples > 0 else None
+
+        if not parts:
+            combined = np.zeros(0, dtype=np.float32)
+        elif len(parts) == 1:
+            combined = parts[0]
+        else:
+            result = parts[0]
+            for seg in parts[1:]:
+                if silence is not None and len(silence) > 0:
+                    result = np.concatenate([result, silence])
+                result = _crossfade_join(result, seg, crossfade_samples)
+            combined = result
+
         sf.write(str(combined_path), combined, sample_rate, subtype='PCM_16')
 
         duration = len(combined) / sample_rate

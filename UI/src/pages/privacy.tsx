@@ -19,6 +19,7 @@ import {
   DeleteForever as DeleteIcon,
 } from '@mui/icons-material'
 import { PublicHeader } from '../components/layout/PublicHeader'
+import { AnimatedWaveform } from '../components/brand/AnimatedWaveform'
 
 export default function PrivacyPolicyPage() {
   const theme = useTheme()
@@ -371,7 +372,8 @@ export default function PrivacyPolicyPage() {
               gap: 3,
             }}
           >
-            <Box>
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+              <AnimatedWaveform height={24} sx={{ mb: 0.3 }} />
               <Typography
                 variant="h6"
                 sx={{

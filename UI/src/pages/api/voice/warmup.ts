@@ -107,7 +107,7 @@ async function runpodWarmupJob(): Promise<string> {
         text: 'Hi.',
         familyspaceId: 'system',
         language: 'English',
-        silencePaddingMs: 200,
+        silencePaddingMs: 100,
       },
     }),
   })

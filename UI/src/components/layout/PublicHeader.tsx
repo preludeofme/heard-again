@@ -15,6 +15,7 @@ import MenuIcon from '@mui/icons-material/Menu'
 import CloseIcon from '@mui/icons-material/Close'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
+import { AnimatedWaveform } from '../brand/AnimatedWaveform'
 
 export function PublicHeader() {
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -96,17 +97,12 @@ export function PublicHeader() {
               sx={{
                 display: 'flex',
                 flexDirection: 'column',
-                alignItems: 'flex-start',
+                alignItems: 'center',
                 textDecoration: 'none',
                 gap: 0,
               }}
             >
-              <Box
-                component="img"
-                src="/logo-small.png"
-                alt=""
-                sx={{ height: 14, width: 'auto', mb: 0.3 }}
-              />
+              <AnimatedWaveform height={18} sx={{ mb: 0.3 }} />
               <Typography
                 sx={{
                   fontFamily: 'var(--font-newsreader), serif',

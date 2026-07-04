@@ -1,6 +1,7 @@
 import React from 'react'
 import { Box, Typography, Container } from '@mui/material'
 import { PublicHeader } from '@/components/layout/PublicHeader'
+import { AnimatedWaveform } from '@/components/brand/AnimatedWaveform'
 import Link from 'next/link'
 import Head from 'next/head'
 
@@ -50,7 +51,8 @@ export default function TermsLegacyPage() {
               gap: 3,
             }}
           >
-            <Box>
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+              <AnimatedWaveform height={24} sx={{ mb: 0.3 }} />
               <Typography
                 variant="h6"
                 sx={{

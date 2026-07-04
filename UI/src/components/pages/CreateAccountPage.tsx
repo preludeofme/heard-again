@@ -24,6 +24,7 @@ import {
 } from '@mui/icons-material'
 import Link from 'next/link'
 import { PublicHeader } from '@/components/layout/PublicHeader'
+import { AnimatedWaveform } from '../brand/AnimatedWaveform'
 
 export function CreateAccountPage() {
   const theme = useTheme()
@@ -36,11 +37,28 @@ export function CreateAccountPage() {
     lastName: '',
     email: '',
     password: '',
+    confirmPassword: '',
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
+
+    if (!formData.firstName || !formData.lastName || !formData.email || !formData.password || !formData.confirmPassword) {
+      setError('All fields are required')
+      return
+    }
+
+    if (formData.password.length < 8) {
+      setError('Password must be at least 8 characters long')
+      return
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match')
+      return
+    }
+
     setIsLoading(true)
 
     try {
@@ -364,6 +382,30 @@ export function CreateAccountPage() {
                     Must be at least 8 characters with a number.
                   </Typography>
 
+                  <TextField
+                    fullWidth
+                    label="Confirm Password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    value={formData.confirmPassword}
+                    onChange={(e) =>
+                      setFormData({ ...formData, confirmPassword: e.target.value })
+                    }
+                    InputLabelProps={{ shrink: true }}
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton
+                            onClick={() => setShowPassword(!showPassword)}
+                            edge="end"
+                          >
+                            {showPassword ? <VisibilityOff /> : <Visibility />}
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+
                   <Button
                     type="submit"
                     fullWidth
@@ -439,13 +481,8 @@ export function CreateAccountPage() {
               gap: 3,
             }}
           >
-            <Box>
-              <Box
-                component="img"
-                src="/logo-small.png"
-                alt=""
-                sx={{ height: 12, width: 'auto', mb: 0.3 }}
-              />
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+              <AnimatedWaveform height={24} sx={{ mb: 0.3 }} />
               <Typography
                 variant="h6"
                 sx={{

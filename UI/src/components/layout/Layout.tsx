@@ -41,6 +41,7 @@ import { ActiveMemberHeader } from './ActiveMemberHeader'
 import { FamilyspaceSwitcher } from './FamilyspaceSwitcher'
 import { ProfileColors } from '@/components/profile/ProfileConstants'
 import { useSelectedFamilyMember } from '@/contexts/SelectedFamilyMemberContext'
+import { AnimatedWaveform } from '../brand/AnimatedWaveform'
 
 interface LayoutProps {
   children: ReactNode
@@ -224,19 +225,14 @@ export function Layout({ children }: LayoutProps) {
             sx={{
               display: 'flex',
               flexDirection: 'column',
-              alignItems: 'flex-start',
+              alignItems: 'center',
               textDecoration: 'none',
               flexShrink: 0,
               mr: { md: 2 },
               gap: 0,
             }}
           >
-            <Box
-              component="img"
-              src="/logo-small.png"
-              alt=""
-              sx={{ height: 10, width: 'auto', mb: 0.2 }}
-            />
+            <AnimatedWaveform height={18} sx={{ mb: 0.2 }} />
             <Typography
               sx={{
                 fontFamily: 'var(--font-newsreader), serif',

@@ -240,7 +240,7 @@ export class RunPodTTSProvider implements TTSProvider {
       familyspaceId,
       referenceText: referenceText ?? undefined,
       language: 'English',
-      silencePaddingMs: 200,
+      silencePaddingMs: 100,
     })
     return { runpodJobId: job.id }
   }
@@ -289,7 +289,7 @@ export class RunPodTTSProvider implements TTSProvider {
       familyspaceId,
       referenceText: referenceText ?? undefined,
       language: 'English',
-      silencePaddingMs: 200,
+      silencePaddingMs: 100,
     })
 
     // Persist the RunPod job ID immediately so callers can rescue if we stall

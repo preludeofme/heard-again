@@ -14,6 +14,7 @@ import {
 import { ArrowBack, Email } from '@mui/icons-material'
 import Link from 'next/link'
 import { PublicHeader } from '@/components/layout/PublicHeader'
+import { AnimatedWaveform } from '@/components/brand/AnimatedWaveform'
 
 export default function ForgotPasswordPage() {
   const theme = useTheme()
@@ -210,13 +211,8 @@ export default function ForgotPasswordPage() {
               gap: 3,
             }}
           >
-            <Box>
-              <Box
-                component="img"
-                src="/logo-small.png"
-                alt=""
-                sx={{ height: 12, width: 'auto', mb: 0.3 }}
-              />
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+              <AnimatedWaveform height={24} sx={{ mb: 0.3 }} />
               <Typography
                 variant="h6"
                 sx={{

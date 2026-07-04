@@ -18,6 +18,7 @@ import {
   Fade,
 } from '@mui/material'
 import { FamilyRestroom, PersonAdd } from '@mui/icons-material'
+import { AnimatedWaveform } from '@/components/brand/AnimatedWaveform'
 
 const steps = ['Family Name', 'Your Profile']
 
@@ -239,9 +240,13 @@ export default function OnboardingPage() {
         sx={{
           py: 3,
           px: { xs: 3, md: 6 },
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
           textAlign: 'center',
         }}
       >
+        <AnimatedWaveform height={18} sx={{ mb: 0.3 }} />
         <Typography
           variant="h5"
           sx={{

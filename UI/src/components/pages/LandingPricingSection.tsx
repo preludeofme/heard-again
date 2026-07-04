@@ -3,7 +3,7 @@ import { Box, Typography, Card, Grid, Button, Chip, Divider } from '@mui/materia
 import { Check, Close, Cloud, Computer, Storage, Support } from '@mui/icons-material'
 import Link from 'next/link'
 
-function FeatureRow({ icon, label, included }: { icon: React.ReactNode; label: string; included: boolean }) {
+function FeatureRow({ icon, label, included }: { icon: React.ReactNode; label: React.ReactNode; included: boolean }) {
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
       <Box
@@ -25,6 +25,7 @@ function FeatureRow({ icon, label, included }: { icon: React.ReactNode; label: s
         sx={{
           color: included ? '#546669' : '#999',
           textDecoration: included ? 'none' : 'line-through',
+          fontSize: '0.9rem',
         }}
       >
         {label}
@@ -42,14 +43,14 @@ export function LandingPricingSection() {
       subtitle: 'For families who want full ownership and control.',
       pricing: { monthlyDisplay: '0.00' },
       features: [
-        'Open-source self-hosting',
+        <strong>Open-source self-hosting</strong>,
         'Unlimited family members',
         'Unlimited stories and memories',
-        'Unlimited voice profiles, based on your own hardware',
+        'Unlimited voice profiles (local hardware)',
         'Full control of your family data',
         'No required cloud storage'
       ],
-      bestFor: 'Best for families who are comfortable running their own software or want a private family memories at home.',
+      bestFor: 'Best for families who are comfortable running their own software or want private family memories at home.',
       isCloud: false
     },
     {
@@ -59,13 +60,13 @@ export function LandingPricingSection() {
       subtitle: 'For families who want a simple hosted option.',
       pricing: { monthlyDisplay: '9.99' },
       features: [
-        'Private cloud hosting',
-        '30 minutes of voice generation per month',
-        'Unlimited family members',
-        'Up to 50 voice profiles',
-        'Secure memory storage',
-        'Managed updates',
-        'No selling of your data, ever'
+        <span key="bold-plus" style={{ color: '#16334a', fontWeight: 600 }}>Includes all Self-Hosted features PLUS:</span>,
+        <strong>Private cloud hosting</strong>,
+        <span><strong>30 minutes</strong> of voice generation / mo</span>,
+        <span>Up to <strong>50 voice profiles</strong></span>,
+        <strong>Secure cloud storage</strong>,
+        'Managed software updates',
+        <strong>No selling of data, ever</strong>
       ],
       bestFor: 'Best for families just beginning to preserve their stories.',
       isCloud: true
@@ -77,13 +78,11 @@ export function LandingPricingSection() {
       subtitle: 'For families actively building their legacy library.',
       pricing: { monthlyDisplay: '19.99' },
       features: [
-        'Private cloud hosting',
-        '60 minutes of voice generation per month',
-        'Unlimited family members',
-        'Up to 50 voice profiles',
-        'Secure memory storage',
-        'Managed updates',
-        'Priority processing'
+        <span key="bold-plus" style={{ color: '#16334a', fontWeight: 600 }}>Includes all Starter features PLUS:</span>,
+        <span><strong>60 minutes</strong> of voice generation / mo</span>,
+        <strong>Priority voice processing</strong>,
+        'Advanced family tree linking',
+        'Priority feature access'
       ],
       bestFor: 'Best for families collecting stories from multiple relatives and contributors.',
       isCloud: true
@@ -95,13 +94,10 @@ export function LandingPricingSection() {
       subtitle: 'For families preserving a large collection of voices, memories, and stories.',
       pricing: { monthlyDisplay: '39.99' },
       features: [
-        'Private cloud hosting',
-        'Unlimited voice generation',
-        'Unlimited family members',
-        'Up to 50 voice profiles',
-        'Secure memory storage',
-        'Managed updates',
-        'Priority support'
+        <span key="bold-plus" style={{ color: '#16334a', fontWeight: 600 }}>Includes all Family features PLUS:</span>,
+        <strong>Unlimited voice generation</strong>,
+        <strong>Priority support response</strong>,
+        'Dedicated success manager'
       ],
       bestFor: 'Best for families building a long-term family legacy library.',
       isCloud: true

@@ -93,7 +93,7 @@ export class RestTTSProvider implements TTSProvider {
           text,
           language: 'English',
           familyspaceId,
-          silencePaddingMs: 200,
+          silencePaddingMs: 100,
         }),
       })
     } catch (err: unknown) {

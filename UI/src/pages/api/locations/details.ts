@@ -51,10 +51,39 @@ export default apiHandler(
 
       const components = data.addressComponents ?? []
       const locality = components.find((c) => c.types.includes('locality'))
+      const militaryInstall = components.find((c) => c.types.includes('military_installation'))
+      const colloquial = components.find((c) => c.types.includes('colloquial_area'))
+      const sublocality = components.find((c) => c.types.includes('sublocality'))
+      const neighborhood = components.find((c) => c.types.includes('neighborhood'))
+      const establishment = components.find((c) => c.types.includes('establishment'))
       const adminArea = components.find((c) => c.types.includes('administrative_area_level_1'))
 
+      let cityText = locality?.longText ?? ''
+      if (!cityText) {
+        if (militaryInstall) {
+          cityText = militaryInstall.longText
+        } else if (colloquial) {
+          cityText = colloquial.longText
+        } else if (sublocality) {
+          cityText = sublocality.longText
+        } else if (neighborhood) {
+          cityText = neighborhood.longText
+        } else if (establishment) {
+          cityText = establishment.longText
+        } else if (components.length > 0) {
+          const first = components[0]
+          if (
+            !first.types.includes('country') &&
+            !first.types.includes('administrative_area_level_1') &&
+            !first.types.includes('postal_code')
+          ) {
+            cityText = first.longText
+          }
+        }
+      }
+
       const details: LocationDetails = {
-        city: locality?.longText ?? '',
+        city: cityText,
         state: adminArea?.shortText ?? '',
         lat: data.location.latitude,
         lng: data.location.longitude,

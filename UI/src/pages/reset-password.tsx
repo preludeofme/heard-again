@@ -16,6 +16,7 @@ import {
 import { ArrowBack, Lock, Visibility, VisibilityOff, CheckCircle } from '@mui/icons-material'
 import Link from 'next/link'
 import { PublicHeader } from '@/components/layout/PublicHeader'
+import { AnimatedWaveform } from '@/components/brand/AnimatedWaveform'
 
 export default function ResetPasswordPage() {
   const theme = useTheme()
@@ -397,7 +398,8 @@ export default function ResetPasswordPage() {
               gap: 3,
             }}
           >
-            <Box>
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+              <AnimatedWaveform height={24} sx={{ mb: 0.3 }} />
               <Typography
                 variant="h6"
                 sx={{
