@@ -42,28 +42,7 @@ const MaterialSymbol = ({ icon, sx }: { icon: string; sx?: any }) => (
   </Typography>
 )
 
-const collaborationSteps = [
-  {
-    icon: 'groups',
-    title: 'Invite Family and Friends',
-    description: 'Securely invite the people who knew your loved one best. Each contributor can add their own stories, recordings, photos, letters, and reflections — helping preserve memories that might otherwise fade away.',
-  },
-  {
-    icon: 'settings_voice',
-    title: 'Save Their Voice',
-    description: 'Upload recordings, voicemails, or interviews to save family voices from aging tech. We organize and protect these memories from being lost. Optionally enable story narration in a familiar voice, always with your consent.',
-  },
-  {
-    icon: 'edit_note',
-    title: 'Capture the Stories Behind the Photos',
-    description: 'Photos show a moment. Stories explain why it mattered. Add written memories, scanned letters, personal notes, family jokes, recipes, sayings, and small details that make someone feel real again.',
-  },
-  {
-    icon: 'auto_stories',
-    title: 'Create a Family Legacy Library',
-    description: 'Over time, your family’s contributions become something bigger than a scrapbook. They become a private family memory library — one that future generations can read, hear, explore, and add to.',
-  },
-]
+
 
 const testimonials = [
   {
@@ -266,7 +245,7 @@ export function LandingPage() {
         </Grid>
       </Box>
 
-      {/* Collaborative Section */}
+      {/* Our Mission & Features Section */}
       <Box
         component="section"
         sx={{
@@ -276,7 +255,7 @@ export function LandingPage() {
         }}
       >
         <Container maxWidth="lg">
-          <Box sx={{ mb: 10 }}>
+          <Box sx={{ mb: 10, textAlign: 'center' }}>
             <Typography
               variant="overline"
               sx={{
@@ -287,85 +266,124 @@ export function LandingPage() {
                 display: 'block',
               }}
             >
-              COLLABORATIVE STORYTELLING
+              OUR MISSION & FEATURES
             </Typography>
             <Typography
               variant="h2"
               sx={{
-                fontSize: { xs: '2rem', md: '3rem' },
+                fontSize: { xs: '2.5rem', md: '3.5rem' },
                 color: 'primary.main',
-                maxWidth: 700,
                 mb: 3,
                 fontFamily: 'var(--font-newsreader), serif',
+                maxWidth: 800,
+                mx: 'auto',
               }}
             >
-              A fuller picture, built by everyone who loved them.
+              What We Provide: A Complete Family Legacy, Built Together
             </Typography>
             <Typography
               variant="body1"
               sx={{
-                fontSize: '1.125rem',
+                fontSize: '1.25rem',
                 color: 'secondary.main',
-                maxWidth: 600,
+                maxWidth: 800,
+                mx: 'auto',
+                lineHeight: 1.7,
               }}
             >
-              No one person remembers everything. A daughter may remember bedtime stories. A grandson may remember fishing trips. An old friend may remember the jokes no one else heard. A sibling may remember who they were before they became “Mom,” “Dad,” “Grandpa,” or “Grandma.”<br /><br />
-              Heard Again lets family members and trusted friends contribute their own memories, creating a richer and more complete portrait of someone&apos;s life.
+              No one person remembers everything. Heard Again is a secure family story preservation suite.
+              We provide the tools to convert physical memories into a private digital library, letting family members and trusted friends contribute their own memories to create a richer, more complete portrait of a life.
             </Typography>
           </Box>
 
-          <Grid container spacing={3}>
-            {collaborationSteps.map((step, index) => (
-              <Grid size={{ xs: 12, sm: 6, lg: 3 }} key={index}>
+          <Grid container spacing={4}>
+            {[
+              {
+                icon: 'settings_voice',
+                title: 'Private Voice Lab',
+                description: 'Safely clone and preserve a loved one\'s voice from old audio recordings. The synthesized voice profile is private, securely stored, and used exclusively to narrate written family stories in their familiar voice with family consent.',
+              },
+              {
+                icon: 'auto_stories',
+                title: 'Interactive Family Scrapbook',
+                description: 'Create a rich digital history repository. Upload photos, scanned letters, personal documents, and audio tracks, link them to specific individuals, and view them on an interactive family timeline.',
+              },
+              {
+                icon: 'keyboard_voice',
+                title: 'Smart Transcription Pipeline',
+                description: 'Convert cassette tapes, home video soundtracks, and oral interviews into clean, searchable, and formatted text. Our private, isolated processing ensures no third party hears your audio.',
+              },
+              {
+                icon: 'groups',
+                title: 'Collaborative Memories',
+                description: 'Invite family members and old friends as contributors. Each person can safely add their own perspective, voice notes, photos, and stories, forming a multi-dimensional portrait of family history.',
+              },
+              {
+                icon: 'history_edu',
+                title: 'Private Family Archive',
+                description: 'Over time, your family\'s contributions grow into a secure, searchable archive—a living memory library that future generations can explore, listen to, and continue to build.',
+              },
+              {
+                icon: 'security',
+                title: 'Absolute Privacy & Control',
+                description: 'Securely store your family memories with our encrypted SaaS app, ensuring all your data remains private, secure, and under your absolute control.',
+              },
+            ].map((feature, index) => (
+              <Grid size={{ xs: 12, md: 6, lg: 4 }} key={index}>
                 <Card
                   sx={{
                     bgcolor: 'background.paper',
                     p: 4,
+                    height: '100%',
                     borderRadius: 4,
                     transition: 'all 0.3s ease',
+                    border: '1px solid rgba(22, 51, 74, 0.05)',
                     '&:hover': {
-                      boxShadow: '0 10px 40px rgba(28, 28, 25, 0.08)',
+                      boxShadow: '0 12px 30px rgba(28, 28, 25, 0.05)',
                       transform: 'translateY(-4px)',
                     },
                   }}
                 >
-                  <Box
-                    sx={{
-                      width: 48,
-                      height: 48,
-                      bgcolor: 'rgba(22, 51, 74, 0.1)',
-                      color: 'primary.main',
-                      borderRadius: 3,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      mb: 3,
-                      transition: 'all 0.3s ease',
-                      '.MuiCard-root:hover &': {
-                        bgcolor: 'primary.main',
-                        color: 'white',
-                      },
-                    }}
-                  >
-                    <MaterialSymbol icon={step.icon} sx={{ fontSize: 28 }} />
+                  <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                    <Box
+                      sx={{
+                        width: 48,
+                        height: 48,
+                        bgcolor: 'rgba(22, 51, 74, 0.08)',
+                        color: 'primary.main',
+                        borderRadius: 3,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        mb: 3,
+                        transition: 'all 0.3s ease',
+                        '.MuiCard-root:hover &': {
+                          bgcolor: 'primary.main',
+                          color: 'white',
+                        },
+                      }}
+                    >
+                      <MaterialSymbol icon={feature.icon} sx={{ fontSize: 28 }} />
+                    </Box>
+                    <Typography
+                      variant="h3"
+                      sx={{
+                        fontSize: '1.25rem',
+                        fontWeight: 600,
+                        color: 'primary.main',
+                        mb: 2,
+                        fontFamily: 'var(--font-newsreader), serif',
+                      }}
+                    >
+                      {feature.title}
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      sx={{ color: 'secondary.main', lineHeight: 1.6 }}
+                    >
+                      {feature.description}
+                    </Typography>
                   </Box>
-                  <Typography
-                    variant="h3"
-                    sx={{
-                      fontSize: '1.25rem',
-                      color: 'primary.main',
-                      mb: 2,
-                      fontFamily: 'var(--font-newsreader), serif',
-                    }}
-                  >
-                    {step.title}
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    sx={{ color: 'secondary.main', lineHeight: 1.6 }}
-                  >
-                    {step.description}
-                  </Typography>
                 </Card>
               </Grid>
             ))}
@@ -482,7 +500,6 @@ export function LandingPage() {
       {/* Pricing Section */}
       <LandingPricingSection />
 
-      {/* What We Provide & FAQ Section */}
       <Box
         id="faq"
         component="section"
@@ -496,141 +513,24 @@ export function LandingPage() {
         }}
       >
         <Container maxWidth="md">
-          {/* What We Provide Header */}
-          <Box sx={{ textAlign: 'center', mb: 8 }}>
-            <Typography
-              variant="overline"
-              sx={{
-                color: 'primary.main',
-                fontWeight: 700,
-                letterSpacing: '0.15em',
-                mb: 2,
-                display: 'block',
-              }}
-            >
-              OUR MISSION & FEATURES
-            </Typography>
-            <Typography
-              variant="h2"
-              sx={{
-                fontSize: { xs: '2.5rem', md: '3.5rem' },
-                color: 'primary.main',
-                mb: 3,
-                fontFamily: 'var(--font-newsreader), serif',
-              }}
-            >
-              What We Provide
-            </Typography>
-            <Typography
-              variant="body1"
-              sx={{
-                fontSize: '1.25rem',
-                color: 'secondary.main',
-                maxWidth: 700,
-                mx: 'auto',
-                lineHeight: 1.7,
-              }}
-            >
-              Heard Again is a comprehensive family story preservation suite. We provide tools to convert physical memories into a private digital library, ensuring your family legacy is protected, organized, and accessible to future generations.
-            </Typography>
-          </Box>
-
-          {/* Service Cards / Details */}
-          <Grid container spacing={4} sx={{ mb: 10 }}>
-            {[
-              {
-                icon: 'settings_voice',
-                title: 'Private Voice Lab',
-                description: 'Safely clone and preserve a loved one\'s voice from old audio recordings. The synthesized voice profile is private, securely stored, and used exclusively to narrate written family stories in their familiar voice with family consent.',
-              },
-              {
-                icon: 'auto_stories',
-                title: 'Interactive Family Scrapbook',
-                description: 'Create a rich digital history repository. Upload photos, scanned letters, personal documents, and audio tracks, link them to specific individuals, and view them on an interactive family timeline.',
-              },
-              {
-                icon: 'keyboard_voice',
-                title: 'Smart Transcription Pipeline',
-                description: 'Convert cassette tapes, home video soundtracks, and oral interviews into clean, searchable, and formatted text. Our private, isolated processing ensures no third party hears your audio.',
-              },
-              {
-                icon: 'groups',
-                title: 'Collaborative Memories',
-                description: 'Invite family members and old friends as contributors. Each person can safely add their own perspective, voice notes, and stories, forming a multi-dimensional portrait of family history.',
-              },
-              {
-                icon: 'security',
-                title: 'Absolute Privacy & Control',
-                description: 'Securely store your family memories with our encrypted SaaS app, ensuring all your data remains private, secure, and under your absolute control.',
-              },
-            ].map((service, index) => (
-              <Grid size={{ xs: 12, md: 6 }} key={index}>
-                <Card
-                  elevation={0}
-                  sx={{
-                    p: 4,
-                    height: '100%',
-                    borderRadius: 4,
-                    bgcolor: 'background.paper',
-                    border: '1px solid rgba(22, 51, 74, 0.05)',
-                    transition: 'all 0.3s ease',
-                    '&:hover': {
-                      boxShadow: '0 12px 30px rgba(28, 28, 25, 0.05)',
-                      transform: 'translateY(-2px)',
-                    },
-                  }}
-                >
-                  <Box sx={{ display: 'flex', gap: 3, alignItems: 'flex-start' }}>
-                    <Box
-                      sx={{
-                        width: 44,
-                        height: 44,
-                        borderRadius: 2,
-                        bgcolor: 'rgba(22, 51, 74, 0.08)',
-                        color: 'primary.main',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flexShrink: 0,
-                      }}
-                    >
-                      <MaterialSymbol icon={service.icon} sx={{ fontSize: 24 }} />
-                    </Box>
-                    <Box>
-                      <Typography variant="h6" sx={{ color: 'primary.main', fontWeight: 600, mb: 1 }}>
-                        {service.title}
-                      </Typography>
-                      <Typography variant="body2" sx={{ color: 'secondary.main', lineHeight: 1.6 }}>
-                        {service.description}
-                      </Typography>
-                    </Box>
-                  </Box>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
-
-          <Divider sx={{ mb: 10, borderColor: 'rgba(22, 51, 74, 0.1)' }} />
-
-          {/* FAQ Section */}
           <Box>
             <Typography
-              variant="h3"
-              sx={{
-                fontSize: { xs: '2rem', md: '2.5rem' },
-                color: 'primary.main',
-                mb: 6,
-                textAlign: 'center',
-                fontFamily: 'var(--font-newsreader), serif',
-              }}
-            >
-              Frequently Asked Questions
-            </Typography>
+            variant="h3"
+            sx={{
+              fontSize: { xs: '2rem', md: '2.5rem' },
+              color: 'primary.main',
+              mb: 6,
+              textAlign: 'center',
+              fontFamily: 'var(--font-newsreader), serif',
+            }}
+          >
+            Frequently Asked Questions
+          </Typography>
 
-            <Stack spacing={2}>
-              {[
-                {
-                  q: 'What is Heard Again and what is it NOT?',
+          <Stack spacing={2}>
+            {[
+              {
+                q: 'What is Heard Again and what is it NOT?',
                   a: 'Heard Again is a secure and private legacy preservation vault, it is NOT a public social media network or marketing platform. There are no public feeds or open sharing unless you decide to share it broadly. Your space is fully customizable and can be open or closed, and you can specify who is allowed to see your family history/stories. We do not sell user data, monetize relationship details, or use ads.',
                 },
                 {
@@ -787,18 +687,25 @@ export function LandingPage() {
           <Box
             sx={{
               display: 'flex',
-              flexDirection: { xs: 'column', md: 'row' },
-              justifyContent: 'space-between',
+              flexDirection: 'column',
               alignItems: 'center',
+              textAlign: 'center',
               gap: 4,
             }}
           >
-            <Box>
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                textAlign: 'center',
+              }}
+            >
               <Box
                 component="img"
-                src="/logo-small.png"
-                alt=""
-                sx={{ height: 14, width: 'auto', mb: 0.3 }}
+                src="/logo-med.png"
+                alt="Heard Again Waveform"
+                sx={{ height: 32, width: 'auto', mb: 1.5 }}
               />
               <Typography
                 variant="h6"
