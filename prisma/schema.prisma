@@ -40,6 +40,9 @@ model User {
   mfaBackupCodes            String?
   mfaEnabled                Boolean               @default(false)
   mfaSecret                 String?
+  mfaMethod                 String?
+  mfaEmailCode              String?
+  mfaEmailCodeExpires       DateTime?
   linkedPersonId            String?               @unique
   role                      UserRole              @default(USER)
   uploadedAssets            Asset[]

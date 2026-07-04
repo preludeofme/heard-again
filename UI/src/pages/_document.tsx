@@ -7,6 +7,11 @@ export default function Document() {
         {/* PWA manifest — enables "Add to Home Screen" with standalone fullscreen display */}
         <link rel="manifest" href="/manifest.json" />
 
+        {/* Favicon — Heard Again logo */}
+        <link rel="icon" type="image/png" sizes="32x32" href="/heard-again-logo-32.png" />
+        <link rel="icon" type="image/png" sizes="64x64" href="/heard-again-logo-64.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/heard-again-logo-180.png" />
+
         {/* Theme color — colors the browser chrome on Android and the status bar tint on iOS */}
         <meta name="theme-color" content="#16334a" />
 

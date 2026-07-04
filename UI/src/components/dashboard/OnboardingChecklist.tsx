@@ -40,6 +40,17 @@ export function OnboardingChecklist({ state, role, familyspaceId }: OnboardingCh
     })
   }
 
+  // MFA step: only for OWNERs who haven't enabled it yet
+  if (role === 'OWNER' && !state.mfaEnabled) {
+    steps.push({
+      key: 'mfaEnabled',
+      label: 'Secure your account with Multi-Factor Authentication',
+      hint: 'Protect your family\'s stories with an extra layer of security.',
+      href: '/account',
+      done: false,
+    })
+  }
+
   const completedCount = steps.filter(s => s.done).length
   const allDone = completedCount === steps.length
   if (allDone) return null

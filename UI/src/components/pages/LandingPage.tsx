@@ -19,6 +19,7 @@ import {
   PlayCircle,
   Share,
   Favorite,
+  GitHub,
 } from '@mui/icons-material'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import Link from 'next/link'
@@ -104,19 +105,87 @@ export function LandingPage() {
         }}
       >
         <Grid container spacing={8} alignItems="center">
-          <Grid size={{ xs: 12, lg: 6 }} sx={{ position: 'relative', zIndex: 10 }}>
-            <Typography
-              variant="h1"
-              sx={{
-                fontSize: { xs: '3rem', md: '4rem', lg: '5rem' },
-                lineHeight: 1.1,
-                mb: 4,
-                color: 'primary.main',
-                fontFamily: 'var(--font-newsreader), serif',
-              }}
-            >
-              Stories fade. Voices don&apos;t have to.
-            </Typography>
+          <Grid size={{ xs: 12, lg: 6 }} sx={{ position: 'relative', zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+            {/* Logo/Header matching og-image */}
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 4, width: '100%' }}>
+              <Box
+                component="img"
+                src="/logo-large.png"
+                alt="Heard Again Waveform"
+                sx={{ height: 72, width: 'auto', mb: 2, mx: 'auto' }}
+              />
+              <Typography
+                variant="h1"
+                sx={{
+                  fontSize: { xs: '3.5rem', md: '4.5rem', lg: '5.5rem' },
+                  lineHeight: 1.0,
+                  color: 'primary.main',
+                  fontFamily: 'var(--font-newsreader), serif',
+                  fontWeight: 500,
+                  letterSpacing: '-0.02em',
+                  textAlign: 'center',
+                }}
+              >
+                Heard Again
+              </Typography>
+              
+              {/* Decorative flourish divider */}
+              <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', maxWidth: 450, my: 1.5, mx: 'auto' }}>
+                <Box sx={{ flexGrow: 1, height: '1px', bgcolor: '#16334a', opacity: 0.2 }} />
+                <Box sx={{ mx: 2, display: 'flex', alignItems: 'center', color: '#16334a', opacity: 0.8 }}>
+                  <svg width="40" height="16" viewBox="0 0 40 16" fill="currentColor">
+                    <path d="M20 1.5c-1 0-2 1.5-2 3 0 2 2.5 3.5 2 7.5-.5-4 2-5.5 2-7.5 0-1.5-1-3-2-3z" />
+                    <path d="M20 12c-4-1-7-3-10-1 4-1 6 1 10 1z" />
+                    <path d="M20 12c4-1 7-3 10-1-4-1-6 1-10 1z" />
+                    <circle cx="6" cy="11" r="1.5" />
+                    <circle cx="34" cy="11" r="1.5" />
+                  </svg>
+                </Box>
+                <Box sx={{ flexGrow: 1, height: '1px', bgcolor: '#16334a', opacity: 0.2 }} />
+              </Box>
+
+              <Typography
+                variant="h5"
+                sx={{
+                  fontFamily: 'var(--font-newsreader), serif',
+                  fontStyle: 'italic',
+                  color: 'primary.main',
+                  fontSize: { xs: '1.25rem', md: '1.5rem' },
+                  mb: 3,
+                  textAlign: 'center',
+                }}
+              >
+                Family stories, preserved with care.
+              </Typography>
+
+              {/* Pill-shaped badges */}
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 1.5, mt: 1 }}>
+                {[
+                  { label: 'Voice Preservation', color: '#6a4c93' },
+                  { label: 'Family Stories', color: '#1a5f7a' },
+                  { label: 'Consent First', color: '#c19a6b' },
+                ].map((badge) => (
+                  <Box
+                    key={badge.label}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1,
+                      px: 2,
+                      py: 0.75,
+                      borderRadius: '20px',
+                      border: '1px solid rgba(22, 51, 74, 0.15)',
+                      bgcolor: 'rgba(255, 255, 255, 0.4)',
+                    }}
+                  >
+                    <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: badge.color }} />
+                    <Typography variant="caption" sx={{ fontWeight: 600, color: 'primary.main', letterSpacing: '0.02em' }}>
+                      {badge.label}
+                    </Typography>
+                  </Box>
+                ))}
+              </Box>
+            </Box>
             <Typography
               variant="body1"
               sx={{
@@ -125,13 +194,15 @@ export function LandingPage() {
                 mb: 5,
                 maxWidth: 600,
                 lineHeight: 1.6,
+                textAlign: 'center',
+                mx: 'auto',
               }}
             >
               Preserve the voices, stories, and memories of the people who shaped your family. Heard Again gives your family a private place to collect recordings, photos, letters, and personal stories — and, when you choose, hear those memories narrated in a familiar voice again.
               <br /><br />
-              <b>Your family&apos;s memories are never sold</b>, never used to train public models, and never shared with third parties. Cloud-host with us, or self-host it yourself — Heard Again is <b>100% open source</b>. Your family&apos;s legacy stays your way.
+              <b>Your family&apos;s memories are never sold</b>, never used to train public models, and never shared with third parties. Your family&apos;s legacy stays your way.
             </Typography>
-            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
+            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'center', gap: 2 }}>
               <Button
                 variant="contained"
                 size="large"
@@ -162,6 +233,8 @@ export function LandingPage() {
                 component="img"
                 src="https://images.unsplash.com/photo-1511895426328-dc8714191300?w=800&h=1000&fit=crop"
                 alt="Happy multi-generational family sitting together laughing"
+                width={800}
+                height={1000}
                 sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />
             </Box>
@@ -184,6 +257,8 @@ export function LandingPage() {
                 component="img"
                 src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop&crop=face"
                 alt="Close up of a grandfather smiling"
+                width={400}
+                height={400}
                 sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />
             </Box>
@@ -416,7 +491,6 @@ export function LandingPage() {
           py: 16,
           px: { xs: 4, md: 8 },
           borderTop: '1px solid',
-          borderColor: 'rgba(208, 227, 230, 0.5)',
           borderBottom: '1px solid',
           borderColor: 'rgba(208, 227, 230, 0.5)',
         }}
@@ -487,7 +561,7 @@ export function LandingPage() {
               {
                 icon: 'security',
                 title: 'Absolute Privacy & Control',
-                description: 'Choose how your data is hosted. Securely cloud-host with our encrypted SaaS app, or self-host Heard Again on your own hardware using our open-source codebase for 100% data custody.',
+                description: 'Securely store your family memories with our encrypted SaaS app, ensuring all your data remains private, secure, and under your absolute control.',
               },
             ].map((service, index) => (
               <Grid size={{ xs: 12, md: 6 }} key={index}>
@@ -568,12 +642,12 @@ export function LandingPage() {
                   a: 'No. Our transcription and Text-to-Speech (TTS) models process all audio in isolated environments. Your family records, audio, and stories are never used to train public models (like those from OpenAI or Google) and are never shared with other customers.',
                 },
                 {
-                  q: 'Who owns the uploaded data and can I self-host?',
-                  a: 'Your family owns 100% of the data and media. You can download a complete archive of your family stories and recordings or delete them entirely at any time. Heard Again is also fully open-source. Technically inclined users can self-host the entire app on their own hardware to guarantee lifetime access and total data control.',
+                  q: 'Who owns the uploaded data?',
+                  a: 'Your family owns 100% of the data and media. You can download a complete archive of your family stories and recordings or delete them entirely at any time. We believe in total data custody, so you always retain full ownership.',
                 },
                 {
-                  q: 'What is the Cloud Tunnel / Connected Mode?',
-                  a: 'For self-hosted instances, the Cloud Tunnel (via Cloudflare) makes it easy to access your local home server securely from anywhere on the web (e.g. your-subdomain.heardagain.com) without open router ports. Note: This feature is currently in Beta / Coming Soon as we refine the auto-configuration steps, but it is fully active for pre-release testing.',
+                  q: 'Can I try Heard Again before I buy it?',
+                  a: 'Yes! We offer a 14-day free trial on all plans—allowing you to set up your family space, try out the Voice Lab, and upload memories before your billing begins.',
                 },
               ].map((faq, index) => (
                 <Accordion
@@ -720,6 +794,12 @@ export function LandingPage() {
             }}
           >
             <Box>
+              <Box
+                component="img"
+                src="/logo-small.png"
+                alt=""
+                sx={{ height: 14, width: 'auto', mb: 0.3 }}
+              />
               <Typography
                 variant="h6"
                 sx={{
@@ -793,6 +873,30 @@ export function LandingPage() {
               </Link>
             </Box>
             <Box sx={{ display: 'flex', gap: 2 }}>
+              <Button
+                variant="outlined"
+                component="a"
+                href="https://github.com/preludeofme/heard-again"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="GitHub"
+                sx={{
+                  minWidth: 0,
+                  width: 40,
+                  height: 40,
+                  borderRadius: '50%',
+                  p: 0,
+                  borderColor: 'rgba(22,51,74,0.2)',
+                  color: 'primary.main',
+                  '&:hover': {
+                    bgcolor: 'primary.main',
+                    color: 'white',
+                    borderColor: 'primary.main',
+                  },
+                }}
+              >
+                <GitHub sx={{ fontSize: 20 }} />
+              </Button>
               <Button
                 variant="outlined"
                 aria-label="Share"

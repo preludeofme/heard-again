@@ -132,13 +132,18 @@ export function LandingPricingSection() {
                     <Typography variant="h3" sx={{ color: '#16334a', fontWeight: 700 }}>${plan.pricing.monthlyDisplay}</Typography>
                     <Typography variant="body2" sx={{ color: '#999' }}>/mo</Typography>
                   </Box>
+                  {plan.isCloud && (
+                    <Typography variant="caption" sx={{ color: '#546669', display: 'block', mt: 0.5, fontWeight: 600 }}>
+                      Includes 14-day free trial
+                    </Typography>
+                  )}
                 </Box>
                 <Divider sx={{ my: 2, opacity: 0.3 }} />
                 <Box sx={{ flexGrow: 1, mb: 3 }}>
                   <Typography variant="subtitle2" sx={{ color: '#546669', mb: 2 }}>Includes:</Typography>
                   <Box sx={{ mt: 2 }}>
                     {plan.features.map((feature, i) => (
-                      <FeatureRow key={i} icon={<Check fontSize="small" />} label={feature} included={true} />
+                       <FeatureRow key={i} icon={<Check fontSize="small" />} label={feature} included={true} />
                     ))}
                   </Box>
                   <Typography variant="body2" sx={{ color: '#16334a', fontStyle: 'italic', mt: 3, p: 2, bgcolor: '#f6f3ee', borderRadius: 2 }}>
@@ -146,7 +151,7 @@ export function LandingPricingSection() {
                   </Typography>
                 </Box>
                 <Button component={Link} href={`/signup?plan=${plan.id}`} variant={plan.isCloud ? 'contained' : 'outlined'} fullWidth sx={{ py: 1.5, borderRadius: 3, textTransform: 'none', fontSize: '1rem', ...(plan.isCloud ? { backgroundColor: '#16334a', '&:hover': { backgroundColor: '#2e4a62' } } : { borderColor: '#16334a', color: '#16334a' }) }}>
-                  Get Started
+                  {plan.isCloud ? 'Start 14-Day Free Trial' : 'Get Started'}
                 </Button>
               </Card>
             </Grid>

@@ -46,6 +46,15 @@ export default function MemoriesPage() {
       <Head>
         <title>The Living Memories | Heard Again</title>
         <meta name="description" content="A unified family memories — life journey, stories, voices, and keepsakes." />
+        <meta property="og:title" content="The Living Memories | Heard Again" />
+        <meta property="og:description" content="A unified family memories — life journey, stories, voices, and keepsakes." />
+        <meta property="og:image" content="https://heardagain.com/og-image.png" />
+        <meta property="og:type" content="website" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="The Living Memories | Heard Again" />
+        <meta name="twitter:description" content="A unified family memories — life journey, stories, voices, and keepsakes." />
+        <meta name="twitter:image" content="https://heardagain.com/og-image.png" />
+        <link rel="canonical" href="https://heardagain.com/legacy" />
       </Head>
       <Layout>
         <MemoriesShell lens={lens} onLensChange={handleLensChange}>

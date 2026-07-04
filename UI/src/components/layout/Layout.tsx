@@ -217,22 +217,39 @@ export function Layout({ children }: LayoutProps) {
           }}
         >
           {/* Brand */}
-          <Typography
+          {/* Logo icon + text */}
+          <Box
             component={Link}
             href="/legacy"
             sx={{
-              fontFamily: 'var(--font-newsreader), serif',
-              fontSize: { xs: '1.3rem', md: '1.5rem' },
-              fontWeight: 700,
-              color: ProfileColors.primary,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'flex-start',
               textDecoration: 'none',
-              letterSpacing: '-0.01em',
               flexShrink: 0,
               mr: { md: 2 },
+              gap: 0,
             }}
           >
-            Heard Again
-          </Typography>
+            <Box
+              component="img"
+              src="/logo-small.png"
+              alt=""
+              sx={{ height: 10, width: 'auto', mb: 0.2 }}
+            />
+            <Typography
+              sx={{
+                fontFamily: 'var(--font-newsreader), serif',
+                fontSize: { xs: '0.8rem', md: '0.9rem' },
+                fontWeight: 700,
+                color: ProfileColors.primary,
+                letterSpacing: '-0.01em',
+                lineHeight: 1,
+              }}
+            >
+              Heard Again
+            </Typography>
+          </Box>
 
           {/* Desktop nav links */}
           {!isMobile && (

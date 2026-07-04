@@ -64,6 +64,8 @@ export default apiHandler({
       untaggedStoriesCount,
       featuredPersonCandidates,
       generationsCount,
+      // MFA status for onboarding checklist
+      currentUserMFA,
     ] = await Promise.all([
       prisma.familyspace.findUnique({
         where: { id: familyspaceId },
@@ -217,6 +219,13 @@ export default apiHandler({
         take: 50,
       }),
       relationshipService.calculateGenerations(familyspaceId),
+      // MFA status for the onboarding checklist — owners get an extra step
+      isAdminOrOwner
+        ? prisma.user.findUnique({
+            where: { id: user.id },
+            select: { mfaEnabled: true },
+          })
+        : Promise.resolve(null),
     ])
 
     const latestStories = latestStoriesRaw.map((s) => ({
@@ -365,6 +374,7 @@ export default apiHandler({
         hasFirstDocument: documentsCount > 0,
         hasFirstVoice: voiceProfileCount > 0,
         hasInvitedMember: hasInvitedMemberValue > 1,
+        mfaEnabled: currentUserMFA?.mfaEnabled ?? false,
       },
       continueWork: {
         lastDraftStory: lastDraftStory

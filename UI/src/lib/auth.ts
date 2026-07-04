@@ -6,6 +6,7 @@ import bcrypt from 'bcrypt'
 import { prisma } from '@/lib/prisma'
 import { validatePassword, hashPassword } from './security/password-policy'
 import { logger } from './logger'
+import { generateMFACode, sendMFACodeEmail, storeMFACode } from '@/services/MFAEmailService'
 
 export const authOptions: NextAuthOptions = {
   // @ts-expect-error trustHost is valid in NextAuth.js v4+ but not in type definitions
@@ -28,6 +29,8 @@ export const authOptions: NextAuthOptions = {
       credentials: {
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' },
+        mfaToken: { label: 'MFA Token', type: 'text' },
+        mfaTempToken: { label: 'MFA Temp Token', type: 'text' },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
@@ -49,6 +52,108 @@ export const authOptions: NextAuthOptions = {
 
         if (!isPasswordValid) {
           return null
+        }
+
+        // Check if MFA is enabled
+        if (user.mfaEnabled) {
+          if (user.mfaMethod === 'email') {
+            // Check if the user has provided a valid mfaTempToken (from the mfa-verify endpoint)
+            if (credentials.mfaTempToken) {
+              // Verify the temp token matches what we stored
+              if (
+                user.mfaEmailCode === credentials.mfaTempToken &&
+                user.mfaEmailCodeExpires &&
+                new Date() < user.mfaEmailCodeExpires
+              ) {
+                // MFA passed — clear temp token and proceed
+                await prisma.user.update({
+                  where: { id: user.id },
+                  data: {
+                    mfaEmailCode: null,
+                    mfaEmailCodeExpires: null,
+                  },
+                })
+                // Continue to return user below
+              } else {
+                // Invalid or expired temp token
+                logger.warn({ userId: user.id }, 'MFA temp token invalid or expired')
+                return null
+              }
+            } else {
+              // MFA is required — return a special signal that the login page can detect
+              // We return a partial user with a marker, and throw a custom error
+              const mfaRequiredError = new Error('MFA_REQUIRED')
+              ;(mfaRequiredError as any).email = user.email
+              ;(mfaRequiredError as any).mfaMethod = 'email'
+              throw mfaRequiredError
+            }
+          } else if (user.mfaMethod === 'totp') {
+            // For TOTP, we need the MFA token from the authenticator app
+            if (!credentials.mfaToken) {
+              const mfaRequiredError = new Error('MFA_REQUIRED')
+              ;(mfaRequiredError as any).email = user.email
+              ;(mfaRequiredError as any).mfaMethod = 'totp'
+              throw mfaRequiredError
+            }
+
+            // Verify TOTP code
+            try {
+              const { default: speakeasy } = await import('speakeasy')
+              const encryptSecret = (encrypted: string) => {
+                const key = process.env.APP_KEY || process.env.NEXTAUTH_SECRET || 'default-key'
+                const buffer = Buffer.from(encrypted, 'base64')
+                let decrypted = ''
+                for (let i = 0; i < buffer.length; i++) {
+                  decrypted += String.fromCharCode(
+                    buffer[i] ^ key.charCodeAt(i % key.length)
+                  )
+                }
+                return decrypted
+              }
+
+              if (user.mfaSecret) {
+                const secret = encryptSecret(user.mfaSecret)
+                const isValid = speakeasy.totp.verify({
+                  secret,
+                  encoding: 'base32',
+                  token: credentials.mfaToken,
+                  window: 1,
+                })
+
+                if (!isValid) {
+                  // Also check backup codes
+                  if (user.mfaBackupCodes) {
+                    const hashedCodes: string[] = JSON.parse(user.mfaBackupCodes as string)
+                    const backupCode = credentials.mfaToken
+                    const bcryptModule = await import('bcrypt')
+
+                    const codeIndex = hashedCodes.findIndex((hashed: string) =>
+                      bcryptModule.compareSync(backupCode.replace('-', ''), hashed)
+                    )
+
+                    if (codeIndex !== -1) {
+                      // Remove used backup code
+                      hashedCodes.splice(codeIndex, 1)
+                      await prisma.user.update({
+                        where: { id: user.id },
+                        data: { mfaBackupCodes: JSON.stringify(hashedCodes) },
+                      })
+                      logger.info({ userId: user.id }, 'MFA backup code used during sign in')
+                    } else {
+                      return null
+                    }
+                  } else {
+                    return null
+                  }
+                }
+              } else {
+                return null
+              }
+            } catch (e) {
+              logger.error({ userId: user.id }, 'TOTP verification error during sign in')
+              return null
+            }
+          }
         }
 
         // Don't return the password

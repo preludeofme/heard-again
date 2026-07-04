@@ -1,0 +1,13 @@
+# https://www.robotstxt.org/robotstxt.html
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://heardagain.com/sitemap.xml
+
+# Disallow admin paths
+Disallow: /api/
+Disallow: /admin/
+
+# Crawl-delay for polite crawling
+Crawl-delay: 10

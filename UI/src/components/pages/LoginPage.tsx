@@ -23,6 +23,7 @@ import {
 } from '@mui/icons-material'
 import Link from 'next/link'
 import { PublicHeader } from '@/components/layout/PublicHeader'
+import { MFAChallenge } from '@/components/auth/MFAChallenge'
 
 export function LoginPage() {
   const theme = useTheme()
@@ -34,6 +35,11 @@ export function LoginPage() {
     email: '',
     password: '',
   })
+
+  // MFA challenge state
+  const [mfaRequired, setMfaRequired] = useState(false)
+  const [mfaMethod, setMfaMethod] = useState<'totp' | 'email'>('email')
+  const [mfaEmail, setMfaEmail] = useState('')
 
   // Get callback URL from query params, default to the unified memories home
   const callbackUrl = (router.query.callbackUrl as string) || '/legacy'
@@ -52,6 +58,26 @@ export function LoginPage() {
       })
 
       if (result?.error) {
+        // Check if this is an MFA_REQUIRED error
+        if (result.error === 'MFA_REQUIRED') {
+          // We need to detect the MFA method from the server
+          // Since next-auth only returns error strings, we need a different approach
+          // Let's check the user's MFA status via an API call
+          const statusRes = await fetch('/api/user/mfa-status-by-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: formData.email }),
+          })
+          const statusData = await statusRes.json()
+
+          if (statusData.mfaEnabled) {
+            setMfaMethod(statusData.mfaMethod || 'email')
+            setMfaEmail(statusData.email || formData.email)
+            setMfaRequired(true)
+            return
+          }
+        }
+
         throw new Error('Invalid email or password')
       }
 
@@ -64,8 +90,72 @@ export function LoginPage() {
     }
   }
 
+  const handleMFASuccess = async (tempToken: string, userId: string) => {
+    // Now sign in with the tempToken
+    setIsLoading(true)
+    try {
+      const result = await signIn('credentials', {
+        email: mfaEmail,
+        password: formData.password,
+        mfaTempToken: tempToken,
+        redirect: false,
+        callbackUrl,
+      })
+
+      if (result?.error) {
+        throw new Error('Authentication failed. Please try again.')
+      }
+
+      window.location.href = callbackUrl
+    } catch (err: any) {
+      setError(err.message || 'An error occurred')
+      setMfaRequired(false)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleMFACancel = () => {
+    setMfaRequired(false)
+    setMfaEmail('')
+  }
+
   const handleGoogleSignIn = () => {
     signIn('google', { callbackUrl })
+  }
+
+  // If MFA is required, show the MFA challenge instead of the login form
+  if (mfaRequired) {
+    return (
+      <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+        <PublicHeader />
+        <Box
+          component="main"
+          sx={{
+            flexGrow: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            px: { xs: 3, md: 6 },
+            py: { xs: 6, md: 10 },
+          }}
+        >
+          <Container maxWidth="sm">
+            {error && (
+              <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
+                {error}
+              </Alert>
+            )}
+            <MFAChallenge
+              email={mfaEmail}
+              method={mfaMethod}
+              onSuccess={handleMFASuccess}
+              onCancel={handleMFACancel}
+            />
+          </Container>
+        </Box>
+      </Box>
+    )
   }
 
   return (
@@ -379,6 +469,12 @@ export function LoginPage() {
             }}
           >
             <Box>
+              <Box
+                component="img"
+                src="/logo-small.png"
+                alt=""
+                sx={{ height: 12, width: 'auto', mb: 0.3 }}
+              />
               <Typography
                 variant="h6"
                 sx={{

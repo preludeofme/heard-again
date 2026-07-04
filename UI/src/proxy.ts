@@ -66,7 +66,8 @@ export default async function middleware(request: NextRequest) {
   const isPublicPath = publicPaths.some((path) => pathname === path || pathname.startsWith(`${path}/`))
   
   // Static files, API routes (API routes handle their own auth), and auth routes
-  if (pathname.startsWith('/_next') || pathname.startsWith('/api/')) {
+  const isStaticAsset = /\.(png|jpg|jpeg|gif|svg|ico|json|txt|xml|css|js|woff2?|ttf|eot)$/i.test(pathname)
+  if (pathname.startsWith('/_next') || pathname.startsWith('/api/') || isStaticAsset) {
     const response = NextResponse.next()
     return addCorsHeaders(response, request)
   }

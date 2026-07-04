@@ -137,10 +137,10 @@ export function LocationAutocomplete({
       onChange={handleChange}
       noOptionsText={
         inputValue.length < 2
-          ? 'Type a city name…'
+          ? 'Type a place name…'
           : notConfigured
-          ? 'Location search not configured'
-          : 'No results'
+          ? 'Location search needs setup — check your account settings for a Google Maps API key'
+          : 'No results found'
       }
       sx={sx}
       renderOption={(props, option) => (
@@ -154,7 +154,7 @@ export function LocationAutocomplete({
           {...params}
           label={label}
           size={size}
-          placeholder="e.g. Chicago, IL"
+          placeholder="e.g. Chicago, IL or Vandenberg AFB"
           sx={inputSx}
           slotProps={{
             input: {

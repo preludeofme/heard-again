@@ -73,7 +73,7 @@ export default apiHandler(
         },
         body: JSON.stringify({
           input,
-          includedPrimaryTypes: ['locality'],
+          // No includedPrimaryTypes filter — accepts cities, military bases, landmarks, neighborhoods, etc.
           languageCode: 'en',
         }),
       })

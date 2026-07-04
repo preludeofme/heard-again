@@ -40,8 +40,8 @@ export function NarrationPreparationBanner({
     },
     failed: {
       icon: <StaleIcon sx={{ color: '#c62828' }} />,
-      title: 'Narration preparation failed',
-      body: 'Something went wrong while rewriting the story. You can try again — the original story is unaffected.',
+      title: 'Narration failed',
+      body: 'Something went wrong. Try again — your story is safe.',
       cta: 'Try again',
     },
   }[mode]

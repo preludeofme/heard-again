@@ -14,9 +14,12 @@ import {
 import MenuIcon from '@mui/icons-material/Menu'
 import CloseIcon from '@mui/icons-material/Close'
 import Link from 'next/link'
+import { useRouter } from 'next/router'
 
 export function PublicHeader() {
   const [mobileOpen, setMobileOpen] = useState(false)
+  const router = useRouter()
+  const isHomePage = router.pathname === '/'
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen)
@@ -85,20 +88,40 @@ export function PublicHeader() {
             py: 2,
           }}
         >
-          <Typography
-            variant="h6"
-            component={Link}
-            href="/"
-            sx={{
-              fontFamily: 'var(--font-newsreader), serif',
-              fontStyle: 'italic',
-              color: 'primary.main',
-              fontSize: '1.5rem',
-              textDecoration: 'none',
-            }}
-          >
-            Heard Again
-          </Typography>
+          {/* Logo icon + text */}
+          {!isHomePage ? (
+            <Box
+              component={Link}
+              href="/"
+              sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'flex-start',
+                textDecoration: 'none',
+                gap: 0,
+              }}
+            >
+              <Box
+                component="img"
+                src="/logo-small.png"
+                alt=""
+                sx={{ height: 14, width: 'auto', mb: 0.3 }}
+              />
+              <Typography
+                sx={{
+                  fontFamily: 'var(--font-newsreader), serif',
+                  fontStyle: 'italic',
+                  color: 'primary.main',
+                  fontSize: '1rem',
+                  lineHeight: 1,
+                }}
+              >
+                Heard Again
+              </Typography>
+            </Box>
+          ) : (
+            <Box sx={{ width: 100 }} />
+          )}
 
           {/* Desktop Nav */}
           <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 1, alignItems: 'center' }}>

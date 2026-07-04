@@ -389,3 +389,17 @@ stock imagery.
 ---
 
 *This plan is a living document. Update as channels are tested, messaging is refined, and users provide feedback.*
+
+---
+
+## Appendix: Deliverables Index
+
+| Deliverable | File | Status |
+|---|---|---|
+| Facebook Post Drafts (14 posts) | `docs/marketing/FACEBOOK_POSTS.md` | ✅ Created |
+| Twitter/X Threads (4 threads) | `docs/marketing/TWITTER_THREADS.md` | ✅ Created |
+| Google Ads Campaign Structure | `docs/marketing/GOOGLE_ADS_CAMPAIGN.md` | ✅ Created |
+| Landing Page A/B Hero Variants (3) | `docs/marketing/LANDING_PAGE_VARIANTS.md` | ✅ Created |
+| Visual/Ad Concepts (10) | `docs/marketing/VISUAL_AD_CONCEPTS.md` | ✅ Created |
+| SEO Audit & Implementation | (in UI source code + public/) | ✅ Created |
+| SEO Changes Applied | robots.txt, sitemap.xml, JSON-LD schema, og:image | ✅ Applied |

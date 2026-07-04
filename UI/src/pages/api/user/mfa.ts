@@ -3,9 +3,10 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { generateMFASecret, verifyAndEnableMFA, disableMFA, isMFAEnabled, regenerateBackupCodes } from '@/lib/security/mfa-service'
 import { logger } from '@/lib/logger'
+
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   const session = await getServerSession(req, res, authOptions)
-  
+
   if (!session?.user?.id) {
     return res.status(401).json({ error: 'Unauthorized' })
   }
@@ -33,11 +34,21 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
 async function setupMFA(req: NextApiRequest, res: NextApiResponse, userId: string) {
   try {
-    const result = await generateMFASecret(userId)
-    
-    logger.info({ userId }, 'MFA setup initiated')
-    
+    const method = req.body?.method === 'email' ? 'email' : 'totp'
+    const result = await generateMFASecret(userId, method)
+
+    logger.info({ userId, method }, 'MFA setup initiated')
+
+    if (method === 'email') {
+      return res.status(200).json({
+        method: 'email',
+        message: result.message || 'Verification code sent to your email.',
+        backupCodes: [],
+      })
+    }
+
     return res.status(200).json({
+      method: 'totp',
       qrCode: result.qrCodeUrl,
       // Don't return secret - user must scan QR code
       backupCodes: result.backupCodes // One-time display
@@ -50,13 +61,13 @@ async function setupMFA(req: NextApiRequest, res: NextApiResponse, userId: strin
 
 async function verifyMFA(req: NextApiRequest, res: NextApiResponse, userId: string) {
   const { code, backupCode } = req.body
-  
+
   if (!code) {
     return res.status(400).json({ error: 'Verification code required' })
   }
-  
+
   const result = await verifyAndEnableMFA(userId, code, backupCode)
-  
+
   if (result.isValid) {
     logger.info({ userId }, 'MFA enabled successfully')
     return res.status(200).json({ success: true, message: 'MFA enabled' })
@@ -67,13 +78,13 @@ async function verifyMFA(req: NextApiRequest, res: NextApiResponse, userId: stri
 
 async function disableUserMFA(req: NextApiRequest, res: NextApiResponse, userId: string) {
   const { password } = req.body
-  
+
   if (!password) {
     return res.status(400).json({ error: 'Password required to disable MFA' })
   }
-  
+
   const success = await disableMFA(userId, password)
-  
+
   if (success) {
     logger.info({ userId }, 'MFA disabled')
     return res.status(200).json({ success: true, message: 'MFA disabled' })
@@ -84,6 +95,18 @@ async function disableUserMFA(req: NextApiRequest, res: NextApiResponse, userId:
 
 async function getMFAStatus(req: NextApiRequest, res: NextApiResponse, userId: string) {
   const enabled = await isMFAEnabled(userId)
-  return res.status(200).json({ enabled })
+
+  // Also get the method if enabled
+  const { prisma } = await import('@/lib/prisma')
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { mfaMethod: true },
+  })
+
+  return res.status(200).json({
+    enabled,
+    method: user?.mfaMethod || null,
+  })
 }
+
 export default handler

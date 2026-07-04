@@ -122,10 +122,14 @@ export async function requireFamilyspaceRole(
     throw Errors.forbidden('You are not a member of this familyspace')
   }
 
-  // ✅ SECURITY REQUIREMENT: Require MFA for OWNER role (S11)
+  // ✅ SECURITY REQUIREMENT: Require Multi-Factor Authentication for OWNER role (S11)
   if (membership.role === 'OWNER' && !membership.user.mfaEnabled) {
     logger.warn(`Owner ${userId} does not have MFA enabled in familyspace ${familyspaceId}`)
-    throw Errors.forbidden('MFA is required for familyspace owners. Please enable MFA in your profile settings.')
+    throw Errors.forbidden(
+      'Familyspace owners need a login code to keep everyone\'s stories safe. ' +
+      'Go to Account Settings ➜ Security to set one up. ' +
+      '(We\'ll send a code to your email — no app needed.)'
+    )
   }
 
   const userRoleIndex = roleHierarchy.indexOf(membership.role as any)

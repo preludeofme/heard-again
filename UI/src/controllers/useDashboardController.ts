@@ -33,6 +33,7 @@ export interface OnboardingState {
   hasFirstDocument: boolean
   hasFirstVoice: boolean
   hasInvitedMember: boolean
+  mfaEnabled: boolean
 }
 
 export interface ContinueWork {
@@ -150,6 +151,7 @@ const EMPTY_ONBOARDING: OnboardingState = {
   hasFirstDocument: false,
   hasFirstVoice: false,
   hasInvitedMember: false,
+  mfaEnabled: false,
 }
 
 const EMPTY_CONTINUE: ContinueWork = {

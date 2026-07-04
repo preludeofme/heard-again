@@ -440,6 +440,12 @@ export function CreateAccountPage() {
             }}
           >
             <Box>
+              <Box
+                component="img"
+                src="/logo-small.png"
+                alt=""
+                sx={{ height: 12, width: 'auto', mb: 0.3 }}
+              />
               <Typography
                 variant="h6"
                 sx={{
