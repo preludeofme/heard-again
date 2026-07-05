@@ -4,6 +4,7 @@
  */
 
 import { validateFileContent } from '@/lib/security/file-validator'
+import { fileTypeFromBuffer } from 'file-type'
 
 // Mock scanAndQuarantineFile so tests don't require ClamAV
 jest.mock('@/lib/security/malware-scanner', () => ({
@@ -37,13 +38,23 @@ describe('File upload security — magic-byte validation', () => {
   })
 
   it('should accept a valid WAV audio file', async () => {
-    // WAV magic bytes: RIFF....WAVE
+    ;(fileTypeFromBuffer as jest.Mock).mockResolvedValue({ ext: 'wav', mime: 'audio/wav' })
+
+    // WAV magic bytes: RIFF....WAVE with valid fmt subchunk (PCM, 16-bit, mono, 16kHz)
     const wavMagic = Buffer.concat([
       Buffer.from('RIFF'),
-      Buffer.from([0x00, 0x00, 0x00, 0x00]), // file size (placeholder)
+      Buffer.from([0x24, 0x00, 0x00, 0x00]), // file size (36)
       Buffer.from('WAVE'),
       Buffer.from('fmt '),
-      Buffer.alloc(100), // padding to simulate a minimal WAV
+      Buffer.from([0x10, 0x00, 0x00, 0x00]), // Subchunk1Size (16)
+      Buffer.from([0x01, 0x00]),             // AudioFormat (1 = PCM)
+      Buffer.from([0x01, 0x00]),             // NumChannels (1)
+      Buffer.from([0x80, 0x3e, 0x00, 0x00]), // SampleRate (16000)
+      Buffer.from([0x00, 0x7d, 0x00, 0x00]), // ByteRate (32000)
+      Buffer.from([0x02, 0x00]),             // BlockAlign (2)
+      Buffer.from([0x10, 0x00]),             // BitsPerSample (16)
+      Buffer.from('data'),
+      Buffer.from([0x00, 0x00, 0x00, 0x00]), // Subchunk2Size (0)
     ])
 
     const result = await validateFileContent(wavMagic, 'sample.wav', 'audio/wav')

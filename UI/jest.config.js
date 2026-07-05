@@ -32,7 +32,7 @@ module.exports = {
   },
   
   transformIgnorePatterns: [
-    '/node_modules/(?!(bullmq|msgpackr|uuid|jose|openid-client|file-type)/)',
+    '/node_modules/(?!(bullmq|msgpackr|uuid|jose|openid-client|file-type|@trigger\\.dev|nanoid|uncrypto)/)',
   ],
   
   // Module file extensions
@@ -44,5 +44,7 @@ module.exports = {
     '<rootDir>/node_modules/',
     '<rootDir>/TTS/',
     '<rootDir>/src/__tests__/setup/',
+    '<rootDir>/src/__tests__/mocks/',
+    '<rootDir>/src/__tests__/api/contract/contractHelpers.ts',
   ],
 }

@@ -28,7 +28,7 @@ export async function validateCSRFToken(
   }
 
   const headerToken = (req.headers['x-csrf-token'] as string) || req.body?.csrfToken
-  const cookieToken = req.cookies['csrf-token']
+  const cookieToken = req.cookies?.['csrf-token']
 
   if (!headerToken) {
     errorResponse(res, 'CSRF token required', 403, 'CSRF_REQUIRED')

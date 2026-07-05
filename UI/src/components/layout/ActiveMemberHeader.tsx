@@ -8,9 +8,10 @@ interface ActiveMemberHeaderProps {
   /** When true the component renders in compact pill form (mobile / sidebar inline).
    *  When false it renders as a full-width sidebar block. */
   compact?: boolean
+  variant?: 'mini' | 'compact' | 'full'
 }
 
-export function ActiveMemberHeader({ compact = true }: ActiveMemberHeaderProps) {
+export function ActiveMemberHeader({ compact = true, variant }: ActiveMemberHeaderProps) {
   const { selectedFamilyMember } = useSelectedFamilyMember()
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
   const buttonRef = useRef<HTMLElement | null>(null)
@@ -23,7 +24,90 @@ export function ActiveMemberHeader({ compact = true }: ActiveMemberHeaderProps) 
       `${selectedFamilyMember.firstName}${selectedFamilyMember.lastName ? ` ${selectedFamilyMember.lastName}` : ''}`
     : null
 
-  if (compact) {
+  const resolvedVariant = variant ?? (compact ? 'compact' : 'full')
+
+  if (resolvedVariant === 'mini') {
+    return (
+      <>
+        <Box
+          ref={buttonRef}
+          component="button"
+          onClick={handleOpen}
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1,
+            px: 1,
+            py: 0.5,
+            border: '1px solid rgba(22, 51, 74, 0.1)',
+            borderRadius: '6px',
+            backgroundColor: '#ffffff',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
+            cursor: 'pointer',
+            outline: 'none',
+            minWidth: 144,
+            maxWidth: 176,
+            height: 30,
+            transition: 'all 0.2s ease',
+            '&:hover': {
+              backgroundColor: '#f6f3ee',
+              borderColor: 'rgba(22, 51, 74, 0.2)',
+            },
+          }}
+        >
+          <Avatar
+            src={selectedFamilyMember?.avatarUrl || undefined}
+            sx={{
+              width: 18,
+              height: 18,
+              fontSize: 9,
+              bgcolor: selectedFamilyMember ? '#16334a' : '#d0e3e6',
+              color: selectedFamilyMember ? '#fff' : '#16334a',
+              flexShrink: 0,
+            }}
+          >
+            {selectedFamilyMember?.firstName?.[0] ?? '?'}
+          </Avatar>
+          
+          <Box sx={{ flexGrow: 1, textAlign: 'left', overflow: 'hidden', lineHeight: 1.1 }}>
+            <Typography
+              variant="caption"
+              sx={{
+                display: 'block',
+                color: '#888',
+                textTransform: 'uppercase',
+                letterSpacing: '0.06em',
+                fontSize: '7.5px',
+                fontWeight: 600,
+                lineHeight: 1,
+              }}
+            >
+              Viewing
+            </Typography>
+            <Typography
+              variant="body2"
+              sx={{
+                fontWeight: 600,
+                color: '#16334a',
+                fontSize: '10px',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                lineHeight: 1.1,
+              }}
+            >
+              {displayName ?? "Whole Family"}
+            </Typography>
+          </Box>
+          <ArrowDownIcon sx={{ fontSize: 12, color: '#546669', flexShrink: 0 }} />
+        </Box>
+
+        <MemberSwitcherFlyout anchorEl={anchorEl} onClose={handleClose} />
+      </>
+    )
+  }
+
+  if (resolvedVariant === 'compact') {
     return (
       <>
         <Box
@@ -86,23 +170,24 @@ export function ActiveMemberHeader({ compact = true }: ActiveMemberHeaderProps) 
           display: 'flex',
           alignItems: 'center',
           gap: 1.5,
-          px: 3,
-          py: 1.5,
+          px: 1.5,
+          py: 1,
           borderRadius: 2,
           cursor: 'pointer',
-          border: selectedFamilyMember ? '1px solid #adcae6' : '1px solid transparent',
-          backgroundColor: selectedFamilyMember ? '#e8f0f6' : 'transparent',
+          border: selectedFamilyMember ? '1px solid rgba(22, 51, 74, 0.15)' : '1px solid rgba(22, 51, 74, 0.1)',
+          backgroundColor: '#ffffff',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
           outline: 'none',
           textAlign: 'left',
-          '&:hover': { backgroundColor: 'rgba(22, 51, 74, 0.1)' },
-          transition: 'background-color 0.2s',
+          '&:hover': { backgroundColor: '#f0ede8' },
+          transition: 'all 0.2s ease',
         }}
       >
         <Avatar
           src={selectedFamilyMember?.avatarUrl || undefined}
           sx={{
-            width: 36,
-            height: 36,
+            width: 32,
+            height: 32,
             fontSize: 14,
             bgcolor: selectedFamilyMember ? '#16334a' : '#d0e3e6',
             color: selectedFamilyMember ? '#fff' : '#16334a',

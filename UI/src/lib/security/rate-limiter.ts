@@ -85,7 +85,7 @@ function getClientIp(req: NextApiRequest): string {
     return realIp
   }
 
-  return req.socket.remoteAddress || 'unknown'
+  return req.socket?.remoteAddress || 'unknown'
 }
 
 // Rate limiting middleware for TTS service (Express-style middleware)

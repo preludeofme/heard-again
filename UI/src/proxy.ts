@@ -52,6 +52,7 @@ export default async function middleware(request: NextRequest) {
     '/reset-password',
     '/onboarding',
     '/self-hosting',
+    '/setup-guide',
     '/privacy',
     '/terms',
     '/terms-legacy',

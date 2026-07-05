@@ -80,6 +80,8 @@ export interface ContractRouteSpec {
    * cannot be exercised through the unified contract — the test will be skipped.
    */
   csrfDefaultOn?: boolean
+  /** Methods that do not require authentication */
+  unauthAllowedMethods?: Array<'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'>
 }
 
 /**
@@ -133,6 +135,7 @@ export async function assertContract(
 
   // 3. Safe method without auth → 401
   for (const method of safeMethods) {
+    if (spec.unauthAllowedMethods?.includes(method)) continue
     hooks.setUnauthenticated()
     const req = buildReq({ method, query: spec.query })
     const res = buildRes()

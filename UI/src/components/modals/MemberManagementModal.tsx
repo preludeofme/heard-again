@@ -339,32 +339,30 @@ export function MemberManagementModal({
           anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
           transformOrigin={{ vertical: 'top', horizontal: 'right' }}
         >
-          {selectedMember && (
-            <>
-              <Typography variant="caption" sx={{ px: 2, py: 1, display: 'block', color: 'text.secondary' }}>
-                Change Role
-              </Typography>
-              {getAvailableRoles(selectedMember.role).map((role) => (
-                <MenuItem
-                  key={role}
-                  onClick={() => handleUpdateRole(role)}
-                  disabled={isUpdating}
-                >
-                  <ListItemIcon>
-                    <AdminIcon fontSize="small" />
-                  </ListItemIcon>
-                  <ListItemText primary={roleLabels[role]} />
-                </MenuItem>
-              ))}
-              <Divider />
-              <MenuItem onClick={handleRemoveMember} disabled={isUpdating} sx={{ color: 'error.main' }}>
+          {selectedMember ? [
+            <Typography key="role-header" variant="caption" sx={{ px: 2, py: 1, display: 'block', color: 'text.secondary' }}>
+              Change Role
+            </Typography>,
+            ...getAvailableRoles(selectedMember.role).map((role) => (
+              <MenuItem
+                key={role}
+                onClick={() => handleUpdateRole(role)}
+                disabled={isUpdating}
+              >
                 <ListItemIcon>
-                  <DeleteIcon fontSize="small" color="error" />
+                  <AdminIcon fontSize="small" />
                 </ListItemIcon>
-                <ListItemText primary="Remove from familyspace" />
+                <ListItemText primary={roleLabels[role]} />
               </MenuItem>
-            </>
-          )}
+            )),
+            <Divider key="divider" />,
+            <MenuItem key="remove" onClick={handleRemoveMember} disabled={isUpdating} sx={{ color: 'error.main' }}>
+              <ListItemIcon>
+                <DeleteIcon fontSize="small" color="error" />
+              </ListItemIcon>
+              <ListItemText primary="Remove from familyspace" />
+            </MenuItem>
+          ] : null}
         </Menu>
       </DialogContent>
 

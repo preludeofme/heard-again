@@ -129,6 +129,6 @@ describe('/api/narration-jobs/[id] API', () => {
 
     const data = res._getJSONData()
     expect(data.assetId).toBe('asset-1')
-    expect(data.assetDownloadUrl).toBe('/api/assets/asset-1/download')
+    expect(data.assetDownloadUrl).toBe('/api/assets/serve/asset-1')
   })
 })

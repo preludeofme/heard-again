@@ -76,7 +76,8 @@ describe('API Contract Tests', () => {
       handler: personDetailHandler,
       supportedMethods: ['GET', 'PUT', 'DELETE'],
       unsupportedMethod: 'POST',
-      query: { id: 'p1' }
+      query: { id: 'p1' },
+      unauthAllowedMethods: ['GET']
     }, hooks)
   })
 
@@ -97,7 +98,8 @@ describe('API Contract Tests', () => {
       handler: storyDetailHandler,
       supportedMethods: ['GET', 'PUT', 'DELETE'],
       unsupportedMethod: 'POST',
-      query: { id: 's1' }
+      query: { id: 's1' },
+      unauthAllowedMethods: ['GET']
     }, hooks)
   })
 

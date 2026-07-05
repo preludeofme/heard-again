@@ -2,6 +2,8 @@ import { StorageProvider } from './providers'
 import { LocalStorageProvider } from './providers/local-provider'
 import { GCSStorageProvider } from './providers/gcp-provider'
 import { S3StorageProvider } from './providers/s3-provider'
+import path from 'path'
+import fs from 'fs'
 
 export interface StorageConfig {
   mode: 'local' | 'gcs' | 'gcp' | 's3' | 'r2'
@@ -155,10 +157,19 @@ export function getStorageService(): StorageService {
     const rawMode = process.env.STORAGE_MODE ?? 'r2'
     const mode = rawMode as StorageConfig['mode']
 
+    let uploadDir = process.env.UPLOAD_DIR ?? './uploads'
+    if (!path.isAbsolute(uploadDir)) {
+      if (fs.existsSync(path.join(process.cwd(), 'UI', 'package.json'))) {
+        uploadDir = path.resolve(process.cwd(), 'UI', uploadDir)
+      } else {
+        uploadDir = path.resolve(process.cwd(), uploadDir)
+      }
+    }
+
     const config: StorageConfig = {
       mode,
       local: {
-        uploadDir: process.env.UPLOAD_DIR ?? './uploads',
+        uploadDir,
         baseUrl: process.env.UPLOAD_BASE_URL ?? '/api/assets',
       },
       gcs: gcsBucketName

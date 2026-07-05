@@ -307,7 +307,7 @@ export function LandingPage() {
               {
                 icon: 'keyboard_voice',
                 title: 'Smart Transcription Pipeline',
-                description: 'Convert cassette tapes, home video soundtracks, and oral interviews into clean, searchable, and formatted text. Our private, isolated processing ensures no third party hears your audio.',
+                description: 'Convert voicemail files, voice memos, video soundtracks, and oral interviews into clean, searchable, and formatted text. Our private, isolated processing ensures no third party hears your audio.',
               },
               {
                 icon: 'groups',
@@ -484,18 +484,18 @@ export function LandingPage() {
                       fontSize: '1.1rem',
                     }}
                   >
-                    Stop losing generations of memories to dead hard drives, broken phones, and aging tech. Before old cassette tapes degrade, voicemail files get deleted, or vintage home videos become unplayable, Heard Again lets you rescue, transcribe, and preserve the physical voices of your loved ones forever.
+                    Stop losing generations of memories to dead hard drives, broken phones, and aging tech. Before voicemail files get deleted or audio clips get lost, Heard Again lets you upload existing audio or video recordings to automatically extract, transcribe, and preserve the voices of your loved ones forever.
                   </Typography>
                   
                   <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 700, color: 'primary.main' }}>
-                    Supported formats & aging media:
+                    Supported formats & audio sources:
                   </Typography>
                   <Grid container spacing={2} sx={{ mb: 4 }}>
                     {[
-                      { label: 'Cassette Tapes', icon: 'album' },
                       { icon: 'settings_voice', label: 'Voicemail Files' },
-                      { icon: 'videocam', label: 'Home Videos (VHS, 8mm)' },
                       { icon: 'phone_iphone', label: 'Voice Memos' },
+                      { icon: 'videocam', label: 'Video Recordings' },
+                      { icon: 'audiotrack', label: 'Audio Files (MP3, WAV)' },
                     ].map((item, i) => (
                       <Grid size={{ xs: 6 }} key={i}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
@@ -512,8 +512,8 @@ export function LandingPage() {
                 </Box>
                 <Box
                   component="img"
-                  src="https://images.unsplash.com/photo-1535478044878-3ed83d5456ef?w=600&auto=format&fit=crop"
-                  alt="Vintage cassette tape and recording"
+                  src="https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=600&auto=format&fit=crop"
+                  alt="Vocal recording microphone"
                   sx={{ width: '100%', height: 200, objectFit: 'cover', borderRadius: 4 }}
                 />
               </Box>
@@ -841,7 +841,7 @@ export function LandingPage() {
                   mb: 6,
                 }}
               >
-                You do not need to have everything ready. Start with a voicemail. A cassette tape. A favorite memory. A letter. A story your family always tells.<br /><br />
+                You do not need to have everything ready. Start with a voicemail. A voice memo. A favorite memory. A letter. A story your family always tells.<br /><br />
                 Heard Again gives your family a private place to preserve it — and, when the time feels right, a way to hear those memories again.
               </Typography>
               <Button

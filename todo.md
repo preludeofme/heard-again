@@ -27,3 +27,4 @@
     [ ] connect to google maps api for this (make sure location fields have an autocomplete functionality so it validates the entry). just use city/state nothing more complicated than that
     [ ] check the gedcom if there's already location data that we can use and import
     
+[ ] Feature: Support video file uploads with automatic audio extraction (e.g., extracting audio tracks from uploaded MP4, MOV files for transcription and Voice Lab training)

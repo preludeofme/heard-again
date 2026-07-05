@@ -11,12 +11,31 @@ export default apiHandler({
 
     const jobId = req.query.id as string
 
-    const job = await prisma.importJob.findFirst({
-      where: { id: jobId, familyspaceId: user.familyspaceId },
-      select: { triggerRunId: true, status: true },
+    const job = await prisma.importJob.findUnique({
+      where: { id: jobId },
+      select: { triggerRunId: true, status: true, importedById: true, familyspaceId: true },
     })
 
     if (!job) throw Errors.notFound('ImportJob')
+
+    const isImporter = job.importedById === user.id
+    let hasAccess = isImporter
+
+    if (!hasAccess) {
+      const membership = await prisma.membership.findUnique({
+        where: {
+          familyspaceId_userId: {
+            familyspaceId: job.familyspaceId,
+            userId: user.id,
+          },
+        },
+      })
+      hasAccess = !!(membership && membership.status === 'ACTIVE')
+    }
+
+    if (!hasAccess) {
+      throw Errors.notFound('ImportJob')
+    }
 
     if (!job.triggerRunId) {
       return successResponse(res, { token: null, runId: null })

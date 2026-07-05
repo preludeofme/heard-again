@@ -68,6 +68,9 @@ describe('Upload Integration — Upload → Malware Scan → Asset', () => {
       headers: {
         'x-csrf-token': csrfToken,
       },
+      cookies: {
+        'csrf-token': csrfToken,
+      },
       body: {},
     } as any
 

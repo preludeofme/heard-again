@@ -124,6 +124,7 @@ function UserMenu() {
 }
 
 export function Layout({ children }: LayoutProps) {
+  const { data: session } = useSession()
   const [isMounted, setIsMounted] = useState(false)
   useEffect(() => {
     setIsMounted(true)
@@ -192,13 +193,20 @@ export function Layout({ children }: LayoutProps) {
     if (!router) return false
     const [itemPath] = href.split('?')
     if (itemPath === '/legacy') {
-      return currentPath === '/legacy' || currentPath === '/'
+      return currentPath === '/legacy' || currentPath === '/' || currentPath.startsWith('/profile/')
     }
     return currentPath === itemPath || currentPath.startsWith(itemPath + '/')
   }
 
   return (
-    <>
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: '100vh',
+        backgroundColor: ProfileColors.surface,
+      }}
+    >
       {/* Top navigation bar — desktop and mobile */}
       <AppBar
         position="sticky"
@@ -206,111 +214,160 @@ export function Layout({ children }: LayoutProps) {
         sx={{
           backgroundColor: ProfileColors.surfaceContainerLow,
           color: ProfileColors.primary,
-          borderBottom: `1px solid ${ProfileColors.outlineVariant}26`,
+          borderBottom: '1px solid rgba(22, 51, 74, 0.08)',
           zIndex: theme.zIndex.appBar,
+          overflow: 'visible',
         }}
       >
-        <Toolbar
-          sx={{
-            minHeight: { xs: 56, md: 64 },
-            px: { xs: 2, md: 4 },
-            gap: 1,
-          }}
-        >
-          {/* Brand */}
-          {/* Logo icon + text */}
-          <Box
-            component={Link}
-            href="/legacy"
+        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+          {/* Row 1: Global / Family Space Level */}
+          <Toolbar
             sx={{
+              minHeight: 64,
+              px: { xs: 2, md: 4 },
               display: 'flex',
-              flexDirection: 'column',
               alignItems: 'center',
-              textDecoration: 'none',
-              flexShrink: 0,
-              mr: { md: 2 },
-              gap: 0,
             }}
           >
-            <AnimatedWaveform height={18} sx={{ mb: 0.2 }} />
-            <Typography
+            {/* Brand */}
+            <Box
+              component={Link}
+              href="/legacy"
               sx={{
-                fontFamily: 'var(--font-newsreader), serif',
-                fontSize: { xs: '0.8rem', md: '0.9rem' },
-                fontWeight: 700,
-                color: ProfileColors.primary,
-                letterSpacing: '-0.01em',
-                lineHeight: 1,
+                display: 'flex',
+                alignItems: 'center',
+                textDecoration: 'none',
+                gap: 1.5,
+                mr: { md: 3 },
               }}
             >
-              Heard Again
-            </Typography>
-          </Box>
-
-          {/* Desktop nav links */}
-          {!isMobile && (
-            <Box sx={{ display: 'flex', gap: 0.5 }}>
-              {dynamicNavItems.map((item) => {
-                const active = isNavActive(item.href)
-                return (
-                  <Typography
-                    key={item.href}
-                    component={Link}
-                    href={item.href}
-                    sx={{
-                      fontFamily: 'var(--font-manrope), sans-serif',
-                      fontSize: '0.95rem',
-                      fontWeight: active ? 600 : 400,
-                      color: active ? ProfileColors.primary : ProfileColors.onSurfaceVariant,
-                      textDecoration: 'none',
-                      px: { xs: 1.5, lg: 2 },
-                      py: 1,
-                      borderRadius: '999px',
-                      backgroundColor: active ? ProfileColors.surfaceContainerLowest : 'transparent',
-                      boxShadow: active ? '0 1px 4px rgba(0,0,0,0.06)' : 'none',
-                      transition: 'all 0.2s ease',
-                      '&:hover': {
-                        backgroundColor: active
-                          ? ProfileColors.surfaceContainerLowest
-                          : ProfileColors.surfaceContainer,
-                        color: ProfileColors.primary,
-                      },
-                    }}
-                  >
-                    {item.label}
-                  </Typography>
-                )
-              })}
+              <AnimatedWaveform height={18} />
+              <Typography
+                sx={{
+                  fontFamily: 'var(--font-newsreader), serif',
+                  fontSize: { xs: '0.9rem', md: '1.05rem' },
+                  fontWeight: 700,
+                  color: ProfileColors.primary,
+                  letterSpacing: '-0.01em',
+                  lineHeight: 1,
+                }}
+              >
+                Heard Again
+              </Typography>
             </Box>
-          )}
 
-          <Box sx={{ flexGrow: 1 }} />
+            {/* Desktop Navigation Links (Row 1) */}
+            {!isMobile && session?.user && (
+              <Box sx={{ display: 'flex', gap: 4, height: '100%', alignItems: 'center' }}>
+                {dynamicNavItems
+                  .filter((item) => item.label !== 'Profile')
+                  .map((item) => {
+                    const active = isNavActive(item.href)
+                    return (
+                      <Box
+                        key={item.href}
+                        sx={{
+                          position: 'relative',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          height: 64,
+                        }}
+                      >
+                        <Typography
+                          component={Link}
+                          href={item.href}
+                          sx={{
+                            fontFamily: 'var(--font-manrope), sans-serif',
+                            fontSize: '0.9rem',
+                            fontWeight: active ? 600 : 500,
+                            color: active ? '#16334a' : ProfileColors.onSurfaceVariant,
+                            textDecoration: 'none',
+                            px: 1,
+                            py: 1,
+                            transition: 'all 0.2s ease',
+                            '&:hover': {
+                              color: '#16334a',
+                            },
+                          }}
+                        >
+                          {item.label}
+                        </Typography>
 
-          {/* Current family space indicator */}
-          {!isMobile && <FamilyspaceSwitcher />}
+                        {/* Active Underline */}
+                        {active && (
+                          <Box
+                            sx={{
+                              position: 'absolute',
+                              left: '50%',
+                              bottom: 0,
+                              transform: 'translateX(-50%)',
+                              width: '56px',
+                              height: '2px',
+                              backgroundColor: '#16334a',
+                              opacity: 0.8,
+                            }}
+                          />
+                        )}
 
-          {/* Active family member pill */}
-          <ActiveMemberHeader compact />
+                        {/* Person Context Selector (Desktop only, under Family Legacy) */}
+                        {item.label === 'Family Legacy' && selectedFamilyMember && (
+                          <Box
+                            sx={{
+                              position: 'absolute',
+                              top: '66px',
+                              left: '50%',
+                              transform: 'translateX(-50%)',
+                              zIndex: 20,
+                            }}
+                          >
+                            <ActiveMemberHeader variant="mini" />
+                          </Box>
+                        )}
+                      </Box>
+                    )
+                  })}
+              </Box>
+            )}
 
-          {/* User account menu */}
-          <UserMenu />
-        </Toolbar>
+            <Box sx={{ flexGrow: 1 }} />
+
+            {/* Mobile: Compact selector and user menu */}
+            {isMobile && session?.user && (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <ActiveMemberHeader compact />
+                <UserMenu />
+              </Box>
+            )}
+
+            {/* Desktop: FamilyspaceSwitcher and UserMenu on Row 1 (right side) */}
+            {!isMobile && session?.user && (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <FamilyspaceSwitcher />
+                <UserMenu />
+              </Box>
+            )}
+          </Toolbar>
+
+          {/* No secondary zone: the active member selector hangs down and overlaps the content below */}
+        </Box>
       </AppBar>
 
-      {/* Main content — full width, no sidebar offset */}
+      {/* Main content */}
       <Box
         component="main"
         sx={{
           backgroundColor: ProfileColors.surface,
+          flexGrow: 1,
           minHeight: isMobile ? 'calc(100vh - 56px)' : 'calc(100vh - 64px)',
-          pb: isMobile ? (router.pathname === '/family-tree' ? 7 : 9) : 0, // Reduced padding for family tree to touch bottom nav
+          pb: isMobile ? (router?.pathname === '/family-tree' ? 7 : 9) : 0,
         }}
       >
         {children}
       </Box>
 
       {/* Mobile only: creation FAB + bottom navigation */}
-      {isMobile && (
+      {isMobile && session?.user && (
         <>
           <SpeedDial
             ariaLabel="Creation SpeedDial"
@@ -413,6 +470,6 @@ export function Layout({ children }: LayoutProps) {
           </Menu>
         </>
       )}
-    </>
+    </Box>
   )
 }

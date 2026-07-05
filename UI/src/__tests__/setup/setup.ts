@@ -23,6 +23,11 @@ jest.mock('@/lib/redis-client', () => ({
     setex: jest.fn(),
     del: jest.fn(),
   },
+  rateLimitCheck: jest.fn().mockResolvedValue({
+    allowed: true,
+    remaining: 100,
+    resetAt: new Date(),
+  }),
 }))
 
 // Mock Prisma for testing
@@ -87,6 +92,41 @@ jest.mock('@/lib/prisma', () => ({
     $queryRaw: jest.fn(),
   },
 }))
+
+// Mock Trigger.dev SDK
+jest.mock('@trigger.dev/sdk/v3', () => {
+  const mockTask = (options: any) => {
+    return {
+      id: options.id,
+      trigger: jest.fn().mockResolvedValue({ id: 'mock-run-id' }),
+      triggerAndWait: jest.fn().mockResolvedValue({ ok: true, output: {} }),
+      batchTrigger: jest.fn().mockResolvedValue([]),
+    }
+  }
+  return {
+    task: mockTask,
+    metadata: {
+      set: jest.fn(),
+      get: jest.fn(),
+      increment: jest.fn(),
+      append: jest.fn(),
+    },
+    logger: {
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+      debug: jest.fn(),
+      trace: jest.fn((name, fn) => fn({ setAttribute: jest.fn() })),
+    },
+    runs: {
+      retrieve: jest.fn().mockResolvedValue({ id: 'mock-run-id', status: 'COMPLETED' }),
+    },
+    auth: {
+      createPublicToken: jest.fn().mockResolvedValue('mock-public-token'),
+    },
+  }
+})
+
 
 // Global test utilities
 global.createMockRequest = (overrides: Partial<NextApiRequest> = {}) => ({

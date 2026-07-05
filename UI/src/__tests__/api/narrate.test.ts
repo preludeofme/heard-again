@@ -1,7 +1,7 @@
 import handler from '@/pages/api/stories/[id]/narrate'
 import { prisma } from '@/lib/prisma'
 import { getAuthUserWithFamilyspace } from '@/lib/auth-helpers'
-import { enqueueNarrationRender } from '@/lib/queues/narrationQueue'
+import { narrationTask } from '@/trigger/narration-task'
 
 // Manual mock for node-mocks-http
 function createMocks({ method = 'GET', query = {}, headers = {} }: any = {}) {
@@ -60,20 +60,26 @@ jest.mock('@/lib/prisma', () => ({
     },
     voiceGenerationJob: {
       create: jest.fn(),
+      findFirst: jest.fn(),
+      update: jest.fn(),
     },
     asset: {
       findFirst: jest.fn(),
+    },
+    subscription: {
+      findUnique: jest.fn().mockResolvedValue({
+        generationMinutesUsed: 5,
+        plan: {
+          planType: 'PRO',
+          generationMinutesIncluded: 100,
+        },
+      }),
     },
   },
 }))
 
 jest.mock('@/lib/auth-helpers', () => ({
   getAuthUserWithFamilyspace: jest.fn(),
-}))
-
-jest.mock('@/lib/queues/narrationQueue', () => ({
-  enqueueNarrationRender: jest.fn(),
-  narrationDedupeKey: jest.fn(() => 'dedupe-key'),
 }))
 
 jest.mock('@/lib/logger', () => ({
@@ -137,7 +143,7 @@ describe('/api/stories/[id]/narrate API', () => {
     await handler(req, res)
 
     expect(res._getStatusCode()).toBe(302)
-    expect(res._getRedirectUrl()).toBe('/api/assets/asset-1/download')
+    expect(res._getRedirectUrl()).toBe('/api/assets/serve/asset-1')
   })
 
   it('should return JSON if cached asset exists and client wants JSON', async () => {
@@ -177,7 +183,6 @@ describe('/api/stories/[id]/narrate API', () => {
     ;(prisma.voiceGenerationJob.create as jest.Mock).mockResolvedValue({
       id: 'vjob-1',
     })
-    ;(enqueueNarrationRender as jest.Mock).mockResolvedValue('queue-job-1')
 
     const { req, res } = createMocks({
       method: 'GET',
@@ -190,7 +195,7 @@ describe('/api/stories/[id]/narrate API', () => {
     const data = res._getJSONData()
     expect(data.status).toBe('queued')
     expect(data.narrationJobId).toBe('vjob-1')
-    expect(enqueueNarrationRender).toHaveBeenCalled()
+    expect(narrationTask.trigger).toHaveBeenCalled()
     expect(prisma.story.update).toHaveBeenCalledWith({
       where: { id: 'story-1' },
       data: { narrationRenderJobId: 'vjob-1' },

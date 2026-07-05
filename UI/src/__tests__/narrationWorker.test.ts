@@ -1,6 +1,5 @@
 import { Job } from 'bullmq'
 import { prisma } from '@/lib/prisma'
-import { storageService } from '@/services/StorageService'
 import { __narrationWorkerInternals } from '@/workers/narrationWorker'
 import { TextEncoder, TextDecoder } from 'util'
 
@@ -25,6 +24,7 @@ jest.mock('@/lib/prisma', () => ({
     },
     voiceGenerationJob: {
       update: jest.fn().mockResolvedValue({}),
+      findUnique: jest.fn(),
     },
     asset: {
       create: jest.fn().mockResolvedValue({ id: 'new-asset-id' }),
@@ -36,11 +36,14 @@ jest.mock('@/lib/prisma', () => ({
   },
 }))
 
-jest.mock('@/services/StorageService', () => ({
-  storageService: {
-    saveAudio: jest.fn(),
-    deleteFile: jest.fn().mockResolvedValue(undefined),
-  },
+const mockStorageService = {
+  uploadFile: jest.fn().mockResolvedValue({ storagePath: 'saved/path.mp3' }),
+  deleteFile: jest.fn().mockResolvedValue(undefined),
+  getMode: jest.fn().mockReturnValue('local'),
+}
+
+jest.mock('@/lib/storage/storage-service', () => ({
+  getStorageService: () => mockStorageService,
 }))
 
 jest.mock('@/lib/logger', () => ({
@@ -82,7 +85,7 @@ describe('Narration Worker', () => {
       await deleteAssetById('asset-1')
 
       expect(prisma.asset.delete).toHaveBeenCalledWith({ where: { id: 'asset-1' } })
-      expect(storageService.deleteFile).toHaveBeenCalledWith('path/to/audio.mp3')
+      expect(mockStorageService.deleteFile).toHaveBeenCalledWith('path/to/audio.mp3')
     })
 
     it('should skip if asset is not GENERATED_AUDIO', async () => {
@@ -94,7 +97,7 @@ describe('Narration Worker', () => {
       await deleteAssetById('asset-1')
 
       expect(prisma.asset.delete).not.toHaveBeenCalled()
-      expect(storageService.deleteFile).not.toHaveBeenCalled()
+      expect(mockStorageService.deleteFile).not.toHaveBeenCalled()
     })
   })
 
@@ -135,6 +138,7 @@ describe('Narration Worker', () => {
         id: 'voice-1',
         name: 'Grandpa',
         personId: 'person-1',
+        externalId: 'ext-voice-1',
       })
       ;(prisma.voiceConsent.findFirst as jest.Mock).mockResolvedValue({
         id: 'consent-1',
@@ -181,8 +185,9 @@ describe('Narration Worker', () => {
         }) // download-audio
 
       // Mock storage and asset creation
-      ;(storageService.saveAudio as jest.Mock).mockResolvedValue({ path: 'saved/path.mp3' })
+      mockStorageService.uploadFile.mockResolvedValue({ storagePath: 'saved/path.mp3' })
       ;(prisma.asset.findMany as jest.Mock).mockResolvedValue([]) // pruning
+      ;(prisma.voiceGenerationJob.findUnique as jest.Mock).mockResolvedValue({ status: 'PROCESSING' })
 
       const result = await handleNarrationRender(mockJob)
 
@@ -204,10 +209,11 @@ describe('Narration Worker', () => {
         id: 'voice-1',
         name: 'Grandpa',
         personId: 'person-1',
+        externalId: 'ext-voice-1',
       })
       ;(prisma.voiceConsent.findFirst as jest.Mock).mockResolvedValue(null)
 
-      await expect(handleNarrationRender(mockJob)).rejects.toThrow('VOICE_CONSENT_REQUIRED')
+      await expect(handleNarrationRender(mockJob)).rejects.toThrow('Voice consent is required')
     })
   })
 })

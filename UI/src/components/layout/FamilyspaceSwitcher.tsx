@@ -166,11 +166,14 @@ export function FamilyspaceSwitcher() {
             textTransform: 'none',
             minWidth: 200,
             justifyContent: 'flex-start',
-            px: 2,
+            px: 1.5,
             py: 1,
             borderRadius: 2,
+            backgroundColor: '#ffffff',
+            border: `1px solid rgba(22, 51, 74, 0.1)`,
+            boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
             '&:hover': {
-              backgroundColor: 'rgba(0,0,0,0.04)',
+              backgroundColor: '#f0ede8',
             },
           }}
         >
@@ -320,32 +323,32 @@ export function FamilyspaceSwitcher() {
           <ListItemText primary="Create new familyspace" />
         </MenuItem>
 
-        {currentFamilyspace?.role === 'OWNER' || currentFamilyspace?.role === 'ADMIN' ? (
-          <>
-            <MenuItem
-              component={Link}
-              href="/invite"
-              onClick={handleClose}
-              sx={{ py: 1.5 }}
-            >
-              <ListItemIcon>
-                <PersonAddIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText primary="Invite a member" />
-            </MenuItem>
-            <MenuItem
-              component={Link}
-              href={`/familyspaces/${currentFamilyspace?.id}/settings`}
-              onClick={handleClose}
-              sx={{ py: 1.5 }}
-            >
-              <ListItemIcon>
-                <SettingsIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText primary="Familyspace settings" />
-            </MenuItem>
-          </>
-        ) : null}
+        {currentFamilyspace?.role === 'OWNER' || currentFamilyspace?.role === 'ADMIN' ? [
+          <MenuItem
+            key="invite"
+            component={Link}
+            href="/invite"
+            onClick={handleClose}
+            sx={{ py: 1.5 }}
+          >
+            <ListItemIcon>
+              <PersonAddIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText primary="Invite a member" />
+          </MenuItem>,
+          <MenuItem
+            key="settings"
+            component={Link}
+            href={`/familyspaces/${currentFamilyspace?.id}/settings`}
+            onClick={handleClose}
+            sx={{ py: 1.5 }}
+          >
+            <ListItemIcon>
+              <SettingsIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText primary="Familyspace settings" />
+          </MenuItem>
+        ] : null}
       </Menu>
     </>
   )
