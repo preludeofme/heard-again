@@ -1,7 +1,8 @@
 import { useState, useRef, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/router'
 import { fetchWithCSRFAndJSON, fetchWithCSRF } from '@/lib/api-client'
-import { TreePerson, FamilyTreeData, PersonFormData } from './types'
+import { TreePerson, FamilyTreeData } from './types'
+import { PersonFormData } from '@/components/modals/AddEditPersonModal'
 import { useSelectedFamilyMember } from '@/contexts/SelectedFamilyMemberContext'
 
 export function useFamilyTree(
@@ -113,10 +114,15 @@ export function useFamilyTree(
           firstName: data.firstName,
           lastName: data.lastName,
           displayName: data.displayName,
+          middleName: data.middleName || null,
+          nickname: data.nickname || null,
+          maidenName: data.maidenName || null,
+          suffix: data.suffix || null,
           birthDate: data.birthDate || null,
           deathDate: data.deathDate || null,
           bio: data.bio,
           personType: data.personType,
+          sex: data.sex || null,
         })
         if (!res.ok) throw new Error('Failed to create person')
         const json = await res.json().catch(() => null)
@@ -127,10 +133,15 @@ export function useFamilyTree(
           firstName: data.firstName,
           lastName: data.lastName,
           displayName: data.displayName,
+          middleName: data.middleName || null,
+          nickname: data.nickname || null,
+          maidenName: data.maidenName || null,
+          suffix: data.suffix || null,
           birthDate: data.birthDate || null,
           deathDate: data.deathDate || null,
           bio: data.bio,
           personType: data.personType,
+          sex: data.sex || null,
         }, { method: 'PUT' })
         if (!res.ok) throw new Error('Failed to update person')
       }

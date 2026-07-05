@@ -30,7 +30,7 @@ export interface CreateRelationshipInput {
   sourcePersonId: string
   targetPersonId: string
   relationshipType: RelationshipType
-  relationshipKind?: 'BIOLOGICAL' | 'ADOPTED' | 'STEP'
+  relationshipKind?: 'BIOLOGICAL' | 'ADOPTED' | 'STEP' | 'FOSTER' | 'GUARDIAN'
   isBiological: boolean
   notes?: string
   marriageDate?: string
@@ -372,7 +372,7 @@ export class RelationshipService {
     sourceId: string,
     targetId: string,
     relationshipType: 'PARENT' | 'CHILD',
-    relationshipKind: 'BIOLOGICAL' | 'ADOPTED' | 'STEP' | undefined,
+    relationshipKind: 'BIOLOGICAL' | 'ADOPTED' | 'STEP' | 'FOSTER' | 'GUARDIAN' | undefined,
     isBiological: boolean,
     target: { id: string; firstName: string; lastName: string | null },
     notes?: string

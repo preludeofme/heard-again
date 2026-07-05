@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { getStorageService } from '@/lib/storage/storage-service'
 import { gedcomImportService } from '@/server/services/gedcom/GedcomImportService'
 import { geocodePlacesTask } from '@/trigger/geocode-places-task'
+import { findPersonMatches } from '@/pages/api/family-merge/analyze'
 
 export interface GedcomImportTaskPayload {
   familyspaceId: string
@@ -10,11 +11,13 @@ export interface GedcomImportTaskPayload {
   storagePath: string
   assetId: string
   jobId: string
+  targetFamilyspaceId?: string
   options?: {
     linkToPersonId?: string
     gedcomXrefForLink?: string
     motherXref?: string
     fatherXref?: string
+    deduplicate?: boolean
   }
 }
 
@@ -42,14 +45,13 @@ export const gedcomImportTask = task({
     })
   },
   run: async (payload: GedcomImportTaskPayload): Promise<GedcomImportTaskOutput> => {
-    const { familyspaceId, userId, storagePath, assetId, jobId, options } = payload
+    const { familyspaceId, userId, storagePath, assetId, jobId, targetFamilyspaceId, options } = payload
 
     metadata.set('phase', 'downloading')
     triggerLogger.info('Downloading GEDCOM file from storage', { storagePath })
 
     const storageService = getStorageService()
     const fileBuffer = await storageService.getFile(storagePath)
-    const fileContent = fileBuffer.toString('utf-8')
 
     metadata.set('phase', 'importing')
     triggerLogger.info('Starting GEDCOM import', { jobId })
@@ -57,7 +59,7 @@ export const gedcomImportTask = task({
     const stats = await gedcomImportService.importGedcom(
       familyspaceId,
       userId,
-      fileContent,
+      fileBuffer,
       assetId,
       jobId,
       options,
@@ -65,6 +67,67 @@ export const gedcomImportTask = task({
         metadata.set('progress', { done, total })
       }
     )
+
+    if (options?.deduplicate && targetFamilyspaceId) {
+      metadata.set('phase', 'analyzing_duplicates')
+      triggerLogger.info('Analyzing duplicates and creating merge proposal', { targetFamilyspaceId, sourceFamilyspaceId: familyspaceId })
+
+      const matches = await findPersonMatches(targetFamilyspaceId, familyspaceId, 0.6)
+      const totalSourcePeople = await prisma.person.count({
+        where: { familyspaceId }
+      })
+
+      const overallMatchScore = matches.length > 0
+        ? matches.reduce((sum, m) => sum + m.matchScore, 0) / matches.length
+        : 0
+
+      const proposal = await prisma.$transaction(async (tx) => {
+        const newProposal = await tx.familyMergeProposal.create({
+          data: {
+            targetFamilyspaceId,
+            sourceFamilyspaceId: familyspaceId,
+            proposedById: userId,
+            status: 'PENDING',
+            overallMatchScore,
+            matchedPeopleCount: matches.length,
+            totalSourcePeople,
+          }
+        })
+
+        if (matches.length > 0) {
+          await tx.familyMergePersonMatch.createMany({
+            data: matches.map(match => ({
+              proposalId: newProposal.id,
+              targetPersonId: match.targetPersonId,
+              sourcePersonId: match.sourcePersonId,
+              matchScore: match.matchScore,
+              matchReason: match.matchReason,
+              isIncluded: true,
+              userOverride: false,
+              status: 'PENDING'
+            }))
+          })
+        }
+
+        return newProposal
+      })
+
+      metadata.set('proposalId', proposal.id)
+      triggerLogger.info('Created family merge proposal', { proposalId: proposal.id })
+
+      // Finalize the ImportJob status to COMPLETED and save proposalId in resultSummary
+      await prisma.importJob.update({
+        where: { id: jobId },
+        data: {
+          status: 'COMPLETED',
+          completedAt: new Date(),
+          resultSummary: {
+            ...(stats as any),
+            proposalId: proposal.id,
+          },
+        },
+      })
+    }
 
     metadata.set('phase', 'complete')
     metadata.set('stats', JSON.stringify(stats))

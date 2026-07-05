@@ -18,6 +18,8 @@ interface PersonDetails {
   id: string
   firstName: string
   lastName?: string | null
+  maidenName?: string | null
+  sex?: 'M' | 'F' | 'U' | 'X' | null
   displayName?: string | null
   nickname?: string | null
   birthDate?: string | null
@@ -98,8 +100,17 @@ function formatEventDate(date: string | null, precision: string): string {
   }
 }
 
-const fullName = (p: { firstName?: string; lastName?: string | null; displayName?: string | null }) =>
-  p.displayName || `${p.firstName || ''}${p.lastName ? ` ${p.lastName}` : ''}`.trim() || 'Unnamed'
+const fullName = (p: { firstName?: string; lastName?: string | null; displayName?: string | null; maidenName?: string | null }) => {
+  if (p.displayName) return p.displayName
+  const parts = [p.firstName || '']
+  if (p.maidenName) {
+    parts.push(`(${p.maidenName})`)
+  }
+  if (p.lastName) {
+    parts.push(p.lastName)
+  }
+  return parts.filter(Boolean).join(' ').trim() || 'Unnamed'
+}
 
 const toYear = (d?: string | null) => (d ? new Date(d).getFullYear() : null)
 
@@ -454,6 +465,20 @@ export default function PersonProfilePage() {
                   {person.nickname}
                 </Typography>
               )}
+              {person.sex && (
+                <Typography
+                  sx={{
+                    fontFamily: 'var(--font-manrope), sans-serif',
+                    fontSize: '0.9rem',
+                    color: ProfileColors.onSurfaceVariant,
+                    mt: 1,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                  }}
+                >
+                  Sex: {person.sex === 'M' ? 'Male' : person.sex === 'F' ? 'Female' : person.sex === 'X' ? 'Other' : 'Undetermined'}
+                </Typography>
+              )}
               {person.bio && (
                 <Typography
                   sx={{
@@ -591,7 +616,23 @@ export default function PersonProfilePage() {
                       document: '#adcae6',
                       custom: '#9c27b0',
                     }
-                    const color = typeColors[event.type] ?? ProfileColors.primary
+                    const subTypeColors: Record<string, string> = {
+                      MILITARY_SERVICE: '#3f51b5',
+                      IMMIGRATION: '#009688',
+                      EMIGRATION: '#009688',
+                      CENSUS: '#757575',
+                      RESIDENCE: '#795548',
+                      EDUCATION: '#03a9f4',
+                      OCCUPATION: '#ff5722',
+                      BAPTISM: '#2196f3',
+                      BURIAL: '#607d8b',
+                      CREMATION: '#607d8b',
+                    }
+                    const subType = event.metadata?.subType as string | undefined
+                    const color = (event.type === 'custom' && subType && subTypeColors[subType])
+                      ? subTypeColors[subType]
+                      : (typeColors[event.type] ?? ProfileColors.primary)
+
                     const typeLabel: Record<string, string> = {
                       birth: 'Birth',
                       death: 'Death',
@@ -601,6 +642,29 @@ export default function PersonProfilePage() {
                       document: 'Document',
                       custom: 'Milestone',
                     }
+                    const subTypeLabels: Record<string, string> = {
+                      BAPTISM: 'Baptism',
+                      BURIAL: 'Burial',
+                      CREMATION: 'Cremation',
+                      RESIDENCE: 'Residence',
+                      OCCUPATION: 'Occupation',
+                      EDUCATION: 'Education',
+                      MILITARY_SERVICE: 'Military Service',
+                      NATURALIZATION: 'Naturalization',
+                      IMMIGRATION: 'Immigration',
+                      EMIGRATION: 'Emigration',
+                      CENSUS: 'Census',
+                      RETIREMENT: 'Retirement',
+                      WILL: 'Will',
+                      TITLE: 'Title',
+                      PHYSICAL_DESCRIPTION: 'Physical Description',
+                      MEDICAL: 'Medical',
+                      ADOPTION: 'Adoption',
+                      CUSTOM: 'Milestone',
+                    }
+                    const displayType = (event.type === 'custom' && subType && subTypeLabels[subType])
+                      ? subTypeLabels[subType]
+                      : (typeLabel[event.type] ?? 'Event')
                     return (
                       <Box
                         key={event.id}
@@ -644,7 +708,7 @@ export default function PersonProfilePage() {
                                 color,
                               }}
                             >
-                              {typeLabel[event.type] ?? 'Event'}
+                              {displayType}
                             </Typography>
                             {event.date && (
                               <Typography

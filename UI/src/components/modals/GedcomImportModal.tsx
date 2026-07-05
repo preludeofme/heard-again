@@ -19,6 +19,8 @@ import {
   CircularProgress,
   Paper,
   Stack,
+  FormControlLabel,
+  Checkbox,
 } from '@mui/material'
 import {
   Close as CloseIcon,
@@ -193,9 +195,11 @@ export function GedcomImportModal({ open, onClose, onSuccess, userPersonId }: Ge
   const [triggerApiUrl, setTriggerApiUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [previewData, setPreviewData] = useState<PreviewData | null>(null)
+  const [jobProposalId, setJobProposalId] = useState<string | null>(null)
 
   // Connection mode
   const [connectionMode, setConnectionMode] = useState<ConnectionMode>('self')
+  const [deduplicate, setDeduplicate] = useState(true)
 
   // "I'm in this file" state
   const [selfXref, setSelfXref] = useState<string | null>(null)           // which GEDCOM person is the user
@@ -221,6 +225,7 @@ export function GedcomImportModal({ open, onClose, onSuccess, userPersonId }: Ge
     setRealtimeToken(null)
     setTriggerApiUrl(null)
     setConnectionMode('self')
+    setDeduplicate(true)
     setSelfXref(null)
     setSelfSearch(null)
     setGedcomFather(null)
@@ -230,6 +235,7 @@ export function GedcomImportModal({ open, onClose, onSuccess, userPersonId }: Ge
     setAnchorPerson(null)
     setGedcomParent(null)
     setParentRole('father')
+    setJobProposalId(null)
   }
 
   // Debounced server-side search for existing tree people
@@ -295,11 +301,15 @@ export function GedcomImportModal({ open, onClose, onSuccess, userPersonId }: Ge
       try {
         const resp = await fetch(`/api/import/jobs/${jobId}`, { credentials: 'include' })
         if (!resp.ok) return
-        const data = await resp.json() as { data?: { status: string; errorMessage?: string; triggerRunId?: string | null } }
+        const data = await resp.json() as { data?: { status: string; errorMessage?: string; triggerRunId?: string | null; resultSummary?: any } }
         const jobStatus = data.data?.status
         if (data.data?.triggerRunId && !triggerRunId) setTriggerRunId(data.data.triggerRunId)
         if (jobStatus === 'COMPLETED') {
           if (pollingRef.current) clearInterval(pollingRef.current)
+          const resultSummary = data.data?.resultSummary
+          if (resultSummary?.proposalId) {
+            setJobProposalId(resultSummary.proposalId)
+          }
           setStatus('success')
           onSuccess?.()
         } else if (jobStatus === 'FAILED') {
@@ -396,7 +406,7 @@ export function GedcomImportModal({ open, onClose, onSuccess, userPersonId }: Ge
     setStatus('processing')
 
     try {
-      const options: Record<string, string> = {}
+      const options: Record<string, any> = {}
 
       if (connectionMode === 'self') {
         const chosenXref = selfXref ?? selfSearch?.xref
@@ -414,6 +424,8 @@ export function GedcomImportModal({ open, onClose, onSuccess, userPersonId }: Ge
         else options.motherXref = gedcomParent.xref
       }
       // standalone: no options
+
+      options.deduplicate = deduplicate
 
       const response = await fetchWithCSRF('/api/import/gedcom', {
         method: 'POST',
@@ -479,13 +491,13 @@ export function GedcomImportModal({ open, onClose, onSuccess, userPersonId }: Ge
           <Box sx={{ py: 4, textAlign: 'center' }}>
             <UploadIcon sx={{ fontSize: 64, color: 'primary.main', mb: 2, opacity: 0.5 }} />
             <Typography variant="body1" gutterBottom>
-              Select a GEDCOM file (.ged) to import your family tree.
+              Select a GEDCOM file (.ged) or ZIP file (.zip) containing your tree and media.
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              This will add new people and relationships to your current family space.
+              This will add new people, relationships, and images to your current family space.
             </Typography>
             <input
-              accept=".ged"
+              accept=".ged,.zip"
               style={{ display: 'none' }}
               id="gedcom-file-input"
               type="file"
@@ -614,6 +626,28 @@ export function GedcomImportModal({ open, onClose, onSuccess, userPersonId }: Ge
                 </Paper>
               ))}
             </Stack>
+
+            <Box sx={{ mb: 2 }}>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={deduplicate}
+                    onChange={(e) => setDeduplicate(e.target.checked)}
+                    color="primary"
+                  />
+                }
+                label={
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      Enable duplicate detection (Match & Merge)
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Identify overlapping profiles and create a merge proposal to resolve duplicates.
+                    </Typography>
+                  </Box>
+                }
+              />
+            </Box>
 
             <Divider sx={{ mb: 3 }} />
 
@@ -775,13 +809,34 @@ export function GedcomImportModal({ open, onClose, onSuccess, userPersonId }: Ge
         {status === 'success' && (
           <Box sx={{ py: 4, textAlign: 'center' }}>
             <SuccessIcon sx={{ fontSize: 64, color: 'success.main', mb: 2 }} />
-            <Typography variant="h6" gutterBottom>Import Started!</Typography>
+            <Typography variant="h6" gutterBottom>Import Completed!</Typography>
             <Typography variant="body1">
-              Your family tree is being processed in the background.
+              Your family tree has been successfully imported.
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-              The tree will refresh automatically once the import is complete.
-            </Typography>
+            {((liveRun?.metadata as any)?.proposalId || jobProposalId) ? (
+              <Box sx={{ mt: 3, p: 2, bgcolor: 'action.hover', borderRadius: 2 }}>
+                <Typography variant="body2" sx={{ mb: 2 }}>
+                  We detected overlapping profiles between the imported file and your tree.
+                </Typography>
+                <Button
+                  variant="contained"
+                  onClick={() => {
+                    const proposalId = (liveRun?.metadata as any)?.proposalId || jobProposalId
+                    if (proposalId) {
+                      onClose()
+                      window.location.href = `/family-merge?proposalId=${proposalId}`
+                    }
+                  }}
+                  sx={{ bgcolor: '#16334a', '&:hover': { bgcolor: '#2e4a62' } }}
+                >
+                  Review and Merge Duplicates
+                </Button>
+              </Box>
+            ) : (
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                The family tree view will refresh automatically.
+              </Typography>
+            )}
           </Box>
         )}
 

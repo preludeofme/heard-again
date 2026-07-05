@@ -31,6 +31,7 @@ export default apiHandler({
         status: 'APPROVED'
       },
       include: {
+        sourceFamilyspace: true,
         personMatches: {
           where: { isIncluded: true },
           include: {
@@ -287,6 +288,37 @@ export default apiHandler({
           })
         }
       }
+
+      // Move unmatched people, family units, stories, documents, collections, assets to target familyspace
+      await tx.person.updateMany({
+        where: { familyspaceId: proposal.sourceFamilyspaceId },
+        data: { familyspaceId: user.familyspaceId }
+      })
+
+      await tx.familyUnit.updateMany({
+        where: { familyspaceId: proposal.sourceFamilyspaceId },
+        data: { familyspaceId: user.familyspaceId }
+      })
+
+      await tx.story.updateMany({
+        where: { familyspaceId: proposal.sourceFamilyspaceId },
+        data: { familyspaceId: user.familyspaceId }
+      })
+
+      await tx.document.updateMany({
+        where: { familyspaceId: proposal.sourceFamilyspaceId },
+        data: { familyspaceId: user.familyspaceId }
+      })
+
+      await tx.asset.updateMany({
+        where: { familyspaceId: proposal.sourceFamilyspaceId },
+        data: { familyspaceId: user.familyspaceId }
+      })
+
+      await tx.collection.updateMany({
+        where: { familyspaceId: proposal.sourceFamilyspaceId },
+        data: { familyspaceId: user.familyspaceId }
+      })
       
       // Update proposal status
       const hasFailures = result.errors.length > 0
@@ -299,6 +331,13 @@ export default apiHandler({
           errorMessage: hasFailures ? result.errors.join('; ') : null
         }
       })
+
+      // Clean up temporary source familyspace to avoid database/workspace listing clutter
+      if (!hasFailures && proposal.sourceFamilyspace.slug.startsWith('gedcom-import-')) {
+        await tx.familyspace.delete({
+          where: { id: proposal.sourceFamilyspaceId }
+        })
+      }
     })
     
     return successResponse(res, {

@@ -168,6 +168,7 @@ export interface PersonListItem {
   middleName: string | null
   lastName: string | null
   maidenName: string | null
+  sex: 'M' | 'F' | 'U' | 'X' | null
   displayName: string
   nickname: string | null
   personType: PersonType
@@ -189,6 +190,7 @@ export interface CreatePersonRequest {
   maidenName?: string
   suffix?: string
   middleName?: string
+  sex?: 'M' | 'F' | 'U' | 'X' | null
   birthDate?: string
   deathDate?: string
   isDeceased?: boolean

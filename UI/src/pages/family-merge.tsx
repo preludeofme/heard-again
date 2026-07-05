@@ -1,5 +1,6 @@
 import Head from 'next/head'
 import { useCallback, useEffect, useState } from 'react'
+import { useRouter } from 'next/router'
 import { fetchWithCSRF, fetchWithCSRFAndJSON } from '@/lib/api-client'
 import { ConfirmDialog } from '@/components/modals/ConfirmDialog'
 import {
@@ -118,6 +119,7 @@ function statusColor(status: MergeStatus): 'default' | 'warning' | 'success' | '
 }
 
 export default function FamilyMergePage() {
+  const router = useRouter()
   const [familyspaces, setFamilyspaces] = useState<Familyspace[]>([])
   const [isLoadingFamilyspaces, setIsLoadingFamilyspaces] = useState(true)
   const [proposals, setProposals] = useState<Proposal[]>([])
@@ -186,6 +188,22 @@ export default function FamilyMergePage() {
     
     loadFamilyspaces()
   }, [])
+
+  // Load proposals on mount
+  useEffect(() => {
+    loadProposals()
+  }, [loadProposals])
+
+  // Handle proposalId query parameter to auto-open details
+  useEffect(() => {
+    const { proposalId } = router.query
+    if (proposalId && typeof proposalId === 'string' && proposals.length > 0) {
+      const match = proposals.find(p => p.id === proposalId)
+      if (match && selectedProposal?.id !== proposalId) {
+        viewProposal(match)
+      }
+    }
+  }, [router.query, proposals])
 
   const analyzeFamilyspace = async () => {
     if (!selectedSourceFamilyspace) return

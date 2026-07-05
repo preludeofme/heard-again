@@ -469,6 +469,7 @@ export default function FamilyTree() {
         maidenName: personCreateData.maidenName || undefined,
         suffix: personCreateData.suffix || undefined,
         middleName: personCreateData.middleName || undefined,
+        sex: personCreateData.sex || undefined,
         birthDate: personCreateData.birthDate || undefined,
         deathDate: personCreateData.deathDate || undefined,
         bio: personCreateData.bio || undefined,

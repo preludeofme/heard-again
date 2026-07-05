@@ -1,10 +1,24 @@
 import { prisma } from '@/lib/prisma'
 import { GedcomParser } from './GedcomParser'
+import { getStorageService } from '@/lib/storage/storage-service'
+import { generateSecureFilename } from '@/lib/security/file-validator'
+import path from 'path'
+import AdmZip from 'adm-zip'
+
+function storageTypeFromMode(mode: string): 'LOCAL' | 'S3' | 'CLOUDFLARE_R2' | 'GOOGLE_CLOUD' {
+  switch (mode) {
+    case 'r2': return 'CLOUDFLARE_R2'
+    case 's3': return 'S3'
+    case 'gcs':
+    case 'gcp': return 'GOOGLE_CLOUD'
+    default: return 'LOCAL'
+  }
+}
 
 export class GedcomImportService {
   async previewGedcom(
     userId: string,
-    fileContent: string
+    fileBufferOrContent: Buffer | string
   ): Promise<{
     potentialMatches: Array<{
       xref: string;
@@ -18,6 +32,26 @@ export class GedcomImportService {
       familyCount: number;
     };
   }> {
+    let fileContent: string
+    if (Buffer.isBuffer(fileBufferOrContent)) {
+      if (fileBufferOrContent[0] === 0x50 && fileBufferOrContent[1] === 0x4B) {
+        const zip = new AdmZip(fileBufferOrContent)
+        const entries = zip.getEntries()
+        const gedcomEntry = entries.find(entry => 
+          entry.entryName.toLowerCase().endsWith('.ged') || 
+          entry.entryName.toLowerCase().endsWith('.gedcom')
+        )
+        if (!gedcomEntry) {
+          throw new Error('No GEDCOM file found inside the ZIP archive')
+        }
+        fileContent = gedcomEntry.getData().toString('utf-8')
+      } else {
+        fileContent = fileBufferOrContent.toString('utf-8')
+      }
+    } else {
+      fileContent = fileBufferOrContent
+    }
+
     const { individuals, families } = GedcomParser.parse(fileContent)
 
     // Get user info for matching - pick the first person record created by this user (likely themselves)
@@ -69,7 +103,7 @@ export class GedcomImportService {
   async importGedcom(
     familyspaceId: string,
     userId: string,
-    fileContent: string,
+    fileBufferOrContent: Buffer | string,
     assetId: string,
     jobId: string,
     options?: {
@@ -77,9 +111,32 @@ export class GedcomImportService {
       gedcomXrefForLink?: string;
       motherXref?: string;
       fatherXref?: string;
+      deduplicate?: boolean;
     },
     onProgress?: (done: number, total: number) => void | Promise<void>
   ): Promise<Record<string, unknown>> {
+    let fileContent: string
+    let zip: AdmZip | null = null
+
+    if (Buffer.isBuffer(fileBufferOrContent)) {
+      if (fileBufferOrContent[0] === 0x50 && fileBufferOrContent[1] === 0x4B) {
+        zip = new AdmZip(fileBufferOrContent)
+        const entries = zip.getEntries()
+        const gedcomEntry = entries.find(entry => 
+          entry.entryName.toLowerCase().endsWith('.ged') || 
+          entry.entryName.toLowerCase().endsWith('.gedcom')
+        )
+        if (!gedcomEntry) {
+          throw new Error('No GEDCOM file found inside the ZIP archive')
+        }
+        fileContent = gedcomEntry.getData().toString('utf-8')
+      } else {
+        fileContent = fileBufferOrContent.toString('utf-8')
+      }
+    } else {
+      fileContent = fileBufferOrContent
+    }
+
     const { individuals, families, standaloneNotes, standaloneSources } = GedcomParser.parse(fileContent)
 
     if (individuals.length === 0) {
@@ -134,7 +191,69 @@ export class GedcomImportService {
       for (let i = 0; i < individuals.length; i += BATCH_SIZE) {
         const batch = individuals.slice(i, i + BATCH_SIZE)
 
+        const uploadedAssets: Array<{
+          individualXref: string
+          filename: string
+          mimeType: string
+          sizeBytes: number
+          storagePath: string
+          filePath: string
+          title: string | null
+        }> = []
+
+        if (zip) {
+          const entries = zip.getEntries()
+          const storageService = getStorageService()
+          for (const individual of batch) {
+            if (individual.mediaLinks && individual.mediaLinks.length > 0) {
+              for (const mediaLink of individual.mediaLinks) {
+                const cleanPath = mediaLink.filePath.replace(/\\/g, '/').toLowerCase()
+                const imgEntry = entries.find(entry => {
+                  const entryPath = entry.entryName.replace(/\\/g, '/').toLowerCase()
+                  return entryPath === cleanPath || entryPath.endsWith('/' + cleanPath)
+                })
+                if (imgEntry && !imgEntry.isDirectory) {
+                  try {
+                    const imgBuffer = imgEntry.getData()
+                    const filename = path.basename(imgEntry.entryName)
+                    const ext = path.extname(filename).toLowerCase()
+                    const mimeMap: Record<string, string> = {
+                      '.jpg': 'image/jpeg',
+                      '.jpeg': 'image/jpeg',
+                      '.png': 'image/png',
+                      '.gif': 'image/gif',
+                      '.webp': 'image/webp',
+                      '.bmp': 'image/bmp',
+                      '.tiff': 'image/tiff',
+                    }
+                    const mimeType = mimeMap[ext] || 'application/octet-stream'
+                    const secureName = generateSecureFilename(filename, mimeType)
+                    const uploadResult = await storageService.uploadFile(
+                      imgBuffer,
+                      secureName,
+                      mimeType,
+                      { folder: `familyspace-${familyspaceId}/photos` }
+                    )
+                    uploadedAssets.push({
+                      individualXref: individual.xref,
+                      filename: uploadResult.filename,
+                      mimeType,
+                      sizeBytes: uploadResult.sizeBytes,
+                      storagePath: uploadResult.storagePath,
+                      filePath: mediaLink.filePath,
+                      title: mediaLink.title || null
+                    })
+                  } catch (err) {
+                    console.error(`Failed to upload media file ${mediaLink.filePath}:`, err)
+                  }
+                }
+              }
+            }
+          }
+        }
+
         await prisma.$transaction(async (tx) => {
+          const storageService = getStorageService()
           for (const individual of batch) {
             const isUserLink = options?.gedcomXrefForLink === individual.xref && resolvedLinkToPersonId
             const personIdToUse = isUserLink ? resolvedLinkToPersonId : undefined
@@ -251,6 +370,56 @@ export class GedcomImportService {
 
             importStats.personUpserts += 1
             importStats.personExternalRefUpserts += 1
+
+            const myUploadedAssets = uploadedAssets.filter(ua => ua.individualXref === individual.xref)
+            for (const ua of myUploadedAssets) {
+              const imgAsset = await tx.asset.create({
+                data: {
+                  familyspaceId,
+                  filename: ua.filename,
+                  originalName: path.basename(ua.filePath),
+                  mimeType: ua.mimeType,
+                  sizeBytes: BigInt(ua.sizeBytes),
+                  storageType: storageTypeFromMode(storageService.getMode()) as any,
+                  storagePath: ua.storagePath,
+                  assetType: 'IMAGE',
+                  processingStatus: 'COMPLETED',
+                  uploadedById: userId,
+                  metadata: {
+                    importSource: 'GEDCOM_ZIP',
+                    gedcomFilePath: ua.filePath,
+                  },
+                },
+              })
+
+              const docTitle = ua.title || `${individual.fullName}'s Portrait`
+              const document = await tx.document.create({
+                data: {
+                  familyspaceId,
+                  assetId: imgAsset.id,
+                  title: docTitle,
+                  documentType: 'PHOTO',
+                  createdById: userId,
+                  source: 'gedcom_zip',
+                },
+              })
+
+              await tx.documentPerson.create({
+                data: {
+                  documentId: document.id,
+                  personId: p.id,
+                  role: 'subject',
+                },
+              })
+
+              if (!p.avatarAssetId) {
+                await tx.person.update({
+                  where: { id: p.id },
+                  data: { avatarAssetId: imgAsset.id },
+                })
+                p.avatarAssetId = imgAsset.id
+              }
+            }
           }
         })
 
@@ -433,7 +602,11 @@ export class GedcomImportService {
 
       await prisma.importJob.update({
         where: { id: jobId },
-        data: { status: 'COMPLETED', completedAt: new Date(), resultSummary: importStats },
+        data: {
+          status: options?.deduplicate ? 'PROCESSING' : 'COMPLETED',
+          completedAt: options?.deduplicate ? null : new Date(),
+          resultSummary: importStats,
+        },
       })
 
       return importStats

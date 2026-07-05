@@ -20,6 +20,8 @@ export const config = {
 const ALLOWED_GEDCOM_MIME_TYPES = [
   'text/plain',
   'application/octet-stream',
+  'application/zip',
+  'application/x-zip-compressed',
 ] as const
 
 function storageTypeFromMode(mode: string): 'LOCAL' | 'S3' | 'CLOUDFLARE_R2' | 'GOOGLE_CLOUD' {
@@ -50,6 +52,7 @@ async function importGedcom(req: NextApiRequest, res: NextApiResponse) {
         gedcomXrefForLink?: string
         motherXref?: string
         fatherXref?: string
+        deduplicate?: boolean
       }
     }
 
@@ -61,9 +64,34 @@ async function importGedcom(req: NextApiRequest, res: NextApiResponse) {
     })
     if (!asset) return errorResponse(res, 'Asset not found', 404)
 
+    let sourceFamilyspaceId = user.familyspaceId
+    let targetFamilyspaceId: string | undefined = undefined
+
+    if (options?.deduplicate) {
+      // Create a temporary source familyspace
+      const tempSpace = await prisma.familyspace.create({
+        data: {
+          name: `GEDCOM Import - ${asset.originalName}`,
+          slug: `gedcom-import-${uuidv4()}`,
+          ownerId: user.id,
+        }
+      })
+      // Create membership for user in the source familyspace as OWNER
+      await prisma.membership.create({
+        data: {
+          userId: user.id,
+          familyspaceId: tempSpace.id,
+          role: 'OWNER',
+          status: 'ACTIVE',
+        }
+      })
+      sourceFamilyspaceId = tempSpace.id
+      targetFamilyspaceId = user.familyspaceId
+    }
+
     const importJob = await prisma.importJob.create({
       data: {
-        familyspaceId: user.familyspaceId,
+        familyspaceId: sourceFamilyspaceId,
         sourceType: 'GEDCOM',
         sourceAssetId: asset.id,
         status: 'PENDING',
@@ -73,11 +101,12 @@ async function importGedcom(req: NextApiRequest, res: NextApiResponse) {
 
     const run = await gedcomImportTask.trigger(
       {
-        familyspaceId: user.familyspaceId,
+        familyspaceId: sourceFamilyspaceId,
         userId: user.id,
         storagePath: asset.storagePath,
         assetId: asset.id,
         jobId: importJob.id,
+        targetFamilyspaceId,
         options,
       },
       { idempotencyKey: `gedcom-import:${importJob.id}` }
@@ -124,20 +153,25 @@ async function importGedcom(req: NextApiRequest, res: NextApiResponse) {
     return errorResponse(res, validationResult.error || 'Validation failed', 400)
   }
 
-  if (!ALLOWED_GEDCOM_MIME_TYPES.includes(validationResult.detectedType! as 'text/plain' | 'application/octet-stream')) {
+  if (!ALLOWED_GEDCOM_MIME_TYPES.includes(validationResult.detectedType! as any)) {
     return errorResponse(res, `File type '${validationResult.detectedType}' not allowed`, 400)
   }
 
   const secureFilename = generateSecureFilename(
     file.originalFilename || 'gedcom.ged',
-    'text/plain'
-  ).replace(/\.[^.]+$/, '.ged')
+    validationResult.detectedType || 'text/plain'
+  )
+
+  let mimeTypeToUse = 'text/plain'
+  if (validationResult.detectedType === 'application/zip' || validationResult.detectedType === 'application/x-zip-compressed') {
+    mimeTypeToUse = validationResult.detectedType
+  }
 
   const storageService = getStorageService()
   const uploadResult = await storageService.uploadFile(
     fileBuffer,
     secureFilename,
-    'text/plain',
+    mimeTypeToUse,
     { folder: `familyspace-${user.familyspaceId}/gedcom` }
   )
 
@@ -147,7 +181,7 @@ async function importGedcom(req: NextApiRequest, res: NextApiResponse) {
         familyspaceId: user.familyspaceId,
         filename: uploadResult.filename,
         originalName: file.originalFilename || 'import.ged',
-        mimeType: 'text/plain',
+        mimeType: mimeTypeToUse,
         sizeBytes: BigInt(uploadResult.sizeBytes),
         storageType: storageTypeFromMode(storageService.getMode()) as any,
         storagePath: uploadResult.storagePath,

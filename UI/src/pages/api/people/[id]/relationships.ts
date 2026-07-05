@@ -28,7 +28,7 @@ export default apiHandler({
     const { valid, errors } = validate(req.body, {
       targetPersonId: [rules.required, rules.uuid],
       relationshipType: [rules.required, rules.oneOf(['PARENT', 'CHILD', 'SPOUSE'])],
-      relationshipKind: [rules.oneOf(['BIOLOGICAL', 'ADOPTED', 'STEP'])],
+      relationshipKind: [rules.oneOf(['BIOLOGICAL', 'ADOPTED', 'STEP', 'FOSTER', 'GUARDIAN'])],
       isBiological: [rules.boolean],
       marriageDate: [rules.date],
       marriagePlace: [rules.string],

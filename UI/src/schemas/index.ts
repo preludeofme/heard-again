@@ -89,6 +89,16 @@ export type ListStoriesQuery = z.infer<typeof listStoriesQuerySchema>
 
 export const personTypeSchema = z.nativeEnum(PersonType)
 
+export const personEventSchema = z.object({
+  id: z.string().uuid().optional(),
+  eventType: z.string().min(1).max(50),
+  eventDate: z.string().datetime().or(z.string().date()).nullish(),
+  place: z.string().max(255).nullish(),
+  description: z.string().max(1000).nullish(),
+})
+
+export type PersonEventInput = z.infer<typeof personEventSchema>
+
 // Base schema without refinements - used for both create and update
 const basePersonSchema = z.object({
   firstName: z.string().min(1).max(100),
@@ -98,12 +108,14 @@ const basePersonSchema = z.object({
   maidenName: z.string().max(100).optional(),
   suffix: z.string().max(20).optional(),
   middleName: z.string().max(100).optional(),
+  sex: z.enum(['M', 'F', 'U', 'X']).nullish(),
   birthDate: z.string().datetime().or(z.string().date()).optional(),
   deathDate: z.string().datetime().or(z.string().date()).optional(),
   isDeceased: z.boolean().optional(),
   bio: z.string().max(5000).optional(),
   personType: personTypeSchema.optional(),
   tags: z.array(z.string().max(50)).max(20).optional(),
+  events: z.array(personEventSchema).optional(),
 })
 
 const personRefinements = [
@@ -150,12 +162,14 @@ export const updatePersonSchema = z.object({
   maidenName: z.string().max(100).nullish(),
   suffix: z.string().max(20).nullish(),
   middleName: z.string().max(100).nullish(),
+  sex: z.enum(['M', 'F', 'U', 'X']).nullish(),
   birthDate: z.string().datetime().or(z.string().date()).nullish(),
   deathDate: z.string().datetime().or(z.string().date()).nullish(),
   isDeceased: z.boolean().optional(),
   bio: z.string().max(5000).nullish(),
   personType: personTypeSchema.optional(),
   tags: z.array(z.string().max(50)).max(20).nullish(),
+  events: z.array(personEventSchema).nullish(),
 })
   .refine(personRefinements[0], personRefinementMessages[0])
   .refine(personRefinements[1], personRefinementMessages[1])

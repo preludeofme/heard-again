@@ -23,6 +23,29 @@ export interface TimelineEvent {
   sourceType: string
 }
 
+const EVENT_LABEL_MAP: Record<string, string> = {
+  BAPTISM: 'Baptism',
+  BURIAL: 'Burial',
+  CREMATION: 'Cremation',
+  MARRIAGE: 'Marriage',
+  DIVORCE: 'Divorce',
+  RESIDENCE: 'Residence',
+  OCCUPATION: 'Occupation',
+  EDUCATION: 'Education',
+  MILITARY_SERVICE: 'Military Service',
+  NATURALIZATION: 'Naturalization',
+  IMMIGRATION: 'Immigration',
+  EMIGRATION: 'Emigration',
+  CENSUS: 'Census',
+  RETIREMENT: 'Retirement',
+  WILL: 'Will',
+  TITLE: 'Title',
+  PHYSICAL_DESCRIPTION: 'Physical Description',
+  MEDICAL: 'Medical',
+  ADOPTION: 'Adoption',
+  CUSTOM: 'Other Event',
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   let familyspaceId: string
   let userId: string
@@ -403,13 +426,21 @@ async function getTimelineEvents(req: NextApiRequest, res: NextApiResponse, fami
   // Add person events (custom events)
   personEvents.forEach(event => {
     if (event.eventDate) {
+      const typeLabel = EVENT_LABEL_MAP[event.eventType] || event.eventType
+      const name = event.person.displayName || `${event.person.firstName} ${event.person.lastName || ''}`.trim()
+      
+      let title = `${typeLabel} of ${name}`
+      if (event.place) {
+        title += ` in ${event.place}`
+      }
+      
       allEvents.push({
         id: `event-${event.id}`,
         type: 'custom',
         date: event.eventDate,
         datePrecision: 'EXACT',
-        title: event.description?.split(':')[0] || `${event.eventType}: ${event.person.displayName || event.person.firstName}`,
-        description: event.description?.includes(':') ? event.description.split(':').slice(1).join(':').trim() : undefined,
+        title,
+        description: event.description || undefined,
         people: [{
           id: event.person.id,
           firstName: event.person.firstName,
@@ -418,6 +449,7 @@ async function getTimelineEvents(req: NextApiRequest, res: NextApiResponse, fami
           avatarAssetId: event.person.avatarAssetId ?? undefined,
           role: 'subject',
         }],
+        metadata: { subType: event.eventType },
         sourceId: event.id,
         sourceType: 'personEvent',
       })

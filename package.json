@@ -36,7 +36,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",
-    "@trigger.dev/build": "^4.4.6",
+    "@trigger.dev/build": "^4.5.0",
     "@types/archiver": "^7.0.0",
     "prisma": "^6.19.2"
   },
@@ -48,7 +48,7 @@
     "@mui/material": "^7.3.9",
     "@mui/system": "^7.3.9",
     "@prisma/client": "^6.19.3",
-    "@trigger.dev/sdk": "^4.4.6",
+    "@trigger.dev/sdk": "^4.5.0",
     "@types/dompurify": "^3.0.5",
     "archiver": "^8.0.0",
     "isomorphic-dompurify": "^3.14.0",

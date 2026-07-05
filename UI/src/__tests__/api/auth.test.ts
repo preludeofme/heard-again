@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import handler from '@/pages/api/people/index'
+import { prisma } from '@/lib/prisma'
 
 jest.mock('@/lib/prisma')
 jest.mock('@/lib/auth-helpers', () => ({
@@ -10,11 +11,19 @@ jest.mock('@/lib/api-helpers', () => ({
   ...jest.requireActual('@/lib/api-helpers'),
   apiHandler: (routes: any) => async (req: any, res: any) => {
     const method = req.method?.toUpperCase() ?? 'GET'
-    const routeHandler = routes[method]
+    let routeHandler = routes[method]
     if (!routeHandler) {
       return res.status(405).json({ error: 'Method not allowed' })
     }
-    return routeHandler(req, res)
+    if (typeof routeHandler === 'object' && routeHandler.handler) {
+      routeHandler = routeHandler.handler
+    }
+    try {
+      return await routeHandler(req, res)
+    } catch (err: any) {
+      const status = err.statusCode || err.status || 500
+      return res.status(status).json({ error: err.message })
+    }
   },
 }))
 
@@ -57,6 +66,7 @@ describe('API route auth — GET /api/people', () => {
     } as any)
 
     // prisma.person.findMany returns [] by default in jest mock
+    ;(prisma.person.findMany as jest.Mock).mockResolvedValueOnce([])
     await handler(req, res)
 
     expect(res.status).not.toHaveBeenCalledWith(401)
@@ -83,6 +93,7 @@ describe('API route auth — familyspace isolation', () => {
       role: 'EDITOR',
     } as any)
 
+    ;(prisma.person.findMany as jest.Mock).mockResolvedValueOnce([])
     await handler(req, res)
 
     // Response should not reference familyspace-a data

@@ -387,14 +387,171 @@ export interface LayoutResult {
   edges: Edge[]
 }
 
-export function buildFamilyTreeLayout(
+function buildPedigreeLayout(
   people: ApiPersonWithEdges[],
   rootPersonId: string,
   callbacks: LayoutCallbacks,
   selectedPersonId: string | null = null,
   userPersonId: string | null = null,
 ): LayoutResult {
+  const peopleById = new Map(people.map((p) => [p.id, p]))
+  const { parentsByChild } = buildRelationshipMaps(people)
+
+  // 1. Identify all direct ancestors of the root person
+  const ancestors = new Set<string>([rootPersonId])
+  const queue = [rootPersonId]
+  while (queue.length > 0) {
+    const currentId = queue.shift()!
+    const parents = parentsByChild.get(currentId)
+    if (parents) {
+      for (const pId of parents) {
+        if (!ancestors.has(pId)) {
+          ancestors.add(pId)
+          queue.push(pId)
+        }
+      }
+    }
+  }
+
+  // 2. Position nodes recursively
+  const nodeWidth = COMPACT_WIDTH
+  const nodeHeight = COMPACT_HEIGHT
+  const hGap = H_GAP
+  const vGap = 80
+
+  const positions = new Map<string, { x: number; y: number; width: number; height: number }>()
+  let currentLeafY = 0
+
+  function layoutNode(id: string, col: number): number {
+    const person = peopleById.get(id)
+    if (!person) return 0
+
+    const parents = Array.from(parentsByChild.get(id) ?? []).filter(pId => ancestors.has(pId))
+    let y = 0
+
+    if (parents.length > 0) {
+      parents.sort((a, b) => {
+        const personA = peopleById.get(a)
+        const personB = peopleById.get(b)
+        const sexA = personA?.sex || ''
+        const sexB = personB?.sex || ''
+        if (sexA === 'M' && sexB !== 'M') return -1
+        if (sexB === 'M' && sexA !== 'M') return 1
+        return a.localeCompare(b)
+      })
+
+      const parentYs = parents.map(pId => layoutNode(pId, col + 1))
+      y = parentYs.reduce((sum, val) => sum + val, 0) / parentYs.length
+    } else {
+      y = currentLeafY
+      currentLeafY += nodeHeight + vGap
+    }
+
+    const x = col * (nodeWidth + hGap)
+    positions.set(id, { x, y, width: nodeWidth, height: nodeHeight })
+    return y
+  }
+
+  layoutNode(rootPersonId, 0)
+
+  // 3. Build Nodes and Edges
+  const nodes: Node[] = []
+  const edges: Edge[] = []
+
+  for (const [personId, pos] of positions) {
+    const person = peopleById.get(personId)
+    if (!person) continue
+
+    const isSelf = personId === rootPersonId
+    const level = isSelf ? 'parent' : 'grandparent'
+
+    let missingUp = false
+    const parents = parentsByChild.get(personId)
+    if (parents) {
+      for (const pId of parents) {
+        if (!positions.has(pId)) {
+          missingUp = true
+        }
+      }
+    }
+
+    const layoutPerson: TreeLayoutPerson = {
+      id: person.id,
+      name: buildDisplayName(person),
+      role: isSelf ? 'Self' : 'Ancestor',
+      avatar: person.avatarUrl ?? '',
+      birthDate: person.birthDate,
+      deathDate: person.deathDate,
+      memories: person.counts?.stories ?? 0,
+      selected: isSelf || personId === selectedPersonId,
+      width: pos.width,
+      height: pos.height,
+      relationship: getRelationshipDescriptor(personId, userPersonId, people)
+    }
+
+    const nodeData = {
+      person: layoutPerson,
+      level,
+      isSelf,
+      isSelected: personId === selectedPersonId,
+      isInLaw: false,
+      levelIndex: 0,
+      isMobile: callbacks.isMobile,
+      onPersonClick: callbacks.onPersonClick,
+      onAddPerson: callbacks.onAddPerson,
+      onViewMemories: callbacks.onViewMemories,
+      onViewFullProfile: callbacks.onViewFullProfile,
+      onSetRoot: callbacks.onSetRoot,
+      onEditRelationships: callbacks.onEditRelationships,
+      onLoadMore: callbacks.onLoadMore,
+      missingUp,
+      missingDown: false,
+      missingLeft: false,
+      missingRight: false,
+    }
+
+    nodes.push({
+      id: personId,
+      type: 'personNode',
+      position: { x: pos.x, y: pos.y },
+      data: nodeData as unknown as Record<string, unknown>,
+      draggable: false,
+      style: { width: pos.width, height: pos.height, pointerEvents: 'all' },
+    })
+
+    const childParents = Array.from(parentsByChild.get(personId) ?? []).filter(pId => positions.has(pId))
+    if (childParents.length > 0) {
+      for (const pId of childParents) {
+        edges.push({
+          id: `edge-pedigree-${personId}-${pId}`,
+          source: personId,
+          target: pId,
+          sourceHandle: 'right',
+          targetHandle: 'left',
+          type: 'smoothstep',
+          style: { stroke: BIO_COLOR, strokeWidth: CONNECTOR_WIDTH, opacity: 0.8 },
+          animated: false,
+        })
+      }
+    }
+  }
+
+  return { nodes, edges }
+}
+
+export function buildFamilyTreeLayout(
+  people: ApiPersonWithEdges[],
+  rootPersonId: string,
+  callbacks: LayoutCallbacks,
+  selectedPersonId: string | null = null,
+  userPersonId: string | null = null,
+  layoutMode: 'vertical' | 'pedigree' = 'vertical',
+): LayoutResult {
   if (people.length === 0) return { nodes: [], edges: [] }
+
+  if (layoutMode === 'pedigree') {
+    return buildPedigreeLayout(people, rootPersonId, callbacks, selectedPersonId, userPersonId)
+  }
 
   const peopleById = new Map(people.map((p) => [p.id, p]))
   const normalizedGraph = buildFamilyGraph(people)

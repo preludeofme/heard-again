@@ -11,6 +11,7 @@ import { validateFileContent, generateSecureFilename } from '@/lib/security/file
 import { gedcomImportService } from '@/server/services/gedcom/GedcomImportService'
 import { getStorageService } from '@/lib/storage/storage-service'
 import { GedcomParser } from '@/server/services/gedcom/GedcomParser'
+import AdmZip from 'adm-zip'
 
 export const config = {
   api: {
@@ -21,6 +22,8 @@ export const config = {
 const ALLOWED_GEDCOM_MIME_TYPES = [
   'text/plain',
   'application/octet-stream',
+  'application/zip',
+  'application/x-zip-compressed',
 ] as const
 
 function storageTypeFromMode(mode: string): 'LOCAL' | 'S3' | 'CLOUDFLARE_R2' | 'GOOGLE_CLOUD' {
@@ -75,14 +78,19 @@ async function previewGedcom(req: NextApiRequest, res: NextApiResponse) {
 
   const secureFilename = generateSecureFilename(
     file.originalFilename || 'gedcom.ged',
-    'text/plain'
-  ).replace(/\.[^.]+$/, '.ged')
+    validationResult.detectedType || 'text/plain'
+  )
+
+  let mimeTypeToUse = 'text/plain'
+  if (validationResult.detectedType === 'application/zip' || validationResult.detectedType === 'application/x-zip-compressed') {
+    mimeTypeToUse = validationResult.detectedType
+  }
 
   const storageService = getStorageService()
   const uploadResult = await storageService.uploadFile(
     fileBuffer,
     secureFilename,
-    'text/plain',
+    mimeTypeToUse,
     { folder: `familyspace-${user.familyspaceId}/gedcom` }
   )
 
@@ -91,7 +99,7 @@ async function previewGedcom(req: NextApiRequest, res: NextApiResponse) {
       familyspaceId: user.familyspaceId,
       filename: uploadResult.filename,
       originalName: file.originalFilename || 'import.ged',
-      mimeType: 'text/plain',
+      mimeType: mimeTypeToUse,
       sizeBytes: BigInt(uploadResult.sizeBytes),
       storageType: storageTypeFromMode(storageService.getMode()) as any,
       storagePath: uploadResult.storagePath,
@@ -106,9 +114,23 @@ async function previewGedcom(req: NextApiRequest, res: NextApiResponse) {
   })
 
   try {
-    const fileContent = fileBuffer.toString('utf-8')
-    const previewData = await gedcomImportService.previewGedcom(user.id, fileContent)
-    const { individuals } = GedcomParser.parse(fileContent)
+    const previewData = await gedcomImportService.previewGedcom(user.id, fileBuffer)
+    let fileContentToParse = ''
+    if (fileBuffer[0] === 0x50 && fileBuffer[1] === 0x4B) {
+      const zip = new AdmZip(fileBuffer)
+      const entries = zip.getEntries()
+      const gedcomEntry = entries.find(entry => 
+        entry.entryName.toLowerCase().endsWith('.ged') || 
+        entry.entryName.toLowerCase().endsWith('.gedcom')
+      )
+      if (!gedcomEntry) {
+        throw new Error('No GEDCOM file found inside the ZIP archive')
+      }
+      fileContentToParse = gedcomEntry.getData().toString('utf-8')
+    } else {
+      fileContentToParse = fileBuffer.toString('utf-8')
+    }
+    const { individuals } = GedcomParser.parse(fileContentToParse)
 
     return successResponse(res, {
       assetId: asset.id,

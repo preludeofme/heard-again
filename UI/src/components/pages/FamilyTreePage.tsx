@@ -166,6 +166,7 @@ export function FamilyTreePage({
   const [insightCollapsed, setInsightCollapsed] = useState(false)
   const [isPanMode] = useState(true)
   const [searchAnchorEl, setSearchAnchorEl] = useState<HTMLElement | null>(null)
+  const [layoutMode, setLayoutMode] = useState<'vertical' | 'pedigree'>('vertical')
 
   // Data states
   const [personDetail, setPersonDetail] = useState<Record<string, unknown> | null>(null)
@@ -280,10 +281,15 @@ export function FamilyTreePage({
             firstName: data.firstName,
             lastName: data.lastName,
             displayName: data.displayName,
-            birthDate: data.birthDate,
-            deathDate: data.deathDate,
+            middleName: data.middleName || null,
+            nickname: data.nickname || null,
+            maidenName: data.maidenName || null,
+            suffix: data.suffix || null,
+            birthDate: data.birthDate || null,
+            deathDate: data.deathDate || null,
             bio: data.bio,
             personType: data.personType,
+            sex: data.sex || null,
           })
           if (!res.ok) throw new Error('Failed to create person')
         } else {
@@ -292,10 +298,15 @@ export function FamilyTreePage({
             firstName: data.firstName,
             lastName: data.lastName,
             displayName: data.displayName,
-            birthDate: data.birthDate,
-            deathDate: data.deathDate,
+            middleName: data.middleName || null,
+            nickname: data.nickname || null,
+            maidenName: data.maidenName || null,
+            suffix: data.suffix || null,
+            birthDate: data.birthDate || null,
+            deathDate: data.deathDate || null,
             bio: data.bio,
             personType: data.personType,
+            sex: data.sex || null,
           }, { method: 'PUT' })
           if (!res.ok) throw new Error('Failed to update person')
         }
@@ -624,6 +635,16 @@ export function FamilyTreePage({
                   </>
                 )}
                 <Divider orientation="vertical" flexItem sx={{ mx: 0.5, borderColor: 'rgba(208, 227, 230, 0.6)' }} />
+                <Button
+                  startIcon={<AccountTree sx={{ fontSize: 18, transform: layoutMode === 'pedigree' ? 'rotate(-90deg)' : 'none' }} />}
+                  size="small"
+                  onClick={() => setLayoutMode(prev => prev === 'vertical' ? 'pedigree' : 'vertical')}
+                  title="Switch between Vertical and Pedigree layouts"
+                  sx={{ color: 'primary.main', textTransform: 'none' }}
+                >
+                  {layoutMode === 'vertical' ? 'Pedigree View' : 'Vertical View'}
+                </Button>
+                <Divider orientation="vertical" flexItem sx={{ mx: 0.5, borderColor: 'rgba(208, 227, 230, 0.6)' }} />
                 <Tooltip title={isExportingPng ? 'Generating export…' : 'Download PNG'} arrow>
                   <span>
                     <Button
@@ -746,6 +767,15 @@ export function FamilyTreePage({
           <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
           <IconButton
             size="small"
+            onClick={() => setLayoutMode(prev => prev === 'vertical' ? 'pedigree' : 'vertical')}
+            title={layoutMode === 'vertical' ? 'Switch to Pedigree Layout' : 'Switch to Vertical Layout'}
+            sx={{ color: 'primary.main' }}
+          >
+            <AccountTree sx={{ fontSize: 18, transform: layoutMode === 'pedigree' ? 'rotate(-90deg)' : 'none' }} />
+          </IconButton>
+          <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
+          <IconButton
+            size="small"
             onClick={onToggleFullscreen}
             sx={{ color: 'primary.main' }}
           >
@@ -783,6 +813,7 @@ export function FamilyTreePage({
             onEditRelationships={handleAddRelationship}
             isPanMode={true}
             fitViewTrigger={fitViewTrigger}
+            layoutMode={layoutMode}
             onExportingChange={setIsExportingPng}
           />
         ) : (

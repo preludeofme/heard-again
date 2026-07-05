@@ -35,6 +35,14 @@ interface Relationship {
   }
 }
 
+interface PersonEvent {
+  id?: string
+  eventType: string
+  eventDate?: string | null
+  place?: string | null
+  description?: string | null
+}
+
 interface PersonData {
   id: string
   firstName: string
@@ -44,6 +52,7 @@ interface PersonData {
   nickname?: string
   maidenName?: string
   suffix?: string
+  sex?: 'M' | 'F' | 'U' | 'X' | null
   personType: string
   birthDate?: string
   deathDate?: string
@@ -53,6 +62,7 @@ interface PersonData {
   tags: string[]
   voiceProfiles: VoiceProfile[]
   relationships: Relationship[]
+  events: PersonEvent[]
   counts: {
     storiesAsSubject: number
     storiesAsSpeaker: number
@@ -91,6 +101,19 @@ const RELATIONSHIP_KINDS = [
   { value: 'BIOLOGICAL', label: 'Biological' },
   { value: 'ADOPTED', label: 'Adopted' },
   { value: 'STEP', label: 'Step' },
+  { value: 'FOSTER', label: 'Foster' },
+  { value: 'GUARDIAN', label: 'Guardian' },
+]
+
+const EVENT_TYPES = [
+  { value: 'BAPTISM', label: 'Baptism' },
+  { value: 'BURIAL', label: 'Burial' },
+  { value: 'CENSUS', label: 'Census' },
+  { value: 'MILITARY_SERVICE', label: 'Military Service' },
+  { value: 'EDUCATION', label: 'Graduation / Education' },
+  { value: 'RETIREMENT', label: 'Retirement' },
+  { value: 'NATURALIZATION', label: 'Naturalization' },
+  { value: 'CUSTOM', label: 'Other Event' },
 ]
 
 
@@ -105,7 +128,7 @@ export function PersonModal({ open, personId, initialTab = 'overview', onClose, 
   const [availablePeople, setAvailablePeople] = useState<Array<{ id: string; firstName: string; lastName?: string }>>([])
   const [relationshipTargetId, setRelationshipTargetId] = useState('')
   const [relationshipType, setRelationshipType] = useState('PARENT')
-  const [relationshipKind, setRelationshipKind] = useState<'BIOLOGICAL' | 'ADOPTED' | 'STEP'>('BIOLOGICAL')
+  const [relationshipKind, setRelationshipKind] = useState<'BIOLOGICAL' | 'ADOPTED' | 'STEP' | 'FOSTER' | 'GUARDIAN'>('BIOLOGICAL')
   const [marriageDate, setMarriageDate] = useState('')
   const [marriagePlace, setMarriagePlace] = useState('')
   const [isMutatingRelationship, setIsMutatingRelationship] = useState(false)
@@ -267,12 +290,20 @@ export function PersonModal({ open, personId, initialTab = 'overview', onClose, 
         nickname: editForm.nickname ?? null,
         maidenName: editForm.maidenName ?? null,
         suffix: editForm.suffix ?? null,
+        sex: editForm.sex ?? null,
         personType: editForm.personType,
         birthDate: editForm.birthDate ?? null,
         deathDate: editForm.deathDate ?? null,
         isDeceased: editForm.isDeceased,
         bio: editForm.bio ?? null,
         tags: editForm.tags,
+        events: (editForm.events || []).map(e => ({
+          id: e.id,
+          eventType: e.eventType,
+          eventDate: e.eventDate || null,
+          place: e.place || null,
+          description: e.description || null,
+        })),
       }
       const res = await fetchWithCSRFAndJSON(`/api/people/${personId}`, payload, { method: 'PUT' })
       const data = await res.json()
@@ -326,6 +357,28 @@ export function PersonModal({ open, personId, initialTab = 'overview', onClose, 
 
   const handleFormChange = (field: keyof PersonData, value: any) => {
     setEditForm(prev => ({ ...prev, [field]: value }))
+  }
+
+  const handleAddEventState = () => {
+    const currentEvents = editForm.events || []
+    handleFormChange('events', [
+      ...currentEvents,
+      { eventType: 'BAPTISM', eventDate: '', place: '', description: '' }
+    ])
+  }
+
+  const handleRemoveEventState = (index: number) => {
+    const currentEvents = editForm.events || []
+    handleFormChange('events', currentEvents.filter((_, i) => i !== index))
+  }
+
+  const handleEventFieldChange = (index: number, field: keyof PersonEvent, value: any) => {
+    const currentEvents = [...(editForm.events || [])]
+    currentEvents[index] = {
+      ...currentEvents[index],
+      [field]: value
+    }
+    handleFormChange('events', currentEvents)
   }
 
   const handleClose = () => {
@@ -530,6 +583,19 @@ export function PersonModal({ open, personId, initialTab = 'overview', onClose, 
                   <TextField
                     select
                     size="small"
+                    label="Biological Sex"
+                    value={editForm.sex || ''}
+                    onChange={(e) => handleFormChange('sex', e.target.value)}
+                  >
+                    <MenuItem value=""><em>None / Unknown</em></MenuItem>
+                    <MenuItem value="M">Male</MenuItem>
+                    <MenuItem value="F">Female</MenuItem>
+                    <MenuItem value="X">Other</MenuItem>
+                    <MenuItem value="U">Undetermined</MenuItem>
+                  </TextField>
+                  <TextField
+                    select
+                    size="small"
                     label="Person Type"
                     value={editForm.personType || 'LIVING'}
                     onChange={(e) => handleFormChange('personType', e.target.value)}
@@ -567,6 +633,15 @@ export function PersonModal({ open, personId, initialTab = 'overview', onClose, 
                       <Person sx={{ fontSize: 18, color: '#546669' }} />
                       <Typography variant="body2" color="text.secondary">Suffix:</Typography>
                       <Typography variant="body2">{person.suffix}</Typography>
+                    </Box>
+                  )}
+                  {person.sex && (
+                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                      <Person sx={{ fontSize: 18, color: '#546669' }} />
+                      <Typography variant="body2" color="text.secondary">Sex:</Typography>
+                      <Typography variant="body2">
+                        {person.sex === 'M' ? 'Male' : person.sex === 'F' ? 'Female' : person.sex === 'X' ? 'Other' : 'Undetermined'}
+                      </Typography>
                     </Box>
                   )}
                 </Box>
@@ -642,6 +717,136 @@ export function PersonModal({ open, personId, initialTab = 'overview', onClose, 
               )}
             </Grid>
 
+            <Grid size={{ xs: 12 }}>
+              <Divider sx={{ my: 2 }} />
+              {isEditing ? (
+                <>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                    <Typography variant="subtitle2" sx={{ color: '#666', fontWeight: 600 }}>
+                      Lifecycle Events
+                    </Typography>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={handleAddEventState}
+                      sx={{ textTransform: 'none', borderRadius: 2 }}
+                    >
+                      + Add Event
+                    </Button>
+                  </Box>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    {(editForm.events || []).length === 0 ? (
+                      <Typography variant="body2" sx={{ color: '#999', fontStyle: 'italic' }}>
+                        No custom lifecycle events added yet.
+                      </Typography>
+                    ) : (
+                      (editForm.events || []).map((event, index) => (
+                        <Card key={event.id || `temp-${index}`} variant="outlined" sx={{ p: 2, position: 'relative', borderRadius: 2 }}>
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() => handleRemoveEventState(index)}
+                            sx={{ position: 'absolute', top: 8, right: 8 }}
+                          >
+                            <Delete fontSize="small" />
+                          </IconButton>
+                          <Grid container spacing={2} sx={{ mt: 1 }}>
+                            <Grid size={{ xs: 12, sm: 6 }}>
+                              <TextField
+                                select
+                                fullWidth
+                                size="small"
+                                label="Event Type"
+                                value={event.eventType}
+                                onChange={(e) => handleEventFieldChange(index, 'eventType', e.target.value)}
+                              >
+                                {EVENT_TYPES.map((t) => (
+                                  <MenuItem key={t.value} value={t.value}>{t.label}</MenuItem>
+                                ))}
+                              </TextField>
+                            </Grid>
+                            <Grid size={{ xs: 12, sm: 6 }}>
+                              <TextField
+                                fullWidth
+                                size="small"
+                                type="date"
+                                label="Event Date"
+                                value={event.eventDate ? event.eventDate.split('T')[0] : ''}
+                                onChange={(e) => handleEventFieldChange(index, 'eventDate', e.target.value)}
+                                InputLabelProps={{ shrink: true }}
+                              />
+                            </Grid>
+                            <Grid size={{ xs: 12, sm: 6 }}>
+                              <TextField
+                                fullWidth
+                                size="small"
+                                label="Place"
+                                value={event.place || ''}
+                                onChange={(e) => handleEventFieldChange(index, 'place', e.target.value)}
+                                placeholder="City, State, Country"
+                              />
+                            </Grid>
+                            <Grid size={{ xs: 12, sm: 6 }}>
+                              <TextField
+                                fullWidth
+                                size="small"
+                                label="Description"
+                                value={event.description || ''}
+                                onChange={(e) => handleEventFieldChange(index, 'description', e.target.value)}
+                                placeholder="e.g. Details about the event"
+                              />
+                            </Grid>
+                          </Grid>
+                        </Card>
+                      ))
+                    )}
+                  </Box>
+                </>
+              ) : (
+                <>
+                  <Typography variant="subtitle2" sx={{ color: '#666', mb: 2, fontWeight: 600 }}>
+                    Lifecycle Events
+                  </Typography>
+                  {(!person.events || person.events.length === 0) ? (
+                    <Typography variant="body2" sx={{ color: '#999', fontStyle: 'italic' }}>
+                      No custom lifecycle events added yet.
+                    </Typography>
+                  ) : (
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      {person.events.map((event) => (
+                        <Box key={event.id} sx={{ p: 2, border: '1px solid #e0e0e0', borderRadius: 2, backgroundColor: '#fcfcfc' }}>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#16334a' }}>
+                              {EVENT_TYPES.find(t => t.value === event.eventType)?.label || event.eventType}
+                            </Typography>
+                            {event.eventDate && (
+                              <Typography variant="caption" color="text.secondary">
+                                {format(new Date(event.eventDate), 'MMMM d, yyyy')}
+                              </Typography>
+                            )}
+                          </Box>
+                          {(event.place || event.description) && (
+                            <Box sx={{ mt: 1 }}>
+                              {event.place && (
+                                <Typography variant="body2" color="text.secondary">
+                                  <strong>Place:</strong> {event.place}
+                                </Typography>
+                              )}
+                              {event.description && (
+                                <Typography variant="body2" sx={{ mt: 0.5 }}>
+                                  {event.description}
+                                </Typography>
+                              )}
+                            </Box>
+                          )}
+                        </Box>
+                      ))}
+                    </Box>
+                  )}
+                </>
+              )}
+            </Grid>
+
             {person.tags.length > 0 && (
               <Grid size={{ xs: 12 }}>
                 <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
@@ -684,7 +889,7 @@ export function PersonModal({ open, personId, initialTab = 'overview', onClose, 
                   size="small"
                   label="Kind"
                   value={relationshipKind}
-                  onChange={(e) => setRelationshipKind(e.target.value as 'BIOLOGICAL' | 'ADOPTED' | 'STEP')}
+                  onChange={(e) => setRelationshipKind(e.target.value as 'BIOLOGICAL' | 'ADOPTED' | 'STEP' | 'FOSTER' | 'GUARDIAN')}
                   sx={{ minWidth: 160 }}
                 >
                   {RELATIONSHIP_KINDS.map((kind) => (

@@ -44,6 +44,7 @@ export interface PersonFormData {
   maidenName?: string
   suffix?: string
   middleName?: string
+  sex?: 'M' | 'F' | 'U' | 'X' | ''
   birthDate?: string
   deathDate?: string
   isDeceased?: boolean
@@ -52,7 +53,7 @@ export interface PersonFormData {
   tags?: string[]
   relationshipTo?: string
   relationshipType?: 'PARENT' | 'CHILD' | 'SPOUSE'
-  relationshipKind?: 'BIOLOGICAL' | 'ADOPTED' | 'STEP'
+  relationshipKind?: 'BIOLOGICAL' | 'ADOPTED' | 'STEP' | 'FOSTER' | 'GUARDIAN'
   marriageDate?: string
   marriagePlace?: string
   avatarFile?: File
@@ -94,6 +95,8 @@ const RELATIONSHIP_KINDS = [
   { value: 'BIOLOGICAL', label: 'Biological' },
   { value: 'ADOPTED', label: 'Adopted' },
   { value: 'STEP', label: 'Step' },
+  { value: 'FOSTER', label: 'Foster' },
+  { value: 'GUARDIAN', label: 'Guardian' },
 ]
 
 export function AddEditPersonModal({
@@ -123,6 +126,7 @@ export function AddEditPersonModal({
     maidenName: '',
     suffix: '',
     middleName: '',
+    sex: '',
     birthDate: '',
     deathDate: '',
     isDeceased: false,
@@ -147,6 +151,7 @@ export function AddEditPersonModal({
         maidenName: person.maidenName || '',
         suffix: person.suffix || '',
         middleName: person.middleName || '',
+        sex: (person as any).sex || '',
         birthDate: person.birthDate || '',
         deathDate: person.deathDate || '',
         isDeceased: person.isDeceased || false,
@@ -164,6 +169,7 @@ export function AddEditPersonModal({
         maidenName: '',
         suffix: '',
         middleName: '',
+        sex: '',
         birthDate: '',
         deathDate: '',
         isDeceased: false,
@@ -584,6 +590,29 @@ export function AddEditPersonModal({
                   </Grid>
                   <Grid size={{ xs: 12, sm: 6 }}>
                     <TextField fullWidth size="small" label="Nickname" value={formData.nickname} onChange={(e) => handleChange('nickname', e.target.value)} />
+                  </Grid>
+                </Grid>
+                <Grid container spacing={2}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <TextField fullWidth size="small" label="Maiden Name" value={formData.maidenName} onChange={(e) => handleChange('maidenName', e.target.value)} />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <FormControl fullWidth size="small">
+                      <InputLabel id="sex-select-label">Biological Sex</InputLabel>
+                      <Select
+                        labelId="sex-select-label"
+                        id="sex-select"
+                        value={formData.sex || ''}
+                        label="Biological Sex"
+                        onChange={(e) => handleChange('sex', e.target.value)}
+                      >
+                        <MenuItem value=""><em>None / Unknown</em></MenuItem>
+                        <MenuItem value="M">Male</MenuItem>
+                        <MenuItem value="F">Female</MenuItem>
+                        <MenuItem value="X">Other</MenuItem>
+                        <MenuItem value="U">Undetermined</MenuItem>
+                      </Select>
+                    </FormControl>
                   </Grid>
                 </Grid>
                 <TextField

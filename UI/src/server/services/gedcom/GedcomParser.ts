@@ -61,6 +61,7 @@ export interface ParsedIndividual {
   familyAsSpouseXrefs: string[]
   /** GEDCOM v7: FAMC entries with optional pedigree type */
   familyAsChildLinks: Array<{ familyXref: string; pedigree: 'ADOPTED' | 'BIRTH' | 'FOSTER' | 'SEALING' | null }>
+  mediaLinks: Array<{ filePath: string; title?: string | null }>
 }
 
 export interface ParsedFamily {
@@ -104,6 +105,7 @@ const INLINE_VALUE_TAGS = new Set(['OCCU', 'TITL', 'EVEN', 'DSCR'])
 export class GedcomParser {
   private static sourceDefs = new Map<string, { title: string | null; author: string | null; date: string | null; text: string | null }>()
   private static noteDefs = new Map<string, string>()
+  private static objectDefs = new Map<string, { filePath: string; title: string | null }>()
 
   static parse(content: string): {
     individuals: ParsedIndividual[]
@@ -114,6 +116,7 @@ export class GedcomParser {
     const lines = content.split(/\r?\n/)
     this.sourceDefs.clear()
     this.noteDefs.clear()
+    this.objectDefs.clear()
 
     const standaloneNotes: StandaloneNote[] = []
     const standaloneSources: StandaloneSource[] = []
@@ -192,6 +195,30 @@ export class GedcomParser {
         continue
       }
 
+      const objectRecordMatch = line.match(/^0\s+(@[^@]+@)\s+OBJE$/)
+      if (objectRecordMatch) {
+        const oref = objectRecordMatch[1]
+        const block: string[] = []
+        index += 1
+        while (index < lines.length && !/^0\s+/.test(lines[index].trim())) {
+          block.push(lines[index].trim())
+          index += 1
+        }
+        let filePath: string | null = null
+        let title: string | null = null
+        for (let bi = 0; bi < block.length; bi++) {
+          const entry = block[bi]
+          const f = entry.match(/^[12]\s+FILE\s+(.+)$/)
+          if (f) filePath = f[1].trim()
+          const t = entry.match(/^[12]\s+TITL\s+(.+)$/)
+          if (t) title = t[1].trim()
+        }
+        if (filePath) {
+          this.objectDefs.set(oref, { filePath, title })
+        }
+        continue
+      }
+
       index += 1
     }
 
@@ -247,6 +274,7 @@ export class GedcomParser {
     const events: ParsedEvent[] = []
     const sourceCitations: ParsedSourceCitation[] = []
     const eventCounters: Record<string, number> = {}
+    const mediaLinks: Array<{ filePath: string; title?: string | null }> = []
 
     const EVENT_TAGS = new Set(Object.keys(TAG_TO_EVENT_TYPE))
 
@@ -377,6 +405,34 @@ export class GedcomParser {
         continue
       }
 
+      if (tag === 'OBJE') {
+        const objeMatch = entry.match(/^1\s+OBJE\s*(.*)$/)
+        if (objeMatch) {
+          const val = objeMatch[1].trim()
+          if (/^@[^@]+@$/.test(val)) {
+            const obj = this.objectDefs.get(val)
+            if (obj) {
+              mediaLinks.push({ filePath: obj.filePath, title: obj.title })
+            }
+          } else {
+            let filePath: string | null = null
+            let title: string | null = null
+            for (let j = i + 1; j < block.length; j++) {
+              const subLevelMatch = block[j].match(/^(\d+)/)
+              if (!subLevelMatch || parseInt(subLevelMatch[1]) <= 1) break
+              const fileMatch = block[j].match(/^[23]\s+FILE\s+(.+)$/)
+              if (fileMatch) filePath = fileMatch[1].trim()
+              const titlMatch = block[j].match(/^[23]\s+TITL\s+(.+)$/)
+              if (titlMatch) title = titlMatch[1].trim()
+            }
+            if (filePath) {
+              mediaLinks.push({ filePath, title })
+            }
+          }
+        }
+        continue
+      }
+
       if (EVENT_TAGS.has(tag)) {
         eventCounters[tag] = (eventCounters[tag] ?? 0) + 1
         const eventIndex = eventCounters[tag]
@@ -484,6 +540,7 @@ export class GedcomParser {
       externalId,
       familyAsSpouseXrefs,
       familyAsChildLinks,
+      mediaLinks,
     }
   }
 

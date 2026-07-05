@@ -59,6 +59,7 @@ interface ReactFlowTreeCanvasProps {
   isPanMode?: boolean
   fitViewTrigger?: number
   forExport?: boolean
+  layoutMode?: 'vertical' | 'pedigree'
   /** Called whenever the export-in-progress state changes so parent can update toolbar */
   onExportingChange?: (isExporting: boolean) => void
 }
@@ -81,6 +82,7 @@ function ReactFlowTreeCanvasInner({
   isPanMode = true,
   fitViewTrigger,
   forExport = false,
+  layoutMode = 'vertical',
   onExportingChange,
 }: ReactFlowTreeCanvasProps): React.JSX.Element {
   const LOCAL_EXPORT_NODE_LIMIT = 150
@@ -378,11 +380,12 @@ function ReactFlowTreeCanvasInner({
       callbacksRef.current,
       selectedPersonId,
       userPersonId,
+      layoutMode,
     )
 
     setNodes(newNodes)
     setEdges(newEdges)
-  }, [people, rootPersonId, selectedPersonId, setNodes, setEdges])
+  }, [people, rootPersonId, selectedPersonId, layoutMode, setNodes, setEdges])
 
   // Expose zoom/pan controls via ref
   React.useImperativeHandle(

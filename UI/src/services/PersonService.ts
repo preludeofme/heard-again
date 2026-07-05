@@ -102,13 +102,22 @@ export class PersonService {
       maidenName: data.maidenName ?? null,
       suffix: data.suffix ?? null,
       middleName: data.middleName ?? null,
+      sex: data.sex ?? null,
       birthDate: data.birthDate ? new Date(data.birthDate) : null,
       deathDate: data.deathDate ? new Date(data.deathDate) : null,
       isDeceased: data.isDeceased ?? false,
       bio: data.bio ?? null,
       personType: data.personType ?? 'FAMILY',
       tags: data.tags ?? [],
-    }, userId)
+      events: data.events ? {
+        create: data.events.map(e => ({
+          eventType: e.eventType as any,
+          eventDate: e.eventDate ? new Date(e.eventDate) : null,
+          place: e.place ?? null,
+          description: e.description ?? null,
+        }))
+      } : undefined,
+    } as any, userId)
 
     return {
       id: person.id,
@@ -138,6 +147,7 @@ export class PersonService {
     if (data.maidenName !== undefined) updateData.maidenName = data.maidenName ?? null
     if (data.suffix !== undefined) updateData.suffix = data.suffix ?? null
     if (data.middleName !== undefined) updateData.middleName = data.middleName ?? null
+    if (data.sex !== undefined) updateData.sex = data.sex ?? null
     if (data.birthDate !== undefined) updateData.birthDate = data.birthDate ? new Date(data.birthDate) : null
     if (data.deathDate !== undefined) updateData.deathDate = data.deathDate ? new Date(data.deathDate) : null
     if (data.isDeceased !== undefined) updateData.isDeceased = data.isDeceased
@@ -146,6 +156,44 @@ export class PersonService {
     if (data.tags !== undefined) updateData.tags = data.tags
 
     const person = await this.repo.update(personId, familyspaceId, updateData, userId)
+
+    if (data.events !== undefined) {
+      const incomingEvents = data.events || []
+      const incomingIds = incomingEvents.map(e => e.id).filter((id): id is string => !!id)
+      
+      // Delete events not in incoming list
+      await prisma.personEvent.deleteMany({
+        where: {
+          personId,
+          id: { notIn: incomingIds }
+        }
+      })
+
+      // Create or update incoming events
+      for (const event of incomingEvents) {
+        if (event.id) {
+          await prisma.personEvent.update({
+            where: { id: event.id },
+            data: {
+              eventType: event.eventType as any,
+              eventDate: event.eventDate ? new Date(event.eventDate) : null,
+              place: event.place ?? null,
+              description: event.description ?? null,
+            }
+          })
+        } else {
+          await prisma.personEvent.create({
+            data: {
+              personId,
+              eventType: event.eventType as any,
+              eventDate: event.eventDate ? new Date(event.eventDate) : null,
+              place: event.place ?? null,
+              description: event.description ?? null,
+            }
+          })
+        }
+      }
+    }
 
     return {
       id: person.id,
@@ -179,6 +227,9 @@ export class PersonService {
             sampleAudioUrl: true,
             createdAt: true,
           },
+        },
+        events: {
+          orderBy: { eventDate: 'asc' },
         },
         _count: {
           select: {
@@ -269,6 +320,7 @@ export class PersonService {
       middleName: person.middleName ?? null,
       lastName: person.lastName,
       maidenName: person.maidenName ?? null,
+      sex: person.sex ?? null,
       displayName: person.displayName || this.computeDisplayName(person),
       nickname: person.nickname ?? null,
       personType: person.personType as PersonType,
