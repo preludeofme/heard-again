@@ -329,6 +329,21 @@ export default function FamilyTree() {
     }
   }, [familyspaceId])
 
+  const handleSaveBio = useCallback(async (newBio: string) => {
+    if (!familyspaceId) return
+    try {
+      const response = await fetchWithCSRFAndJSON(`/api/familyspaces/${familyspaceId}/generate-bio`, { bio: newBio }, { method: 'PUT' })
+      const data = await response.json()
+      if (data.success) {
+        setFamilyBio(data.data.bio)
+      } else {
+        alert(data.error || 'Failed to save biography.')
+      }
+    } catch (err) {
+      console.error('Failed to save family bio:', err)
+    }
+  }, [familyspaceId])
+
   useEffect(() => {
     if (familyspaceId) {
       fetchFamilyBio()
@@ -607,6 +622,7 @@ export default function FamilyTree() {
         familyBio={familyBio}
         onGenerateBio={handleGenerateBio}
         isGeneratingBio={isGeneratingBio}
+        onSaveBio={handleSaveBio}
         userPersonId={session?.user?.linkedPersonId}
         onViewFullProfile={handleViewFullProfile}
         onLoadAll={handleLoadAll}

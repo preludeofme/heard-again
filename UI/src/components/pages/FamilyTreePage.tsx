@@ -12,6 +12,7 @@ import {
   useTheme,
   useMediaQuery,
   CircularProgress,
+  TextField,
 } from '@mui/material'
 import {
   ZoomIn,
@@ -33,6 +34,9 @@ import {
   Image as ImageIcon,
   PictureAsPdf,
   Polyline as SvgIcon,
+  Edit,
+  Check,
+  Close,
 } from '@mui/icons-material'
 import { PersonDetailModal } from '@/components/modals/PersonDetailModal'
 import { AddEditPersonModal, PersonFormData } from '@/components/modals/AddEditPersonModal'
@@ -84,6 +88,7 @@ interface FamilyTreePageProps {
   familyBio?: string | null
   onGenerateBio?: () => Promise<void>
   isGeneratingBio?: boolean
+  onSaveBio?: (newBio: string) => Promise<void>
   userPersonId?: string | null
   onViewFullProfile?: (personId: string) => void
   onLoadAll?: () => void
@@ -116,6 +121,7 @@ export function FamilyTreePage({
   familyBio,
   onGenerateBio,
   isGeneratingBio = false,
+  onSaveBio,
   userPersonId,
   onViewFullProfile,
   onLoadAll,
@@ -124,6 +130,14 @@ export function FamilyTreePage({
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const { setSelectedFamilyMember } = useSelectedFamilyMember()
+
+  const [isEditingBio, setIsEditingBio] = useState(false)
+  const [editableBio, setEditableBio] = useState(familyBio || '')
+  const [isSavingBio, setIsSavingBio] = useState(false)
+
+  React.useEffect(() => {
+    setEditableBio(familyBio || '')
+  }, [familyBio])
 
   // Derive rootPersonId from rawPeople if not supplied by the page
   const effectiveRootId: string = useMemo(() => {
@@ -1044,20 +1058,102 @@ export function FamilyTreePage({
 
           {!insightCollapsed && (
             <>
-              <Card
-                sx={{
-                  bgcolor: 'rgba(208, 227, 230, 0.3)',
-                  p: 3,
-                  borderRadius: 4,
-                  mb: 3,
-                  maxHeight: 300,
-                  overflowY: 'auto'
-                }}
-              >
-                <Typography variant="body2" sx={{ color: 'secondary.main', fontStyle: familyBio ? 'normal' : 'italic', lineHeight: 1.6 }}>
-                  {familyBio || '"Each family member added here contributes to a larger narrative of resilience and connection waiting to be told."'}
-                </Typography>
-              </Card>
+              <Box sx={{ position: 'relative', mb: 3 }}>
+                {!isEditingBio && (
+                  <Tooltip title={familyBio ? "Edit Biography" : "Write Biography"} arrow>
+                    <IconButton
+                      size="small"
+                      onClick={() => {
+                        setEditableBio(familyBio || '')
+                        setIsEditingBio(true)
+                      }}
+                      sx={{
+                        position: 'absolute',
+                        top: 8,
+                        right: 8,
+                        color: 'primary.main',
+                        bgcolor: 'rgba(255, 255, 255, 0.8)',
+                        '&:hover': { bgcolor: '#ffffff' },
+                        zIndex: 2,
+                      }}
+                    >
+                      <Edit sx={{ fontSize: 16 }} />
+                    </IconButton>
+                  </Tooltip>
+                )}
+                
+                <Card
+                  sx={{
+                    bgcolor: 'rgba(208, 227, 230, 0.3)',
+                    p: 3,
+                    borderRadius: 4,
+                    maxHeight: 300,
+                    overflowY: 'auto'
+                  }}
+                >
+                  {isEditingBio ? (
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                      <TextField
+                        multiline
+                        minRows={4}
+                        maxRows={8}
+                        fullWidth
+                        variant="outlined"
+                        value={editableBio}
+                        onChange={(e) => setEditableBio(e.target.value)}
+                        placeholder="Write your family's story..."
+                        disabled={isSavingBio}
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            backgroundColor: '#ffffff',
+                          }
+                        }}
+                      />
+                      <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          disabled={isSavingBio}
+                          onClick={() => {
+                            setIsEditingBio(false)
+                            setEditableBio(familyBio || '')
+                          }}
+                          startIcon={<Close />}
+                          sx={{ textTransform: 'none' }}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          size="small"
+                          variant="contained"
+                          disabled={isSavingBio}
+                          onClick={async () => {
+                            setIsSavingBio(true)
+                            try {
+                              if (onSaveBio) {
+                                await onSaveBio(editableBio)
+                              }
+                              setIsEditingBio(false)
+                            } catch (err) {
+                              console.error(err)
+                            } finally {
+                              setIsSavingBio(false)
+                            }
+                          }}
+                          startIcon={isSavingBio ? <CircularProgress size={16} color="inherit" /> : <Check />}
+                          sx={{ textTransform: 'none' }}
+                        >
+                          Save
+                        </Button>
+                      </Box>
+                    </Box>
+                  ) : (
+                    <Typography variant="body2" sx={{ color: 'secondary.main', fontStyle: familyBio ? 'normal' : 'italic', lineHeight: 1.6, pr: 3 }}>
+                      {familyBio || '"Each family member added here contributes to a larger narrative of resilience and connection waiting to be told."'}
+                    </Typography>
+                  )}
+                </Card>
+              </Box>
 
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, px: 1, mb: 2 }}>
                 <Box

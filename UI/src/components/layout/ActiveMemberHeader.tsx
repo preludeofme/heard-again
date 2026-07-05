@@ -36,18 +36,18 @@ export function ActiveMemberHeader({ compact = true, variant }: ActiveMemberHead
           sx={{
             display: 'flex',
             alignItems: 'center',
-            gap: 1,
-            px: 1,
-            py: 0.5,
+            gap: 1.25,
+            px: 1.5,
+            py: 0.75,
             border: '1px solid rgba(22, 51, 74, 0.1)',
-            borderRadius: '6px',
+            borderRadius: '8px',
             backgroundColor: '#ffffff',
-            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)',
             cursor: 'pointer',
             outline: 'none',
-            minWidth: 144,
-            maxWidth: 176,
-            height: 30,
+            minWidth: 160,
+            maxWidth: 200,
+            height: 36,
             transition: 'all 0.2s ease',
             '&:hover': {
               backgroundColor: '#f6f3ee',
@@ -58,9 +58,9 @@ export function ActiveMemberHeader({ compact = true, variant }: ActiveMemberHead
           <Avatar
             src={selectedFamilyMember?.avatarUrl || undefined}
             sx={{
-              width: 18,
-              height: 18,
-              fontSize: 9,
+              width: 22,
+              height: 22,
+              fontSize: 11,
               bgcolor: selectedFamilyMember ? '#16334a' : '#d0e3e6',
               color: selectedFamilyMember ? '#fff' : '#16334a',
               flexShrink: 0,
@@ -69,7 +69,7 @@ export function ActiveMemberHeader({ compact = true, variant }: ActiveMemberHead
             {selectedFamilyMember?.firstName?.[0] ?? '?'}
           </Avatar>
           
-          <Box sx={{ flexGrow: 1, textAlign: 'left', overflow: 'hidden', lineHeight: 1.1 }}>
+          <Box sx={{ flexGrow: 1, textAlign: 'left', overflow: 'hidden', lineHeight: 1.15 }}>
             <Typography
               variant="caption"
               sx={{
@@ -77,7 +77,7 @@ export function ActiveMemberHeader({ compact = true, variant }: ActiveMemberHead
                 color: '#888',
                 textTransform: 'uppercase',
                 letterSpacing: '0.06em',
-                fontSize: '7.5px',
+                fontSize: '8px',
                 fontWeight: 600,
                 lineHeight: 1,
               }}
@@ -89,17 +89,17 @@ export function ActiveMemberHeader({ compact = true, variant }: ActiveMemberHead
               sx={{
                 fontWeight: 600,
                 color: '#16334a',
-                fontSize: '10px',
+                fontSize: '11px',
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
-                lineHeight: 1.1,
+                lineHeight: 1.15,
               }}
             >
               {displayName ?? "Whole Family"}
             </Typography>
           </Box>
-          <ArrowDownIcon sx={{ fontSize: 12, color: '#546669', flexShrink: 0 }} />
+          <ArrowDownIcon sx={{ fontSize: 14, color: '#546669', flexShrink: 0 }} />
         </Box>
 
         <MemberSwitcherFlyout anchorEl={anchorEl} onClose={handleClose} />

@@ -5,6 +5,10 @@ import { logger } from '@/lib/logger'
 
 const CHAT_SERVICE_URL = process.env.CHAT_SERVICE_URL || process.env.CHAT_SYSTEM_URL || 'https://localhost:4778'
 
+if (CHAT_SERVICE_URL.includes('localhost') || CHAT_SERVICE_URL.includes('127.0.0.1')) {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
+}
+
 export default apiHandler({
   /**
    * POST /api/familyspaces/[id]/generate-bio
@@ -38,6 +42,7 @@ export default apiHandler({
           'x-familyspace-id': user.familyspaceId,
           'x-user-id': user.id,
         },
+        body: JSON.stringify({}),
       })
 
       if (!chatRes.ok) {
@@ -90,5 +95,38 @@ export default apiHandler({
     })
 
     return successResponse(res, { bio: familyspace?.bio || null })
+  },
+
+  /**
+   * PUT /api/familyspaces/[id]/generate-bio
+   * Updates/saves the family biography manually.
+   */
+  PUT: async (req, res) => {
+    const user = await getAuthUserWithFamilyspace(req, res)
+    
+    // Only EDITOR or higher can save the family bio
+    await requireFamilyspaceRole(user.id, user.familyspaceId, 'EDITOR')
+    
+    const urlId = req.query.id as string
+    if (urlId !== user.familyspaceId) {
+      throw Errors.forbidden('Invalid familyspace context')
+    }
+
+    const { bio } = req.body as { bio?: string }
+    if (typeof bio !== 'string') {
+      throw Errors.badRequest('Invalid biography content')
+    }
+
+    await prisma.familyspace.update({
+      where: { id: user.familyspaceId },
+      data: { 
+        bio: bio.trim() || null,
+        updatedAt: new Date(),
+      },
+    })
+
+    logger.info({ familyspaceId: user.familyspaceId }, 'Family bio updated and saved manually')
+
+    return successResponse(res, { bio: bio.trim() || null })
   }
 })

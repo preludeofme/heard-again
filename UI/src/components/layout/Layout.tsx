@@ -311,7 +311,7 @@ export function Layout({ children }: LayoutProps) {
                         )}
 
                         {/* Person Context Selector (Desktop only, under Family Legacy) */}
-                        {item.label === 'Family Legacy' && selectedFamilyMember && (
+                        {item.label === 'Family Legacy' && (
                           <Box
                             sx={{
                               position: 'absolute',
