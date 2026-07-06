@@ -206,7 +206,7 @@ export async function incrementGenerationMinutes(
     where: { familyspaceId },
     data: {
       generationMinutesUsed: {
-        increment: Math.ceil(durationSeconds / 60),
+        increment: durationSeconds / 60,
       },
     },
   })

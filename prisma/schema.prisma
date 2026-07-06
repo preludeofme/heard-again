@@ -332,7 +332,7 @@ model Subscription {
   stripeCustomerId      String?
   renewalDate           DateTime?
   cancelledAt           DateTime?
-  generationMinutesUsed Int           @default(0)
+  generationMinutesUsed Float           @default(0)
   storageBytesUsed      BigInt        @default(0)
   lastBillingResetAt    DateTime      @default(now())
   createdAt             DateTime      @default(now())

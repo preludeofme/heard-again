@@ -109,115 +109,111 @@ export default function OnboardingPage() {
     switch (activeStep) {
       case 0:
         return (
-          <Fade in>
-            <Box>
-              <Box sx={{ textAlign: 'center', mb: 4 }}>
-                <Box
-                  sx={{
-                    width: 80,
-                    height: 80,
-                    bgcolor: 'rgba(208, 227, 230, 0.3)',
-                    borderRadius: '50%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    mx: 'auto',
-                    mb: 3,
-                  }}
-                >
-                  <FamilyRestroom sx={{ fontSize: 40, color: 'primary.main' }} />
-                </Box>
-                <Typography
-                  variant="h4"
-                  sx={{
-                    color: 'primary.main',
-                    mb: 2,
-                    fontFamily: 'var(--font-newsreader), serif',
-                  }}
-                >
-                  What should we call your family story?
-                </Typography>
-                <Typography variant="body1" sx={{ color: 'secondary.main' }}>
-                  This will be the name of your family familyspace. You can always change it later.
-                </Typography>
+          <Box>
+            <Box sx={{ textAlign: 'center', mb: 4 }}>
+              <Box
+                sx={{
+                  width: 80,
+                  height: 80,
+                  bgcolor: 'rgba(208, 227, 230, 0.3)',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  mx: 'auto',
+                  mb: 3,
+                }}
+              >
+                <FamilyRestroom sx={{ fontSize: 40, color: 'primary.main' }} />
               </Box>
-
-              <TextField
-                fullWidth
-                label="Family Name"
-                placeholder="e.g., The Johnson Family, Smith Legacy, etc."
-                value={formData.familyName}
-                onChange={(e) =>
-                  setFormData({ ...formData, familyName: e.target.value })
-                }
-                sx={{ mb: 2 }}
-                required
-              />
-              <Typography variant="caption" sx={{ color: 'secondary.main' }}>
-                This name will appear on your family tree and story.
+              <Typography
+                variant="h4"
+                sx={{
+                  color: 'primary.main',
+                  mb: 2,
+                  fontFamily: 'var(--font-newsreader), serif',
+                }}
+              >
+                What should we call your family story?
+              </Typography>
+              <Typography variant="body1" sx={{ color: 'secondary.main' }}>
+                This will be the name of your family familyspace. You can always change it later.
               </Typography>
             </Box>
-          </Fade>
+
+            <TextField
+              fullWidth
+              label="Family Name"
+              placeholder="e.g., The Johnson Family, Smith Legacy, etc."
+              value={formData.familyName}
+              onChange={(e) =>
+                setFormData({ ...formData, familyName: e.target.value })
+              }
+              sx={{ mb: 2 }}
+              required
+            />
+            <Typography variant="caption" sx={{ color: 'secondary.main' }}>
+              This name will appear on your family tree and story.
+            </Typography>
+          </Box>
         )
 
       case 1:
         return (
-          <Fade in>
-            <Box>
-              <Box sx={{ textAlign: 'center', mb: 4 }}>
-                <Box
-                  sx={{
-                    width: 80,
-                    height: 80,
-                    bgcolor: 'rgba(208, 227, 230, 0.3)',
-                    borderRadius: '50%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    mx: 'auto',
-                    mb: 3,
-                  }}
-                >
-                  <PersonAdd sx={{ fontSize: 40, color: 'primary.main' }} />
-                </Box>
-                <Typography
-                  variant="h4"
-                  sx={{
-                    color: 'primary.main',
-                    mb: 2,
-                    fontFamily: 'var(--font-newsreader), serif',
-                  }}
-                >
-                  Tell us about yourself
-                </Typography>
-                <Typography variant="body1" sx={{ color: 'secondary.main' }}>
-                  You&apos;ll be the first member of your family tree. Others can be added later.
-                </Typography>
+          <Box>
+            <Box sx={{ textAlign: 'center', mb: 4 }}>
+              <Box
+                sx={{
+                  width: 80,
+                  height: 80,
+                  bgcolor: 'rgba(208, 227, 230, 0.3)',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  mx: 'auto',
+                  mb: 3,
+                }}
+              >
+                <PersonAdd sx={{ fontSize: 40, color: 'primary.main' }} />
               </Box>
-
-              <TextField
-                fullWidth
-                label="First Name"
-                placeholder="Your first name"
-                value={formData.firstName}
-                onChange={(e) =>
-                  setFormData({ ...formData, firstName: e.target.value })
-                }
-                sx={{ mb: 3 }}
-                required
-              />
-
-              <TextField
-                fullWidth
-                label="Last Name (Optional)"
-                placeholder="Your last name"
-                value={formData.lastName}
-                onChange={(e) =>
-                  setFormData({ ...formData, lastName: e.target.value })
-                }
-              />
+              <Typography
+                variant="h4"
+                sx={{
+                  color: 'primary.main',
+                  mb: 2,
+                  fontFamily: 'var(--font-newsreader), serif',
+                }}
+              >
+                Tell us about yourself
+              </Typography>
+              <Typography variant="body1" sx={{ color: 'secondary.main' }}>
+                You&apos;ll be the first member of your family tree. Others can be added later.
+              </Typography>
             </Box>
-          </Fade>
+
+            <TextField
+              fullWidth
+              label="First Name"
+              placeholder="Your first name"
+              value={formData.firstName}
+              onChange={(e) =>
+                setFormData({ ...formData, firstName: e.target.value })
+              }
+              sx={{ mb: 3 }}
+              required
+            />
+
+            <TextField
+              fullWidth
+              label="Last Name (Optional)"
+              placeholder="Your last name"
+              value={formData.lastName}
+              onChange={(e) =>
+                setFormData({ ...formData, lastName: e.target.value })
+              }
+            />
+          </Box>
         )
 
       default:
