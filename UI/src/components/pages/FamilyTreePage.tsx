@@ -19,7 +19,6 @@ import {
   ZoomOut,
   RestartAlt,
   Add,
-  AutoFixHigh,
   Fullscreen,
   FullscreenExit,
   ExpandMore,
@@ -86,8 +85,6 @@ interface FamilyTreePageProps {
   isLoadingMore?: boolean
   fitViewTrigger?: number
   familyBio?: string | null
-  onGenerateBio?: () => Promise<void>
-  isGeneratingBio?: boolean
   onSaveBio?: (newBio: string) => Promise<void>
   userPersonId?: string | null
   onViewFullProfile?: (personId: string) => void
@@ -119,8 +116,6 @@ export function FamilyTreePage({
   onToggleFullscreen,
   fitViewTrigger,
   familyBio,
-  onGenerateBio,
-  isGeneratingBio = false,
   onSaveBio,
   userPersonId,
   onViewFullProfile,
@@ -1177,17 +1172,6 @@ export function FamilyTreePage({
                   Genealogy sync active
                 </Typography>
               </Box>
-
-              <Button
-                fullWidth
-                variant="contained"
-                disabled={isGeneratingBio || rawPeople.length === 0}
-                onClick={onGenerateBio}
-                endIcon={isGeneratingBio ? <CircularProgress size={20} color="inherit" /> : <AutoFixHigh />}
-                sx={{ mt: 4, py: 1.5, borderRadius: 3, textTransform: 'none', fontWeight: 600 }}
-              >
-                {isGeneratingBio ? 'Generating...' : familyBio ? 'Regenerate Family Bio' : 'Generate Family Bio'}
-              </Button>
             </>
           )}
         </Card>

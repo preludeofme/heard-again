@@ -24,8 +24,6 @@ import voiceTrainHandler from '@/pages/api/voice/train'
 import voiceConsentHandler from '@/pages/api/voice/consent/[id]'
 import billingWebhookHandler from '@/pages/api/billing/webhook'
 import billingSubscribeHandler from '@/pages/api/billing/subscribe'
-import personaGenerateHandler from '@/pages/api/persona/[personId]/generate'
-import chatMessagesHandler from '@/pages/api/chat/messages'
 
 const mockGetToken = getToken as jest.MockedFunction<typeof getToken>
 const mockGetSession = getServerSession as jest.MockedFunction<typeof getServerSession>
@@ -250,24 +248,4 @@ describe('API Contract Tests', () => {
     }, hooks)
   })
 
-  // 19. Persona Generate
-  it('contract: /api/persona/[personId]/generate', async () => {
-    await assertContract({
-      label: 'POST /api/persona/[personId]/generate',
-      handler: personaGenerateHandler,
-      supportedMethods: ['POST'],
-      unsupportedMethod: 'GET',
-      query: { personId: 'p1' }
-    }, hooks)
-  })
-
-  // 20. Chat Messages
-  it('contract: /api/chat/messages', async () => {
-    await assertContract({
-      label: 'GET/POST /api/chat/messages',
-      handler: chatMessagesHandler,
-      supportedMethods: ['GET', 'POST'],
-      unsupportedMethod: 'DELETE',
-    }, hooks)
-  })
 })

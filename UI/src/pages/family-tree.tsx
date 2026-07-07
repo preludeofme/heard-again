@@ -281,7 +281,6 @@ export default function FamilyTree() {
   
   // Family Bio state
   const [familyBio, setFamilyBio] = useState<string | null>(null)
-  const [isGeneratingBio, setIsGeneratingBio] = useState(false)
 
   // Modal states
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null)
@@ -308,24 +307,6 @@ export default function FamilyTree() {
       }
     } catch (err) {
       console.error('Failed to fetch family bio:', err)
-    }
-  }, [familyspaceId])
-
-  const handleGenerateBio = useCallback(async () => {
-    if (!familyspaceId) return
-    setIsGeneratingBio(true)
-    try {
-      const response = await fetchWithCSRFAndJSON(`/api/familyspaces/${familyspaceId}/generate-bio`, {})
-      const data = await response.json()
-      if (data.success) {
-        setFamilyBio(data.data.bio)
-      } else {
-        alert(data.error || 'Failed to generate biography.')
-      }
-    } catch (err) {
-      console.error('Failed to generate family bio:', err)
-    } finally {
-      setIsGeneratingBio(false)
     }
   }, [familyspaceId])
 
@@ -620,8 +601,6 @@ export default function FamilyTree() {
         isLoadingMore={isIncrementalLoading}
         fitViewTrigger={fitViewTrigger}
         familyBio={familyBio}
-        onGenerateBio={handleGenerateBio}
-        isGeneratingBio={isGeneratingBio}
         onSaveBio={handleSaveBio}
         userPersonId={session?.user?.linkedPersonId}
         onViewFullProfile={handleViewFullProfile}

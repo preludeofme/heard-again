@@ -4,7 +4,7 @@ const prisma = new PrismaClient();
 async function resetFamily(familyspaceId) {
   if (!familyspaceId) {
     console.error('Error: Please provide a Familyspace ID.');
-    console.log('Usage: node scripts/reset-family.js <familyspace_id>');
+    console.log('Usage: node Scripts/reset-family.js <familyspace_id>');
     process.exit(1);
   }
 

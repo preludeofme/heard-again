@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Heard Again - Live Log Tailing Script
-# Usage: ./scripts/logs.sh [service] [lines]
+# Usage: ./Scripts/logs.sh [service] [lines]
 #   service: all (default), main, tts
 #   lines: number of lines to show (default: 50)
 
@@ -27,7 +27,7 @@ TTS_LOG="$MAIN_APP_DIR/logs/tts-service.log"
 show_help() {
     echo -e "${BLUE}Heard Again - Log Tailing Script${NC}"
     echo ""
-    echo "Usage: ./scripts/logs.sh [service] [lines]"
+    echo "Usage: ./Scripts/logs.sh [service] [lines]"
     echo ""
     echo "Services:"
     echo "  all   - Tail all service logs (default)"
@@ -35,9 +35,9 @@ show_help() {
     echo "  tts   - Tail TTS service logs only"
     echo ""
     echo "Examples:"
-    echo "  ./scripts/logs.sh           # Tail all logs"
-    echo "  ./scripts/logs.sh tts       # Tail TTS logs only"
-    echo "  ./scripts/logs.sh tts 100   # Tail last 100 lines of TTS logs"
+    echo "  ./Scripts/logs.sh           # Tail all logs"
+    echo "  ./Scripts/logs.sh tts       # Tail TTS logs only"
+    echo "  ./Scripts/logs.sh tts 100   # Tail last 100 lines of TTS logs"
     echo ""
 }
 
@@ -85,5 +85,5 @@ case "$SERVICE" in
 esac
 
 echo -e "${BLUE}═══════════════════════════════════════════════════════════════${NC}"
-echo -e "${YELLOW}Tip: Run with 'watch' to auto-refresh:${NC} watch -n 2 ./scripts/logs.sh tts"
+echo -e "${YELLOW}Tip: Run with 'watch' to auto-refresh:${NC} watch -n 2 ./Scripts/logs.sh tts"
 echo ""

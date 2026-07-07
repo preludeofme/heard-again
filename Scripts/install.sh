@@ -138,8 +138,10 @@ REDIS_URL=redis://localhost:6379
 
 # Optional: External APIs
 # OPENAI_API_KEY=your-key
-# AWS_ACCESS_KEY_ID=your-key
-# AWS_SECRET_ACCESS_KEY=your-secret
+# R2_ACCESS_KEY_ID=your-r2-access-key-id
+# R2_SECRET_ACCESS_KEY=your-r2-secret-access-key
+# R2_ENDPOINT=your-r2-endpoint-url
+# R2_BUCKET_NAME=your-r2-bucket-name
 EOF
     fi
     echo -e "  ${GREEN}✓ Root .env created${NC}"

@@ -61,7 +61,6 @@ model User {
   invitedFamilyspaceInvites FamilyspaceInvite[]
   accounts                  Account[]
   sessions                  Session[]
-  chatSessions              ChatSession[]
 
   @@index([email])
   @@index([oauthProvider, oauthId])
@@ -103,7 +102,6 @@ model Familyspace {
   members                Membership[]
   notifications          Notification[]
   people                 Person[]
-  personaProfiles        PersonaProfile[]
   stories                Story[]
   storyComments          StoryComment[]
   subscription           Subscription?
@@ -112,7 +110,6 @@ model Familyspace {
   voiceProfiles          VoiceProfile[]
   owner                  User                  @relation("FamilyspaceOwner", fields: [ownerId], references: [id])
   invites                FamilyspaceInvite[]
-  chatSessions           ChatSession[]
 
   @@index([ownerId])
   @@index([slug])
@@ -395,12 +392,10 @@ model Person {
   names            PersonName[]
   notes            PersonNote[]
   sourceCitations  PersonSourceCitation[]
-  personaProfiles  PersonaProfile[]
   storiesAsSpeaker Story[]                  @relation("StorySpeaker")
   storiesAsSubject Story[]                  @relation("StorySubject")
   voiceConsents    VoiceConsent[]
   voiceProfiles    VoiceProfile[]
-  chatSessions     ChatSession[]
   storyComments    StoryComment[]           @relation("PersonStoryComments")
   linkedUser       User?                    @relation("UserLinkedPerson")
 
@@ -408,44 +403,6 @@ model Person {
   @@index([familyspaceId])
   @@index([firstName, lastName])
   @@index([maidenName])
-}
-
-model PersonaProfile {
-  id                       String    @id @default(uuid())
-  personId                 String
-  familyspaceId            String
-  version                  Int       @default(1)
-  status                   String    @default("draft")
-  vocabulary               String[]  @default([])
-  sentencePatterns         String[]  @default([])
-  tone                     Json?
-  formality                String    @default("neutral")
-  averageSentenceLength    Float     @default(15.0)
-  commonPhrases            String[]  @default([])
-  emotionIndicators        Json[]    @default([])
-  knownFacts               Json[]    @default([])
-  relationships            Json[]    @default([])
-  systemPrompt             String    @default("")
-  responseGuidelines       String[]  @default([])
-  relationshipInstructions Json      @default("{}")
-  behaviorInstructions     String[]  @default([])
-  topicInstructions        Json      @default("{}")
-  contextInstructions      Json      @default("{}")
-  styleOverrides           Json      @default("{}")
-  writingStyle             Json?
-  customInstructions       Json?
-  documentSampleCount      Int       @default(0)
-  confidenceScore          Float     @default(0.0)
-  lastUpdated              DateTime  @default(now())
-  deletedAt                DateTime?
-  createdAt                DateTime  @default(now())
-  person                   Person    @relation(fields: [personId], references: [id], onDelete: Cascade)
-  familyspace              Familyspace @relation(fields: [familyspaceId], references: [id], onDelete: Cascade)
-
-  @@unique([personId, familyspaceId, version])
-  @@index([personId])
-  @@index([familyspaceId])
-  @@index([status])
 }
 
 model Story {
@@ -1301,40 +1258,6 @@ enum MergeStatus {
   FAILED
 }
 
-// --- Chat Service Models ---
-
-model ChatSession {
-  id            String         @id @default(uuid())
-  familyspaceId String
-  personId      String
-  userId        String
-  title         String?
-  status        ChatSessionStatus @default(ACTIVE)
-  metadata      Json           @default("{}")
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  messages      ChatMessage[]
-  familyspace   Familyspace    @relation(fields: [familyspaceId], references: [id], onDelete: Cascade)
-  person        Person         @relation(fields: [personId], references: [id], onDelete: Cascade)
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([familyspaceId])
-  @@index([personId])
-  @@index([userId])
-}
-
-model ChatMessage {
-  id        String      @id @default(uuid())
-  sessionId String
-  role      MessageRole
-  content   String
-  metadata  Json        @default("{}")
-  createdAt DateTime    @default(now())
-  session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-
-  @@index([sessionId])
-}
-
 model DocumentChunk {
   id             String   @id @default(uuid())
   documentId     String
@@ -1368,18 +1291,6 @@ model IngestionJob {
 
   @@index([familyspaceId])
   @@index([documentId])
-}
-
-enum ChatSessionStatus {
-  ACTIVE
-  ARCHIVED
-  DELETED
-}
-
-enum MessageRole {
-  USER
-  ASSISTANT
-  SYSTEM
 }
 
 enum IngestionJobType {

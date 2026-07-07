@@ -1,11 +1,12 @@
 import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
+import { createHmac, timingSafeEqual } from 'crypto'
 import { prisma } from '@/lib/prisma'
 import { errorResponse, successResponse } from '@/lib/api-helpers'
 
 /**
  * POST /api/billing/webhook - Handle Stripe webhook events
- * 
+ *
  * This endpoint processes Stripe webhook events for subscription lifecycle management:
  * - checkout.session.completed: New subscription created
  * - invoice.paid: Successful payment, extend subscription
@@ -14,22 +15,39 @@ import { errorResponse, successResponse } from '@/lib/api-helpers'
  * - customer.subscription.updated: Subscription changed (plan upgrade/downgrade)
  */
 
-// Verify Stripe webhook signature
-async function verifyStripeSignature(
-  payload: string,
-  signature: string,
-  secret: string
-): Promise<boolean> {
-  try {
-    // In production, use Stripe library to verify signature
-    // const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-    // return stripe.webhooks.constructEvent(payload, signature, secret);
-    
-    // For now, simple validation (replace with actual Stripe verification in production)
-    return !!signature && !!secret
-  } catch {
+// Maximum allowed age of a webhook timestamp, to mitigate replay attacks.
+const WEBHOOK_TOLERANCE_SECONDS = 5 * 60
+
+// Verify Stripe webhook signature per Stripe's documented algorithm
+// (https://docs.stripe.com/webhooks#verify-manually), without requiring the Stripe SDK.
+function verifyStripeSignature(payload: string, signatureHeader: string, secret: string): boolean {
+  if (!signatureHeader || !secret) return false
+
+  const parts = signatureHeader.split(',').reduce<Record<string, string>>((acc, part) => {
+    const [key, value] = part.split('=')
+    if (key && value) acc[key] = value
+    return acc
+  }, {})
+
+  const timestamp = parts.t
+  const v1Signature = parts.v1
+  if (!timestamp || !v1Signature) return false
+
+  const timestampSeconds = Number(timestamp)
+  if (!Number.isFinite(timestampSeconds)) return false
+  if (Math.abs(Date.now() / 1000 - timestampSeconds) > WEBHOOK_TOLERANCE_SECONDS) {
     return false
   }
+
+  const expectedSignature = createHmac('sha256', secret)
+    .update(`${timestamp}.${payload}`, 'utf8')
+    .digest('hex')
+
+  const expectedBuffer = Buffer.from(expectedSignature, 'hex')
+  const actualBuffer = Buffer.from(v1Signature, 'hex')
+  if (expectedBuffer.length !== actualBuffer.length) return false
+
+  return timingSafeEqual(expectedBuffer, actualBuffer)
 }
 
 export const config = {
@@ -58,7 +76,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const signature = req.headers['stripe-signature'] as string
 
   // Verify signature
-  const isValid = await verifyStripeSignature(rawBody, signature, webhookSecret)
+  const isValid = verifyStripeSignature(rawBody, signature, webhookSecret)
   if (!isValid) {
     return errorResponse(res, 'Invalid signature', 400)
   }

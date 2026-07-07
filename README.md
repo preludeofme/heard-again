@@ -77,7 +77,7 @@ Central Prisma schema used by the UI service:
 
 ## Prerequisites
 
-- **Node.js** 18+ (for UI)
+- **Node.js** 20.9+ (for UI — required by Next.js 16)
 - **Python** 3.10+ (for TTS)
 - **PostgreSQL** 15+
 - **Redis** 7+
@@ -177,7 +177,7 @@ docker compose --profile with-tts up -d
 | Service | URL | Internal Hostname |
 |---------|-----|-------------------|
 | UI | http://localhost:4777 | `app` |
-| TTS API | http://localhost:8101 | `tts` |
+| TTS API | http://localhost:4779 | `tts` |
 | PostgreSQL | localhost:5432 | `db` |
 | Redis | localhost:6379 | `redis` |
 
@@ -215,13 +215,15 @@ NEXTAUTH_SECRET=your-secret-key
 NEXTAUTH_URL=http://localhost:4777
 
 # Services
-TTS_SERVICE_URL=http://localhost:8100
+TTS_SERVICE_URL=http://localhost:4779
 REDIS_URL=redis://localhost:6379
 
 # Optional: External APIs
 OPENAI_API_KEY=your-key
-AWS_ACCESS_KEY_ID=your-key
-AWS_SECRET_ACCESS_KEY=your-secret
+R2_ACCESS_KEY_ID=your-r2-access-key-id
+R2_SECRET_ACCESS_KEY=your-r2-secret-access-key
+R2_ENDPOINT=your-r2-endpoint-url
+R2_BUCKET_NAME=your-r2-bucket-name
 ```
 
 ## Testing
@@ -290,7 +292,7 @@ npm install package-name
 
 **Port Conflicts:**
 - UI runs on port 4777
-- TTS runs on port 8100/8101
+- TTS runs on port 4779
 
 **Database Connection Issues:**
 Ensure PostgreSQL is running: `docker compose up -d db`

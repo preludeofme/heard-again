@@ -196,6 +196,6 @@ else
     echo -e "  ${YELLOW}⚠ Some services need attention${NC}"
     echo ""
     echo -e "  ${BLUE}Quick fixes:${NC}"
-    echo "    Start all:       ./scripts/start-dev.sh"
+    echo "    Start all:       ./Scripts/start-dev.sh"
     exit 1
 fi

@@ -672,7 +672,7 @@ if [ "$LOG_MODE" = "live" ]; then
     echo -e "  ${YELLOW}Live logging enabled - all service output shown above${NC}"
 else
     echo -e "  ${YELLOW}Log mode: file${NC} (run with LOG_MODE=live for live output)"
-    echo -e "  ${BLUE}Tail all logs:${NC} ./scripts/logs.sh"
+    echo -e "  ${BLUE}Tail all logs:${NC} ./Scripts/logs.sh"
 fi
 echo -e "  ${YELLOW}Press Ctrl+C to stop all services${NC}"
 echo ""

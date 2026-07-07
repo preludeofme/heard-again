@@ -25,7 +25,7 @@
     "db:push": "npm --workspace UI run db:push",
     "db:studio": "npm --workspace UI run db:studio",
     "db:seed": "npm --workspace UI run db:seed",
-    "db:reset-family": "node scripts/reset-family.js",
+    "db:reset-family": "node Scripts/reset-family.js",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "docker:build": "docker compose build",

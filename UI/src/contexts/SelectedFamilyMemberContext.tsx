@@ -28,7 +28,6 @@ const PERSON_AWARE_PAGES = [
   '/family-tree',
   '/favorites',
   '/voice-lab',
-  '/chat',
   '/collections',
   '/documents',
   '/stories',

@@ -7,7 +7,7 @@ Thank you for your interest in contributing to Heard Again! This document outlin
 To set up a local development environment, follow these steps:
 
 ### Prerequisites
-* **Node.js**: `v18.0.0` or higher
+* **Node.js**: `v20.9.0` or higher (required by Next.js 16)
 * **npm**: `v9.0.0` or higher
 * **Docker & Docker Compose**: Required for running PostgreSQL and Redis.
 * **Python 3.10+** (Optional): Only required if you want to run the local GPU/CPU voice synthesis (TTS) worker.
