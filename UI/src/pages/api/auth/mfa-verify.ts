@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '@/lib/prisma'
 import { logger } from '@/lib/logger'
 import { generateMFACode, sendMFACodeEmail, storeMFACode, verifyMFACode } from '@/services/MFAEmailService'
+import { decryptSecret } from '@/lib/security/mfa-service'
 import speakeasy from 'speakeasy'
 import crypto from 'crypto'
 
@@ -9,18 +10,6 @@ import crypto from 'crypto'
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
 const RATE_LIMIT_MAX = 5
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000 // 15 minutes
-
-function decryptSecret(encrypted: string): string {
-  const key = process.env.APP_KEY || process.env.NEXTAUTH_SECRET || 'default-key'
-  const buffer = Buffer.from(encrypted, 'base64')
-  let decrypted = ''
-  for (let i = 0; i < buffer.length; i++) {
-    decrypted += String.fromCharCode(
-      buffer[i] ^ key.charCodeAt(i % key.length)
-    )
-  }
-  return decrypted
-}
 
 function checkRateLimit(email: string): boolean {
   const now = Date.now()

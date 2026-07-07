@@ -51,7 +51,7 @@ export function FeaturedPersonCard({ person }: FeaturedPersonCardProps) {
           color: 'rgba(255,255,255,0.7)',
         }}
       >
-        Today's spotlight
+        Today&apos;s spotlight
       </Typography>
 
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>

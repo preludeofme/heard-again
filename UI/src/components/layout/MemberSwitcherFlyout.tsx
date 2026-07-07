@@ -328,7 +328,7 @@ export function MemberSwitcherFlyout({ anchorEl, onClose, onMemberSelect, initia
             </Typography>
             {activeMembers.length === 0 ? (
               <Typography variant="body2" sx={{ px: 2, py: 2, color: 'text.secondary', fontStyle: 'italic' }}>
-                No members match "{searchQuery}"
+                No members match &quot;{searchQuery}&quot;
               </Typography>
             ) : (
               activeMembers.map((m) => (
@@ -386,7 +386,7 @@ export function MemberSwitcherFlyout({ anchorEl, onClose, onMemberSelect, initia
                     <SearchIcon sx={{ fontSize: 16 }} />
                   </Avatar>
                   <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                    View Everyone's Story
+                    View Everyone&apos;s Story
                   </Typography>
                 </ButtonBase>
                 {recentToShow.length > 0 && <Divider sx={{ my: 1 }} />}
@@ -420,7 +420,7 @@ export function MemberSwitcherFlyout({ anchorEl, onClose, onMemberSelect, initia
                     <SearchIcon sx={{ fontSize: 16 }} />
                   </Avatar>
                   <Typography variant="body2" sx={{ fontWeight: 600, color: '#16334a' }}>
-                    Everyone's Story
+                    Everyone&apos;s Story
                   </Typography>
                 </ButtonBase>
                 <Divider sx={{ mt: 1 }} />

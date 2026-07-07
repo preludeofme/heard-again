@@ -99,20 +99,10 @@ export const authOptions: NextAuthOptions = {
             // Verify TOTP code
             try {
               const { default: speakeasy } = await import('speakeasy')
-              const encryptSecret = (encrypted: string) => {
-                const key = process.env.APP_KEY || process.env.NEXTAUTH_SECRET || 'default-key'
-                const buffer = Buffer.from(encrypted, 'base64')
-                let decrypted = ''
-                for (let i = 0; i < buffer.length; i++) {
-                  decrypted += String.fromCharCode(
-                    buffer[i] ^ key.charCodeAt(i % key.length)
-                  )
-                }
-                return decrypted
-              }
+              const { decryptSecret } = await import('./security/mfa-service')
 
               if (user.mfaSecret) {
-                const secret = encryptSecret(user.mfaSecret)
+                const secret = decryptSecret(user.mfaSecret)
                 const isValid = speakeasy.totp.verify({
                   secret,
                   encoding: 'base32',

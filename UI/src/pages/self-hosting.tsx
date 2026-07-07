@@ -418,7 +418,7 @@ export default function SelfHostingPage() {
 
                 {instanceType === 'HYBRID' && (
                   <Alert severity="warning" sx={{ mb: 3 }}>
-                    Connected mode requires a plan with tunnel support. You'll be able to enable the tunnel after registration if your plan supports it.
+                    Connected mode requires a plan with tunnel support. You&apos;ll be able to enable the tunnel after registration if your plan supports it.
                   </Alert>
                 )}
 

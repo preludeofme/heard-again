@@ -117,6 +117,14 @@ qa_fixes.md
 # Open-source cleanup: private genealogy exports / local imports
 *.ged
 family-tree.json
+UI/exports/
+TTS/generated/
 
 # Open-source cleanup: local debug screenshots
 screenshots/debug_*.png
+
+# Open-source cleanup: internal-only planning/legal/agent-memory docs
+docs/patent/
+docs/memory-bank/
+.opencode/memory/
+/opensource.md

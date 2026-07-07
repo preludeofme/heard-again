@@ -712,7 +712,7 @@ export function GedcomImportModal({ open, onClose, onSuccess, userPersonId }: Ge
                     Optional: add your parents from this file
                   </Typography>
                   <Typography variant="caption" color="text.secondary" sx={{ mb: 1.5, display: 'block' }}>
-                    Skip this if your parents aren't in the file, or you prefer to connect them manually.
+                    Skip this if your parents aren&apos;t in the file, or you prefer to connect them manually.
                   </Typography>
                   <Stack spacing={1.5}>
                     <PersonAutocomplete
@@ -788,7 +788,7 @@ export function GedcomImportModal({ open, onClose, onSuccess, userPersonId }: Ge
                   {anchorPerson && gedcomParent && (
                     <Alert severity="info" sx={{ py: 0.5 }}>
                       <strong>{gedcomParent.fullName}</strong> will be imported as{' '}
-                      <strong>{personLabel(anchorPerson)}</strong>'s {parentRole}.
+                      <strong>{personLabel(anchorPerson)}</strong>&apos;s {parentRole}.
                     </Alert>
                   )}
                 </Stack>

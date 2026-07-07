@@ -164,7 +164,7 @@ export default function ChatPage() {
                 Persona Not Ready
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                We need to analyze {person?.firstName}'s stories and documents to build their AI persona before you can chat.
+                We need to analyze {person?.firstName}&apos;s stories and documents to build their AI persona before you can chat.
               </Typography>
               <Button 
                 variant="contained" 

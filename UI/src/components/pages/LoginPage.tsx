@@ -206,7 +206,7 @@ export function LoginPage() {
                     lineHeight: 1.6,
                   }}
                 >
-                  Sign in to continue preserving your family's stories, voices, and memories for future generations.
+                  Sign in to continue preserving your family&apos;s stories, voices, and memories for future generations.
                 </Typography>
 
                 {/* Trust Badge */}
@@ -304,7 +304,7 @@ export function LoginPage() {
                     Sign In
                   </Typography>
                   <Typography variant="body2" sx={{ color: 'secondary.main' }}>
-                    Don't have an account?{' '}
+                    Don&apos;t have an account?{' '}
                     <Link
                       href="/signup"
                       style={{

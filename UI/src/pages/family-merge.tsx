@@ -555,7 +555,7 @@ export default function FamilyMergePage() {
           <DialogTitle>Create Merge Proposal</DialogTitle>
           <DialogContent>
             <Typography variant="body2" sx={{ color: '#6f7c7f', mb: 3 }}>
-              Select a familyspace to merge into your current family tree. We'll analyze and suggest matching people.
+              Select a familyspace to merge into your current family tree. We&apos;ll analyze and suggest matching people.
             </Typography>
 
             <FormControl fullWidth sx={{ mb: 3 }}>

@@ -16,7 +16,6 @@ NC='\033[0m' # No Color
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(dirname "$SCRIPT_DIR")"
 UI_DIR="$ROOT_DIR/UI"
-CHAT_DIR="$ROOT_DIR/Chat"
 TTS_DIR="$ROOT_DIR/TTS"
 
 echo -e "${BLUE}═══════════════════════════════════════════════════════════════${NC}"
@@ -46,7 +45,7 @@ echo -e "  ${GREEN}✓ npm${NC}"
 # Check Docker
 if ! command -v docker &> /dev/null; then
     echo -e "${YELLOW}⚠ Docker is not installed${NC}"
-    echo "Docker is required for PostgreSQL, Redis, and ChromaDB."
+    echo "Docker is required for PostgreSQL and Redis."
     echo "Install from https://docs.docker.com/get-docker/"
 else
     echo -e "  ${GREEN}✓ Docker${NC}"
@@ -172,72 +171,6 @@ else
     echo -e "  ${GREEN}✓ UI .env already exists${NC}"
 fi
 
-# Chat .env
-CHAT_ENV_CREATED=false
-if [ ! -f "$CHAT_DIR/.env" ]; then
-    if [ -f "$CHAT_DIR/.env.example" ]; then
-        echo "  Creating Chat .env..."
-        cp "$CHAT_DIR/.env.example" "$CHAT_DIR/.env"
-    else
-        echo "  Creating Chat .env with defaults..."
-        cat > "$CHAT_DIR/.env" << EOF
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/heard_again
-REDIS_URL=redis://localhost:6379
-CHROMA_URL=http://localhost:8004
-OLLAMA_URL=http://localhost:11434
-TTS_SERVICE_URL=http://localhost:8100
-NODE_ENV=development
-PORT=3001
-EOF
-    fi
-    CHAT_ENV_CREATED=true
-    echo -e "  ${GREEN}✓ Chat .env created${NC}"
-else
-    echo -e "  ${GREEN}✓ Chat .env already exists${NC}"
-fi
-
-# Generate and set CHAT_SERVICE_SECRET in both .env files if not present
-echo ""
-echo -e "${YELLOW}Setting up service authentication...${NC}"
-
-# Generate a secure random secret if needed
-if ! grep -q "^CHAT_SERVICE_SECRET=" "$UI_DIR/.env" 2>/dev/null || ! grep -q "^CHAT_SERVICE_SECRET=" "$CHAT_DIR/.env" 2>/dev/null; then
-    echo "  Generating CHAT_SERVICE_SECRET..."
-    SERVICE_SECRET=$(openssl rand -hex 32 2>/dev/null || head -c 64 /dev/urandom | xxd -p | tr -d '\n' | head -c 64)
-    
-    # Add to UI .env
-    if ! grep -q "^CHAT_SERVICE_SECRET=" "$UI_DIR/.env" 2>/dev/null; then
-        echo "" >> "$UI_DIR/.env"
-        echo "# Service Authentication (shared with Chat service)" >> "$UI_DIR/.env"
-        echo "CHAT_SERVICE_SECRET=$SERVICE_SECRET" >> "$UI_DIR/.env"
-        echo -e "  ${GREEN}✓ CHAT_SERVICE_SECRET added to UI/.env${NC}"
-    fi
-    
-    # Add to Chat .env
-    if ! grep -q "^CHAT_SERVICE_SECRET=" "$CHAT_DIR/.env" 2>/dev/null; then
-        # Check if there's an empty CHAT_SERVICE_SECRET line
-        if grep -q "^CHAT_SERVICE_SECRET=\"\"" "$CHAT_DIR/.env" 2>/dev/null; then
-            # Replace the empty value
-            sed -i "s/^CHAT_SERVICE_SECRET=\"\"/CHAT_SERVICE_SECRET=$SERVICE_SECRET/" "$CHAT_DIR/.env"
-        else
-            echo "" >> "$CHAT_DIR/.env"
-            echo "# Service Authentication (shared with UI service)" >> "$CHAT_DIR/.env"
-            echo "CHAT_SERVICE_SECRET=$SERVICE_SECRET" >> "$CHAT_DIR/.env"
-        fi
-        echo -e "  ${GREEN}✓ CHAT_SERVICE_SECRET added to Chat/.env${NC}"
-    fi
-else
-    # Check if values match
-    UI_SECRET=$(grep '^CHAT_SERVICE_SECRET=' "$UI_DIR/.env" | cut -d'=' -f2- | tr -d '"' | head -1)
-    CHAT_SECRET=$(grep '^CHAT_SERVICE_SECRET=' "$CHAT_DIR/.env" | cut -d'=' -f2- | tr -d '"' | head -1)
-    if [ "$UI_SECRET" = "$CHAT_SECRET" ] && [ -n "$UI_SECRET" ]; then
-        echo -e "  ${GREEN}✓ CHAT_SERVICE_SECRET is set and matches in both .env files${NC}"
-    else
-        echo -e "  ${YELLOW}⚠ CHAT_SERVICE_SECRET mismatch between UI/.env and Chat/.env${NC}"
-        echo -e "    Please ensure both files have the same value."
-    fi
-fi
-
 # TTS .env (if it exists or has example)
 if [ -f "$TTS_DIR/.env.example" ] && [ ! -f "$TTS_DIR/.env" ]; then
     echo "  Creating TTS .env..."
@@ -267,16 +200,6 @@ if [ ! -d "node_modules" ]; then
     echo -e "  ${GREEN}✓ UI dependencies installed${NC}"
 else
     echo -e "  ${GREEN}✓ UI dependencies already installed${NC}"
-fi
-
-# Install Chat dependencies
-echo -e "${YELLOW}Installing Chat dependencies...${NC}"
-cd "$CHAT_DIR"
-if [ ! -d "node_modules" ]; then
-    npm install
-    echo -e "  ${GREEN}✓ Chat dependencies installed${NC}"
-else
-    echo -e "  ${GREEN}✓ Chat dependencies already installed${NC}"
 fi
 
 echo ""
@@ -371,14 +294,12 @@ echo ""
 echo -e "  1. Review and update environment files if needed:"
 echo -e "     - ${YELLOW}$ROOT_DIR/.env${NC}"
 echo -e "     - ${YELLOW}$UI_DIR/.env${NC}"
-echo -e "     - ${YELLOW}$CHAT_DIR/.env${NC}"
 echo ""
 echo -e "  2. Start the application:"
 echo -e "     ${YELLOW}./Scripts/start-dev.sh --live${NC}"
 echo ""
-echo -e "  Or start services individually:"
+echo -e "  Or start the UI directly:"
 echo -e "     ${YELLOW}cd UI && npm run dev${NC}     # Main UI on http://localhost:4777"
-echo -e "     ${YELLOW}cd Chat && npm run dev${NC}  # Chat system on http://localhost:3001"
 echo ""
 echo -e "${BLUE}Documentation:${NC}"
 echo -e "  - README.md - Overview and architecture"

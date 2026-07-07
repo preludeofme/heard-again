@@ -2,9 +2,16 @@
 
 Local FastAPI service that wraps **Qwen3-TTS** for voice cloning and text-to-speech, used by the Heard Again Next.js frontend.
 
+> **Which directory should I use?** This folder (`TTS/tts-service`) is what `npm run dev`
+> actually starts (see `Scripts/start-dev.sh`), and it also contains the RunPod serverless
+> deployment variants (`Dockerfile.runpod*`). `docker-compose.yml` instead builds from
+> `TTS/app` (the parent directory) for containerized/production deployment. The two trees
+> have diverged and are pending consolidation — if you're changing TTS behavior, check
+> whether your change needs to be made in both places until that consolidation happens.
+
 ## Prerequisites
 
-Complete the [Qwen3-TTS Setup Guide](../docs/QWEN3_TTS_SETUP_GUIDE.md) first — you need:
+Before starting the service, make sure you have:
 - NVIDIA GPU with CUDA drivers
 - Python venv at `~/qwen3-tts/venv` with PyTorch + Qwen3-TTS installed
 - The Qwen3-TTS model downloaded via HuggingFace
@@ -19,7 +26,7 @@ npm run start:tts
 cd tts-service && ./start.sh
 ```
 
-The service starts on **http://localhost:8100**.
+The service starts on **http://localhost:4779** (see `TTS_PORT`).
 
 ## API Endpoints
 

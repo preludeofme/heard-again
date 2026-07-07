@@ -2,7 +2,7 @@
 
 # Heard Again - Live Log Tailing Script
 # Usage: ./scripts/logs.sh [service] [lines]
-#   service: all (default), main, chat, tts
+#   service: all (default), main, tts
 #   lines: number of lines to show (default: 50)
 
 set -e
@@ -22,7 +22,6 @@ LINES="${2:-50}"
 
 # Log file paths
 MAIN_LOG="$MAIN_APP_DIR/logs/main-app.log"
-CHAT_LOG="$MAIN_APP_DIR/logs/chat-system.log"
 TTS_LOG="$MAIN_APP_DIR/logs/tts-service.log"
 
 show_help() {
@@ -33,7 +32,6 @@ show_help() {
     echo "Services:"
     echo "  all   - Tail all service logs (default)"
     echo "  main  - Tail main app logs only"
-    echo "  chat  - Tail chat system logs only"
     echo "  tts   - Tail TTS service logs only"
     echo ""
     echo "Examples:"
@@ -72,15 +70,11 @@ case "$SERVICE" in
     main|app)
         tail_logs "Main App" "$MAIN_LOG" "$GREEN"
         ;;
-    chat)
-        tail_logs "Chat System" "$CHAT_LOG" "$CYAN"
-        ;;
     tts|voice)
         tail_logs "TTS Service" "$TTS_LOG" "$YELLOW"
         ;;
     all)
         tail_logs "Main App" "$MAIN_LOG" "$GREEN"
-        tail_logs "Chat System" "$CHAT_LOG" "$CYAN"
         tail_logs "TTS Service" "$TTS_LOG" "$YELLOW"
         ;;
     *)

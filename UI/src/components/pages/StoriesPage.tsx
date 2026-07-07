@@ -56,10 +56,10 @@ export function StoriesPage({ stories, selectedFamilyMember, isLens = false, fam
           <Grid container spacing={4} alignItems="center">
             <Grid size={{ xs: 12, lg: 7 }}>
               <Typography variant="h1" className="serif-font" sx={{ fontSize: { xs: '3rem', md: '4.5rem' }, color: ProfileColors.primary, fontWeight: 600, lineHeight: 1.1, mb: 4, fontStyle: 'italic' }}>
-                Help us tell {getDisplayName(selectedFamilyMember)}'s story.
+                Help us tell {getDisplayName(selectedFamilyMember)}&apos;s story.
               </Typography>
               <Typography variant="h6" sx={{ color: ProfileColors.onSurfaceVariant, maxWidth: 500, lineHeight: 1.6, fontFamily: 'var(--font-newsreader), serif', fontSize: '1.25rem', mb: 4 }}>
-                We are building a living story of {getDisplayName(selectedFamilyMember)}'s life. Your memories, voice, and stories keep this legacy vibrant for generations to come.
+                We are building a living story of {getDisplayName(selectedFamilyMember)}&apos;s life. Your memories, voice, and stories keep this legacy vibrant for generations to come.
               </Typography>
               <Button
                 variant="contained"

@@ -412,7 +412,7 @@ export default function StoryDetailPage() {
         <DialogContent>
           <Typography variant="body2" sx={{ color: '#546669', mb: 2 }}>
             To rewrite this story accurately, we need to know your name so the narrator
-            can refer to you correctly (e.g. "I was telling Ryan about a time…").
+            can refer to you correctly (e.g. &quot;I was telling Ryan about a time…&quot;).
           </Typography>
           <TextField
             autoFocus

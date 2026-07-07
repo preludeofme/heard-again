@@ -45,10 +45,6 @@ ok "Prisma Client"
 step "Type-checking UI"
 cd "$ROOT/UI" && npx tsc --noEmit || fail "UI type-check failed"
 ok "UI"
-
-step "Type-checking Chat"
-cd "$ROOT/Chat" && npm run type-check || fail "Chat type-check failed"
-ok "Chat"
 cd "$ROOT"
 
 # ── 4. Lint ───────────────────────────────────────────────────────────────────
@@ -61,20 +57,12 @@ cd "$ROOT"
 step "Running UI tests"
 cd "$ROOT/UI" && npm test -- --passWithNoTests || fail "UI tests failed"
 ok "UI"
-
-step "Running Chat tests"
-cd "$ROOT/Chat" && npm test -- --passWithNoTests || fail "Chat tests failed"
-ok "Chat"
 cd "$ROOT"
 
 # ── 6. Production build ───────────────────────────────────────────────────────
 step "Building UI"
 cd "$ROOT/UI" && NEXTAUTH_URL=http://localhost:4777 npm run build || fail "UI build failed"
 ok "UI"
-
-step "Building Chat"
-cd "$ROOT/Chat" && npm run build || fail "Chat build failed"
-ok "Chat"
 cd "$ROOT"
 
 # ── 7. Migration dry-run check ────────────────────────────────────────────────

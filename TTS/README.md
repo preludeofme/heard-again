@@ -2,9 +2,17 @@
 
 Local FastAPI service that wraps **Qwen3-TTS** for voice cloning and text-to-speech, used by the Heard Again Next.js frontend.
 
+> **Which directory should I use?** This folder (`TTS/app`) is the version referenced by
+> `docker-compose.yml` and is the target for containerized/production deployment.
+> `npm run dev` (via `Scripts/start-dev.sh`) currently starts the service from
+> `TTS/tts-service/` instead, which also contains RunPod serverless deployment variants
+> (`Dockerfile.runpod*`) not used by Docker Compose. The two trees have diverged and are
+> pending consolidation — if you're changing TTS behavior, check whether your change needs
+> to be made in both places until that consolidation happens.
+
 ## Prerequisites
 
-Complete the [Qwen3-TTS Setup Guide](../docs/QWEN3_TTS_SETUP_GUIDE.md) first — you need:
+Before starting the service, make sure you have:
 - NVIDIA GPU with CUDA drivers
 - Python venv at `~/qwen3-tts/venv` with PyTorch + Qwen3-TTS installed
 - The Qwen3-TTS model downloaded via HuggingFace
@@ -16,10 +24,10 @@ Complete the [Qwen3-TTS Setup Guide](../docs/QWEN3_TTS_SETUP_GUIDE.md) first —
 npm run start:tts
 
 # Or directly
-cd tts-service && ./start.sh
+cd TTS && ./start.sh
 ```
 
-The service starts on **http://localhost:8100**.
+The service starts on **http://localhost:4779** (see `TTS_PORT`).
 
 ## API Endpoints
 
@@ -54,7 +62,7 @@ Copy `.env.example` and adjust as needed. Key settings:
 
 ## Data Directories
 
-Created automatically under `tts-service/data/`:
+Created automatically under `TTS/data/`:
 - `reference_audio/` — Uploaded reference audio files
 - `voice_profiles/` — Saved .pt voice profile files
 - `generated_audio/` — Generated speech output files

@@ -51,8 +51,7 @@ export class PersonService {
     const skip = (page - 1) * limit
     const tokens = getPersonSearchTokens(search)
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const where: any = { familyspaceId }
+    const where: Record<string, unknown> = { familyspaceId }
 
     if (tokens.length > 0) {
       where.AND = buildPersonNameSearchWhere(tokens)

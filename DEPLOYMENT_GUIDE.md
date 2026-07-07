@@ -1,6 +1,6 @@
 # Production Deployment Guide
 
-Follow these steps to deploy a new change to the production environment (Versail).
+Follow these steps to deploy a new change to a self-hosted production environment using Docker Compose.
 
 ## 1. Verify (Pre-Flight)
 Run the automated quality gate to ensure the codebase is stable and builds correctly:
@@ -10,21 +10,23 @@ Run the automated quality gate to ensure the codebase is stable and builds corre
 *Note: This checks linting, types, unit tests, and production builds for all services.*
 
 ## 2. Deploy
-Push to the production branch — the Versail platform handles the build and deployment automatically:
+Pull the latest change and rebuild/restart the affected services:
 ```bash
-git push origin main
+git pull origin main
+npm run docker:build
+npm run docker:up
 ```
 
-**Automated Actions:**
-- Builds Docker images for **UI**, **Worker**, and **TTS**.
-- Executes Prisma **database migrations**.
-- Deploys all services to the Versail infrastructure.
+**What this does:**
+- Builds Docker images for **UI** and **TTS** (with the `with-tts` profile).
+- Executes Prisma **database migrations** on startup.
+- Restarts services with the new images.
 
 ## 3. Validate
 Confirm all services are healthy by checking their endpoints:
-- **UI:** `https://heardagain.com/api/instance/health`
-- **TTS:** Check the RunPod endpoint health
-- **Background Jobs:** Trigger.dev dashboard
+- **UI:** `/api/instance/health`
+- **TTS:** the TTS service's `/api/tts/health` endpoint
+- **Background Jobs:** the Trigger.dev dashboard (`TRIGGER_API_URL`)
 
 ---
 

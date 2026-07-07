@@ -17,7 +17,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18.x'
+          node-version: '20.x'
           cache: 'npm'
 
       - name: Install All Dependencies
@@ -27,27 +27,16 @@ jobs:
         run: npm run db:generate
 
       - name: Type Check UI
-        run: cd UI && npm run type-check || npx tsc --noEmit
-
-      - name: Type Check Chat
-        run: cd Chat && npm run type-check
+        run: cd UI && npm run typecheck
 
       - name: Lint UI
         run: cd UI && npm run lint
 
-      - name: Lint Chat
-        run: cd Chat && npm run lint
-
       - name: Run UI Tests
         run: cd UI && npm test -- --passWithNoTests
-
-      - name: Run Chat Tests
-        run: cd Chat && npm test -- --passWithNoTests
 
       - name: Build UI
         run: cd UI && npm run build
         env:
           NEXTAUTH_SECRET: 'dummy-secret-for-ci-build'
-
-      - name: Build Chat
-        run: cd Chat && npm run build
+          NEXTAUTH_URL: 'http://localhost:4777'

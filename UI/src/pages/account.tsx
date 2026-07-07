@@ -579,7 +579,7 @@ export default function AccountPage() {
                   ) : (
                     <>
                       <Alert severity="info" sx={{ mb: 3 }}>
-                        You don't have an active subscription. Subscribe to a plan to unlock premium features.
+                        You don&apos;t have an active subscription. Subscribe to a plan to unlock premium features.
                       </Alert>
                       <Button
                         variant="contained"

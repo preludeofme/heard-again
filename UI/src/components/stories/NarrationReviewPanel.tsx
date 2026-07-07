@@ -67,7 +67,7 @@ export function NarrationReviewPanel({
       }}
     >
       <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#16334a', mb: 0.5 }}>
-        Review {subject}'s narration
+        Review {subject}&apos;s narration
       </Typography>
       <Typography variant="body2" sx={{ color: '#546669', mb: 2 }}>
         Read through the first-person rewrite. Edit anything that sounds off, then approve. This is what the cloned voice will read. The original story is unchanged.

@@ -237,7 +237,7 @@ export default function SubscriptionPage() {
 
               {isCancelled && (
                 <Alert severity="warning" sx={{ mt: 2 }}>
-                  Your subscription has been cancelled. You'll continue to have access until the end of your billing period.
+                  Your subscription has been cancelled. You&apos;ll continue to have access until the end of your billing period.
                 </Alert>
               )}
             </Card>
@@ -408,7 +408,7 @@ export default function SubscriptionPage() {
                       Cancel Subscription
                     </Typography>
                     <Typography variant="body2" sx={{ color: '#546669' }}>
-                      Downgrade to the free plan. You'll keep access until the end of your billing period.
+                      Downgrade to the free plan. You&apos;ll keep access until the end of your billing period.
                     </Typography>
                   </Box>
                   <Button
@@ -442,8 +442,8 @@ export default function SubscriptionPage() {
               Are you sure you want to cancel your {plan?.name} subscription?
             </Typography>
             <Typography variant="body2" sx={{ color: '#999' }}>
-              • You'll be downgraded to the Free Local plan<br />
-              • You'll keep access until {subscription?.renewalDate
+              • You&apos;ll be downgraded to the Free Local plan<br />
+              • You&apos;ll keep access until {subscription?.renewalDate
                 ? new Date(subscription.renewalDate).toLocaleDateString('en-US', {
                     month: 'long',
                     day: 'numeric',

@@ -238,7 +238,7 @@ export function VoiceTrainingModal({
               onClick={handleClose}
               sx={{ color: '#16334a', borderColor: '#16334a', textTransform: 'none' }}
             >
-              I'll do it later
+              I&apos;ll do it later
             </Button>
           </Box>
         ) : (

@@ -3,6 +3,7 @@ import QRCode from 'qrcode'
 import { prisma } from '@/lib/prisma'
 import { logger } from '@/lib/logger'
 import { generateMFACode, sendMFACodeEmail, storeMFACode, verifyMFACode } from '@/services/MFAEmailService'
+import { getAppEncryptionKey } from '@/lib/security/app-key'
 
 export interface MFASetupResult {
   secret: string
@@ -383,10 +384,10 @@ function generateBackupCodes(count: number): string[] {
   return codes
 }
 
-function encryptSecret(secret: string): string {
+export function encryptSecret(secret: string): string {
   // Simple encryption using APP_KEY
   // In production, use proper encryption (AWS KMS, HashiCorp Vault, etc.)
-  const key = process.env.APP_KEY || process.env.NEXTAUTH_SECRET || 'default-key'
+  const key = getAppEncryptionKey()
   // XOR with key (simplified - use proper encryption in production)
   let encrypted = ''
   for (let i = 0; i < secret.length; i++) {
@@ -397,8 +398,8 @@ function encryptSecret(secret: string): string {
   return Buffer.from(encrypted).toString('base64')
 }
 
-function decryptSecret(encrypted: string): string {
-  const key = process.env.APP_KEY || process.env.NEXTAUTH_SECRET || 'default-key'
+export function decryptSecret(encrypted: string): string {
+  const key = getAppEncryptionKey()
   const buffer = Buffer.from(encrypted, 'base64')
   let decrypted = ''
   for (let i = 0; i < buffer.length; i++) {

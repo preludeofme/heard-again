@@ -184,7 +184,7 @@ export function DocumentsPage({ documents, onUploadSuccess, onDelete, onLink, on
               Heirlooms & Keepsakes
             </Typography>
             <Typography variant="body1" sx={{ color: ProfileColors.onSurfaceVariant, mt: 2, maxWidth: 500, fontFamily: 'var(--font-newsreader), serif', fontSize: '1.1rem' }}>
-              Tuck away the letters, photos, and handwritten notes that tell your family's story.
+              Tuck away the letters, photos, and handwritten notes that tell your family&apos;s story.
             </Typography>
           </Box>
           

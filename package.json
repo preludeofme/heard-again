@@ -6,16 +6,16 @@
   "scripts": {
     "dev": "./Scripts/start-dev.sh --live",
     "dev_worktree": "./Scripts/start-dev-worktree.sh --live",
-    "build": "npm --workspace UI run build && npm --workspace Chat run build",
-    "type-check": "npm --workspace UI run typecheck && npm --workspace Chat run type-check",
+    "build": "npm --workspace UI run build",
+    "type-check": "npm --workspace UI run typecheck",
     "start": "npm --workspace UI run start",
     "test": "npm --workspace UI run test",
     "test:watch": "npm --workspace UI run test:watch",
     "test:coverage": "npm --workspace UI run test:coverage",
     "lint": "npm --workspace UI run lint",
     "start:tts": "cd TTS && ./start.sh",
-    "start:voice": "docker compose -f docker-compose.voice.yml up -d",
-    "stop:voice": "docker compose -f docker-compose.voice.yml down",
+    "start:voice": "docker compose --profile with-tts up -d",
+    "stop:voice": "docker compose --profile with-tts down",
     "sonar:scan": "sonar-scanner -Dproject.settings=sonar-project.properties",
     "sonar:start": "docker compose -f docker-compose.sonarqube.yml up -d",
     "sonar:stop": "docker compose -f docker-compose.sonarqube.yml down",
@@ -59,8 +59,7 @@
     "react-dom": "19.2.6"
   },
   "workspaces": [
-    "UI",
-    "Chat"
+    "UI"
   ],
   "overrides": {
     "@types/react": "^19.0.0",

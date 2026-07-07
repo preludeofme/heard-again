@@ -2,52 +2,8 @@ import React from 'react'
 import { Box, Typography, Card, Grid, Button, Chip, Divider } from '@mui/material'
 import { Check, Close } from '@mui/icons-material'
 import Link from 'next/link'
-
-function FeatureRow({
-  icon,
-  label,
-  included,
-  strikeThrough = true,
-  warning = false,
-}: {
-  icon: React.ReactNode
-  label: React.ReactNode
-  included: boolean
-  strikeThrough?: boolean
-  warning?: boolean
-}) {
-  return (
-    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5, mb: 1.5 }}>
-      <Box
-        sx={{
-          width: 20,
-          height: 20,
-          borderRadius: '50%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: included ? '#d0e3e6' : warning ? '#fae8e8' : '#f6f3ee',
-          color: included ? '#16334a' : warning ? '#c0392b' : '#999',
-          flexShrink: 0,
-          mt: 0.25,
-        }}
-      >
-        {included ? <Check sx={{ fontSize: 12 }} /> : <Close sx={{ fontSize: 12 }} />}
-      </Box>
-      <Typography
-        variant="body2"
-        sx={{
-          color: included ? '#546669' : warning ? '#7f8c8d' : '#999',
-          textDecoration: !included && strikeThrough ? 'line-through' : 'none',
-          fontSize: '0.9rem',
-          lineHeight: 1.3,
-        }}
-      >
-        {label}
-      </Typography>
-    </Box>
-  )
-}
+import { FeatureRow } from './FeatureRow'
+import { SystemRequirements } from './SystemRequirements'
 
 export function LandingPricingSection() {
   const cloudPlans = [
@@ -58,13 +14,13 @@ export function LandingPricingSection() {
       subtitle: 'For families who want a simple, secure hosted option.',
       pricing: { monthlyDisplay: '9.99' },
       features: [
-        <strong>No setup required</strong>,
-        <strong>Secure managed hosting</strong>,
-        <strong>Automatic backups & updates</strong>,
-        <span>
+        <strong key="no-setup">No setup required</strong>,
+        <strong key="managed-hosting">Secure managed hosting</strong>,
+        <strong key="auto-backups">Automatic backups & updates</strong>,
+        <span key="voice-minutes">
           <strong>30 minutes</strong> of voice generation / mo
         </span>,
-        <span>
+        <span key="voice-profiles">
           Up to <strong>50 voice profiles</strong>
         </span>,
         'Easy family sharing',
@@ -85,12 +41,12 @@ export function LandingPricingSection() {
         <span key="bold-plus" style={{ color: '#16334a', fontWeight: 600 }}>
           Includes all Starter features PLUS:
         </span>,
-        <span>
+        <span key="voice-minutes">
           <strong>60 minutes</strong> of voice generation / mo
         </span>,
-        <strong>Priority voice processing</strong>,
+        <strong key="priority-processing">Priority voice processing</strong>,
         'Advanced family tree linking',
-        <strong>Priority support response</strong>,
+        <strong key="priority-support">Priority support response</strong>,
         'Easy family sharing',
       ],
       bestFor: 'Best for families collecting stories from multiple relatives and contributors.',
@@ -107,9 +63,9 @@ export function LandingPricingSection() {
         <span key="bold-plus" style={{ color: '#16334a', fontWeight: 600 }}>
           Includes all Family features PLUS:
         </span>,
-        <strong>Unlimited voice generation</strong>,
-        <strong>Priority support response</strong>,
-        <strong>Dedicated success manager</strong>,
+        <strong key="unlimited-voice">Unlimited voice generation</strong>,
+        <strong key="priority-support">Priority support response</strong>,
+        <strong key="success-manager">Dedicated success manager</strong>,
       ],
       bestFor: 'Best for families building a long-term family legacy library.',
       isRecommended: false,
@@ -384,44 +340,7 @@ export function LandingPricingSection() {
 
           <Divider sx={{ my: 4, borderColor: 'rgba(22, 51, 74, 0.1)' }} />
 
-          <Typography
-            variant="subtitle2"
-            sx={{ color: '#16334a', fontWeight: 700, mb: 2, textTransform: 'uppercase', letterSpacing: 0.5, fontSize: '0.75rem' }}
-          >
-            Minimum System Requirements
-          </Typography>
-          <Grid container spacing={3}>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <Typography variant="body2" sx={{ color: '#16334a', fontWeight: 600, mb: 0.5 }}>
-                Core archive (photos, documents, family tree)
-              </Typography>
-              {[
-                '4 CPU cores, 8GB RAM',
-                '20GB+ free disk space (grows with your media)',
-                'Docker & Docker Compose',
-                'Linux, macOS, or Windows (WSL2)',
-              ].map((req, idx) => (
-                <FeatureRow key={idx} icon={<Check />} label={req} included={true} />
-              ))}
-            </Grid>
-
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <Typography variant="body2" sx={{ color: '#16334a', fontWeight: 600, mb: 0.5 }}>
-                + Local AI chat & voice cloning
-              </Typography>
-              {[
-                '8+ CPU cores, 32GB RAM',
-                'NVIDIA GPU with 24GB VRAM (e.g. RTX 3090/4090)',
-                '50GB+ free disk (AI models + generated audio)',
-              ].map((req, idx) => (
-                <FeatureRow key={idx} icon={<Check />} label={req} included={true} />
-              ))}
-              <Typography variant="caption" sx={{ color: '#7f8c8d', display: 'block', mt: 1, lineHeight: 1.5 }}>
-                No local GPU? AI chat and voice generation can also run against a cloud
-                LLM or RunPod endpoint instead of local hardware.
-              </Typography>
-            </Grid>
-          </Grid>
+          <SystemRequirements />
         </Card>
       </Box>
     </Box>

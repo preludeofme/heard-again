@@ -212,7 +212,7 @@ export function SecuritySettings() {
             <Box>
               <Typography variant="h6">Login code (recommended)</Typography>
               <Typography variant="body2" color="text.secondary">
-                Adds a check to keep your family's stories safe.
+                Adds a check to keep your family&apos;s stories safe.
               </Typography>
             </Box>
           </Box>
@@ -243,7 +243,7 @@ export function SecuritySettings() {
               {setupStep === 'INITIAL' && (
                 <>
                   <Typography variant="body2" sx={{ mb: 3 }}>
-                    A login code isn't set up yet. We recommend turning it on — it helps keep your family's stories safe.
+                    A login code isn&apos;t set up yet. We recommend turning it on — it helps keep your family&apos;s stories safe.
                   </Typography>
                   <Button
                     variant="contained"
@@ -289,7 +289,7 @@ export function SecuritySettings() {
                               </Typography>
                             </Box>
                             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, ml: 5 }}>
-                              When you sign in, we'll send a code to <strong>{userEmail || 'your email'}</strong>. Easy — no app to install.
+                              When you sign in, we&apos;ll send a code to <strong>{userEmail || 'your email'}</strong>. Easy — no app to install.
                             </Typography>
                           </Box>
                         }
@@ -320,7 +320,7 @@ export function SecuritySettings() {
                               </Typography>
                             </Box>
                             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, ml: 5 }}>
-                              Scan a QR code with an authenticator app. You'll get backup codes you can save in case you lose the app.
+                              Scan a QR code with an authenticator app. You&apos;ll get backup codes you can save in case you lose the app.
                             </Typography>
                           </Box>
                         }
@@ -406,7 +406,7 @@ export function SecuritySettings() {
                   <Box>
                     <Typography variant="subtitle2" sx={{ mb: 1 }}>Backup Codes</Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                      Save these somewhere you can find them — your notes app or password manager works. You'll need them if you lose the authenticator app.
+                      Save these somewhere you can find them — your notes app or password manager works. You&apos;ll need them if you lose the authenticator app.
                     </Typography>
                     <Paper sx={{ p: 2, bgcolor: '#f5f5f5', mb: 2, position: 'relative' }}>
                       <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>

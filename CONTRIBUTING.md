@@ -9,7 +9,7 @@ To set up a local development environment, follow these steps:
 ### Prerequisites
 * **Node.js**: `v18.0.0` or higher
 * **npm**: `v9.0.0` or higher
-* **Docker & Docker Compose**: Required for running PostgreSQL, Redis, Ollama, and ChromaDB.
+* **Docker & Docker Compose**: Required for running PostgreSQL and Redis.
 * **Python 3.10+** (Optional): Only required if you want to run the local GPU/CPU voice synthesis (TTS) worker.
 
 ### Installation Steps
@@ -28,11 +28,11 @@ To set up a local development environment, follow these steps:
 3. **Configure Environment Variables**:
    * Copy the `.env.example` in the root (or service folders) to `.env`.
    * For local dev, you can usually start with the defaults.
-   * See the [Setup Guide](docs/SETUP_GUIDE.md) for detailed configuration details.
+   * See the [README Environment Configuration](README.md#environment-configuration) section for detailed configuration details.
 
 4. **Spin up local infrastructure (Docker)**:
    ```bash
-   # Starts Postgres, Redis, ChromaDB, Ollama, and ClamAV
+   # Starts Postgres, Redis, and ClamAV
    npm run docker:up
    ```
 
@@ -45,7 +45,7 @@ To set up a local development environment, follow these steps:
 
 6. **Start the development servers**:
    ```bash
-   # Starts UI, Chat, and background workers simultaneously
+   # Starts UI and background workers simultaneously
    npm run dev
    ```
 

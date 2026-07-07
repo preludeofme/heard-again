@@ -41,12 +41,10 @@ export function useVoiceLabController(subjectId?: string) {
 
   const startRecording = useCallback(() => {
     setIsRecording(true)
-    console.log('Starting recording...')
   }, [])
 
   const stopRecording = useCallback(() => {
     setIsRecording(false)
-    console.log('Stopping recording...')
   }, [])
 
   return {

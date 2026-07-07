@@ -47,7 +47,7 @@ export default function TermsOfLegacyPage() {
                 Welcome to Heard Again
               </Typography>
               <Typography variant="body1" sx={{ color: 'text.primary', lineHeight: 1.8 }}>
-                By using Heard Again, you are entering into a partnership with us to preserve your family's history. These "Terms of Service" govern your use of our platform and services.
+                By using Heard Again, you are entering into a partnership with us to preserve your family&apos;s history. These &quot;Terms of Service&quot; govern your use of our platform and services.
               </Typography>
             </Box>
 
@@ -103,7 +103,7 @@ export default function TermsOfLegacyPage() {
                 6. Disclaimer of Warranties
               </Typography>
               <Typography variant="body1" sx={{ color: 'text.primary', lineHeight: 1.8 }}>
-                While we strive for 100% availability and data integrity, the service is provided "as is". We encourage regular exports of your data for your own offline backups.
+                While we strive for 100% availability and data integrity, the service is provided &quot;as is&quot;. We encourage regular exports of your data for your own offline backups.
               </Typography>
             </Box>
           </Box>
