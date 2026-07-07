@@ -5,7 +5,19 @@ import { useRouter } from 'next/router'
 import { loadStripe } from '@stripe/stripe-js'
 import { EmbeddedCheckoutProvider, EmbeddedCheckout } from '@stripe/react-stripe-js'
 
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '')
+let stripePromise: any = null
+const getStripePromise = () => {
+  if (typeof window === 'undefined') return null
+  if (!stripePromise) {
+    const key = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+    if (!key) {
+      console.warn('NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY is not configured')
+      return null
+    }
+    stripePromise = loadStripe(key)
+  }
+  return stripePromise
+}
 import {
   Alert,
   Avatar,
@@ -932,12 +944,19 @@ export default function AccountPage() {
             <DialogContent>
               {stripeClientSecret ? (
                 <Box sx={{ mt: 1, minHeight: '400px' }}>
-                  <EmbeddedCheckoutProvider
-                    stripe={stripePromise}
-                    options={{ clientSecret: stripeClientSecret }}
-                  >
-                    <EmbeddedCheckout />
-                  </EmbeddedCheckoutProvider>
+                  {getStripePromise() ? (
+                    <EmbeddedCheckoutProvider
+                      stripe={getStripePromise()}
+                      options={{ clientSecret: stripeClientSecret }}
+                    >
+                      <EmbeddedCheckout />
+                    </EmbeddedCheckoutProvider>
+                  ) : (
+                    <Alert severity="error">
+                      Failed to load payment processor: Stripe Publishable Key is not configured.
+                      Please set NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY in your environment settings.
+                    </Alert>
+                  )}
                 </Box>
               ) : (
                 (() => {
