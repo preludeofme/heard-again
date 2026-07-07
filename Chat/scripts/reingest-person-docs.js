@@ -5,8 +5,9 @@ const { PrismaClient } = require('@prisma/client');
 const { Queue } = require('bullmq');
 const { v4: uuidv4 } = require('uuid');
 
-const FAMILYSPACE_ID = '931638b2-8341-41fc-a064-0883a9911d54';
-const PERSON_ID = '6967b35d-a6fb-46d4-9cb5-4965c8f36c6c';
+const path = require('path');
+const FAMILYSPACE_ID = process.env.FAMILYSPACE_ID || 'your-familyspace-uuid';
+const PERSON_ID = process.env.PERSON_ID || 'your-person-uuid';
 
 async function reingest() {
   const prisma = new PrismaClient();
@@ -39,7 +40,7 @@ async function reingest() {
       const traceId = uuidv4();
       const job = await queue.add('process-document', {
         documentId: doc.id,
-        filePath: `/home/trubuck-design/Projects/Personal/heard-again/Chat/temp-ingestion/${FAMILYSPACE_ID}/${doc.id}.docx`,
+        filePath: path.resolve(__dirname, `../temp-ingestion/${FAMILYSPACE_ID}/${doc.id}.docx`),
         mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         familyspaceId: FAMILYSPACE_ID,
         title: doc.title,

@@ -1,0 +1,35 @@
+name: 💡 Feature Request
+description: Propose a new feature or enhancement for Heard Again
+title: "[FEATURE]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for suggesting a feature! Please describe your request below.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Is your feature request related to a problem?
+      description: A clear and concise description of what the problem is (e.g. "I'm always frustrated when...").
+      placeholder: Tell us about the problem you are facing...
+  - type: textarea
+    id: solution
+    attributes:
+      label: Describe the Solution You'd Like
+      description: A clear and concise description of what you want to happen.
+      placeholder: Describe the feature or improvement...
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Describe Alternatives You've Considered
+      description: A clear and concise description of any alternative solutions or features you've considered.
+      placeholder: What other ways could this be solved?
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Add any other context, mockup screenshots, or thoughts about the feature here.
+      placeholder: Mockups, diagrams, code snippets, etc.

@@ -3,8 +3,8 @@
 	admin off
 }
 
-trubuck-design-ai-beast.stern-mulley.ts.net:4777 {
-	tls ./certs/trubuck-design-ai-beast.stern-mulley.ts.net.crt ./certs/trubuck-design-ai-beast.stern-mulley.ts.net.key
+your-tailscale-node-name.ts.net:4777 {
+	tls ./certs/your-tailscale-node-name.ts.net.crt ./certs/your-tailscale-node-name.ts.net.key
 
 	reverse_proxy localhost:4776 {
 		header_up X-Real-IP {remote_host}

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-HOSTNAME="trubuck-design-ai-beast.stern-mulley.ts.net"
+HOSTNAME="your-tailscale-node-name.ts.net"
 CERT_DIR="/etc/ssl/tailscale"
 
 echo "==> Creating cert directory: $CERT_DIR"

@@ -381,6 +381,47 @@ export function LandingPricingSection() {
               </Grid>
             </Grid>
           </Grid>
+
+          <Divider sx={{ my: 4, borderColor: 'rgba(22, 51, 74, 0.1)' }} />
+
+          <Typography
+            variant="subtitle2"
+            sx={{ color: '#16334a', fontWeight: 700, mb: 2, textTransform: 'uppercase', letterSpacing: 0.5, fontSize: '0.75rem' }}
+          >
+            Minimum System Requirements
+          </Typography>
+          <Grid container spacing={3}>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <Typography variant="body2" sx={{ color: '#16334a', fontWeight: 600, mb: 0.5 }}>
+                Core archive (photos, documents, family tree)
+              </Typography>
+              {[
+                '4 CPU cores, 8GB RAM',
+                '20GB+ free disk space (grows with your media)',
+                'Docker & Docker Compose',
+                'Linux, macOS, or Windows (WSL2)',
+              ].map((req, idx) => (
+                <FeatureRow key={idx} icon={<Check />} label={req} included={true} />
+              ))}
+            </Grid>
+
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <Typography variant="body2" sx={{ color: '#16334a', fontWeight: 600, mb: 0.5 }}>
+                + Local AI chat & voice cloning
+              </Typography>
+              {[
+                '8+ CPU cores, 32GB RAM',
+                'NVIDIA GPU with 24GB VRAM (e.g. RTX 3090/4090)',
+                '50GB+ free disk (AI models + generated audio)',
+              ].map((req, idx) => (
+                <FeatureRow key={idx} icon={<Check />} label={req} included={true} />
+              ))}
+              <Typography variant="caption" sx={{ color: '#7f8c8d', display: 'block', mt: 1, lineHeight: 1.5 }}>
+                No local GPU? AI chat and voice generation can also run against a cloud
+                LLM or RunPod endpoint instead of local hardware.
+              </Typography>
+            </Grid>
+          </Grid>
         </Card>
       </Box>
     </Box>

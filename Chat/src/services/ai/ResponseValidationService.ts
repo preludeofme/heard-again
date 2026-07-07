@@ -287,6 +287,7 @@ Respond ONLY with the JSON array.`
   private extractAtomicClaims(response: string): string[] {
     return response
       .split(/[.!?]+/)
+      .flatMap(part => part.split(/\bbut\b/))
       .map(part => part.trim())
       .filter(part => part.length >= 20)
       .filter(part => !part.endsWith('?'))
@@ -294,9 +295,16 @@ Respond ONLY with the JSON array.`
       .filter(part => {
         const normalized = this.normalizeText(part)
         return !(
-          normalized.startsWith("i don't know") ||
+          normalized.startsWith("i don t know") ||
+          normalized.startsWith("i dont know") ||
           normalized.startsWith("i do not know") ||
-          normalized.startsWith("i am not sure")
+          normalized.startsWith("i am not sure") ||
+          normalized.startsWith("i can t quite recall") ||
+          normalized.startsWith("i dont quite recall") ||
+          normalized.startsWith("i cannot quite recall") ||
+          normalized.startsWith("i can t recall") ||
+          normalized.startsWith("i dont recall") ||
+          normalized.startsWith("i cannot recall")
         )
       })
   }

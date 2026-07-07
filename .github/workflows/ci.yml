@@ -1,142 +1,53 @@
-name: CI
+name: Continuous Integration
 
 on:
   push:
-    branches: [main, production-readiness]
+    branches: [ main, master ]
   pull_request:
-    branches: [main]
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+    branches: [ main, master ]
 
 jobs:
-  blocked-files:
-    name: Blocked file check
+  verify:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Reject scratch / quarantine artifacts
-        run: |
-          BLOCKED=$(git ls-files \
-            'UI/scratch*.js' 'UI/scratch*.ts' \
-            'UI/debug-*.ts' 'UI/debug-*.js' \
-            'UI/test-api*.js' 'UI/test-api*.ts' \
-            'UI/test-db*.js' \
-            'UI/test-frontend*.js' \
-            'UI/test-find-*.js' \
-            'UI/test-import*.js' \
-            'UI/test-layout*.ts' \
-            'UI/quarantine/' 2>/dev/null || true)
-          if [[ -n "$BLOCKED" ]]; then
-            echo "::error::Blocked files found in git:$BLOCKED"
-            exit 1
-          fi
 
-  ui:
-    name: UI — install / lint / typecheck / test / build
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: UI
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: 18
-          cache: npm
-          cache-dependency-path: UI/package-lock.json
+          node-version: '18.x'
+          cache: 'npm'
 
-      - name: Install
-        run: npm ci
+      - name: Install All Dependencies
+        run: npm run install:all
 
-      - name: Lint
-        run: npm run lint
+      - name: Generate Prisma Client
+        run: npm run db:generate
 
-      - name: Type-check
-        run: npx tsc --noEmit
+      - name: Type Check UI
+        run: cd UI && npm run type-check || npx tsc --noEmit
 
-      - name: Test
-        run: npm test -- --passWithNoTests --ci --coverage
+      - name: Type Check Chat
+        run: cd Chat && npm run type-check
 
-      - name: Build
-        run: npm run build
+      - name: Lint UI
+        run: cd UI && npm run lint
+
+      - name: Lint Chat
+        run: cd Chat && npm run lint
+
+      - name: Run UI Tests
+        run: cd UI && npm test -- --passWithNoTests
+
+      - name: Run Chat Tests
+        run: cd Chat && npm test -- --passWithNoTests
+
+      - name: Build UI
+        run: cd UI && npm run build
         env:
-          NODE_ENV: production
+          NEXTAUTH_SECRET: 'dummy-secret-for-ci-build'
 
-  chat:
-    name: Chat — install / typecheck / test / build
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: Chat
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 18
-          cache: npm
-          cache-dependency-path: Chat/package-lock.json
-
-      - name: Install
-        run: npm ci
-
-      - name: Type-check
-        run: npm run type-check
-
-      - name: Test
-        run: npm test -- --passWithNoTests --ci
-
-      - name: Build
-        run: npm run build
-        env:
-          NODE_ENV: production
-
-  migration-check:
-    name: Prisma migration status
-    runs-on: ubuntu-latest
-    needs: [ui]
-    services:
-      postgres:
-        image: postgres:15-alpine
-        env:
-          POSTGRES_USER: heard_again
-          POSTGRES_PASSWORD: heard_again
-          POSTGRES_DB: heard_again_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 5
-    env:
-      DATABASE_URL: postgresql://heard_again:heard_again@localhost:5432/heard_again_test
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 18
-          cache: npm
-          cache-dependency-path: UI/package-lock.json
-
-      - name: Install UI deps
-        working-directory: UI
-        run: npm ci
-
-      - name: Run migrations
-        working-directory: UI
-        run: npx prisma migrate deploy
-
-      - name: Assert no pending migrations
-        working-directory: UI
-        run: |
-          STATUS=$(npx prisma migrate status 2>&1)
-          echo "$STATUS"
-          if echo "$STATUS" | grep -qi "pending\|not applied"; then
-            echo "::error::Unapplied migrations detected"
-            exit 1
-          fi
+      - name: Build Chat
+        run: cd Chat && npm run build

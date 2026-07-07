@@ -1,0 +1,49 @@
+name: 🐛 Bug Report
+description: Report a bug or issue in Heard Again
+title: "[BUG]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting a bug! Please fill out the form below as completely as possible.
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the Bug
+      description: A clear and concise description of what the bug is.
+      placeholder: Tell us what went wrong...
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: Steps to reproduce the behavior.
+      placeholder: |
+        1. Go to '...'
+        2. Click on '...'
+        3. Scroll down to '...'
+        4. See error
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: A clear and concise description of what you expected to happen.
+      placeholder: What should have happened instead?
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Heard Again Version
+      description: The version or commit hash where the bug occurs.
+      placeholder: e.g. v1.0.0 or commit main@1a2b3c
+  - type: textarea
+    id: context
+    attributes:
+      label: Environment & Logs
+      description: Browser, OS, DB, or terminal logs if relevant.
+      placeholder: e.g. Chrome 120 on Windows 11, Node v18.19.0, PostgreSQL logs...

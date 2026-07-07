@@ -33,20 +33,15 @@ fi
 ok "No blocked files"
 
 # ── 2. Install ────────────────────────────────────────────────────────────────
-step "Installing root dependencies"
+step "Installing all dependencies (root & workspaces)"
 npm ci --silent || fail "Root npm ci failed"
-ok "Root"
-
-step "Installing UI dependencies"
-cd "$ROOT/UI" && npm ci --silent || fail "UI npm ci failed"
-ok "UI"
-
-step "Installing Chat dependencies"
-cd "$ROOT/Chat" && npm ci --silent || fail "Chat npm ci failed"
-ok "Chat"
-cd "$ROOT"
+ok "All dependencies"
 
 # ── 3. Type-check ─────────────────────────────────────────────────────────────
+step "Generating Prisma Client"
+npm run db:generate || fail "Prisma Client generation failed"
+ok "Prisma Client"
+
 step "Type-checking UI"
 cd "$ROOT/UI" && npx tsc --noEmit || fail "UI type-check failed"
 ok "UI"
@@ -74,7 +69,7 @@ cd "$ROOT"
 
 # ── 6. Production build ───────────────────────────────────────────────────────
 step "Building UI"
-cd "$ROOT/UI" && npm run build || fail "UI build failed"
+cd "$ROOT/UI" && NEXTAUTH_URL=http://localhost:4777 npm run build || fail "UI build failed"
 ok "UI"
 
 step "Building Chat"

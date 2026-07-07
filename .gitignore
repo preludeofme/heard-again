@@ -28,18 +28,29 @@ sonar-reports/
 playwright-report/
 test-results/
 
-# TTS service
-TTS/data/
+# TTS service and Python files
 TTS/__pycache__/
 TTS/app/__pycache__/
-*.pyc
+TTS/tts-service/__pycache__/
+TTS/tts-service/app/__pycache__/
+TTS/venv/
+TTS/tts-service/venv/
 venv/
-generated/
-generated/**
-!UI/generated/.gitkeep
-data
+*.pyc
 data/
+generated/
+
+# TTS data directories (keep empty structures via .gitkeep)
+TTS/data/**
+!TTS/data/**/.gitkeep
+TTS/tts-service/data/**
+!TTS/tts-service/data/**/.gitkeep
+
+# Chat system temp ingestion
 Chat/temp-ingestion/
+
+# Local Caddy proxy binary
+/caddy
 
 # Dev-only scripts — moved to UI/scripts/dev-only/, excluded from source tracking
 UI/scripts/dev-only/
@@ -64,6 +75,8 @@ UI/test-layout*.ts
 **/.env
 **/.env.*
 **/.env*
+!**/.env.example
+!**/.env.example.*
 
 # Terraform
 .terraform/

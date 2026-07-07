@@ -361,18 +361,13 @@ MIT License - See LICENSE file for details
 
 ## Contributing
 
-1. Create a feature branch
-2. Make changes following the existing code style
-3. Add tests for new functionality
-4. Run `npm run lint` and `npm test`
-5. Submit a pull request
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct, development setup, and pull request process.
 
 ## Support
 
 For issues and questions, refer to:
-- `docs/` directory for detailed specifications
-- `DEVELOPMENT_SETUP.md` for detailed setup instructions
-- Individual component READMEs for service-specific documentation
+- `docs/` directory for detailed specifications and architecture guides.
+- Individual component READMEs for service-specific documentation.
 
 
 ## Workspace Commands (Next.js app in `UI/`)

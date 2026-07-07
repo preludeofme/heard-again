@@ -9,7 +9,7 @@ const getAllowedOrigins = () => {
     return envOrigins.split(',').map(o => o.trim())
   }
   return [
-    'https://trubuck-design-ai-beast.stern-mulley.ts.net:4777',
+    'https://your-tailscale-node-name.ts.net:4777',
     'http://localhost:4777',
     'http://localhost:3000'
   ]

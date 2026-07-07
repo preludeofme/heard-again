@@ -58,7 +58,7 @@ const nextConfig = {
   turbopack: {
     root: workspaceRoot,
   },
-  allowedDevOrigins: ['100.75.138.91', 'trubuck-design-ai-beast.stern-mulley.ts.net', 'localhost', '127.0.0.1'],
+  allowedDevOrigins: ['localhost', '127.0.0.1', ...(process.env.ALLOWED_DEV_ORIGINS ? process.env.ALLOWED_DEV_ORIGINS.split(',') : [])],
   images: {
     remotePatterns: [
       {

@@ -143,7 +143,7 @@ echo -e "${YELLOW}HEALTH ENDPOINT TESTS${NC}"
 echo ""
 
 echo -e "${BLUE}1. Main App Health${NC}"
-test_json_endpoint_with_fallback "http://localhost:$MAIN_APP_PORT/api/instance/health" "http://trubuck-design-ai-beast.stern-mulley.ts.net:$MAIN_APP_PORT/api/instance/health" "Main App" '.data // .'
+test_json_endpoint_with_fallback "http://localhost:$MAIN_APP_PORT/api/instance/health" "http://your-tailscale-node-name.ts.net:$MAIN_APP_PORT/api/instance/health" "Main App" '.data // .'
 
 echo ""
 echo -e "${BLUE}2. Chat System Health${NC}"

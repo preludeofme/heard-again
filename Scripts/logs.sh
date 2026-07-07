@@ -16,7 +16,7 @@ CYAN='\033[0;36m'
 NC='\033[0m'
 
 # Config
-MAIN_APP_DIR="/home/trubuck-design/Projects/Personal/heard-again"
+MAIN_APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SERVICE="${1:-all}"
 LINES="${2:-50}"
 
