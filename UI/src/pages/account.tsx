@@ -205,11 +205,6 @@ export default function AccountPage() {
   const [instance, setInstance] = useState<Instance | null>(null)
   const [tunnelStatus, setTunnelStatus] = useState<TunnelStatus | null>(null)
 
-  // Load all data
-  useEffect(() => {
-    loadData()
-  }, [])
-
   const loadData = async () => {
     setIsLoading(true)
     try {
@@ -222,10 +217,26 @@ export default function AccountPage() {
 
       // Get subscription
       try {
-        const subRes = await fetch('/api/billing/subscription', { credentials: 'include' })
+        const sessionId = router.query.session_id
+        const fetchUrl = typeof sessionId === 'string' && sessionId.startsWith('cs_')
+          ? `/api/billing/subscription?session_id=${sessionId}`
+          : '/api/billing/subscription'
+
+        const subRes = await fetch(fetchUrl, { credentials: 'include' })
         const subData = await subRes.json()
         if (subData.success) {
           setSubscription(subData.data)
+          if (sessionId) {
+            setSuccess("Your plan was updated successfully! A confirmation email has been sent.")
+            // Clean up session_id from URL without reloading the page
+            const newQuery = { ...router.query }
+            delete newQuery.session_id
+            router.replace(
+              { pathname: router.pathname, query: newQuery },
+              undefined,
+              { shallow: true }
+            )
+          }
         }
       } catch {
         // No subscription is ok
@@ -285,6 +296,13 @@ export default function AccountPage() {
       setIsLoading(false)
     }
   }
+
+  // Load all data when router is ready
+  useEffect(() => {
+    if (router.isReady) {
+      loadData()
+    }
+  }, [router.isReady])
 
   const handleCancelSubscription = async () => {
     try {

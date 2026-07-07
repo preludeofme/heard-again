@@ -228,4 +228,56 @@ ${params.message}
       `
     })
   }
+
+  /**
+   * Send subscription confirmation email
+   */
+  static async sendSubscriptionConfirmationEmail(params: {
+    to: string
+    userName: string
+    planName: string
+    priceDisplay: string
+    billingCycle: string
+    baseUrl: string
+  }): Promise<boolean> {
+    return this.sendEmail({
+      to: params.to,
+      subject: 'Your Heard Again Subscription is Active!',
+      html: `
+        <div style="font-family: 'Newsreader', serif, Arial; line-height: 1.6; color: #16334a; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #d0e3e6; border-radius: 8px;">
+          <h2 style="color: #16334a; border-bottom: 2px solid #16334a; padding-bottom: 10px;">Subscription Confirmed!</h2>
+          <p>Hi ${params.userName},</p>
+          <p>Thank you for subscribing to the <strong>${params.planName}</strong> plan on <strong>Heard Again</strong>!</p>
+          
+          <div style="background-color: #f5f9fa; border: 1px solid #d0e3e6; border-radius: 6px; padding: 16px; margin: 20px 0;">
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 6px 0; font-weight: bold; color: #16334a;">Plan:</td>
+                <td style="padding: 6px 0; text-align: right; color: #16334a;">${params.planName}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px 0; font-weight: bold; color: #16334a;">Price:</td>
+                <td style="padding: 6px 0; text-align: right; color: #16334a;">$${params.priceDisplay} / ${params.billingCycle}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px 0; font-weight: bold; color: #16334a;">Status:</td>
+                <td style="padding: 6px 0; text-align: right; color: green; font-weight: bold;">Active</td>
+              </tr>
+            </table>
+          </div>
+
+          <p>Your subscription includes access to advanced features such as cloud storage quotas, generation minutes for voice narration/synthesis, and family member spaces.</p>
+          
+          <div style="margin: 30px 0; text-align: center;">
+            <a href="${params.baseUrl}/account?tab=subscription" style="background-color: #16334a; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block;">Manage Your Subscription</a>
+          </div>
+          
+          <p style="font-size: 0.9rem; color: #546669;">If you have any questions or need support, reply to this email or contact us at ${this.supportEmail}.</p>
+          <p style="font-size: 0.8rem; color: #8a9a9d; margin-top: 40px; border-top: 1px solid #f0ede8; padding-top: 20px;">
+            — The Heard Again Team
+          </p>
+        </div>
+      `
+    })
+  }
 }
