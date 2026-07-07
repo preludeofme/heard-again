@@ -161,9 +161,28 @@ export const authOptions: NextAuthOptions = {
           prompt: 'select_account',
         },
       },
+      // Let a Google sign-in link to an existing email/password account with the
+      // same email, instead of NextAuth's default OAuthAccountNotLinked block.
+      // Safe here specifically because Google always verifies the email address
+      // before it's ever handed to us — see the signIn callback below for the
+      // defensive check we still do on top of this.
+      allowDangerousEmailAccountLinking: true,
     }),
   ],
   callbacks: {
+    async signIn({ account, profile }) {
+      // Defense in depth: even though Google reliably verifies emails, don't
+      // trust that blindly — refuse to link/sign in if the profile explicitly
+      // reports the email as unverified.
+      if (account?.provider === 'google') {
+        const emailVerified = (profile as { email_verified?: boolean } | undefined)?.email_verified
+        if (emailVerified === false) {
+          logger.warn(`Blocked Google sign-in with unverified email for account linking`)
+          return false
+        }
+      }
+      return true
+    },
     async jwt({ token, user, account, trigger }) {
       // On initial sign-in, persist user info into the JWT
       if (user) {
