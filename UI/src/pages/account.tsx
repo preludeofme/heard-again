@@ -2,6 +2,10 @@ import Head from 'next/head'
 import { useEffect, useState } from 'react'
 import { fetchWithCSRF } from '@/lib/api-client'
 import { useRouter } from 'next/router'
+import { loadStripe } from '@stripe/stripe-js'
+import { EmbeddedCheckoutProvider, EmbeddedCheckout } from '@stripe/react-stripe-js'
+
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '')
 import {
   Alert,
   Avatar,
@@ -154,6 +158,7 @@ export default function AccountPage() {
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false)
   const [cancelImmediately, setCancelImmediately] = useState(false)
   const [isChangePlanDialogOpen, setIsChangePlanDialogOpen] = useState(false)
+  const [stripeClientSecret, setStripeClientSecret] = useState<string | null>(null)
   const [selectedPlanId, setSelectedPlanId] = useState('')
 
   // Refunds (owner/admin only)
@@ -335,6 +340,10 @@ export default function AccountPage() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to change plan')
+      if (data.data?.clientSecret) {
+        setStripeClientSecret(data.data.clientSecret)
+        return
+      }
       if (data.data?.checkoutUrl) {
         window.location.href = data.data.checkoutUrl
         return
@@ -908,108 +917,138 @@ export default function AccountPage() {
           </Dialog>
 
           {/* Change Plan Dialog */}
-          <Dialog open={isChangePlanDialogOpen} onClose={() => setIsChangePlanDialogOpen(false)} maxWidth="sm" fullWidth>
-            <DialogTitle sx={{ pb: 1, fontWeight: 700, color: '#16334a' }}>Confirm Plan Change</DialogTitle>
+          <Dialog 
+            open={isChangePlanDialogOpen} 
+            onClose={() => {
+              setIsChangePlanDialogOpen(false)
+              setStripeClientSecret(null)
+            }} 
+            maxWidth="sm" 
+            fullWidth
+          >
+            <DialogTitle sx={{ pb: 1, fontWeight: 700, color: '#16334a' }}>
+              {stripeClientSecret ? 'Complete Subscription' : 'Confirm Plan Change'}
+            </DialogTitle>
             <DialogContent>
-              {(() => {
-                const targetPlan = plans.find((p) => p.id === selectedPlanId)
-                if (!targetPlan) {
+              {stripeClientSecret ? (
+                <Box sx={{ mt: 1, minHeight: '400px' }}>
+                  <EmbeddedCheckoutProvider
+                    stripe={stripePromise}
+                    options={{ clientSecret: stripeClientSecret }}
+                  >
+                    <EmbeddedCheckout />
+                  </EmbeddedCheckoutProvider>
+                </Box>
+              ) : (
+                (() => {
+                  const targetPlan = plans.find((p) => p.id === selectedPlanId)
+                  if (!targetPlan) {
+                    return (
+                      <FormControl fullWidth sx={{ mt: 2 }}>
+                        <InputLabel>Select Plan</InputLabel>
+                        <Select
+                          value={selectedPlanId}
+                          onChange={(e) => setSelectedPlanId(e.target.value)}
+                        >
+                          {plans.map((plan) => (
+                            <MenuItem key={plan.id} value={plan.id}>
+                              {plan.name} - ${plan.pricing.monthlyDisplay}/month
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    )
+                  }
+
+                  const currentPlan = subscription?.plan
+                  const currentCents = currentPlan?.pricing?.monthlyCents || 0
+                  const targetCents = targetPlan.pricing.monthlyCents
+                  const deltaCents = targetCents - currentCents
+                  let deltaText = ''
+                  if (deltaCents > 0) {
+                    deltaText = `(+$${(deltaCents / 100).toFixed(2)}/month)`
+                  } else if (deltaCents < 0) {
+                    deltaText = `(-$${(Math.abs(deltaCents) / 100).toFixed(2)}/month)`
+                  } else {
+                    deltaText = '(No price change)'
+                  }
+
                   return (
-                    <FormControl fullWidth sx={{ mt: 2 }}>
-                      <InputLabel>Select Plan</InputLabel>
-                      <Select
-                        value={selectedPlanId}
-                        onChange={(e) => setSelectedPlanId(e.target.value)}
-                      >
-                        {plans.map((plan) => (
-                          <MenuItem key={plan.id} value={plan.id}>
-                            {plan.name} - ${plan.pricing.monthlyDisplay}/month
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  )
-                }
-
-                const currentPlan = subscription?.plan
-                const currentCents = currentPlan?.pricing?.monthlyCents || 0
-                const targetCents = targetPlan.pricing.monthlyCents
-                const deltaCents = targetCents - currentCents
-                let deltaText = ''
-                if (deltaCents > 0) {
-                  deltaText = `(+$${(deltaCents / 100).toFixed(2)}/month)`
-                } else if (deltaCents < 0) {
-                  deltaText = `(-$${(Math.abs(deltaCents) / 100).toFixed(2)}/month)`
-                } else {
-                  deltaText = '(No price change)'
-                }
-
-                return (
-                  <Box sx={{ mt: 1 }}>
-                    <Typography variant="body1" sx={{ mb: 3 }}>
-                      You are switching to the <strong>{targetPlan.name}</strong> plan. Please review the changes below.
-                    </Typography>
-
-                    {/* Cost Perspective */}
-                    <Box sx={{ mb: 3, p: 2, bgcolor: '#f6f3ee', borderRadius: 2 }}>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, color: '#16334a' }}>
-                        Cost Comparison
+                    <Box sx={{ mt: 1 }}>
+                      <Typography variant="body1" sx={{ mb: 3 }}>
+                        You are switching to the <strong>{targetPlan.name}</strong> plan. Please review the changes below.
                       </Typography>
-                      <Grid container spacing={2}>
-                        <Grid item xs={6}>
-                          <Typography variant="caption" color="text.secondary">Current Price</Typography>
-                          <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                            {currentPlan ? `$${currentPlan.pricing.monthlyDisplay}/month` : '$0.00 (Free)'}
-                          </Typography>
-                        </Grid>
-                        <Grid item xs={6}>
-                          <Typography variant="caption" color="text.secondary">New Price</Typography>
-                          <Typography variant="body2" sx={{ fontWeight: 600, color: '#16334a' }}>
-                            ${targetPlan.pricing.monthlyDisplay}/month <span style={{ fontSize: '0.8rem', fontWeight: 500, display: 'block', marginTop: '2px' }}>{deltaText}</span>
-                          </Typography>
-                        </Grid>
-                      </Grid>
-                    </Box>
 
-                    {/* Features Perspective */}
-                    <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, color: '#16334a' }}>
-                      Feature Changes
-                    </Typography>
-                    <Stack spacing={1.5} sx={{ mt: 1 }}>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(0,0,0,0.06)', pb: 1 }}>
-                        <Typography variant="body2" color="text.secondary">Generation Minutes</Typography>
-                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                          {currentPlan ? `${currentPlan.entitlements.generationMinutesIncluded} min` : '0 min'} ➜ <span style={{ color: '#16334a' }}>{targetPlan.entitlements.generationMinutesIncluded} min</span>
+                      {/* Cost Perspective */}
+                      <Box sx={{ mb: 3, p: 2, bgcolor: '#f6f3ee', borderRadius: 2 }}>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, color: '#16334a' }}>
+                          Cost Comparison
                         </Typography>
+                        <Grid container spacing={2}>
+                          <Grid size={{ xs: 6 }}>
+                            <Typography variant="caption" color="text.secondary">Current Price</Typography>
+                            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                              {currentPlan ? `$${currentPlan.pricing.monthlyDisplay}/month` : '$0.00 (Free)'}
+                            </Typography>
+                          </Grid>
+                          <Grid size={{ xs: 6 }}>
+                            <Typography variant="caption" color="text.secondary">New Price</Typography>
+                            <Typography variant="body2" sx={{ fontWeight: 600, color: '#16334a' }}>
+                              ${targetPlan.pricing.monthlyDisplay}/month <span style={{ fontSize: '0.8rem', fontWeight: 500, display: 'block', marginTop: '2px' }}>{deltaText}</span>
+                            </Typography>
+                          </Grid>
+                        </Grid>
                       </Box>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(0,0,0,0.06)', pb: 1 }}>
-                        <Typography variant="body2" color="text.secondary">Storage Space</Typography>
-                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                          {currentPlan ? formatBytes(currentPlan.entitlements.storageQuotaBytes) : '0 B'} ➜ <span style={{ color: '#16334a' }}>{formatBytes(targetPlan.entitlements.storageQuotaBytes)}</span>
-                        </Typography>
-                      </Box>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(0,0,0,0.06)', pb: 1 }}>
-                        <Typography variant="body2" color="text.secondary">Member Limit</Typography>
-                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                          {currentPlan ? `${currentPlan.entitlements.memberQuota} members` : '0 members'} ➜ <span style={{ color: '#16334a' }}>{targetPlan.entitlements.memberQuota} members</span>
-                        </Typography>
-                      </Box>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', pb: 0.5 }}>
-                        <Typography variant="body2" color="text.secondary">Cloud GPU Access</Typography>
-                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                          {currentPlan?.entitlements?.cloudGpuEnabled ? 'Yes' : 'No'} ➜ <span style={{ color: '#16334a' }}>{targetPlan.entitlements.cloudGpuEnabled ? 'Yes' : 'No'}</span>
-                        </Typography>
-                      </Box>
-                    </Stack>
-                  </Box>
-                )
-              })()}
+
+                      {/* Features Perspective */}
+                      <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, color: '#16334a' }}>
+                        Feature Changes
+                      </Typography>
+                      <Stack spacing={1.5} sx={{ mt: 1 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(0,0,0,0.06)', pb: 1 }}>
+                          <Typography variant="body2" color="text.secondary">Generation Minutes</Typography>
+                          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                            {currentPlan ? `${currentPlan.entitlements.generationMinutesIncluded} min` : '0 min'} ➜ <span style={{ color: '#16334a' }}>{targetPlan.entitlements.generationMinutesIncluded} min</span>
+                          </Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(0,0,0,0.06)', pb: 1 }}>
+                          <Typography variant="body2" color="text.secondary">Storage Space</Typography>
+                          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                            {currentPlan ? formatBytes(currentPlan.entitlements.storageQuotaBytes) : '0 B'} ➜ <span style={{ color: '#16334a' }}>{formatBytes(targetPlan.entitlements.storageQuotaBytes)}</span>
+                          </Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(0,0,0,0.06)', pb: 1 }}>
+                          <Typography variant="body2" color="text.secondary">Member Limit</Typography>
+                          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                            {currentPlan ? `${currentPlan.entitlements.memberQuota} members` : '0 members'} ➜ <span style={{ color: '#16334a' }}>{targetPlan.entitlements.memberQuota} members</span>
+                          </Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', pb: 0.5 }}>
+                          <Typography variant="body2" color="text.secondary">Cloud GPU Access</Typography>
+                          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                            {currentPlan?.entitlements?.cloudGpuEnabled ? 'Yes' : 'No'} ➜ <span style={{ color: '#16334a' }}>{targetPlan.entitlements.cloudGpuEnabled ? 'Yes' : 'No'}</span>
+                          </Typography>
+                        </Box>
+                      </Stack>
+                    </Box>
+                  )
+                })()
+              )}
             </DialogContent>
             <DialogActions sx={{ px: 3, pb: 2 }}>
-              <Button onClick={() => setIsChangePlanDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleChangePlan} variant="contained" disabled={!selectedPlanId} sx={{ bgcolor: '#16334a', '&:hover': { bgcolor: '#2e4a62' } }}>
-                Confirm Change
+              <Button 
+                onClick={() => {
+                  setIsChangePlanDialogOpen(false)
+                  setStripeClientSecret(null)
+                }}
+              >
+                {stripeClientSecret ? 'Close' : 'Cancel'}
               </Button>
+              {!stripeClientSecret && (
+                <Button onClick={handleChangePlan} variant="contained" disabled={!selectedPlanId} sx={{ bgcolor: '#16334a', '&:hover': { bgcolor: '#2e4a62' } }}>
+                  Confirm Change
+                </Button>
+              )}
             </DialogActions>
           </Dialog>
         </Container>

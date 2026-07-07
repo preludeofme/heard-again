@@ -105,6 +105,7 @@ describe('/api/billing/subscribe', () => {
     })
     ;(stripe.checkout.sessions.create as jest.Mock).mockResolvedValue({
       url: 'https://checkout.stripe.com/session_abc',
+      client_secret: 'cs_abc',
     })
 
     const { req, res } = createMocks({ body: { planId: 'cloud_min', billingCycle: 'monthly' } })
@@ -132,7 +133,7 @@ describe('/api/billing/subscribe', () => {
     ;(prisma.subscription.findUnique as jest.Mock).mockResolvedValue({
       stripeCustomerId: 'cus_existing',
     })
-    ;(stripe.checkout.sessions.create as jest.Mock).mockResolvedValue({ url: 'https://checkout.stripe.com/x' })
+    ;(stripe.checkout.sessions.create as jest.Mock).mockResolvedValue({ url: 'https://checkout.stripe.com/x', client_secret: 'cs_x' })
 
     const { req, res } = createMocks({ body: { planId: 'cloud_min', billingCycle: 'monthly' } })
     await handler(req, res)

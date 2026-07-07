@@ -50,6 +50,7 @@ const handler = apiHandler({
 
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
+      ui_mode: 'embedded_page',
       line_items: [{ price: stripePriceId, quantity: 1 }],
       subscription_data: {
         trial_period_days: TRIAL_PERIOD_DAYS,
@@ -60,8 +61,7 @@ const handler = apiHandler({
       ...(existingSubscription?.stripeCustomerId
         ? { customer: existingSubscription.stripeCustomerId }
         : { customer_email: user.email }),
-      success_url: `${baseUrl}/account?tab=subscription&checkout=success`,
-      cancel_url: `${baseUrl}/account?tab=subscription&checkout=cancelled`,
+      return_url: `${baseUrl}/account?tab=subscription&session_id={CHECKOUT_SESSION_ID}`,
     })
 
     return successResponse(res, {
@@ -72,6 +72,7 @@ const handler = apiHandler({
         planType: plan.planType,
       },
       checkoutUrl: session.url,
+      clientSecret: session.client_secret,
     }, 201)
   },
 })
