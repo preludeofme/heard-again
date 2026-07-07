@@ -145,8 +145,8 @@ const nextConfig = {
           {
             key: 'Content-Security-Policy',
             value: isDev
-              ? "default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' blob: http://localhost:3030 ws://localhost:3030 https://api.trigger.dev wss://api.trigger.dev; media-src 'self' blob:; worker-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
-              : "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' blob: https://*.r2.cloudflarestorage.com https://api.trigger.dev; media-src 'self' blob:; worker-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'self';",
+              ? "default-src 'self'; script-src 'self' 'unsafe-eval' https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' blob: http://localhost:3030 ws://localhost:3030 https://api.trigger.dev wss://api.trigger.dev https://api.stripe.com; media-src 'self' blob:; worker-src 'self' blob:; frame-src https://js.stripe.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
+              : "default-src 'self'; script-src 'self' https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' blob: https://*.r2.cloudflarestorage.com https://api.trigger.dev https://api.stripe.com; media-src 'self' blob:; worker-src 'self' blob:; frame-src https://js.stripe.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self';",
           },
           {
             key: 'X-Content-Type-Options',

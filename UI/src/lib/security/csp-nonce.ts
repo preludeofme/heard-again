@@ -7,11 +7,12 @@ export function generateNonce(): string {
 export function generateCspPolicy(nonce: string): string {
   const directives = {
     'default-src': ["'self'"],
-    'script-src': ["'self'", `'nonce-${nonce}'`],
+    'script-src': ["'self'", `'nonce-${nonce}'`, 'https://js.stripe.com'],
     'style-src': ["'self'", `'nonce-${nonce}'`],
     'img-src': ["'self'", 'data:', 'https:'],
     'font-src': ["'self'", 'data:'],
-    'connect-src': ["'self'"],
+    'connect-src': ["'self'", 'https://api.stripe.com'],
+    'frame-src': ['https://js.stripe.com'],
     'frame-ancestors': ["'none'"],
     'base-uri': ["'self'"],
     'form-action': ["'self'"],

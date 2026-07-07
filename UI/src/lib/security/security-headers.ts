@@ -149,11 +149,12 @@ export const developmentSecurityConfig: SecurityHeadersConfig = {
   contentSecurityPolicy: {
     directives: {
       'default-src': ["'self'"],
-      'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'", 'localhost:4777'], // Development needs
+      'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'", 'localhost:4777', 'https://js.stripe.com'], // Development needs
       'style-src': ["'self'", "'unsafe-inline'", 'localhost:4777'],
       'img-src': ["'self'", 'data:', 'https:', 'localhost:4777'],
       'font-src': ["'self'", 'data:', 'localhost:4777'],
-      'connect-src': ["'self'", 'https://localhost:4777', 'https://localhost:4778', 'https://localhost:4779', 'ws://localhost:4777', 'ws://localhost:4778', 'ws://localhost:4779'],
+      'connect-src': ["'self'", 'https://localhost:4777', 'https://localhost:4778', 'https://localhost:4779', 'ws://localhost:4777', 'ws://localhost:4778', 'ws://localhost:4779', 'https://api.stripe.com'],
+      'frame-src': ['https://js.stripe.com'],
       'frame-ancestors': ["'none'"],
       'base-uri': ["'self'"],
       'form-action': ["'self'"],
@@ -187,11 +188,12 @@ export const productionSecurityConfig: SecurityHeadersConfig = {
   contentSecurityPolicy: {
     directives: {
       'default-src': ["'self'"],
-      'script-src': ["'self'"], // No unsafe-inline/eval in production
+      'script-src': ["'self'", 'https://js.stripe.com'], // No unsafe-inline/eval in production
       'style-src': ["'self'"], // No unsafe-inline in production
       'img-src': ["'self'", 'data:', 'https:'],
       'font-src': ["'self'", 'data:'],
-      'connect-src': ["'self'", 'https://*.r2.cloudflarestorage.com'],
+      'connect-src': ["'self'", 'https://*.r2.cloudflarestorage.com', 'https://api.trigger.dev', 'https://api.stripe.com'],
+      'frame-src': ['https://js.stripe.com'],
       'frame-ancestors': ["'none'"],
       'base-uri': ["'self'"],
       'form-action': ["'self'"],
