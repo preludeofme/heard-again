@@ -4,11 +4,13 @@ interface SendEmailParams {
   to: string | string[]
   subject: string
   html: string
+  replyTo?: string
 }
 
 export class EmailService {
   private static apiKey = process.env.RESEND_API_KEY
   private static fromEmail = process.env.EMAIL_FROM || 'Heard Again <no-reply@heardagain.com>'
+  private static supportEmail = process.env.SUPPORT_EMAIL || 'ryan@trubuckdesign.com'
 
   /**
    * Send an email using Resend API
@@ -19,7 +21,8 @@ export class EmailService {
       logger.info({
         to: params.to,
         subject: params.subject,
-        htmlSnippet: params.html.substring(0, 200) + '...'
+        htmlSnippet: params.html.substring(0, 200) + '...',
+        ...(params.replyTo ? { replyTo: params.replyTo } : {})
       }, 'Simulated Email Sent')
       return true
     }
@@ -36,6 +39,7 @@ export class EmailService {
           to: Array.isArray(params.to) ? params.to : [params.to],
           subject: params.subject,
           html: params.html,
+          ...(params.replyTo ? { reply_to: params.replyTo } : {}),
         }),
       })
 
@@ -170,6 +174,56 @@ export class EmailService {
           </p>
           <p>If you did not request this, you can safely ignore this email.</p>
           <p>This link expires in 1 hour.</p>
+        </div>
+      `
+    })
+  }
+
+  /**
+   * Send a support contact request email to the support email address
+   */
+  static async sendSupportContactEmail(params: {
+    name?: string
+    email: string
+    subject: string
+    message: string
+  }): Promise<boolean> {
+    const nameStr = params.name ? params.name : 'Anonymous User'
+    return this.sendEmail({
+      to: this.supportEmail,
+      replyTo: params.email,
+      subject: `[Heard Again Support] ${params.subject}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #16334a; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #d0e3e6; border-radius: 8px;">
+          <h2 style="color: #16334a; border-bottom: 2px solid #16334a; padding-bottom: 10px; margin-top: 0;">New Support Request</h2>
+          <p>You have received a new support contact request from the Heard Again application contact form.</p>
+          
+          <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+            <tr>
+              <td style="padding: 8px; font-weight: bold; width: 120px; border-bottom: 1px solid #f0ede8;">From Name:</td>
+              <td style="padding: 8px; border-bottom: 1px solid #f0ede8;">${nameStr}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px; font-weight: bold; border-bottom: 1px solid #f0ede8;">From Email:</td>
+              <td style="padding: 8px; border-bottom: 1px solid #f0ede8;"><a href="mailto:${params.email}" style="color: #16334a;">${params.email}</a></td>
+            </tr>
+            <tr>
+              <td style="padding: 8px; font-weight: bold; border-bottom: 1px solid #f0ede8;">Subject:</td>
+              <td style="padding: 8px; border-bottom: 1px solid #f0ede8;">${params.subject}</td>
+            </tr>
+          </table>
+          
+          <div style="background-color: #f5f9fa; border: 1px solid #d0e3e6; border-radius: 6px; padding: 16px; margin: 20px 0; white-space: pre-wrap;">
+${params.message}
+          </div>
+          
+          <p style="font-size: 0.9rem; color: #546669; margin-top: 30px;">
+            To reply to this support request, simply reply directly to this email (the Reply-To header has been set to the user's email address).
+          </p>
+          
+          <p style="font-size: 0.8rem; color: #8a9a9d; margin-top: 40px; border-top: 1px solid #f0ede8; padding-top: 20px;">
+            Heard Again System Notification
+          </p>
         </div>
       `
     })

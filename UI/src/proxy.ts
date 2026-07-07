@@ -56,6 +56,7 @@ export default async function middleware(request: NextRequest) {
     '/privacy',
     '/terms',
     '/terms-legacy',
+    '/support',
     '/images',
     '/manifest.json',
     '/icon-192.png',
