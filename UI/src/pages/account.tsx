@@ -61,6 +61,7 @@ interface User {
   email: string
   image: string | null
   role: string
+  loginProvider?: string | null
 }
 
 interface Plan {
@@ -175,9 +176,13 @@ export default function AccountPage() {
       subscription: 3,
     }
     if (tabParam in tabIndex) {
+      if (tabParam === 'security' && user?.loginProvider === 'google') {
+        setActiveTab(0)
+        return
+      }
       setActiveTab(tabIndex[tabParam])
     }
-  }, [router.query.tab])
+  }, [router.query.tab, user?.loginProvider])
 
   // Instance/Tunnel data
   const [instance, setInstance] = useState<Instance | null>(null)
@@ -427,7 +432,11 @@ export default function AccountPage() {
               allowScrollButtonsMobile
             >
               <Tab icon={<Person />} label="Profile" />
-              <Tab icon={<SecurityIcon />} label="Security" />
+              <Tab 
+                icon={<SecurityIcon />} 
+                label="Security" 
+                style={user?.loginProvider === 'google' ? { display: 'none' } : undefined} 
+              />
               <Tab icon={<Group />} label="Familyspace" />
               <Tab icon={<CreditCard />} label="Subscription" />
               {/* <Tab icon={<Cloud />} label="Instance & Tunnel" /> */}
@@ -483,28 +492,30 @@ export default function AccountPage() {
           </TabPanel>
 
           {/* Security Tab */}
-          <TabPanel value={activeTab} index={1}>
-            {pendingPlan && (
-              <Alert severity="info" sx={{ mb: 3 }}>
-                Almost there — familyspace owners need two-factor security set up before
-                subscribing. Set it up below, then head to the{' '}
-                <Button
-                  size="small"
-                  onClick={() => {
-                    setActiveTab(3)
-                    const matchedPlan = plans.find((p) => p.slug === pendingPlan)
-                    setSelectedPlanId(matchedPlan?.id || pendingPlan)
-                    setIsChangePlanDialogOpen(true)
-                  }}
-                  sx={{ verticalAlign: 'baseline', textTransform: 'none', p: 0, minWidth: 0 }}
-                >
-                  Subscription tab
-                </Button>{' '}
-                to finish subscribing to your selected plan.
-              </Alert>
-            )}
-            <SecuritySettings />
-          </TabPanel>
+          {user?.loginProvider !== 'google' && (
+            <TabPanel value={activeTab} index={1}>
+              {pendingPlan && (
+                <Alert severity="info" sx={{ mb: 3 }}>
+                  Almost there — familyspace owners need two-factor security set up before
+                  subscribing. Set it up below, then head to the{' '}
+                  <Button
+                    size="small"
+                    onClick={() => {
+                      setActiveTab(3)
+                      const matchedPlan = plans.find((p) => p.slug === pendingPlan)
+                      setSelectedPlanId(matchedPlan?.id || pendingPlan)
+                      setIsChangePlanDialogOpen(true)
+                    }}
+                    sx={{ verticalAlign: 'baseline', textTransform: 'none', p: 0, minWidth: 0 }}
+                  >
+                    Subscription tab
+                  </Button>{' '}
+                  to finish subscribing to your selected plan.
+                </Alert>
+              )}
+              <SecuritySettings />
+            </TabPanel>
+          )}
 
           {/* Familyspace Tab */}
           <TabPanel value={activeTab} index={2}>
