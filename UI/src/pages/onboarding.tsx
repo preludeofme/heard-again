@@ -96,6 +96,27 @@ export default function OnboardingPage() {
       // Update session to reflect onboarding is complete
       await update()
 
+      // If the user arrived from a paid pricing tier (?plan=cloud_mid etc.), start
+      // Stripe Checkout for it now that the familyspace exists. Falls through to the
+      // normal dashboard redirect if there's no plan, or if Checkout couldn't start —
+      // they can still subscribe later from /account.
+      const planSlug = typeof router.query.plan === 'string' ? router.query.plan : null
+      if (planSlug) {
+        try {
+          const subRes = await fetchWithCSRFAndJSON('/api/billing/subscribe', {
+            planId: planSlug,
+            billingCycle: 'monthly',
+          })
+          const subData = await subRes.json()
+          if (subRes.ok && subData.data?.checkoutUrl) {
+            window.location.href = subData.data.checkoutUrl
+            return
+          }
+        } catch {
+          // Ignore — fall through to the normal dashboard redirect below.
+        }
+      }
+
       // Redirect to dashboard (middleware will allow access since onboarding is now complete)
       router.push('/family-tree')
     } catch (err: any) {

@@ -9,6 +9,7 @@ import {
   Button,
   Card,
   CardContent,
+  Checkbox,
   Chip,
   CircularProgress,
   Container,
@@ -18,6 +19,7 @@ import {
   DialogTitle,
   Divider,
   FormControl,
+  FormControlLabel,
   Grid,
   InputLabel,
   LinearProgress,
@@ -84,6 +86,7 @@ interface Subscription {
   billingStatus: string
   renewalDate: string | null
   cancelledAt: string | null
+  cancelAtPeriodEnd: boolean
   stripeSubscriptionId: string | null
   usage: {
     generationMinutesUsed: number
@@ -91,6 +94,15 @@ interface Subscription {
     lastBillingResetAt: string
   }
   plan: Plan | null
+}
+
+interface Refund {
+  id: string
+  amountCents: number
+  currency: string
+  reason: string | null
+  status: string
+  createdAt: string
 }
 
 interface TunnelStatus {
@@ -138,8 +150,15 @@ export default function AccountPage() {
   const [subscription, setSubscription] = useState<Subscription | null>(null)
   const [plans, setPlans] = useState<Plan[]>([])
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false)
+  const [cancelImmediately, setCancelImmediately] = useState(false)
   const [isChangePlanDialogOpen, setIsChangePlanDialogOpen] = useState(false)
   const [selectedPlanId, setSelectedPlanId] = useState('')
+
+  // Refunds (owner/admin only)
+  const [refunds, setRefunds] = useState<Refund[]>([])
+  const [isRefundDialogOpen, setIsRefundDialogOpen] = useState(false)
+  const [refundAmount, setRefundAmount] = useState('')
+  const [refundReason, setRefundReason] = useState('')
 
   // Instance/Tunnel data
   const [instance, setInstance] = useState<Instance | null>(null)
@@ -182,11 +201,26 @@ export default function AccountPage() {
       const instanceRes = await fetch('/api/instance/status', { credentials: 'include' })
       const instanceData = await instanceRes.json()
       let currentFamilyspaceId = ''
+      let currentRole = 'MEMBER'
       if (instanceData.success) {
         setInstance(instanceData.data.instance || null)
         setTunnelStatus(instanceData.data.tunnel || null)
-        setFamilyspaceRole(instanceData.data.familyspaceRole || 'MEMBER')
+        currentRole = instanceData.data.familyspaceRole || 'MEMBER'
+        setFamilyspaceRole(currentRole)
         currentFamilyspaceId = instanceData.data.familyspaceId
+      }
+
+      // Refund history is owner/admin only
+      if (currentRole === 'OWNER' || currentRole === 'ADMIN') {
+        try {
+          const refundsRes = await fetch('/api/billing/refund', { credentials: 'include' })
+          const refundsData = await refundsRes.json()
+          if (refundsData.success) {
+            setRefunds(refundsData.data.refunds)
+          }
+        } catch {
+          // Refund history is non-critical
+        }
       }
 
       // Get familyspace details
@@ -213,11 +247,53 @@ export default function AccountPage() {
 
   const handleCancelSubscription = async () => {
     try {
-      const res = await fetchWithCSRF('/api/billing/cancel', { method: 'POST', credentials: 'include' })
+      const res = await fetchWithCSRF('/api/billing/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ immediate: cancelImmediately }),
+      })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to cancel')
-      setSuccess('Subscription cancelled successfully')
+      setSuccess(data.data?.message || 'Subscription cancelled successfully')
       setIsCancelDialogOpen(false)
+      setCancelImmediately(false)
+      await loadData()
+    } catch (err: any) {
+      setError(err.message)
+    }
+  }
+
+  const handleResumeSubscription = async () => {
+    try {
+      const res = await fetchWithCSRF('/api/billing/resume', { method: 'POST', credentials: 'include' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to resume subscription')
+      setSuccess(data.data?.message || 'Subscription resumed')
+      await loadData()
+    } catch (err: any) {
+      setError(err.message)
+    }
+  }
+
+  const handleRequestRefund = async () => {
+    try {
+      const amountCents = refundAmount ? Math.round(parseFloat(refundAmount) * 100) : undefined
+      const res = await fetchWithCSRF('/api/billing/refund', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          ...(amountCents ? { amountCents } : {}),
+          ...(refundReason ? { reason: refundReason } : {}),
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to submit refund')
+      setSuccess(data.data?.message || 'Refund submitted')
+      setIsRefundDialogOpen(false)
+      setRefundAmount('')
+      setRefundReason('')
       await loadData()
     } catch (err: any) {
       setError(err.message)
@@ -235,6 +311,10 @@ export default function AccountPage() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to change plan')
+      if (data.data?.checkoutUrl) {
+        window.location.href = data.data.checkoutUrl
+        return
+      }
       setSuccess('Plan changed successfully')
       setIsChangePlanDialogOpen(false)
       await loadData()
@@ -482,10 +562,14 @@ export default function AccountPage() {
                 <CardContent>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
                     <Typography variant="h6">Current Plan</Typography>
-                    <Chip
-                      label={subscription?.billingStatus || 'NO SUBSCRIPTION'}
-                      color={subscription?.billingStatus === 'ACTIVE' ? 'success' : 'default'}
-                    />
+                    {subscription?.cancelAtPeriodEnd ? (
+                      <Chip label="Cancels at period end" color="warning" />
+                    ) : (
+                      <Chip
+                        label={subscription?.billingStatus || 'NO SUBSCRIPTION'}
+                        color={subscription?.billingStatus === 'ACTIVE' ? 'success' : 'default'}
+                      />
+                    )}
                   </Box>
 
                   {subscription?.plan ? (
@@ -496,7 +580,11 @@ export default function AccountPage() {
                       <Typography variant="body2" sx={{ color: '#6f7c7f', mb: 3 }}>
                         ${subscription.plan.pricing.monthlyDisplay}/month
                         {subscription.renewalDate && (
-                          <> · Renews on {new Date(subscription.renewalDate).toLocaleDateString()}</>
+                          <>
+                            {' · '}
+                            {subscription.cancelAtPeriodEnd ? 'Cancels on ' : 'Renews on '}
+                            {new Date(subscription.renewalDate).toLocaleDateString()}
+                          </>
                         )}
                       </Typography>
 
@@ -566,13 +654,23 @@ export default function AccountPage() {
                           Change Plan
                         </Button>
                         {subscription.plan.planType !== 'FREE' && (
-                          <Button
-                            variant="outlined"
-                            color="error"
-                            onClick={() => setIsCancelDialogOpen(true)}
-                          >
-                            Cancel Subscription
-                          </Button>
+                          subscription.cancelAtPeriodEnd ? (
+                            <Button
+                              variant="outlined"
+                              color="success"
+                              onClick={handleResumeSubscription}
+                            >
+                              Resume Subscription
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="outlined"
+                              color="error"
+                              onClick={() => setIsCancelDialogOpen(true)}
+                            >
+                              Cancel Subscription
+                            </Button>
+                          )
                         )}
                       </Stack>
                     </>
@@ -623,6 +721,53 @@ export default function AccountPage() {
                   </List>
                 </CardContent>
               </Card>
+
+              {/* Refunds — owner/admin only */}
+              {(familyspaceRole === 'OWNER' || familyspaceRole === 'ADMIN') && (
+                <Card>
+                  <CardContent>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                      <Typography variant="h6">Refunds</Typography>
+                      {subscription?.plan && subscription.plan.planType !== 'FREE' && (
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          color="error"
+                          onClick={() => setIsRefundDialogOpen(true)}
+                        >
+                          Request Refund
+                        </Button>
+                      )}
+                    </Box>
+                    {refunds.length === 0 ? (
+                      <Typography variant="body2" color="text.secondary">
+                        No refunds have been issued for this familyspace.
+                      </Typography>
+                    ) : (
+                      <List>
+                        {refunds.map((refund) => (
+                          <ListItem key={refund.id}>
+                            <ListItemText
+                              primary={`$${(refund.amountCents / 100).toFixed(2)} ${refund.currency.toUpperCase()}`}
+                              secondary={`${new Date(refund.createdAt).toLocaleDateString()}${refund.reason ? ` · ${refund.reason}` : ''}`}
+                            />
+                            <Chip
+                              size="small"
+                              label={refund.status}
+                              color={
+                                refund.status === 'SUCCEEDED' ? 'success'
+                                  : refund.status === 'FAILED' ? 'error'
+                                  : refund.status === 'CANCELED' ? 'default'
+                                  : 'warning'
+                              }
+                            />
+                          </ListItem>
+                        ))}
+                      </List>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
             </Stack>
           </TabPanel>
 
@@ -637,17 +782,74 @@ export default function AccountPage() {
           */}
 
           {/* Cancel Dialog */}
-          <Dialog open={isCancelDialogOpen} onClose={() => setIsCancelDialogOpen(false)}>
+          <Dialog
+            open={isCancelDialogOpen}
+            onClose={() => {
+              setIsCancelDialogOpen(false)
+              setCancelImmediately(false)
+            }}
+          >
             <DialogTitle>Cancel Subscription?</DialogTitle>
             <DialogContent>
-              <Typography>
-                Are you sure you want to cancel your subscription? You will be downgraded to the free plan immediately.
+              <Typography sx={{ mb: 2 }}>
+                {cancelImmediately
+                  ? 'Your subscription will be cancelled and downgraded to the free plan immediately.'
+                  : "Your subscription will remain active until the end of your current billing period, then downgrade to the free plan. You won't be charged again."}
               </Typography>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={cancelImmediately}
+                    onChange={(e) => setCancelImmediately(e.target.checked)}
+                  />
+                }
+                label="Cancel immediately instead (skips remaining paid access)"
+              />
             </DialogContent>
             <DialogActions>
-              <Button onClick={() => setIsCancelDialogOpen(false)}>Keep Subscription</Button>
+              <Button
+                onClick={() => {
+                  setIsCancelDialogOpen(false)
+                  setCancelImmediately(false)
+                }}
+              >
+                Keep Subscription
+              </Button>
               <Button onClick={handleCancelSubscription} color="error">
                 Cancel Subscription
+              </Button>
+            </DialogActions>
+          </Dialog>
+
+          {/* Refund Dialog — owner/admin only */}
+          <Dialog open={isRefundDialogOpen} onClose={() => setIsRefundDialogOpen(false)} maxWidth="sm" fullWidth>
+            <DialogTitle>Request Refund</DialogTitle>
+            <DialogContent>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Leave the amount blank to refund the full latest payment.
+              </Typography>
+              <TextField
+                fullWidth
+                label="Amount (USD, optional)"
+                type="number"
+                placeholder="e.g. 9.99"
+                value={refundAmount}
+                onChange={(e) => setRefundAmount(e.target.value)}
+                sx={{ mb: 2 }}
+                inputProps={{ min: 0, step: 0.01 }}
+              />
+              <TextField
+                fullWidth
+                label="Reason (optional)"
+                placeholder="e.g. requested_by_customer"
+                value={refundReason}
+                onChange={(e) => setRefundReason(e.target.value)}
+              />
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setIsRefundDialogOpen(false)}>Cancel</Button>
+              <Button onClick={handleRequestRefund} color="error" variant="contained">
+                Submit Refund
               </Button>
             </DialogActions>
           </Dialog>

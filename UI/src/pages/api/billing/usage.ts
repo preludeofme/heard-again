@@ -2,8 +2,9 @@ import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
 import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 import { formatBytes } from '@/lib/format'
+import { withRateLimit } from '@/lib/security/rate-limiter'
 
-export default apiHandler({
+const handler = apiHandler({
   // GET /api/billing/usage - Get usage stats for current billing period
   GET: async (req, res) => {
     const user = await getAuthUserWithFamilyspace(req, res)
@@ -99,3 +100,5 @@ export default apiHandler({
     })
   },
 })
+
+export default withRateLimit('general', handler)

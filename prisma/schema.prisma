@@ -21,7 +21,7 @@ model User {
   password                  String?
   oauthProvider             String?
   oauthId                   String?
-  displayName             String?
+  displayName               String?
   avatarUrl                 String?
   status                    UserStatus            @default(ACTIVE)
   createdAt                 DateTime              @default(now())
@@ -41,17 +41,17 @@ model User {
   role                      UserRole              @default(USER)
   uploadedAssets            Asset[]
   collections               Collection[]
-  collectionStories       CollectionStory[]
-  createdDocuments        Document[]
+  collectionStories         CollectionStory[]
+  createdDocuments          Document[]
   exportJobs                ExportJob[]
   mergeProposals            FamilyMergeProposal[]
   importJobs                ImportJob[]
   memberships               Membership[]
   notifications             Notification[]
   createdPeople             Person[]
-  createdStories          Story[]               @relation("StoryCreator")
-  narrationApprovals      Story[]               @relation("StoryNarrationApprover")
-  comments                StoryComment[]
+  createdStories            Story[]               @relation("StoryCreator")
+  narrationApprovals        Story[]               @relation("StoryNarrationApprover")
+  comments                  StoryComment[]
   defaultFamilyspace        Familyspace?          @relation("UserDefaultFamilyspace", fields: [defaultFamilyspaceId], references: [id])
   linkedPerson              Person?               @relation("UserLinkedPerson", fields: [linkedPersonId], references: [id], onDelete: SetNull)
   favorites                 UserStoryFavorite[]
@@ -163,7 +163,7 @@ model PersonName {
 }
 
 model PersonEvent {
-  id              String                  @id @default(uuid())
+  id              String                 @id @default(uuid())
   personId        String
   eventType       PersonEventType
   eventDate       DateTime?
@@ -174,11 +174,11 @@ model PersonEvent {
   description     String?
   customType      String?
   sourceCitation  String?
-  isPrimary       Boolean                 @default(false)
+  isPrimary       Boolean                @default(false)
   gedcomXref      String?
-  createdAt       DateTime                @default(now())
-  updatedAt       DateTime                @updatedAt
-  person          Person                  @relation(fields: [personId], references: [id], onDelete: Cascade)
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+  person          Person                 @relation(fields: [personId], references: [id], onDelete: Cascade)
   sourceCitations PersonSourceCitation[]
 
   @@unique([personId, gedcomXref])
@@ -315,32 +315,66 @@ model Instance {
 }
 
 model Subscription {
-  id                    String        @id @default(uuid())
-  familyspaceId         String        @unique
-  planId                String
-  billingStatus         BillingStatus @default(TRIAL)
-  stripeSubscriptionId  String?
-  stripeCustomerId      String?
-  renewalDate           DateTime?
-  cancelledAt           DateTime?
-  generationMinutesUsed Float           @default(0)
-  storageBytesUsed      BigInt        @default(0)
-  lastBillingResetAt    DateTime      @default(now())
-  createdAt             DateTime      @default(now())
-  updatedAt             DateTime      @updatedAt
-  plan                  Plan          @relation(fields: [planId], references: [id])
-  familyspace           Familyspace   @relation(fields: [familyspaceId], references: [id], onDelete: Cascade)
+  id                          String        @id @default(uuid())
+  familyspaceId               String        @unique
+  planId                      String
+  billingStatus               BillingStatus @default(TRIAL)
+  stripeSubscriptionId        String?
+  stripeCustomerId            String?
+  stripeLatestPaymentIntentId String?
+  cancelAtPeriodEnd           Boolean       @default(false)
+  renewalDate                 DateTime?
+  cancelledAt                 DateTime?
+  generationMinutesUsed       Float         @default(0)
+  storageBytesUsed            BigInt        @default(0)
+  lastBillingResetAt          DateTime      @default(now())
+  createdAt                   DateTime      @default(now())
+  updatedAt                   DateTime      @updatedAt
+  plan                        Plan          @relation(fields: [planId], references: [id])
+  familyspace                 Familyspace   @relation(fields: [familyspaceId], references: [id], onDelete: Cascade)
+  refunds                     Refund[]
 
   @@index([familyspaceId])
   @@index([stripeSubscriptionId])
 }
 
+model Refund {
+  id                    String       @id @default(uuid())
+  subscriptionId        String
+  familyspaceId         String
+  requestedById         String
+  amountCents           Int
+  currency              String       @default("usd")
+  reason                String?
+  status                RefundStatus @default(PENDING)
+  stripeRefundId        String?      @unique
+  stripePaymentIntentId String?
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+  subscription          Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([subscriptionId])
+  @@index([familyspaceId])
+  @@index([stripeRefundId])
+}
+
+enum RefundStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  CANCELED
+}
+
 model Plan {
   id                        String         @id @default(cuid())
+  slug                      String?        @unique
   name                      String         @unique
   planType                  PlanType
   priceMonthlyCents         Int
   priceYearlyCents          Int?
+  stripeProductId           String?
+  stripePriceIdMonthly      String?
+  stripePriceIdYearly       String?
   tunnelEnabled             Boolean        @default(false)
   cloudGpuEnabled           Boolean        @default(false)
   cloudStorageEnabled       Boolean        @default(false)
@@ -506,9 +540,9 @@ model Asset {
   processingStatus         ProcessingStatus     @default(PENDING)
   processingError          String?
   createdAt                DateTime             @default(now())
-  updatedAt             DateTime             @updatedAt
-  uploadedById          String?
-  uploadedBy            User?                 @relation(fields: [uploadedById], references: [id])
+  updatedAt                DateTime             @updatedAt
+  uploadedById             String?
+  uploadedBy               User?                @relation(fields: [uploadedById], references: [id])
   familyspace              Familyspace          @relation(fields: [familyspaceId], references: [id], onDelete: Cascade)
   document                 Document?
   exportOutputs            ExportJob[]          @relation("ExportOutputAsset")
@@ -541,10 +575,10 @@ model Document {
   aiSummary             String?
   aiSuggestedPeople     Json?
   content               String?
-  source                String?           @default("upload")
-  embeddingStatus       EmbeddingStatus   @default(PENDING)
-  createdAt             DateTime          @default(now())
-  updatedAt             DateTime          @updatedAt
+  source                String?          @default("upload")
+  embeddingStatus       EmbeddingStatus  @default(PENDING)
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
   createdById           String
   asset                 Asset            @relation(fields: [assetId], references: [id], onDelete: Cascade)
   createdBy             User             @relation(fields: [createdById], references: [id])
@@ -671,20 +705,20 @@ model VoiceGenerationJob {
 }
 
 model AuditLog {
-  id           String      @id @default(uuid())
+  id            String      @id @default(uuid())
   familyspaceId String
-  actorId      String?
-  actorType    ActorType
-  action       String
-  resourceType String
-  resourceId   String?
-  ipAddress    String?
-  userAgent    String?
-  beforeState  Json?
-  afterState   Json?
-  metadata     Json?
-  createdAt    DateTime    @default(now())
-  familyspace  Familyspace @relation(fields: [familyspaceId], references: [id], onDelete: Cascade)
+  actorId       String?
+  actorType     ActorType
+  action        String
+  resourceType  String
+  resourceId    String?
+  ipAddress     String?
+  userAgent     String?
+  beforeState   Json?
+  afterState    Json?
+  metadata      Json?
+  createdAt     DateTime    @default(now())
+  familyspace   Familyspace @relation(fields: [familyspaceId], references: [id], onDelete: Cascade)
 
   @@index([familyspaceId])
   @@index([action])
@@ -756,26 +790,26 @@ model ExportJob {
 }
 
 model FamilyMergeProposal {
-  id                     String                   @id @default(uuid())
-  targetFamilyspaceId    String
-  sourceFamilyspaceId    String
-  proposedById           String
-  status                 MergeStatus              @default(PENDING)
-  overallMatchScore      Float?
-  matchedPeopleCount     Int                      @default(0)
-  totalSourcePeople      Int                      @default(0)
-  conflictDetails        Json?
-  reviewedAt             DateTime?
-  reviewedById           String?
-  executedAt             DateTime?
-  executedById           String?
-  errorMessage           String?
-  createdAt              DateTime                 @default(now())
-  updatedAt              DateTime                 @updatedAt
-  personMatches          FamilyMergePersonMatch[]
-  proposedBy             User                     @relation(fields: [proposedById], references: [id])
-  sourceFamilyspace      Familyspace              @relation("MergeSourceFamilyspace", fields: [sourceFamilyspaceId], references: [id], onDelete: Cascade)
-  targetFamilyspace      Familyspace              @relation("MergeTargetFamilyspace", fields: [targetFamilyspaceId], references: [id], onDelete: Cascade)
+  id                  String                   @id @default(uuid())
+  targetFamilyspaceId String
+  sourceFamilyspaceId String
+  proposedById        String
+  status              MergeStatus              @default(PENDING)
+  overallMatchScore   Float?
+  matchedPeopleCount  Int                      @default(0)
+  totalSourcePeople   Int                      @default(0)
+  conflictDetails     Json?
+  reviewedAt          DateTime?
+  reviewedById        String?
+  executedAt          DateTime?
+  executedById        String?
+  errorMessage        String?
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+  personMatches       FamilyMergePersonMatch[]
+  proposedBy          User                     @relation(fields: [proposedById], references: [id])
+  sourceFamilyspace   Familyspace              @relation("MergeSourceFamilyspace", fields: [sourceFamilyspaceId], references: [id], onDelete: Cascade)
+  targetFamilyspace   Familyspace              @relation("MergeTargetFamilyspace", fields: [targetFamilyspaceId], references: [id], onDelete: Cascade)
 
   @@index([targetFamilyspaceId])
   @@index([sourceFamilyspaceId])

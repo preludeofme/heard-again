@@ -26,61 +26,84 @@ async function main() {
         advancedAnalytics: false,
       },
     }),
+    // Cloud Access tiers — mirrors UI/src/components/pages/LandingPricingSection.tsx
+    // Stripe products/prices created in test mode via `stripe products create` / `stripe prices create`.
     prisma.plan.upsert({
-      where: { name: 'Connected' },
-      update: {},
-      create: {
-        name: 'Connected',
-        planType: PlanType.CONNECTED,
-        priceMonthlyCents: 100, // $1/month
-        priceYearlyCents: 1000, // $10/year
-        tunnelEnabled: true,
-        cloudGpuEnabled: false,
-        cloudStorageEnabled: false,
-        generationMinutesIncluded: 20, // 20 minutes for basic voice testing
-        storageQuotaBytes: BigInt(0),
-        memberQuota: 10,
-        voiceProfileQuota: 10,
-        prioritySupport: false,
-        advancedAnalytics: false,
+      where: { name: 'Cloud Access — Starter' },
+      update: {
+        slug: 'cloud_min',
+        stripeProductId: 'prod_Uq7eEZ1Hm5fFkI',
+        stripePriceIdMonthly: 'price_1TqRPgCNS9LPcJ0tWF0UxEsl',
       },
-    }),
-    prisma.plan.upsert({
-      where: { name: 'Hybrid Compute' },
-      update: {},
       create: {
-        name: 'Hybrid Compute',
-        planType: PlanType.HYBRID,
-        priceMonthlyCents: 500, // $5/month
-        priceYearlyCents: 5000, // $50/year
-        tunnelEnabled: true,
-        cloudGpuEnabled: true,
-        cloudStorageEnabled: false,
-        generationMinutesIncluded: 60, // 60 minutes included
-        storageQuotaBytes: BigInt(0),
-        memberQuota: 10,
-        voiceProfileQuota: 20,
-        prioritySupport: true,
-        advancedAnalytics: false,
-      },
-    }),
-    prisma.plan.upsert({
-      where: { name: 'Cloud Hosted' },
-      update: {},
-      create: {
-        name: 'Cloud Hosted',
+        slug: 'cloud_min',
+        name: 'Cloud Access — Starter',
         planType: PlanType.CLOUD,
-        priceMonthlyCents: 1000, // $10/month
-        priceYearlyCents: 10000, // $100/year
+        priceMonthlyCents: 999, // $9.99/month
+        priceYearlyCents: null,
         tunnelEnabled: false,
         cloudGpuEnabled: true,
         cloudStorageEnabled: true,
-        generationMinutesIncluded: 120, // 120 minutes included
+        generationMinutesIncluded: 30, // 30 minutes of voice generation / mo
         storageQuotaBytes: BigInt(10 * 1024 * 1024 * 1024), // 10GB
+        memberQuota: 10,
+        voiceProfileQuota: 50,
+        prioritySupport: false,
+        advancedAnalytics: false,
+        stripeProductId: 'prod_Uq7eEZ1Hm5fFkI',
+        stripePriceIdMonthly: 'price_1TqRPgCNS9LPcJ0tWF0UxEsl',
+      },
+    }),
+    prisma.plan.upsert({
+      where: { name: 'Cloud Access — Family' },
+      update: {
+        slug: 'cloud_mid',
+        stripeProductId: 'prod_Uq7ejGAjZh9eCk',
+        stripePriceIdMonthly: 'price_1TqRPhCNS9LPcJ0tCgPN7iIU',
+      },
+      create: {
+        slug: 'cloud_mid',
+        name: 'Cloud Access — Family',
+        planType: PlanType.CLOUD,
+        priceMonthlyCents: 1999, // $19.99/month
+        priceYearlyCents: null,
+        tunnelEnabled: false,
+        cloudGpuEnabled: true,
+        cloudStorageEnabled: true,
+        generationMinutesIncluded: 60, // 60 minutes of voice generation / mo
+        storageQuotaBytes: BigInt(25 * 1024 * 1024 * 1024), // 25GB
         memberQuota: 20,
         voiceProfileQuota: 50,
         prioritySupport: true,
+        advancedAnalytics: false,
+        stripeProductId: 'prod_Uq7ejGAjZh9eCk',
+        stripePriceIdMonthly: 'price_1TqRPhCNS9LPcJ0tCgPN7iIU',
+      },
+    }),
+    prisma.plan.upsert({
+      where: { name: 'Cloud Access — Legacy' },
+      update: {
+        slug: 'cloud_max',
+        stripeProductId: 'prod_Uq7egQ9kYdAxqf',
+        stripePriceIdMonthly: 'price_1TqRPhCNS9LPcJ0ttCpP4aop',
+      },
+      create: {
+        slug: 'cloud_max',
+        name: 'Cloud Access — Legacy',
+        planType: PlanType.CLOUD,
+        priceMonthlyCents: 3999, // $39.99/month
+        priceYearlyCents: null,
+        tunnelEnabled: false,
+        cloudGpuEnabled: true,
+        cloudStorageEnabled: true,
+        generationMinutesIncluded: 999999, // Effectively unlimited voice generation
+        storageQuotaBytes: BigInt(100 * 1024 * 1024 * 1024), // 100GB
+        memberQuota: 50,
+        voiceProfileQuota: 200,
+        prioritySupport: true,
         advancedAnalytics: true,
+        stripeProductId: 'prod_Uq7egQ9kYdAxqf',
+        stripePriceIdMonthly: 'price_1TqRPhCNS9LPcJ0ttCpP4aop',
       },
     }),
   ]);

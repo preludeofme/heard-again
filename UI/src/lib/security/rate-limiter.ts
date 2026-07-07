@@ -31,6 +31,15 @@ const rateLimitConfigs = {
     max: 100, // 100 TTS requests per window
     message: 'Too many TTS requests, please try again later',
   },
+
+  // Strict rate limiting for billing endpoints (financial operations — checkout,
+  // cancel, resume, refund). Excludes the Stripe webhook, which is IP/signature
+  // authenticated separately and shouldn't be limited per-client.
+  billing: {
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 30, // 30 requests per window
+    message: 'Too many billing requests, please try again later',
+  },
 }
 
 // Rate limiting middleware for Next.js API routes — Redis sliding-window only

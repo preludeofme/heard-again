@@ -1,8 +1,9 @@
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
 import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
+import { withRateLimit } from '@/lib/security/rate-limiter'
 
-export default apiHandler({
+const handler = apiHandler({
   // GET /api/billing/subscription - Get current subscription
   GET: async (req, res) => {
     const user = await getAuthUserWithFamilyspace(req, res)
@@ -22,6 +23,7 @@ export default apiHandler({
       billingStatus: subscription.billingStatus,
       renewalDate: subscription.renewalDate,
       cancelledAt: subscription.cancelledAt,
+      cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
       stripeSubscriptionId: subscription.stripeSubscriptionId,
       stripeCustomerId: subscription.stripeCustomerId,
       usage: {
@@ -60,3 +62,5 @@ export default apiHandler({
     })
   },
 })
+
+export default withRateLimit('general', handler)

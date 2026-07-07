@@ -1,8 +1,9 @@
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse } from '@/lib/api-helpers'
 import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
+import { withRateLimit } from '@/lib/security/rate-limiter'
 
-export default apiHandler({
+const handler = apiHandler({
   // GET /api/billing/plans - List available active plans
   GET: async (req, res) => {
     const dbPlans = await prisma.plan.findMany({
@@ -12,6 +13,7 @@ export default apiHandler({
 
     const plans = dbPlans.map(plan => ({
       id: plan.id,
+      slug: plan.slug,
       name: plan.name,
       planType: plan.planType,
       pricing: {
@@ -38,3 +40,5 @@ export default apiHandler({
     return successResponse(res, { plans })
   },
 })
+
+export default withRateLimit('general', handler)
