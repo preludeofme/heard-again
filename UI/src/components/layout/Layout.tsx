@@ -149,6 +149,7 @@ export function Layout({ children }: LayoutProps) {
     status === 'authenticated' &&
     session?.user?.role === 'OWNER' &&
     !session?.user?.mfaEnabled &&
+    session?.user?.loginProvider !== 'google' &&
     router?.pathname !== '/account' &&
     router?.pathname !== '/support' &&
     router?.pathname !== '/login'

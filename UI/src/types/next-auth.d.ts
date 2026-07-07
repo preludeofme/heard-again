@@ -15,6 +15,7 @@ declare module 'next-auth' {
       role?: string | null
       userRole?: string | null
       mfaEnabled?: boolean | null
+      loginProvider?: string | null
     }
   }
 
@@ -37,5 +38,6 @@ declare module 'next-auth/jwt' {
     role?: string | null
     userRole?: string | null
     mfaEnabled?: boolean | null
+    loginProvider?: string | null
   }
 }

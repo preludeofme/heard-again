@@ -196,6 +196,7 @@ export const authOptions: NextAuthOptions = {
         // Persist the user's global role (USER/ADMIN) for admin access control
         token.userRole = (user as any).role || 'USER'
         token.mfaEnabled = (user as any).mfaEnabled || false
+        token.loginProvider = account?.provider || 'credentials'
       }
 
       // On session update (e.g. after switching familyspace or enabling MFA), always refresh from DB
@@ -299,6 +300,7 @@ export const authOptions: NextAuthOptions = {
         session.user.role = (token.role as string) || 'VIEWER'
         session.user.userRole = (token.userRole as string) || 'USER'
         session.user.mfaEnabled = !!token.mfaEnabled
+        session.user.loginProvider = (token.loginProvider as string) || 'credentials'
       }
       return session
     },

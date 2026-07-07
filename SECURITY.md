@@ -13,7 +13,7 @@ Only the latest release of Heard Again is actively supported with security updat
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability, please do **not** open a public issue. Instead, report it privately by emailing us at **security@heardagain.com**.
+If you discover a security vulnerability, please do **not** open a public issue. Instead, report it privately by emailing us at **ryan@trubuckdesign.com**.
 
 Please include the following details in your report:
 * A description of the vulnerability and its potential impact.
