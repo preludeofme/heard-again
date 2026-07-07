@@ -14,6 +14,7 @@ declare module 'next-auth' {
       linkedPersonId?: string | null
       role?: string | null
       userRole?: string | null
+      mfaEnabled?: boolean | null
     }
   }
 
@@ -22,6 +23,7 @@ declare module 'next-auth' {
     avatarUrl?: string | null
     defaultFamilyspaceId?: string | null
     linkedPersonId?: string | null
+    mfaEnabled?: boolean | null
   }
 }
 
@@ -34,5 +36,6 @@ declare module 'next-auth/jwt' {
     linkedPersonId?: string | null
     role?: string | null
     userRole?: string | null
+    mfaEnabled?: boolean | null
   }
 }

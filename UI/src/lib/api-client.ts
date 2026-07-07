@@ -66,7 +66,7 @@ export async function fetchWithCSRF(
 
       // If token is undefined or invalid, throw an error
       if (!token || token === 'undefined' || token.length !== 64) {
-        throw new Error(`Invalid CSRF token received`)
+        throw new Error(`Invalid CSRF token received: ${token ? 'length ' + token.length : 'null'}`)
       }
       
       // Add CSRF token to headers
@@ -74,15 +74,21 @@ export async function fetchWithCSRF(
         ...options.headers,
         'x-csrf-token': token,
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.error('[fetchWithCSRF] CSRF token retrieval failed:', error)
       // For development, continue without token (will be rejected by server)
       if (process.env.NODE_ENV === 'production') {
-        throw new Error('CSRF protection failed')
+        throw new Error(`CSRF protection failed: ${error.message}`)
       }
     }
   }
 
-  return fetchWithSessionHandling(url, options)
+  try {
+    return await fetchWithSessionHandling(url, options)
+  } catch (error: any) {
+    console.error(`[fetchWithCSRF] Fetch execution failed for ${url}:`, error)
+    throw error
+  }
 }
 
 /**

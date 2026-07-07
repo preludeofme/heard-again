@@ -138,24 +138,45 @@ export async function fetchWithSessionHandling(
   options: RequestInit = {},
   currentPath?: string
 ): Promise<Response> {
+  console.log(`[fetchWithSessionHandling] Fetching: ${url}`, {
+    method: options.method || 'GET',
+    headers: options.headers ? Object.keys(options.headers) : [],
+    credentials: options.credentials || 'default',
+  })
   try {
     const response = await fetch(url, options)
+    
+    console.log(`[fetchWithSessionHandling] Response from ${url}:`, {
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok,
+    })
     
     // Check for 401 Unauthorized response. Confirm with NextAuth before a
     // global redirect so one endpoint-specific 401 does not poison client
     // session state while server auth is still valid.
     if (response.status === 401) {
+      console.warn(`[fetchWithSessionHandling] 401 status from ${url}. Confirming auth status...`)
       if (await isActuallyUnauthenticated()) {
+        console.warn(`[fetchWithSessionHandling] Confirmed unauthenticated. Redirecting to login...`)
         redirectToLogin(currentPath)
+      } else {
+        console.log(`[fetchWithSessionHandling] Session still valid despite 401. Skipping redirect.`)
       }
       return response
     }
     
     return response
   } catch (error: any) {
+    console.error(`[fetchWithSessionHandling] Native fetch exception for ${url}:`, {
+      message: error.message,
+      name: error.name,
+      stack: error.stack,
+    })
     // Check if error indicates session expiration. For structured errors that
     // already contain an auth status we still confirm with NextAuth first.
     if (isSessionExpiredError(error)) {
+      console.warn(`[fetchWithSessionHandling] Session expired error caught. Checking auth...`)
       if (await isActuallyUnauthenticated()) {
         redirectToLogin(currentPath)
       }

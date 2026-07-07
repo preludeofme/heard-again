@@ -20,6 +20,11 @@ import {
   SpeedDialIcon,
   useTheme,
   useMediaQuery,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Alert,
 } from '@mui/material'
 import {
   Logout as LogoutIcon,
@@ -35,6 +40,7 @@ import {
   PostAdd as PostAddIcon,
   CloudUpload as UploadIcon,
   Close as CloseIcon,
+  LockOutlined as LockIcon,
 } from '@mui/icons-material'
 import Link from 'next/link'
 import { ActiveMemberHeader } from './ActiveMemberHeader'
@@ -124,7 +130,7 @@ function UserMenu() {
 }
 
 export function Layout({ children }: LayoutProps) {
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const [isMounted, setIsMounted] = useState(false)
   useEffect(() => {
     setIsMounted(true)
@@ -137,6 +143,15 @@ export function Layout({ children }: LayoutProps) {
   } catch (e) {
     // Router not mounted (common during some build phases)
   }
+
+  const isMfaRequired =
+    isMounted &&
+    status === 'authenticated' &&
+    session?.user?.role === 'OWNER' &&
+    !session?.user?.mfaEnabled &&
+    router?.pathname !== '/account' &&
+    router?.pathname !== '/support' &&
+    router?.pathname !== '/login'
   
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
@@ -468,6 +483,61 @@ export function Layout({ children }: LayoutProps) {
               )
             })}
           </Menu>
+
+          <Dialog
+            open={!!isMfaRequired}
+            disableEscapeKeyDown
+            PaperProps={{
+              sx: {
+                borderRadius: 4,
+                p: 2,
+                maxWidth: 480,
+                boxShadow: '0 12px 40px rgba(22, 51, 74, 0.15)',
+              }
+            }}
+          >
+            <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.5, pb: 1 }}>
+              <LockIcon color="warning" sx={{ fontSize: 28 }} />
+              <Typography variant="h6" sx={{ fontWeight: 700, color: '#16334a' }}>
+                Security Setup Required
+              </Typography>
+            </DialogTitle>
+            <DialogContent sx={{ pb: 2 }}>
+              <Typography variant="body2" sx={{ mb: 2.5, color: 'text.secondary', lineHeight: 1.6 }}>
+                As a <strong>Familyspace Owner</strong>, you need to enable a login code to keep everyone&apos;s stories and memories safe. 
+                We will send a verification code to your email when you sign in — no app download is needed.
+              </Typography>
+              <Alert severity="warning" variant="outlined" sx={{ borderRadius: 2 }}>
+                You must enable Multi-Factor Authentication (MFA) to access the rest of the application.
+              </Alert>
+            </DialogContent>
+            <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
+              <Button 
+                onClick={async () => {
+                  await signOut({ callbackUrl: '/login' })
+                }} 
+                color="inherit"
+                variant="text"
+                sx={{ textTransform: 'none' }}
+              >
+                Sign Out
+              </Button>
+              <Button
+                component={Link}
+                href="/account?tab=security"
+                variant="contained"
+                color="primary"
+                sx={{ 
+                  textTransform: 'none', 
+                  borderRadius: 2,
+                  bgcolor: '#16334a',
+                  '&:hover': { bgcolor: '#2e4a62' }
+                }}
+              >
+                Go to Security Settings
+              </Button>
+            </DialogActions>
+          </Dialog>
         </>
       )}
     </Box>

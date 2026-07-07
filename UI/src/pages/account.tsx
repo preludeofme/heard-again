@@ -687,7 +687,11 @@ export default function AccountPage() {
                       <Stack direction="row" spacing={2}>
                         <Button
                           variant="outlined"
-                          onClick={() => setIsChangePlanDialogOpen(true)}
+                          onClick={() => {
+                            const defaultSelect = plans.find(p => p.id !== subscription?.plan?.id)?.id || ''
+                            setSelectedPlanId(defaultSelect)
+                            setIsChangePlanDialogOpen(true)
+                          }}
                         >
                           Change Plan
                         </Button>
@@ -894,26 +898,106 @@ export default function AccountPage() {
 
           {/* Change Plan Dialog */}
           <Dialog open={isChangePlanDialogOpen} onClose={() => setIsChangePlanDialogOpen(false)} maxWidth="sm" fullWidth>
-            <DialogTitle>Change Plan</DialogTitle>
+            <DialogTitle sx={{ pb: 1, fontWeight: 700, color: '#16334a' }}>Confirm Plan Change</DialogTitle>
             <DialogContent>
-              <FormControl fullWidth sx={{ mt: 2 }}>
-                <InputLabel>Select Plan</InputLabel>
-                <Select
-                  value={selectedPlanId}
-                  onChange={(e) => setSelectedPlanId(e.target.value)}
-                >
-                  {plans.map((plan) => (
-                    <MenuItem key={plan.id} value={plan.id}>
-                      {plan.name} - ${plan.pricing.monthlyDisplay}/month
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+              {(() => {
+                const targetPlan = plans.find((p) => p.id === selectedPlanId)
+                if (!targetPlan) {
+                  return (
+                    <FormControl fullWidth sx={{ mt: 2 }}>
+                      <InputLabel>Select Plan</InputLabel>
+                      <Select
+                        value={selectedPlanId}
+                        onChange={(e) => setSelectedPlanId(e.target.value)}
+                      >
+                        {plans.map((plan) => (
+                          <MenuItem key={plan.id} value={plan.id}>
+                            {plan.name} - ${plan.pricing.monthlyDisplay}/month
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  )
+                }
+
+                const currentPlan = subscription?.plan
+                const currentCents = currentPlan?.pricing?.monthlyCents || 0
+                const targetCents = targetPlan.pricing.monthlyCents
+                const deltaCents = targetCents - currentCents
+                let deltaText = ''
+                if (deltaCents > 0) {
+                  deltaText = `(+$${(deltaCents / 100).toFixed(2)}/month)`
+                } else if (deltaCents < 0) {
+                  deltaText = `(-$${(Math.abs(deltaCents) / 100).toFixed(2)}/month)`
+                } else {
+                  deltaText = '(No price change)'
+                }
+
+                return (
+                  <Box sx={{ mt: 1 }}>
+                    <Typography variant="body1" sx={{ mb: 3 }}>
+                      You are switching to the <strong>{targetPlan.name}</strong> plan. Please review the changes below.
+                    </Typography>
+
+                    {/* Cost Perspective */}
+                    <Box sx={{ mb: 3, p: 2, bgcolor: '#f6f3ee', borderRadius: 2 }}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, color: '#16334a' }}>
+                        Cost Comparison
+                      </Typography>
+                      <Grid container spacing={2}>
+                        <Grid item xs={6}>
+                          <Typography variant="caption" color="text.secondary">Current Price</Typography>
+                          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                            {currentPlan ? `$${currentPlan.pricing.monthlyDisplay}/month` : '$0.00 (Free)'}
+                          </Typography>
+                        </Grid>
+                        <Grid item xs={6}>
+                          <Typography variant="caption" color="text.secondary">New Price</Typography>
+                          <Typography variant="body2" sx={{ fontWeight: 600, color: '#16334a' }}>
+                            ${targetPlan.pricing.monthlyDisplay}/month <span style={{ fontSize: '0.8rem', fontWeight: 500, display: 'block', marginTop: '2px' }}>{deltaText}</span>
+                          </Typography>
+                        </Grid>
+                      </Grid>
+                    </Box>
+
+                    {/* Features Perspective */}
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, color: '#16334a' }}>
+                      Feature Changes
+                    </Typography>
+                    <Stack spacing={1.5} sx={{ mt: 1 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(0,0,0,0.06)', pb: 1 }}>
+                        <Typography variant="body2" color="text.secondary">Generation Minutes</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                          {currentPlan ? `${currentPlan.entitlements.generationMinutesIncluded} min` : '0 min'} ➜ <span style={{ color: '#16334a' }}>{targetPlan.entitlements.generationMinutesIncluded} min</span>
+                        </Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(0,0,0,0.06)', pb: 1 }}>
+                        <Typography variant="body2" color="text.secondary">Storage Space</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                          {currentPlan ? formatBytes(currentPlan.entitlements.storageQuotaBytes) : '0 B'} ➜ <span style={{ color: '#16334a' }}>{formatBytes(targetPlan.entitlements.storageQuotaBytes)}</span>
+                        </Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(0,0,0,0.06)', pb: 1 }}>
+                        <Typography variant="body2" color="text.secondary">Member Limit</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                          {currentPlan ? `${currentPlan.entitlements.memberQuota} members` : '0 members'} ➜ <span style={{ color: '#16334a' }}>{targetPlan.entitlements.memberQuota} members</span>
+                        </Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', pb: 0.5 }}>
+                        <Typography variant="body2" color="text.secondary">Cloud GPU Access</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                          {currentPlan?.entitlements?.cloudGpuEnabled ? 'Yes' : 'No'} ➜ <span style={{ color: '#16334a' }}>{targetPlan.entitlements.cloudGpuEnabled ? 'Yes' : 'No'}</span>
+                        </Typography>
+                      </Box>
+                    </Stack>
+                  </Box>
+                )
+              })()}
             </DialogContent>
-            <DialogActions>
+            <DialogActions sx={{ px: 3, pb: 2 }}>
               <Button onClick={() => setIsChangePlanDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleChangePlan} variant="contained" disabled={!selectedPlanId}>
-                Change Plan
+              <Button onClick={handleChangePlan} variant="contained" disabled={!selectedPlanId} sx={{ bgcolor: '#16334a', '&:hover': { bgcolor: '#2e4a62' } }}>
+                Confirm Change
               </Button>
             </DialogActions>
           </Dialog>

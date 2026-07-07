@@ -195,20 +195,38 @@ export const authOptions: NextAuthOptions = {
         token.linkedPersonId = (user as any).linkedPersonId || null
         // Persist the user's global role (USER/ADMIN) for admin access control
         token.userRole = (user as any).role || 'USER'
+        token.mfaEnabled = (user as any).mfaEnabled || false
       }
 
-      // On session update (e.g. after switching familyspace), always refresh from DB
+      // On session update (e.g. after switching familyspace or enabling MFA), always refresh from DB
       if (trigger === 'update' && token.id) {
         try {
           const dbUser = await prisma.user.findUnique({
             where: { id: token.id as string },
-            select: { defaultFamilyspaceId: true },
+            select: { defaultFamilyspaceId: true, mfaEnabled: true },
           })
-          if (dbUser?.defaultFamilyspaceId) {
+          if (dbUser) {
             token.defaultFamilyspaceId = dbUser.defaultFamilyspaceId
+            token.mfaEnabled = dbUser.mfaEnabled
+            
+            // Also refresh role for the new default familyspace!
+            if (dbUser.defaultFamilyspaceId) {
+              const membership = await prisma.membership.findUnique({
+                where: {
+                  familyspaceId_userId: {
+                    familyspaceId: dbUser.defaultFamilyspaceId,
+                    userId: token.id as string,
+                  },
+                },
+                select: { role: true },
+              })
+              if (membership) {
+                token.role = membership.role
+              }
+            }
           }
         } catch (e) {
-          logger.error('Failed to refresh defaultFamilyspaceId on update:', e)
+          logger.error('Failed to refresh defaultFamilyspaceId and mfaEnabled on update:', e)
         }
       }
 
@@ -227,17 +245,44 @@ export const authOptions: NextAuthOptions = {
         }
       }
 
-      // Ensure role is always present in token (for new and existing sessions)
-      if (!token.role && token.id) {
+      // Ensure mfaEnabled is always present in token (self-heal)
+      if (token.id && token.mfaEnabled === undefined) {
         try {
-          const membership = await prisma.membership.findFirst({
-            where: { userId: token.id },
-            select: { role: true }
+          const dbUser = await prisma.user.findUnique({
+            where: { id: token.id as string },
+            select: { mfaEnabled: true },
           })
-          token.role = membership?.role || 'VIEWER'
+          token.mfaEnabled = dbUser?.mfaEnabled || false
+        } catch (e) {
+          logger.error('Failed to re-fetch mfaEnabled:', e)
+        }
+      }
+
+      // Ensure role is always present and matches the current default/active familyspace
+      if (token.id) {
+        try {
+          const targetFamilyspaceId = token.defaultFamilyspaceId as string | null
+          if (targetFamilyspaceId) {
+            const membership = await prisma.membership.findUnique({
+              where: {
+                familyspaceId_userId: {
+                  familyspaceId: targetFamilyspaceId,
+                  userId: token.id as string,
+                },
+              },
+              select: { role: true }
+            })
+            token.role = membership?.role || 'VIEWER'
+          } else {
+            const membership = await prisma.membership.findFirst({
+              where: { userId: token.id },
+              select: { role: true }
+            })
+            token.role = membership?.role || 'VIEWER'
+          }
         } catch (e) {
           logger.error('Failed to fetch user role:', e)
-          token.role = 'VIEWER'
+          token.role = token.role || 'VIEWER'
         }
       }
 
@@ -253,6 +298,7 @@ export const authOptions: NextAuthOptions = {
         session.user.linkedPersonId = (token.linkedPersonId as string) || null
         session.user.role = (token.role as string) || 'VIEWER'
         session.user.userRole = (token.userRole as string) || 'USER'
+        session.user.mfaEnabled = !!token.mfaEnabled
       }
       return session
     },
