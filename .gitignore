@@ -87,3 +87,23 @@ UI/next-env.d.ts
 
 # Deep code review reports (ephemeral)
 deep-review-report*.md
+
+# Open-source cleanup: local tool state and scanner output
+.claude/
+.scannerwork/
+
+# Open-source cleanup: local logs, reports, and downloaded archives
+logs*.txt
+build-logs-*.txt
+qa_report*.md
+qa_validation_report.md
+qa_fixes.md
+*.tar.gz
+*.zip
+
+# Open-source cleanup: private genealogy exports / local imports
+*.ged
+family-tree.json
+
+# Open-source cleanup: local debug screenshots
+screenshots/debug_*.png
