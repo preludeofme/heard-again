@@ -65,6 +65,7 @@ interface User {
 
 interface Plan {
   id: string
+  slug: string | null
   name: string
   planType: string
   pricing: {
@@ -159,6 +160,24 @@ export default function AccountPage() {
   const [isRefundDialogOpen, setIsRefundDialogOpen] = useState(false)
   const [refundAmount, setRefundAmount] = useState('')
   const [refundReason, setRefundReason] = useState('')
+
+  // Deep-link support: /account?tab=security&pendingPlan=cloud_mid (onboarding
+  // redirects here when a brand-new owner picks a paid plan before MFA is set up)
+  const pendingPlan = typeof router.query.pendingPlan === 'string' ? router.query.pendingPlan : null
+
+  useEffect(() => {
+    const tabParam = router.query.tab
+    if (typeof tabParam !== 'string') return
+    const tabIndex: Record<string, number> = {
+      profile: 0,
+      security: 1,
+      familyspace: 2,
+      subscription: 3,
+    }
+    if (tabParam in tabIndex) {
+      setActiveTab(tabIndex[tabParam])
+    }
+  }, [router.query.tab])
 
   // Instance/Tunnel data
   const [instance, setInstance] = useState<Instance | null>(null)
@@ -465,6 +484,25 @@ export default function AccountPage() {
 
           {/* Security Tab */}
           <TabPanel value={activeTab} index={1}>
+            {pendingPlan && (
+              <Alert severity="info" sx={{ mb: 3 }}>
+                Almost there — familyspace owners need two-factor security set up before
+                subscribing. Set it up below, then head to the{' '}
+                <Button
+                  size="small"
+                  onClick={() => {
+                    setActiveTab(3)
+                    const matchedPlan = plans.find((p) => p.slug === pendingPlan)
+                    setSelectedPlanId(matchedPlan?.id || pendingPlan)
+                    setIsChangePlanDialogOpen(true)
+                  }}
+                  sx={{ verticalAlign: 'baseline', textTransform: 'none', p: 0, minWidth: 0 }}
+                >
+                  Subscription tab
+                </Button>{' '}
+                to finish subscribing to your selected plan.
+              </Alert>
+            )}
             <SecuritySettings />
           </TabPanel>
 

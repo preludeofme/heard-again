@@ -64,22 +64,45 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const familyspaceId = session.metadata?.familyspaceId || session.client_reference_id
         const stripeCustomerId = session.customer as string
         const stripeSubscriptionId = session.subscription as string
-        
+        const planId = session.metadata?.planId
+
         if (!familyspaceId) {
           logger.error('[Billing] No familyspaceId in checkout session')
           break
         }
 
-        // Update subscription with Stripe IDs
+        // Look up the plan (if provided) so we can sync both the Subscription row
+        // and the familyspace's entitlements in one pass — this is the actual
+        // moment a plan upgrade/signup becomes real, since /api/billing/subscribe
+        // only creates a Checkout Session and never writes the plan itself.
+        const plan = planId ? await prisma.plan.findUnique({ where: { id: planId } }) : null
+
         await prisma.subscription.updateMany({
           where: { familyspaceId },
           data: {
             stripeCustomerId,
             stripeSubscriptionId,
             billingStatus: 'ACTIVE',
+            ...(plan ? { planId: plan.id } : {}),
           },
         })
-        
+
+        if (plan) {
+          await prisma.familyspace.update({
+            where: { id: familyspaceId },
+            data: {
+              planType: plan.planType,
+              tunnelEnabled: plan.tunnelEnabled,
+              cloudGpuEnabled: plan.cloudGpuEnabled,
+              storageQuotaBytes: plan.storageQuotaBytes,
+              memberQuota: plan.memberQuota,
+              generationMinuteQuota: plan.generationMinutesIncluded,
+            },
+          })
+        } else if (planId) {
+          logger.error(`[Billing] Checkout session referenced unknown planId ${planId}`)
+        }
+
         logger.info(`[Billing] Checkout completed for familyspace ${familyspaceId}`)
         break
       }
@@ -93,9 +116,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
 
         const stripeSubscriptionId = invoice.subscription as string
-        const periodEnd = invoice.period_end
 
-        if (stripeSubscriptionId && periodEnd) {
+        if (stripeSubscriptionId) {
           // Resolve the payment intent behind this invoice so a refund can be issued
           // against it later (see api/billing/refund.ts) without another Stripe round
           // trip at refund time. Best-effort — a failure here shouldn't fail the webhook.
@@ -112,12 +134,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             }
           }
 
+          // Don't trust this invoice's own `period_end` for the renewal date: the
+          // invoice Stripe fires immediately when a trialing subscription starts
+          // covers a zero-length $0 period (its period_end is "now", not the actual
+          // trial end), which would show the wrong renewal date for the whole trial.
+          // The subscription object's own current_period_end is authoritative in
+          // both the trial and steady-state-renewal cases.
+          let renewalDate: Date | undefined
+          try {
+            const subscription = await stripe.subscriptions.retrieve(stripeSubscriptionId)
+            const periodEnd = subscription.items.data[0]?.current_period_end
+            if (periodEnd) {
+              renewalDate = new Date(periodEnd * 1000)
+            }
+          } catch (err: any) {
+            logger.warn(`[Billing] Could not resolve current period end for subscription ${stripeSubscriptionId}: ${err.message}`)
+          }
+
           // Extend subscription renewal date
           await prisma.subscription.updateMany({
             where: { stripeSubscriptionId },
             data: {
               billingStatus: 'ACTIVE',
-              renewalDate: new Date(periodEnd * 1000),
+              ...(renewalDate ? { renewalDate } : {}),
               lastBillingResetAt: new Date(),
               generationMinutesUsed: 0, // Reset usage for new period
               ...(paymentIntentId ? { stripeLatestPaymentIntentId: paymentIntentId } : {}),

@@ -112,8 +112,16 @@ export default function OnboardingPage() {
             window.location.href = subData.data.checkoutUrl
             return
           }
+
+          // Most common failure here: familyspace owners must have MFA enabled
+          // before any billing action (see requireFamilyspaceRole in auth-helpers).
+          // Brand-new owners never have MFA set up yet, so send them to set it up
+          // with the chosen plan preserved — /account surfaces a banner and lets
+          // them pick the plan up again once MFA is on.
+          router.push(`/account?tab=security&pendingPlan=${encodeURIComponent(planSlug)}`)
+          return
         } catch {
-          // Ignore — fall through to the normal dashboard redirect below.
+          // Network error — fall through to the normal dashboard redirect below.
         }
       }
 
