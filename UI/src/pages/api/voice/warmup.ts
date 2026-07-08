@@ -88,10 +88,10 @@ declare global {
  */
 async function runpodWarmupJob(): Promise<string> {
   const apiKey = process.env.RUNPOD_API_KEY
-  const endpointId = process.env.RUNPOD_TTS_ENDPOINT_ID
-
+  const endpointId = process.env.RUNPOD_TTS_ENDPOINT_ID || process.env.RUNPOD_ENDPOINT_ID
+ 
   if (!apiKey || !endpointId) {
-    throw new Error('RUNPOD_API_KEY and RUNPOD_TTS_ENDPOINT_ID must be set')
+    throw new Error('RUNPOD_API_KEY and RUNPOD_TTS_ENDPOINT_ID (or RUNPOD_ENDPOINT_ID) must be set')
   }
 
   const res = await fetch(`https://api.runpod.ai/v2/${endpointId}/run`, {

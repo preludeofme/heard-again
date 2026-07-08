@@ -576,9 +576,9 @@ else
     echo "  Starting Trigger.dev dev worker..."
     cd "$MAIN_APP_DIR"
     if [ "$LOG_MODE" = "live" ]; then
-        npx trigger.dev@latest dev --api-url "$TRIGGER_API_URL" 2>&1 | tee "$MAIN_APP_DIR/logs/trigger-dev.log" &
+        npx trigger.dev@4.5.0 dev --api-url "$TRIGGER_API_URL" 2>&1 | tee "$MAIN_APP_DIR/logs/trigger-dev.log" &
     else
-        npx trigger.dev@latest dev --api-url "$TRIGGER_API_URL" > "$MAIN_APP_DIR/logs/trigger-dev.log" 2>&1 &
+        npx trigger.dev@4.5.0 dev --api-url "$TRIGGER_API_URL" > "$MAIN_APP_DIR/logs/trigger-dev.log" 2>&1 &
     fi
     TRIGGER_PID=$!
     echo $TRIGGER_PID >> "$PIDS_FILE"

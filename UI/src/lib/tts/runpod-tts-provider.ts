@@ -10,7 +10,7 @@ import type {
 } from './tts-provider.types'
 
 const RUNPOD_API_KEY = process.env.RUNPOD_API_KEY ?? ''
-const RUNPOD_TTS_ENDPOINT_ID = process.env.RUNPOD_TTS_ENDPOINT_ID ?? ''
+const RUNPOD_TTS_ENDPOINT_ID = process.env.RUNPOD_TTS_ENDPOINT_ID || process.env.RUNPOD_ENDPOINT_ID || ''
 const POLL_INTERVAL_MS = Number(process.env.RUNPOD_POLL_INTERVAL_MS ?? 1500)
 const POLL_TIMEOUT_MS = Number(process.env.RUNPOD_POLL_TIMEOUT_MS ?? 600_000)
 const INLINE_THRESHOLD_BYTES = Number(process.env.RUNPOD_INLINE_AUDIO_THRESHOLD_BYTES ?? 1_048_576)

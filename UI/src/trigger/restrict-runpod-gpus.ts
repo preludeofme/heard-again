@@ -136,10 +136,10 @@ export const restrictRunpodGpus = task({
     const { dryRun = false, allowAll = false } = payload
 
     const apiKey = process.env.RUNPOD_API_KEY
-    const endpointId = process.env.RUNPOD_TTS_ENDPOINT_ID
+    const endpointId = process.env.RUNPOD_TTS_ENDPOINT_ID || process.env.RUNPOD_ENDPOINT_ID
 
     if (!apiKey) throw new Error('RUNPOD_API_KEY is not set in environment')
-    if (!endpointId) throw new Error('RUNPOD_TTS_ENDPOINT_ID is not set in environment')
+    if (!endpointId) throw new Error('RUNPOD_TTS_ENDPOINT_ID (or RUNPOD_ENDPOINT_ID) is not set in environment')
 
     // ── 1. Fetch current endpoint config ─────────────────────────────────────
     logger.info('Fetching RunPod endpoint config', { endpointId })
