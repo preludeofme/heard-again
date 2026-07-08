@@ -105,6 +105,16 @@ deep-review-report*.md
 # Open-source cleanup: local tool state and scanner output
 .claude/
 .scannerwork/
+.agents/
+.openhands/
+.windsurf/
+.trigger/
+screenshots/
+!UI/public/screenshots/
+UI/scratch/
+UI/coverage/
+UI/lint/
+Exporter/
 
 # Open-source cleanup: local logs, reports, and downloaded archives
 logs*.txt
