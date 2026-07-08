@@ -20,7 +20,7 @@ tsconfig.tsbuildinfo
 # TTS/tts-service/.env
 scratch/
 imports/
-
+screenshots/
 # Analysis reports — internal only, not for source control
 sonar-reports/
 

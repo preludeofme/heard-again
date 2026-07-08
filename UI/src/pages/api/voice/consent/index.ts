@@ -3,6 +3,10 @@ import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
 import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 import { validate, rules } from '@/lib/validation'
 export default apiHandler({
+  GET: async (req, res) => {
+    await getAuthUserWithFamilyspace(req, res)
+    throw Errors.methodNotAllowed(['POST'])
+  },
   // POST /api/voice/consent - Record voice consent
   POST: async (req, res) => {
     const user = await getAuthUserWithFamilyspace(req, res)
