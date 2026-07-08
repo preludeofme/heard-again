@@ -3,10 +3,6 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { getToken } from 'next-auth/jwt'
 import { errorResponse } from '../api-helpers'
 
-const _csrfSecret = process.env.NEXTAUTH_SECRET
-if (!_csrfSecret) throw new Error('NEXTAUTH_SECRET is required for CSRF protection')
-const CSRF_SECRET: string = _csrfSecret
-
 /**
  * Derive a deterministic CSRF token from session identifiers using HMAC.
  * Stateless — no Redis required.
