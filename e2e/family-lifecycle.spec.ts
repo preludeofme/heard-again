@@ -228,12 +228,20 @@ test('signup -> onboarding -> add family member -> edit -> delete', async ({ pag
     await expect(page.getByRole('application').getByText(PARENT_DISPLAY_NAME, { exact: true })).toHaveCount(0, { timeout: 15000 })
 
     // Hard verification against the API: the person record is actually gone.
-    // Bypass HTTP caching explicitly — the browser has cached earlier 200
-    // responses for this exact URL from the pre-delete detail-modal fetches.
+    // Poll: the confirm click fires the DELETE and reloads the page in
+    // parallel, so the row can lag the UI by a moment under dev-server load.
+    // (No-cache headers bypass the browser's cached pre-delete 200s.)
     expect(newPersonId).toBeTruthy()
-    const getResult = await page.request.get(`/api/people/${newPersonId}`, {
-      headers: { 'Cache-Control': 'no-cache', Pragma: 'no-cache' },
-    })
-    expect(getResult.status()).toBe(404)
+    await expect
+      .poll(
+        async () => {
+          const getResult = await page.request.get(`/api/people/${newPersonId}`, {
+            headers: { 'Cache-Control': 'no-cache', Pragma: 'no-cache' },
+          })
+          return getResult.status()
+        },
+        { timeout: 20_000 },
+      )
+      .toBe(404)
   })
 })

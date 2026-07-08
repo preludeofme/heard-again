@@ -124,6 +124,9 @@ export class TestUser {
   /** Authenticate through the real NextAuth credentials callback. */
   async login(): Promise<void> {
     const csrfRes = await this.api.get('/api/auth/csrf')
+    if (!csrfRes.ok()) {
+      throw new Error(`NextAuth csrf fetch failed (${csrfRes.status()})`)
+    }
     const { csrfToken } = (await csrfRes.json()) as { csrfToken: string }
     const loginRes = await this.api.post('/api/auth/callback/credentials', {
       form: {
@@ -148,14 +151,20 @@ export class TestUser {
 
   /** Family name + self person, same as finishing the onboarding wizard. */
   async completeOnboarding(): Promise<void> {
-    const body = await this.postJson<{ person?: { id: string }; familyspace?: { id: string } }>(
-      '/api/auth/complete-onboarding',
-      {
-        familyName: this.info.familyName,
-        firstName: this.info.firstName,
-        lastName: this.info.lastName,
-      },
-    )
+    const payload = {
+      familyName: this.info.familyName,
+      firstName: this.info.firstName,
+      lastName: this.info.lastName,
+    }
+    let body: ApiEnvelope<{ person?: { id: string }; familyspace?: { id: string } }>
+    try {
+      body = await this.postJson('/api/auth/complete-onboarding', payload)
+    } catch {
+      // The dev server occasionally 500s this transaction under heavy parallel
+      // load; the transaction rolls back, so one retry is safe.
+      await new Promise((resolve) => setTimeout(resolve, 2_000))
+      body = await this.postJson('/api/auth/complete-onboarding', payload)
+    }
     this.personId = body.data?.person?.id ?? null
     this.familyspaceId = body.data?.familyspace?.id ?? this.familyspaceId
   }

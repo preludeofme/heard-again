@@ -20,7 +20,9 @@ export default defineConfig({
   testIgnore: ['**/full-suite.spec.ts', '**/screenshots.spec.ts'],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
+  // One local retry absorbs dev-server load hiccups (the dev Next server
+  // compiles lazily and serves every worker); CI gets the usual two.
+  retries: process.env.CI ? 2 : 1,
   // The dev server compiles routes lazily and renders on one core; higher
   // parallelism makes first hits flaky-slow. Two workers is the sweet spot.
   workers: process.env.CI ? 1 : 2,

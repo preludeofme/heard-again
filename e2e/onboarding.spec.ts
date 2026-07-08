@@ -11,7 +11,7 @@ test.describe('Onboarding', () => {
   test('wizard requires a family name before continuing', async ({ page, context }) => {
     const user = await signUpFreshUser(context)
 
-    await page.goto('/onboarding')
+    await page.goto('/onboarding', { waitUntil: 'networkidle' })
     await expect(page.getByText('What should we call your family story?')).toBeVisible()
 
     // Step 1 cannot be skipped with an empty family name.
@@ -24,7 +24,7 @@ test.describe('Onboarding', () => {
   test('wizard requires a first name on the profile step', async ({ page, context }) => {
     const user = await signUpFreshUser(context)
 
-    await page.goto('/onboarding')
+    await page.goto('/onboarding', { waitUntil: 'networkidle' })
     await page.getByLabel('Family Name').fill(user.info.familyName)
     await page.getByRole('button', { name: 'Continue', exact: true }).click()
 
@@ -43,7 +43,7 @@ test.describe('Onboarding', () => {
   }) => {
     const user = await signUpFreshUser(context)
 
-    await page.goto('/onboarding')
+    await page.goto('/onboarding', { waitUntil: 'networkidle' })
     await page.getByLabel('Family Name').fill(user.info.familyName)
     await page.getByRole('button', { name: 'Continue', exact: true }).click()
 

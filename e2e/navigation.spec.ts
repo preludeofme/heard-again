@@ -10,14 +10,15 @@ test.describe('Desktop navigation', () => {
     await page.goto('/legacy')
     await expect(page.getByText(user.info.familyName)).toBeVisible()
 
+    // Generous timeouts: dev mode compiles each destination on first hit.
     await page.getByRole('link', { name: 'Family Tree', exact: true }).click()
-    await expect(page).toHaveURL(/\/family-tree/)
+    await expect(page).toHaveURL(/\/family-tree/, { timeout: 30_000 })
 
     await page.getByRole('link', { name: 'Contribute', exact: true }).click()
-    await expect(page).toHaveURL(/\/contribute/)
+    await expect(page).toHaveURL(/\/contribute/, { timeout: 30_000 })
 
     await page.getByRole('link', { name: 'Family Legacy', exact: true }).click()
-    await expect(page).toHaveURL(/\/legacy/)
+    await expect(page).toHaveURL(/\/legacy/, { timeout: 30_000 })
   })
 
   test('memories lenses switch and stay deep-linkable', async ({ page, user }) => {
@@ -67,14 +68,17 @@ test.describe('Mobile navigation', () => {
     const bottomNav = page.locator('.MuiBottomNavigation-root')
     await expect(bottomNav).toBeVisible()
 
-    await bottomNav.getByRole('button', { name: 'Tree' }).click()
-    await expect(page).toHaveURL(/\/family-tree/)
+    // The Next.js dev-tools launcher floats over the bottom edge in dev mode
+    // and can swallow taps (dev-only artifact) — drop it before each tap.
+    const tap = async (name: string, url: RegExp) => {
+      await page.evaluate(() => document.querySelector('nextjs-portal')?.remove())
+      await bottomNav.getByRole('button', { name }).click()
+      await expect(page).toHaveURL(url, { timeout: 30_000 })
+    }
 
-    await bottomNav.getByRole('button', { name: 'Contribute' }).click()
-    await expect(page).toHaveURL(/\/contribute/)
-
-    await bottomNav.getByRole('button', { name: 'Legacy' }).click()
-    await expect(page).toHaveURL(/\/legacy/)
+    await tap('Tree', /\/family-tree/)
+    await tap('Contribute', /\/contribute/)
+    await tap('Legacy', /\/legacy/)
   })
 })
 
@@ -83,7 +87,9 @@ test.describe('Back / return behaviour', () => {
     const { id } = await user.createStory({ title: `Back Nav Story ${Date.now().toString(36)}` })
 
     await page.goto(`/stories/${id}`)
-    await expect(page.getByText('Back Nav Story', { exact: false }).first()).toBeVisible()
+    await expect(page.getByText('Back Nav Story', { exact: false }).first()).toBeVisible({
+      timeout: 30_000,
+    })
 
     // The detail page's back arrow returns to the stories overview.
     await page.locator('button:has([data-testid="ArrowBackIcon"])').first().click()

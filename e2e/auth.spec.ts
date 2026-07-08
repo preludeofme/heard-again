@@ -9,7 +9,9 @@ test.describe('Registration', () => {
   test('new user can register and lands on onboarding @mobile', async ({ page }) => {
     const info = uniqueUserInfo('signup')
 
-    await page.goto('/signup')
+    // networkidle: wait for hydration — pre-hydration clicks are dropped and
+    // pre-hydration fills are wiped when React takes over the controlled form.
+    await page.goto('/signup', { waitUntil: 'networkidle' })
     await page.getByLabel('Email Address').fill(info.email)
     await page.getByLabel('Password', { exact: true }).fill(info.password)
     await page.getByLabel('Confirm Password', { exact: true }).fill(info.password)
@@ -24,7 +26,7 @@ test.describe('Registration', () => {
   test('registering with an existing email shows a friendly error', async ({ page }) => {
     const existing = await TestUser.signUp({ onboard: false })
 
-    await page.goto('/signup')
+    await page.goto('/signup', { waitUntil: 'networkidle' })
     await page.getByLabel('Email Address').fill(existing.info.email)
     await page.getByLabel('Password', { exact: true }).fill(existing.info.password)
     await page.getByLabel('Confirm Password', { exact: true }).fill(existing.info.password)
@@ -41,7 +43,9 @@ test.describe('Registration', () => {
   test('mismatched passwords are rejected before submission', async ({ page }) => {
     const info = uniqueUserInfo('mismatch')
 
-    await page.goto('/signup')
+    // networkidle: wait for hydration — pre-hydration clicks are dropped and
+    // pre-hydration fills are wiped when React takes over the controlled form.
+    await page.goto('/signup', { waitUntil: 'networkidle' })
     await page.getByLabel('Email Address').fill(info.email)
     await page.getByLabel('Password', { exact: true }).fill(info.password)
     await page.getByLabel('Confirm Password', { exact: true }).fill(`${info.password}-different`)
@@ -58,7 +62,7 @@ test.describe('Login', () => {
   test('valid credentials sign the user in @mobile', async ({ page }) => {
     const user = await TestUser.signUp()
 
-    await page.goto('/login')
+    await page.goto('/login', { waitUntil: 'networkidle' })
     await page.getByLabel('Email Address').fill(user.info.email)
     await page.getByLabel('Password', { exact: true }).fill(user.info.password)
     await page.getByRole('button', { name: 'Sign In', exact: true }).click()
@@ -71,7 +75,7 @@ test.describe('Login', () => {
   })
 
   test('invalid credentials show an error and stay on the login page', async ({ page }) => {
-    await page.goto('/login')
+    await page.goto('/login', { waitUntil: 'networkidle' })
     await page.getByLabel('Email Address').fill('nobody@heardagain.test')
     await page.getByLabel('Password', { exact: true }).fill('definitely-wrong-password')
     await page.getByRole('button', { name: 'Sign In', exact: true }).click()
@@ -93,13 +97,17 @@ test.describe('Logout', () => {
     await expect(page.getByText(user.info.familyName).first()).toBeVisible()
 
     await page.getByRole('button', { name: 'Open user menu' }).click()
-    await page.getByRole('menuitem', { name: /sign out/i }).click()
+    const signOutItem = page.getByRole('menuitem', { name: /sign out/i })
+    await expect(signOutItem).toBeVisible()
+    await signOutItem.click()
 
-    await expect(page).toHaveURL(/\/login/, { timeout: 30_000 })
+    // NextAuth posts the signout then redirects — generous timeout for dev mode.
+    await expect(page).toHaveURL(/\/login/, { timeout: 45_000 })
 
-    // The session is really gone: private pages redirect again.
+    // The session is really gone: private pages redirect again. The guard is
+    // client-side (session fetch then redirect), so allow it time under load.
     await page.goto('/legacy')
-    await expect(page).toHaveURL(/\/login/)
+    await expect(page).toHaveURL(/\/login/, { timeout: 30_000 })
   })
 })
 

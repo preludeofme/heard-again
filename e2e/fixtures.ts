@@ -47,6 +47,21 @@ export const test = base.extend<Fixtures>({
   // limits behave as they would for real, distinct users (see uniqueFakeIp).
   context: async ({ context }, use) => {
     await context.setExtraHTTPHeaders({ 'x-forwarded-for': uniqueFakeIp() })
+    // The Next.js dev-tools overlay (<nextjs-portal>) floats over the page and
+    // intercepts clicks near the bottom edge (mobile bottom nav). Hide it —
+    // it doesn't exist in production builds.
+    await context.addInitScript(() => {
+      const hide = () => {
+        if (!document.head) return
+        if (document.getElementById('e2e-hide-nextjs-portal')) return
+        const style = document.createElement('style')
+        style.id = 'e2e-hide-nextjs-portal'
+        style.textContent = 'nextjs-portal { display: none !important; pointer-events: none !important; }'
+        document.head.appendChild(style)
+      }
+      hide()
+      document.addEventListener('DOMContentLoaded', hide)
+    })
     await use(context)
   },
   user: async ({ context }, use) => {
