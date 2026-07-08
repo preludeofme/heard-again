@@ -21,6 +21,7 @@ tsconfig.tsbuildinfo
 scratch/
 imports/
 screenshots/
+!UI/public/screenshots/
 # Analysis reports — internal only, not for source control
 sonar-reports/
 
@@ -128,3 +129,4 @@ docs/patent/
 docs/memory-bank/
 .opencode/memory/
 /opensource.md
+.env*.local

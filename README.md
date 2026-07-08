@@ -2,6 +2,8 @@
 
 A family story preservation platform that digitizes and preserves family histories through AI-powered transcription, voice synthesis, and conversational interfaces.
 
+![Heard Again Landing Page](UI/public/screenshots/landing-hero.jpg)
+
 ## Architecture Overview
 
 This is a multi-service application organized into separate components:
@@ -30,6 +32,8 @@ The primary user interface for the platform. Features include:
 - **Timeline** - Chronological view of family events
 - **Import/Export** - GEDCOM support for genealogy data
 - **Authentication** - NextAuth with MFA support
+
+![Features](UI/public/screenshots/landing-features.jpg)
 
 **Key Directories:**
 - `src/components/` - React components
