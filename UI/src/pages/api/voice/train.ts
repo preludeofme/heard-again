@@ -2,9 +2,8 @@ import { logger } from '@/lib/logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '@/lib/prisma'
 import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
-import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
-import { getTTSProvider } from '@/lib/tts'
-import { generateVoiceSample } from '@/lib/voice/generate-voice-sample'
+import { apiHandler, Errors } from '@/lib/api-helpers'
+import { voiceTrainingTask } from '@/trigger/voice-training-task'
 
 /**
  * POST /api/voice/train
@@ -12,12 +11,11 @@ import { generateVoiceSample } from '@/lib/voice/generate-voice-sample'
  * Create a voice clone from uploaded audio samples.
  *
  * Because RunPod profile creation and sample synthesis can take 30–90 seconds
- * (triggering ERR_NETWORK_CHANGED in the browser), this endpoint now runs the
- * heavy lifting in a background Promise. It:
+ * (triggering ERR_NETWORK_CHANGED in the browser), this endpoint now triggers
+ * a Trigger.dev background task. It:
  *   1. Validates the request and creates the Prisma VoiceProfile record.
- *   2. Returns `{ status: 'processing', profileId }` immediately.
- *   3. Runs the RunPod profile creation + sample generation in the background.
- *   4. Updates the VoiceProfile status and sampleAudioUrl when done.
+ *   2. Triggers the voiceTrainingTask in the background.
+ *   3. Returns `{ status: 'processing', profileId }` immediately.
  *
  * The frontend polls /api/voice/profiles/[id] to detect completion
  * (when sampleAudioUrl is populated and status is 'READY').
@@ -95,9 +93,22 @@ async function trainVoiceHandler(req: NextApiRequest, res: NextApiResponse) {
     },
   })
 
-  logger.info('[API] train: voice profile record created, backgrounding work', {
+  logger.info('[API] train: voice profile record created, triggering background task', {
     profileId: profile.id,
     ttsFileId,
+  })
+
+  // ── Step B: Trigger Trigger.dev voiceTrainingTask ────────────────────────
+  await voiceTrainingTask.trigger({
+    profileId: profile.id,
+    ttsFileId,
+    profileName,
+    styleInstruct,
+    familyspaceId: user.familyspaceId,
+    userId: user.id,
+  }, {
+    idempotencyKey: `voice-train:profile:${profile.id}`,
+    tags: [`profile:${profile.id}`, `family:${user.familyspaceId}`],
   })
 
   // ── Return immediately while work runs in background ────────────────────
@@ -107,55 +118,6 @@ async function trainVoiceHandler(req: NextApiRequest, res: NextApiResponse) {
     profileId: profile.id,
     ttsProfileId: ttsFileId,
   })
-
-  // ── Step B: Create .pt profile on TTS service (background) ──────────────
-  ;(async () => {
-    const ttsProvider = getTTSProvider()
-    let ttsProfileName = ttsFileId
-
-    if (ttsProvider.createVoiceProfile) {
-      try {
-        const result = await ttsProvider.createVoiceProfile(
-          ttsFileId,
-          profileName,
-          styleInstruct
-        )
-        ttsProfileName = result.profileId
-        logger.info('[API] train: .pt voice profile created', { profileId: result.profileId, ttsFileId })
-      } catch (err) {
-        logger.error('[API] train: failed to create .pt voice profile', { ttsFileId, err })
-        await prisma.voiceProfile.update({
-          where: { id: profile.id },
-          data: { status: 'ERROR' },
-        }).catch(() => {})
-        return
-      }
-    }
-
-    // ── Step C: Generate voice sample (background) ────────────────────────
-    try {
-      const result = await generateVoiceSample(profile.id, ttsProfileName, user.familyspaceId, user.id)
-
-      await prisma.voiceProfile.update({
-        where: { id: profile.id },
-        data: {
-          status: 'READY',
-          sampleAudioUrl: result.url,
-        },
-      })
-
-      logger.info('[API] train: sample generated and profile READY', { profileId: profile.id })
-    } catch (err) {
-      logger.warn('[API] train: sample generation failed', { profileId: profile.id, err })
-
-      // Profile was created on TTS side, but sample failed — still mark READY
-      // so the user can use it (just no sample to play yet).
-      await prisma.voiceProfile.update({
-        where: { id: profile.id },
-        data: { status: 'READY' },
-      }).catch(() => {})
-    }
-  })()
 }
 
 export default apiHandler({
