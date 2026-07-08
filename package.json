@@ -3,6 +3,13 @@
   "version": "1.0.0",
   "private": true,
   "description": "Heard Again - Family Story Preservation Platform",
+  "license": "MIT",
+  "repository": "github:preludeofme/heard-again",
+  "bugs": "https://github.com/preludeofme/heard-again/issues",
+  "homepage": "https://github.com/preludeofme/heard-again",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "./Scripts/start-dev.sh --live",
     "dev_worktree": "./Scripts/start-dev-worktree.sh --live",
