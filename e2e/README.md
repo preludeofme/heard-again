@@ -38,8 +38,8 @@ the target first and fails fast with a clear message if the app isn't running.
 Run one spec / one test:
 
 ```bash
-npx playwright test e2e/stories.spec.ts
-npx playwright test e2e/auth.spec.ts -g "invalid credentials"
+npx playwright test e2e/stories/stories.spec.ts
+npx playwright test e2e/auth/auth.spec.ts -g "invalid credentials"
 ```
 
 ## Projects (viewports)
@@ -50,20 +50,46 @@ npx playwright test e2e/auth.spec.ts -g "invalid credentials"
   person profile, bottom-nav navigation). Tests tagged `@mobile-only` exercise
   mobile-specific UI and are excluded from the desktop project.
 
-## Test files
+## Test files (by feature area)
 
-| File                       | Coverage                                                              |
-| -------------------------- | --------------------------------------------------------------------- |
+### auth/
 | `auth.spec.ts`             | Registration, duplicate email, login (valid/invalid), logout, password recovery, protected-route redirects, session persistence |
 | `onboarding.spec.ts`       | Wizard validation, completion, persistence across reload/re-login, pre-onboarding empty tree |
-| `family-lifecycle.spec.ts` | The full journey: signup → onboarding → add relative with relationship → edit → delete (single-flow regression guard) |
-| `people.spec.ts`           | Person creation validation, person profile pages, tree ↔ profile navigation |
+
+### stories/
 | `stories.spec.ts`          | Create via UI, validation, lens listing, detail view, special characters, long content, edit, delete, empty state |
-| `access-control.spec.ts`   | Unauthenticated 401s, cross-familyspace isolation (API + browser), deleted-resource 404s, CSRF enforcement, security headers |
-| `billing.spec.ts`          | Free-plan baseline + entitlements, plan catalog, account subscription tab, Stripe test-mode checkout start (never completed), abandoned checkout leaves plan unchanged |
+| `story-advanced.spec.ts`   | Narrative generation, voice profiles, publishing, collections |
+
+### family/
+| `family-lifecycle.spec.ts` | The full journey: signup → onboarding → add relative with relationship → edit → delete (single-flow regression guard) |
+| `family-merge.spec.ts`     | Merging duplicate family members |
+| `people.spec.ts`           | Person creation validation, person profile pages, tree ↔ profile navigation |
+
+### voice/
+| `voice-pipeline.spec.ts`   | Voice cloning, training, synthesis end-to-end |
 | `consent.spec.ts`          | Voice-consent lifecycle: grant, duplicate guard, validation, cross-familyspace refusal, persistence across sessions, revoke + re-grant |
+
+### account/
+| `account-security.spec.ts` | MFA setup, session management, account settings, linked-person pairing |
+| `billing.spec.ts`          | Free-plan baseline + entitlements, plan catalog, subscription tab, Stripe test-mode checkout start, abandoned checkout leaves plan unchanged |
+| `password-reset.spec.ts`   | Forgot password flow, reset token validation, new password enforcement |
+
+### ui/
+| `public-pages.spec.ts`     | Landing page, terms, privacy — rendered and responsive |
 | `navigation.spec.ts`       | Desktop top nav, memories lens switching + deep links, user menu, legacy-route redirects, mobile bottom nav, back behaviour |
 | `empty-states.spec.ts`     | New-family empty states and a simulated API failure with retry recovery |
+| `page-ui.spec.ts`          | Visual regression and responsive layout checks |
+| `screenshots.spec.ts`      | Screenshot capture for documentation |
+
+### Other
+| `access-control.spec.ts` (access/) | Unauthenticated 401s, cross-familyspace isolation, CSRF enforcement |
+| `multi-familyspace.spec.ts` (social/) | Cross-familyspace interactions, invites, role switching |
+| `collections-interactions.spec.ts` (collections/) | Collections CRUD and interactions |
+| `search-deep.spec.ts` (collections/) | Full-text search across stories, people, documents |
+| `timeline-deep.spec.ts` (timeline/) | Timeline event creation, reordering, GEDCOM integration |
+| `media-uploads.spec.ts` (audio/) | Audio/file upload flows and validation |
+| `support-contact.spec.ts` (support/) | Contact form and support flows |
+| `import-export.spec.ts` (impexp/) | GEDCOM import/export, JSON/PDF export |
 
 Shared infrastructure:
 
