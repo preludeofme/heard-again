@@ -77,11 +77,16 @@ const handler = async (req: NextApiRequest, res: NextApiResponse): Promise<void>
 
       const stagingPath = asset.storagePath
 
+      // Prefer the OpenAI transcript stashed in process-upload.ts (runs
+      // concurrently with the RunPod storage job) over RunPod's own
+      // GPU-worker-bound Whisper transcript, which is now vestigial.
+      const openaiTranscript = existingMeta.openaiTranscript as string | null | undefined
+
       await prisma.asset.update({
         where: { id: assetId },
         data: {
           processingStatus: 'COMPLETED',
-          transcript: jobStatus.result.transcript,
+          transcript: openaiTranscript || jobStatus.result.transcript,
           durationSeconds: jobStatus.result.duration,
           storagePath: jobStatus.result.filePath,
           metadata: { ...existingMeta, ttsFileId: jobStatus.result.fileId },

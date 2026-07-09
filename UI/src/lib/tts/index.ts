@@ -4,6 +4,15 @@ import { RunPodTTSProvider } from './runpod-tts-provider'
 
 let instance: TTSProvider | null = null
 
+function resolveTTSServiceUrl(): string {
+  // When running in Trigger.dev cloud, use the public Funnel URL instead of localhost.
+  // TTS_SERVICE_URL_PUBLIC is synced via trigger.config.ts and set in .env.
+  const publicUrl = process.env.TTS_SERVICE_URL_PUBLIC
+  if (publicUrl) return publicUrl
+
+  return process.env.TTS_SERVICE_URL ?? 'http://127.0.0.1:4779'
+}
+
 export function getTTSProvider(): TTSProvider {
   if (instance) return instance
 
@@ -15,7 +24,7 @@ export function getTTSProvider(): TTSProvider {
       break
     case 'rest':
     default:
-      instance = new RestTTSProvider()
+      instance = new RestTTSProvider(resolveTTSServiceUrl())
   }
 
   return instance

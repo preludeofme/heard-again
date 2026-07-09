@@ -15,7 +15,13 @@ export interface VoiceTrainingTaskPayload {
 
 export const voiceTrainingTask = task({
   id: 'voice-training',
-  maxDuration: 600, // 10 minutes timeout
+  // RunPod queue-stall ceiling (RUNPOD_QUEUE_TIMEOUT_MS, default 120s) +
+  // execution ceiling (RUNPOD_POLL_TIMEOUT_MS, default 600s) + headroom for
+  // the surrounding DB/storage work. Previously this was 600s — identical to
+  // RUNPOD_POLL_TIMEOUT_MS's default — leaving no room for the WebSocket ->
+  // polling fallback to run before Trigger.dev force-killed the task.
+  maxDuration: 780, // 13 minutes
+
   retry: {
     maxAttempts: 1, // Only try once for profile creation to prevent redundant billing/compute
   },

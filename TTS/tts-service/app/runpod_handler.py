@@ -95,6 +95,19 @@ def _transcribe(audio_path: Path) -> str | None:
             return None
 
 
+def _crossfade_join(a: "np.ndarray", b: "np.ndarray", fade_samples: int) -> "np.ndarray":
+    """Join two audio arrays with a linear crossfade to eliminate click artifacts at the boundary."""
+    import numpy as np
+
+    fade_samples = min(fade_samples, len(a), len(b))
+    if fade_samples <= 0:
+        return np.concatenate([a, b])
+    ramp_out = np.linspace(1.0, 0.0, fade_samples, dtype=np.float32)
+    ramp_in = np.linspace(0.0, 1.0, fade_samples, dtype=np.float32)
+    blended = a[-fade_samples:] * ramp_out + b[:fade_samples] * ramp_in
+    return np.concatenate([a[:-fade_samples], blended, b[fade_samples:]])
+
+
 def _audio_duration(path: Path) -> float:
     try:
         data, sr = sf.read(str(path))

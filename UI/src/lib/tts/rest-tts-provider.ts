@@ -7,20 +7,26 @@ import type {
   SynthesisEvent,
 } from './tts-provider.types'
 
-const TTS_SERVICE_URL = process.env.TTS_SERVICE_URL ?? 'http://127.0.0.1:4779'
-const TTS_SERVICE_TOKEN = process.env.TTS_SERVICE_TOKEN
-
 export class RestTTSProvider implements TTSProvider {
+  private readonly serviceUrl: string
+  private readonly serviceToken: string | undefined
+
+  constructor(serviceUrl?: string) {
+    this.serviceUrl = serviceUrl ?? process.env.TTS_SERVICE_URL ?? 'http://127.0.0.1:4779'
+    this.serviceToken = process.env.TTS_SERVICE_TOKEN
+  }
+
+  private get url() { return this.serviceUrl }
   async createVoiceProfile(
     fileId: string,
     profileName: string,
     styleInstruct?: string | null
   ): Promise<{ profileId: string; profilePath: string }> {
-    const response = await fetch(`${TTS_SERVICE_URL}/api/tts/create-voice-profile`, {
+    const response = await fetch(`${this.url}/api/tts/create-voice-profile`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${TTS_SERVICE_TOKEN}`,
+        Authorization: `Bearer ${this.serviceToken}`,
         'X-Familyspace-Id': 'system',
       },
       body: JSON.stringify({
@@ -50,10 +56,10 @@ export class RestTTSProvider implements TTSProvider {
     const blob = new Blob([new Uint8Array(audioBuffer)], { type: mimeType })
     formData.append('audio', blob, filename)
 
-    const response = await fetch(`${TTS_SERVICE_URL}/api/tts/upload-reference`, {
+    const response = await fetch(`${this.url}/api/tts/upload-reference`, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${TTS_SERVICE_TOKEN}`,
+        Authorization: `Bearer ${this.serviceToken}`,
         'X-Familyspace-Id': familyspaceId,
       },
       body: formData,
@@ -77,7 +83,7 @@ export class RestTTSProvider implements TTSProvider {
     onProgress: (event: SynthesisProgressEvent) => Promise<void>,
     _onJobSubmitted?: (cloudJobId: string) => Promise<void>
   ): Promise<SynthesisCompleteEvent> {
-    const synthUrl = `${TTS_SERVICE_URL}/api/tts/synthesize-batch`
+    const synthUrl = `${this.url}/api/tts/synthesize-batch`
     let response: Response
 
     try {
@@ -85,7 +91,7 @@ export class RestTTSProvider implements TTSProvider {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${TTS_SERVICE_TOKEN}`,
+          Authorization: `Bearer ${this.serviceToken}`,
           'X-Familyspace-Id': familyspaceId,
         },
         body: JSON.stringify({
@@ -99,7 +105,7 @@ export class RestTTSProvider implements TTSProvider {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
       throw new Error(
-        `TTS synth request failed (url=${synthUrl}, tokenConfigured=${Boolean(TTS_SERVICE_TOKEN)}): ${msg}`
+        `TTS synth request failed (url=${synthUrl}, tokenConfigured=${Boolean(this.serviceToken)}): ${msg}`
       )
     }
 
@@ -148,13 +154,13 @@ export class RestTTSProvider implements TTSProvider {
   }
 
   async downloadAudio(audioId: string, familyspaceId: string): Promise<Buffer> {
-    const audioUrl = `${TTS_SERVICE_URL}/api/tts/audio/${audioId}`
+    const audioUrl = `${this.url}/api/tts/audio/${audioId}`
     let response: Response
 
     try {
       response = await fetch(audioUrl, {
         headers: {
-          Authorization: `Bearer ${TTS_SERVICE_TOKEN}`,
+          Authorization: `Bearer ${this.serviceToken}`,
           'X-Familyspace-Id': familyspaceId,
         },
       })

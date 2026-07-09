@@ -74,18 +74,33 @@ export default defineConfig({
         // Forward TTS vars so narration-render task can reach the correct provider.
         // In production these should be set in Vercel: TTS_PROVIDER=runpod_serverless,
         // RUNPOD_TTS_ENDPOINT_ID, and RUNPOD_API_KEY.
+        //
+        // TTS_SERVICE_URL: local dev uses http://localhost:4779, but Trigger.dev
+        // cloud workers need a public URL. Set TTS_SERVICE_URL_PUBLIC in .env
+        // to override (Tailscale Funnel or similar public endpoint).
         for (const key of [
           "TTS_PROVIDER",
           "TTS_SERVICE_URL",
+          "TTS_SERVICE_URL_PUBLIC",
           "TTS_SERVICE_TOKEN",
           "RUNPOD_API_KEY",
           "RUNPOD_TTS_ENDPOINT_ID",
           "RUNPOD_ENDPOINT_ID",
           "RUNPOD_POLL_INTERVAL_MS",
           "RUNPOD_POLL_TIMEOUT_MS",
+          "RUNPOD_QUEUE_TIMEOUT_MS",
         ]) {
           const value = ctx.env[key];
           if (value) vars.push({ name: key, value });
+        }
+
+        // Override TTS_SERVICE_URL with the public variant for cloud deployments
+        const publicTtsUrl = ctx.env.TTS_SERVICE_URL_PUBLIC;
+        if (publicTtsUrl) {
+          // Remove the local TTS_SERVICE_URL if present and replace with public
+          const idx = vars.findIndex(v => v.name === "TTS_SERVICE_URL");
+          if (idx >= 0) vars[idx] = { name: "TTS_SERVICE_URL", value: publicTtsUrl };
+          else vars.push({ name: "TTS_SERVICE_URL", value: publicTtsUrl });
         }
 
         return vars;

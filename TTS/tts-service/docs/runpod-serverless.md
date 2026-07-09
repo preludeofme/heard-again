@@ -30,6 +30,7 @@ REGISTRY_IMAGE=ghcr.io/youruser/heard-again-qwen3-tts IMAGE_TAG=latest ./scripts
 - Max workers: 1 while testing.
 
 ## Required environment variables
+- `HF_HUB_OFFLINE=0` (**REQUIRED** — RunPod blocks outbound traffic by default; this allows HuggingFace cache lookups)
 - `MODEL_ID` (`Qwen/Qwen3-TTS-12Hz-0.6B-Base` or `Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice`)
 - `MODEL_CACHE_DIR=/runpod-volume/models`
 - `HF_HOME=/runpod-volume/models/huggingface`

@@ -5,6 +5,7 @@ import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-h
 import { getStorageService } from '@/lib/storage/storage-service'
 import { S3StorageProvider } from '@/lib/storage/providers/s3-provider'
 import { getTTSProvider } from '@/lib/tts'
+import { transcribeWithOpenAI } from '@/lib/tts/openai-transcribe'
 
 const handler = async (req: NextApiRequest, res: NextApiResponse): Promise<void> => {
   if (req.method !== 'POST') {
@@ -54,18 +55,18 @@ const handler = async (req: NextApiRequest, res: NextApiResponse): Promise<void>
     if (!(rawProvider instanceof S3StorageProvider)) {
       const fileBuffer = await storage.getFile(asset.storagePath)
 
-      const result = await ttsProvider.uploadReference(
-        fileBuffer,
-        asset.originalName,
-        asset.mimeType,
-        user.familyspaceId
-      )
+      // Transcription now goes through OpenAI Whisper directly — decoupled from
+      // the TTS provider's own storage/reference-upload job, run concurrently.
+      const [result, transcript] = await Promise.all([
+        ttsProvider.uploadReference(fileBuffer, asset.originalName, asset.mimeType, user.familyspaceId),
+        transcribeWithOpenAI(fileBuffer, asset.originalName, asset.mimeType),
+      ])
 
       await prisma.asset.update({
         where: { id: assetId },
         data: {
           processingStatus: 'COMPLETED',
-          transcript: result.transcript,
+          transcript: transcript || result.transcript,
           durationSeconds: result.duration,
           storagePath: result.filePath,
           metadata: { ttsFileId: result.fileId },
@@ -85,12 +86,15 @@ const handler = async (req: NextApiRequest, res: NextApiResponse): Promise<void>
       return
     }
 
-    const { jobId: runpodJobId } = await ttsProvider.submitUploadReferenceFromUrl(
-      audioUrl,
-      asset.originalName,
-      asset.mimeType,
-      user.familyspaceId
-    )
+    // Fetch the audio bytes once so we can transcribe via OpenAI in parallel
+    // with the RunPod storage job, instead of relying on RunPod's own
+    // (GPU-worker-bound) Whisper transcription.
+    const fileBuffer = await storage.getFile(asset.storagePath)
+
+    const [{ jobId: runpodJobId }, transcript] = await Promise.all([
+      ttsProvider.submitUploadReferenceFromUrl(audioUrl, asset.originalName, asset.mimeType, user.familyspaceId),
+      transcribeWithOpenAI(fileBuffer, asset.originalName, asset.mimeType),
+    ])
 
     const existingMeta =
       typeof asset.metadata === 'object' && asset.metadata !== null
@@ -101,7 +105,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse): Promise<void>
       where: { id: assetId },
       data: {
         processingStatus: 'PROCESSING',
-        metadata: { ...existingMeta, runpodJobId },
+        metadata: { ...existingMeta, runpodJobId, openaiTranscript: transcript || null },
       },
     })
 

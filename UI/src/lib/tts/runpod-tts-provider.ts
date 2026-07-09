@@ -12,7 +12,15 @@ import type {
 const RUNPOD_API_KEY = process.env.RUNPOD_API_KEY ?? ''
 const RUNPOD_TTS_ENDPOINT_ID = process.env.RUNPOD_TTS_ENDPOINT_ID || process.env.RUNPOD_ENDPOINT_ID || ''
 const POLL_INTERVAL_MS = Number(process.env.RUNPOD_POLL_INTERVAL_MS ?? 1500)
+// Ceiling for the *execution* phase only (job already picked up by a worker).
+// Observed legitimate cold-start + synthesis runs take up to ~10 minutes.
 const POLL_TIMEOUT_MS = Number(process.env.RUNPOD_POLL_TIMEOUT_MS ?? 600_000)
+// Ceiling for how long we'll wait for a worker to pick the job up at all.
+// If a job is still IN_QUEUE after this, no worker was ever assigned (RunPod
+// bills nothing in that case) — waiting longer only burns the caller's own
+// timeout budget for zero chance of success, so we cancel and fail fast
+// instead of sitting idle for the full POLL_TIMEOUT_MS.
+const QUEUE_TIMEOUT_MS = Number(process.env.RUNPOD_QUEUE_TIMEOUT_MS ?? 120_000)
 const INLINE_THRESHOLD_BYTES = Number(process.env.RUNPOD_INLINE_AUDIO_THRESHOLD_BYTES ?? 1_048_576)
 
 const RUNPOD_BASE = 'https://api.runpod.ai/v2'
@@ -64,11 +72,67 @@ export class RunPodTTSProvider implements TTSProvider {
     return res.json() as Promise<RunPodJobResponse>
   }
 
+  /**
+   * Best-effort cancellation. Called when we give up on a job (queue stall or
+   * overall timeout) so it doesn't keep occupying/billing a worker after we've
+   * stopped waiting on it. Never throws — cancellation failing is not fatal to
+   * the caller, which is already surfacing its own error.
+   */
+  private async cancelJob(jobId: string): Promise<void> {
+    try {
+      await fetch(`${RUNPOD_BASE}/${RUNPOD_TTS_ENDPOINT_ID}/cancel/${jobId}`, {
+        method: 'POST',
+        headers: this.authHeaders(),
+      })
+    } catch (err) {
+      logger.warn('[RunPodTTSProvider] failed to cancel stalled/timed-out job', { jobId, err })
+    }
+  }
+
+  /**
+   * Waits only for the job to be picked up by a worker (leave IN_QUEUE), not
+   * for it to finish. RunPod does not bill anything while a job sits
+   * IN_QUEUE, so a job still queued after QUEUE_TIMEOUT_MS means no worker
+   * was ever assigned — continuing to wait the full POLL_TIMEOUT_MS would
+   * just burn the caller's time budget for a job that was never going to
+   * run. Cancels and fails fast instead.
+   *
+   * Returns the first non-IN_QUEUE status response (which may already be a
+   * terminal state for very fast jobs).
+   */
+  private async waitForJobStart(jobId: string): Promise<RunPodJobResponse> {
+    const deadline = Date.now() + QUEUE_TIMEOUT_MS
+
+    while (Date.now() < deadline) {
+      const res = await fetch(
+        `${RUNPOD_BASE}/${RUNPOD_TTS_ENDPOINT_ID}/status/${jobId}`,
+        { headers: this.authHeaders() }
+      )
+
+      if (!res.ok) {
+        const errText = await res.text().catch(() => '')
+        throw new Error(`RunPod status check failed (${res.status}): ${errText}`)
+      }
+
+      const job = (await res.json()) as RunPodJobResponse
+      if (job.status !== 'IN_QUEUE') return job
+
+      await new Promise<void>((resolve) => setTimeout(resolve, POLL_INTERVAL_MS))
+    }
+
+    logger.warn('[RunPodTTSProvider] job stalled IN_QUEUE, cancelling', { jobId, QUEUE_TIMEOUT_MS })
+    await this.cancelJob(jobId)
+    throw new Error(
+      `RUNPOD_QUEUE_TIMEOUT: no RunPod worker picked up job ${jobId} within ${QUEUE_TIMEOUT_MS}ms — endpoint may be at capacity`
+    )
+  }
+
   private async pollJob(
     jobId: string,
     onProgress?: (event: SynthesisProgressEvent) => Promise<void>
   ): Promise<RunPodJobResponse> {
     const deadline = Date.now() + POLL_TIMEOUT_MS
+    const queueDeadline = Date.now() + QUEUE_TIMEOUT_MS
 
     while (Date.now() < deadline) {
       const res = await fetch(
@@ -90,6 +154,16 @@ export class RunPodTTSProvider implements TTSProvider {
       if (job.status === 'CANCELLED') throw new Error('RunPod job was cancelled')
       if (job.status === 'TIMED_OUT') throw new Error('TTS_JOB_TIMEOUT: RunPod job timed out')
 
+      // Still queued and no worker has picked it up after QUEUE_TIMEOUT_MS —
+      // don't wait out the rest of POLL_TIMEOUT_MS for nothing.
+      if (job.status === 'IN_QUEUE' && Date.now() > queueDeadline) {
+        logger.warn('[RunPodTTSProvider] job stalled IN_QUEUE during poll, cancelling', { jobId, QUEUE_TIMEOUT_MS })
+        await this.cancelJob(jobId)
+        throw new Error(
+          `RUNPOD_QUEUE_TIMEOUT: no RunPod worker picked up job ${jobId} within ${QUEUE_TIMEOUT_MS}ms — endpoint may be at capacity`
+        )
+      }
+
       // Emit a heartbeat progress event so the caller can reflect that synthesis
       // is actively running. RunPod's REST status endpoint does not return
       // per-chunk counts, so sentencesDone/Total stay at 0 (indeterminate).
@@ -100,6 +174,7 @@ export class RunPodTTSProvider implements TTSProvider {
       await new Promise<void>((resolve) => setTimeout(resolve, POLL_INTERVAL_MS))
     }
 
+    await this.cancelJob(jobId)
     throw new Error('TTS_POLL_TIMEOUT: exceeded maximum wait time for RunPod job')
   }
 
@@ -296,6 +371,15 @@ export class RunPodTTSProvider implements TTSProvider {
     if (onJobSubmitted) {
       await onJobSubmitted(job.id).catch(() => undefined)
     }
+
+    // Fail fast (and cancel) if no worker ever picks the job up, rather than
+    // sitting on an open WebSocket for the full POLL_TIMEOUT_MS waiting for
+    // messages that will never arrive.
+    const started = await this.waitForJobStart(job.id)
+    if (started.status === 'COMPLETED') return started.output as SynthesisCompleteEvent
+    if (started.status === 'FAILED') throw new Error(`RunPod job failed: ${started.error ?? 'unknown error'}`)
+    if (started.status === 'CANCELLED') throw new Error('RunPod job was cancelled')
+    if (started.status === 'TIMED_OUT') throw new Error('TTS_JOB_TIMEOUT: RunPod job timed out')
 
     try {
       return await this.streamViaWebSocket(job.id, onProgress)

@@ -3,10 +3,7 @@ import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
 import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 import { logger } from '@/lib/logger'
 import { getStorageService } from '@/lib/storage/storage-service'
-import { getTTSProvider } from '@/lib/tts'
-
-const TTS_SERVICE_URL = process.env.TTS_SERVICE_URL ?? 'http://127.0.0.1:4779'
-const TTS_SERVICE_TOKEN = process.env.TTS_SERVICE_TOKEN ?? ''
+import { transcribeWithOpenAI } from '@/lib/tts/openai-transcribe'
 
 export default apiHandler({
   POST: async (req, res) => {
@@ -65,37 +62,8 @@ export default apiHandler({
       const mimeType = audioAsset.mimeType || 'audio/mpeg'
       const fileName = `${audioAsset.id}.${ext}`
 
-      let transcript: string
-
-      const provider = getTTSProvider()
-      if (provider.transcribeAudio) {
-        logger.info('[transcribe] using TTS provider transcribeAudio', { storyId })
-        transcript = await provider.transcribeAudio(audioBuffer, fileName, mimeType, user.familyspaceId)
-      } else {
-        // REST provider fallback — forwards multipart form to local FastAPI
-        logger.info('[transcribe] forwarding to TTS REST Whisper', { storyId, url: `${TTS_SERVICE_URL}/api/tts/transcribe` })
-        const formData = new FormData()
-        formData.append('audio', new Blob([new Uint8Array(audioBuffer)], { type: mimeType }), fileName)
-
-        const ttsRes = await fetch(`${TTS_SERVICE_URL}/api/tts/transcribe`, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${TTS_SERVICE_TOKEN}`,
-            'X-Familyspace-Id': user.familyspaceId,
-          },
-          body: formData,
-        })
-
-        if (!ttsRes.ok) {
-          const errText = await ttsRes.text().catch(() => 'unknown')
-          logger.error('[transcribe] TTS transcription failed', { storyId, status: ttsRes.status, errText })
-          await prisma.story.update({ where: { id: storyId }, data: { transcriptionStatus: 'FAILED' } })
-          throw Errors.badRequest('Transcription service failed — check TTS logs')
-        }
-
-        const ttsData = await ttsRes.json() as { transcript?: string }
-        transcript = ttsData.transcript ?? ''
-      }
+      logger.info('[transcribe] using OpenAI Whisper', { storyId })
+      const transcript = await transcribeWithOpenAI(audioBuffer, fileName, mimeType)
 
       if (!transcript.trim()) {
         await prisma.story.update({ where: { id: storyId }, data: { transcriptionStatus: 'FAILED' } })

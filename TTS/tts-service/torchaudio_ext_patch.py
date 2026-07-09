@@ -24,11 +24,22 @@ __all__ = [
 ]
 
 
+class _NoSoxExt:
+    """Dummy sox extension stand-in — reports unavailable rather than None,
+    so callers like torchaudio._backend.utils.get_available_backends() that
+    unconditionally call .is_available() on the result don't crash with
+    AttributeError: 'NoneType' object has no attribute 'is_available'."""
+
+    @staticmethod
+    def is_available() -> bool:
+        return False
+
+
 def lazy_import_sox_ext():
     """Stub: NGC torch does not ship with libtorchaudio, so sox_effects
     cannot use the C extension. Returns a dummy no-op so callers that
     only check for the import (not actually use sox_effects) will work."""
-    pass
+    return _NoSoxExt()
 
 
 if os.name == "nt" and (3, 8) <= sys.version_info < (3, 9):
