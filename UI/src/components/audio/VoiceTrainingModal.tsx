@@ -138,9 +138,7 @@ export function VoiceTrainingModal({
   }
 
   const handleClose = () => {
-    if (!isTraining) {
-      onClose()
-    }
+    onClose()
   }
 
   const handleSuggestionClick = (suggestion: string) => {
@@ -190,7 +188,7 @@ export function VoiceTrainingModal({
               Upload a recording and describe how they sound
             </Typography>
           </Box>
-          <IconButton onClick={handleClose} size="small" disabled={isTraining}>
+          <IconButton onClick={handleClose} size="small">
             <CloseIcon />
           </IconButton>
         </Box>
@@ -532,7 +530,7 @@ export function VoiceTrainingModal({
               </Box>
             </Box>
 
-            {/* ── Creating State ── */}
+            {/* ── Brief "submitting" indicator ── */}
             {isTraining && (
               <Alert
                 severity="info"
@@ -545,14 +543,11 @@ export function VoiceTrainingModal({
                 }}
               >
                 <Typography variant="body2" sx={{ fontWeight: 600, color: '#16334a' }}>
-                  Creating voice profile...
+                  Starting voice creation…
                 </Typography>
                 <Typography variant="caption" sx={{ color: '#546669' }}>
-                  Analyzing voice identity and applying style. This takes about 10-15 seconds.
+                  You can close this modal — we&apos;ll notify you when it&apos;s ready.
                 </Typography>
-                <LinearProgress
-                  sx={{ mt: 1, borderRadius: 1, '& .MuiLinearProgress-bar': { backgroundColor: '#16334a' } }}
-                />
               </Alert>
             )}
           </Box>

@@ -43,7 +43,122 @@ interface VoiceTrainingActions {
   resetTraining: () => void
 }
 
-// Waits until navigator.onLine is true, or rejects after timeoutMs.
+// ── Global poll registry: survives component unmount / page navigation ──
+type PollEntry = {
+  abort: AbortController
+  profileId: string
+  enqueueSnackbar: (msg: string, opts?: Record<string, unknown>) => void
+  closeSnackbar: (key?: string) => void
+}
+
+const activePolls = new Map<string, PollEntry>()
+
+/**
+ * Start polling a voice profile in the background.
+ * Survives page navigation — uses a module-level Map so polling continues
+ * even after the component that kicked it off unmounts.
+ */
+function startBackgroundPoll(
+  profileId: string,
+  enqueueSnackbar: (msg: string, opts?: Record<string, unknown>) => void,
+  closeSnackbar: (key?: string) => void,
+) {
+  // Abort any existing poll for this profile
+  const existing = activePolls.get(profileId)
+  if (existing) {
+    existing.abort.abort()
+  }
+
+  const abort = new AbortController()
+  const TOAST_KEY = `voice-training:${profileId}`
+
+  // Show a persistent "processing" toast that the user sees regardless of page
+  enqueueSnackbar(`Creating voice profile…`, {
+    variant: 'info',
+    persist: true,
+    key: TOAST_KEY,
+  })
+
+  activePolls.set(profileId, { abort, profileId, enqueueSnackbar, closeSnackbar })
+
+  const POLL_INTERVAL_MS = 3000
+  const MAX_ATTEMPTS = 60 // 180 seconds
+  let attempts = 0
+
+  const poll = async () => {
+    if (abort.signal.aborted) return
+
+    attempts++
+
+    try {
+      const resp = await fetch(`/api/voice/profiles/${profileId}`, { credentials: 'include' })
+
+      if (!resp.ok && attempts < MAX_ATTEMPTS) {
+        scheduleNext()
+        return
+      }
+
+      const data = await resp.json()
+      const profile = data?.data ?? data
+
+      if (profile?.status === 'READY' || profile?.sampleAudioUrl) {
+        // Success — dismiss the "processing" toast and show a persistent success toast
+        closeSnackbar(TOAST_KEY)
+        enqueueSnackbar(`Voice profile created! You can now use it in Talk.`, {
+          variant: 'success',
+          persist: true,
+          key: `voice-done:${profileId}`,
+        })
+        activePolls.delete(profileId)
+        return
+      }
+
+      if (profile?.status === 'ERROR') {
+        closeSnackbar(TOAST_KEY)
+        enqueueSnackbar(`Voice profile creation failed.`, {
+          variant: 'error',
+          persist: true,
+          key: `voice-error:${profileId}`,
+        })
+        activePolls.delete(profileId)
+        return
+      }
+
+      if (attempts >= MAX_ATTEMPTS) {
+        closeSnackbar(TOAST_KEY)
+        enqueueSnackbar(`Voice creation is still processing — check back soon.`, {
+          variant: 'warning',
+          persist: true,
+          key: `voice-timeout:${profileId}`,
+        })
+        activePolls.delete(profileId)
+        return
+      }
+
+      scheduleNext()
+    } catch {
+      if (attempts >= MAX_ATTEMPTS) {
+        closeSnackbar(TOAST_KEY)
+        enqueueSnackbar(`Voice creation check failed — please refresh.`, {
+          variant: 'warning',
+          persist: true,
+          key: `voice-error:${profileId}`,
+        })
+        activePolls.delete(profileId)
+        return
+      }
+      scheduleNext()
+    }
+  }
+
+  const scheduleNext = () => {
+    if (abort.signal.aborted) return
+    setTimeout(poll, POLL_INTERVAL_MS)
+  }
+
+  // Start first poll after a short delay (give Trigger.dev time to spin up)
+  setTimeout(poll, 2000)
+}
 function waitForOnline(timeoutMs = 60_000): Promise<void> {
   return new Promise((resolve, reject) => {
     if (typeof navigator === 'undefined' || navigator.onLine) {
@@ -313,10 +428,10 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
     language: string,
     styleInstruct?: string,
     personId?: string
-  ) => {
+  ): Promise<void> => {
     if (state.trainingSamples.length === 0) {
       enqueueSnackbar('Please upload at least one audio sample', { variant: 'error' })
-      return
+      throw new Error('No training samples')
     }
 
     setState(prev => ({ ...prev, isTraining: true }))
@@ -328,7 +443,7 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
       if (sampleFileIds.length === 0) {
         enqueueSnackbar('No valid audio samples found. Please re-upload your audio files.', { variant: 'error' })
         setState(prev => ({ ...prev, isTraining: false }))
-        return
+        throw new Error('No valid sample file IDs')
       }
 
       const requestBody = {
@@ -355,72 +470,20 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
         throw new Error(result.error || 'Voice profile creation failed')
       }
 
-      const profileId = result.profileId as string
+      const profileId: string = result.profileId
 
+      // ── Async background: the API returns immediately (Trigger.dev handles the work) ──
+      // Start a module-level poll that survives page navigation.
+      // The modal will close — the user gets a persistent toast when done.
+      startBackgroundPoll(profileId, enqueueSnackbar, closeSnackbar)
+
+      // Reset local state immediately — user can close the modal and move on
       setState(prev => ({
         ...prev,
-        trainingJob: {
-          id: profileId,
-          modelId: profileId,
-          status: 'processing',
-          progress: 30,
-          currentStage: 'creating_profile',
-          createdAt: new Date().toISOString(),
-        },
+        isTraining: false,
+        trainingSamples: [],
+        trainingJob: null,
       }))
-
-      enqueueSnackbar('Creating voice profile in the background — this may take a minute…', { variant: 'info' })
-
-      // Poll for completion — profile is READY when sampleAudioUrl is populated
-      let retries = 0
-      const maxRetries = 60 // 60 attempts × 3s = 3 minutes max wait
-
-      const pollInterval = setInterval(async () => {
-        retries++
-        try {
-          const pollResp = await fetch(`/api/voice/profiles/${profileId}`, { credentials: 'include' })
-          if (!pollResp.ok) return
-
-          const pollData = await pollResp.json()
-          const profile = pollData.data || pollData
-
-          if (profile?.status === 'READY' || profile?.sampleAudioUrl) {
-            clearInterval(pollInterval)
-            setState(prev => ({
-              ...prev,
-              trainingJob: {
-                id: profileId,
-                modelId: profileId,
-                status: 'completed',
-                progress: 100,
-                currentStage: 'completed',
-                createdAt: new Date().toISOString(),
-                completedAt: new Date().toISOString(),
-              },
-              isTraining: false,
-              trainingSamples: [],
-            }))
-            enqueueSnackbar('Voice profile created! You can now use it in Talk.', { variant: 'success' })
-          }
-
-          if (profile?.status === 'ERROR') {
-            clearInterval(pollInterval)
-            setState(prev => ({ ...prev, isTraining: false }))
-            enqueueSnackbar('Voice profile creation failed', { variant: 'error' })
-          }
-
-          if (retries >= maxRetries) {
-            clearInterval(pollInterval)
-            setState(prev => ({ ...prev, isTraining: false }))
-            enqueueSnackbar('Voice creation is still processing — check back soon.', { variant: 'warning' })
-          }
-        } catch {
-          if (retries >= maxRetries) {
-            clearInterval(pollInterval)
-            setState(prev => ({ ...prev, isTraining: false }))
-          }
-        }
-      }, 3000)
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to create voice profile'
       setState(prev => ({
@@ -430,7 +493,7 @@ export function useVoiceTraining(): VoiceTrainingState & VoiceTrainingActions {
       enqueueSnackbar(message, { variant: 'error' })
       throw error
     }
-  }, [state.trainingSamples, enqueueSnackbar, fetchToken])
+  }, [state.trainingSamples, enqueueSnackbar, closeSnackbar, fetchToken])
 
   const checkTrainingStatus = useCallback(async (jobId: string) => {
     try {

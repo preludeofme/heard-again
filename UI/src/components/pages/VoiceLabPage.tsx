@@ -168,12 +168,15 @@ export function VoiceLabPage({ voiceModels, controller, autoCreate }: VoiceLabPa
     }
   }
 
-  // ── Create voice with auto-refresh ──
+  // ── Create voice: fire-and-forget with background toast ──
   const handleCreateVoice = async (modelName: string, language: string, styleInstruct?: string) => {
     if (!selectedFamilyMember?.id) {
       throw new Error('Select a family member before creating a voice.')
     }
     await startVoiceTraining(modelName, language, styleInstruct)
+    // Close modal immediately — background poll handles completion notification
+    toggleRecordingModal()
+    // Refresh data optimistically (profile may not exist yet; toast will confirm)
     await refreshData()
   }
 

@@ -72,7 +72,9 @@ export function FamilyTreeModals({
     styleInstruct?: string,
   ): Promise<void> => {
     await startVoiceTraining(modelName, language, styleInstruct, voiceTrainingPersonId ?? undefined)
-  }, [startVoiceTraining, voiceTrainingPersonId])
+    // Close modal immediately — background poll handles completion notification
+    setVoiceTrainingPersonId(null)
+  }, [startVoiceTraining, voiceTrainingPersonId, setVoiceTrainingPersonId])
 
   return (
     <>
