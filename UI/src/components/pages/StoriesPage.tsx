@@ -61,15 +61,25 @@ export function StoriesPage({ stories, selectedFamilyMember, isLens = false, fam
               <Typography variant="h6" sx={{ color: ProfileColors.onSurfaceVariant, maxWidth: 500, lineHeight: 1.6, fontFamily: 'var(--font-newsreader), serif', fontSize: '1.25rem', mb: 4 }}>
                 We are building a living story of {getDisplayName(selectedFamilyMember)}&apos;s life. Your memories, voice, and stories keep this legacy vibrant for generations to come.
               </Typography>
-              <Button
-                variant="contained"
-                startIcon={<Share />}
-                component={Link}
-                href={familyspaceId ? `/familyspaces/${familyspaceId}/settings?tab=members` : '/account'}
-                sx={{ backgroundColor: ProfileColors.primary, borderRadius: '999px', px: 3, py: 1.5 }}
-              >
-                Invite family to contribute
-              </Button>
+              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                <Button
+                  variant="contained"
+                  startIcon={<Share />}
+                  component={Link}
+                  href={familyspaceId ? `/familyspaces/${familyspaceId}/settings?tab=members` : '/account'}
+                  sx={{ backgroundColor: ProfileColors.primary, borderRadius: '999px', px: 3, py: 1.5 }}
+                >
+                  Invite family to contribute
+                </Button>
+                <Button
+                  variant="outlined"
+                  component={Link}
+                  href="/moderation"
+                  sx={{ borderRadius: '999px', px: 3, py: 1.5, borderColor: ProfileColors.primary, color: ProfileColors.primary }}
+                >
+                  Review pending submissions
+                </Button>
+              </Box>
             </Grid>
             <Grid size={{ xs: 12, lg: 5 }}>
               <Box sx={{ aspectRatio: '4/5', borderRadius: 6, overflow: 'hidden', boxShadow: '0 20px 80px rgba(0,0,0,0.12)', transform: 'rotate(2deg)', background: `linear-gradient(135deg, ${ProfileColors.primaryContainer} 0%, ${ProfileColors.secondaryContainer} 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `12px solid #fff` }}>

@@ -2,30 +2,36 @@ import { apiHandler, successResponse, Errors, sanitizeStoryResponse } from '@/li
 import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 import { storyService } from '@/services'
 import { updateStorySchema } from '@/schemas'
+import { checkRateLimit } from '@/lib/security/rate-limiter'
 
 export default apiHandler({
   // GET /api/stories/[id] - Get story details
   GET: async (req, res) => {
     const storyId = req.query.id as string
-    
-    // First, try to get the story without requiring auth to check if it's public
-    // We pass null for familyspaceId to the service if we don't have a user yet
-    // The service might need adjustment to handle this or we use the repo directly
-    
+
     let user = null
     try {
       user = await getAuthUserWithFamilyspace(req, res)
     } catch (e) {
-      // Not authenticated, that's fine for now
+      // Not authenticated, that's fine — fall through to the share-link check below
     }
 
-    const story = await storyService.getStoryDetail(storyId, user?.familyspaceId)
+    if (!user) {
+      // Anonymous access requires a valid, unexpired share token — being
+      // marked isPublic alone isn't enough (see docs/sharing.md). Rate-limit
+      // this branch the same as the other public sharing endpoints, since
+      // it's otherwise unauthenticated and unthrottled.
+      const allowed = await checkRateLimit('public', req, res)
+      if (!allowed) return
+
+      // Use the dedicated public endpoint so we never leak internal-only fields.
+      const publicStory = await storyService.getPublicStory(storyId, req.query.token)
+      if (!publicStory) throw Errors.unauthorized()
+      return successResponse(res, publicStory)
+    }
+
+    const story = await storyService.getStoryDetail(storyId, user.familyspaceId)
     if (!story) throw Errors.notFound('Story')
-
-    // If not public and no user, throw unauthorized
-    if (!story.isPublic && !user) {
-      throw Errors.unauthorized()
-    }
 
     // Sanitize response to remove storage path information
     const sanitizedStory = sanitizeStoryResponse(story)

@@ -7,17 +7,18 @@ export default apiHandler({
   // GET /api/people/[id] - Get person details
   GET: async (req, res) => {
     const personId = req.query.id as string
-    
-    let user = null
-    try {
-      user = await getAuthUserWithFamilyspace(req, res)
-    } catch (e) {
-      // Not authenticated
-    }
+
+    // Requires familyspace membership. Anonymous access to a person's basic
+    // info is only ever allowed through the dedicated, share-token-gated
+    // `/api/people/[id]/public` endpoint (see docs/sharing.md) — this
+    // endpoint previously had an unauthenticated fallback that returned
+    // name/avatar for *any* person in *any* familyspace with no consent
+    // check and no familyspace scoping; removed as a privacy leak.
+    const user = await getAuthUserWithFamilyspace(req, res)
 
     let result
     try {
-      result = await personService.getPersonDetail(personId, user?.familyspaceId)
+      result = await personService.getPersonDetail(personId, user.familyspaceId)
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to get person details'
       return res.status(500).json({ success: false, error: message })
@@ -25,18 +26,6 @@ export default apiHandler({
 
     if (!result) {
       throw Errors.notFound('Person')
-    }
-
-    // If not authenticated, return only basic info
-    if (!user) {
-      return successResponse(res, {
-        id: result.id,
-        firstName: result.firstName,
-        middleName: result.middleName,
-        lastName: result.lastName,
-        displayName: result.displayName,
-        avatarUrl: result.avatarUrl,
-      })
     }
 
     return successResponse(res, result)

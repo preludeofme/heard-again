@@ -3,6 +3,12 @@ import type { PersonListItem, CreatePersonResponse, PersonType } from '@/contrac
 import { personRepository, PersonRepository } from '@/server/repositories/PersonRepository'
 import { prisma } from '@/lib/prisma'
 import { buildPersonNameSearchWhere, getPersonSearchTokens } from '@/lib/person-search'
+import {
+  generateShareToken,
+  computeShareExpiry,
+  isShareLinkValid,
+  type ShareExpiryOption,
+} from '@/lib/security/share-tokens'
 
 export type TrimScope = 'person' | 'children' | 'all'
 export type TrimAction = 'detach' | 'delete'
@@ -307,6 +313,67 @@ export class PersonService {
    */
   async deletePerson(personId: string, familyspaceId: string, userId: string): Promise<void> {
     await this.repo.delete(personId, familyspaceId, userId)
+  }
+
+  /**
+   * Create or refresh a person's public profile share link (see docs/sharing.md).
+   */
+  async createShareLink(
+    personId: string,
+    familyspaceId: string,
+    userId: string,
+    expiryOption: ShareExpiryOption
+  ): Promise<{ token: string; expiresAt: Date | null }> {
+    const token = generateShareToken()
+    const expiresAt = computeShareExpiry(expiryOption)
+
+    await this.repo.update(personId, familyspaceId, {
+      isPubliclyShared: true,
+      shareToken: token,
+      shareTokenExpiresAt: expiresAt,
+    }, userId)
+
+    return { token, expiresAt }
+  }
+
+  /**
+   * Revoke a person's public profile share link.
+   */
+  async revokeShareLink(personId: string, familyspaceId: string, userId: string): Promise<void> {
+    await this.repo.update(personId, familyspaceId, {
+      isPubliclyShared: false,
+      shareToken: null,
+      shareTokenExpiresAt: null,
+    }, userId)
+  }
+
+  /**
+   * Fetch a person's public profile via a share link: name + any stories
+   * about them that have themselves been individually shared publicly.
+   * Returns null if the person doesn't exist, isn't shared, or the token is
+   * missing/wrong/expired.
+   */
+  async getPublicProfile(personId: string, token: string | string[] | undefined): Promise<any | null> {
+    const person = await this.repo.findById(personId)
+    if (!person || !(person as any).isPubliclyShared) return null
+    if (!isShareLinkValid((person as any).shareToken, (person as any).shareTokenExpiresAt, token)) {
+      return null
+    }
+
+    const stories = await prisma.story.findMany({
+      where: { subjectId: personId, isPublic: true, status: 'PUBLISHED' },
+      select: { id: true, title: true, excerpt: true, storyDate: true, createdAt: true },
+      orderBy: { createdAt: 'desc' },
+    })
+
+    return {
+      id: person.id,
+      firstName: person.firstName,
+      lastName: person.lastName,
+      displayName: person.displayName || this.computeDisplayName(person),
+      bio: person.bio,
+      stories,
+    }
   }
 
   /**

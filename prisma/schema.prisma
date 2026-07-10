@@ -51,6 +51,7 @@ model User {
   createdPeople             Person[]
   createdStories            Story[]               @relation("StoryCreator")
   narrationApprovals        Story[]               @relation("StoryNarrationApprover")
+  publicSubmissionApprovals Story[]               @relation("StoryPublicApprover")
   comments                  StoryComment[]
   defaultFamilyspace        Familyspace?          @relation("UserDefaultFamilyspace", fields: [defaultFamilyspaceId], references: [id])
   linkedPerson              Person?               @relation("UserLinkedPerson", fields: [linkedPersonId], references: [id], onDelete: SetNull)
@@ -413,6 +414,9 @@ model Person {
   gedcomXref       String?
   causeOfDeath     String?
   sex              GedcomSex?
+  isPubliclyShared Boolean                  @default(false)
+  shareToken       String?                  @unique
+  shareTokenExpiresAt DateTime?
   documentLinks    DocumentPerson[]
   familyChildLinks FamilyChild[]
   mergeSources     FamilyMergePersonMatch[] @relation("MergeSourcePerson")
@@ -464,6 +468,11 @@ model Story {
   authorRelationship    String?
   isPublic              Boolean              @default(false)
   shareToken            String?              @unique
+  shareTokenExpiresAt   DateTime?
+  submittedByName       String?
+  submittedByEmail      String?
+  publicApprovedAt      DateTime?
+  publicApprovedById    String?
   transcript            String?
   transcriptionStatus   TranscriptionStatus  @default(NONE)
   narratedContent       String?
@@ -479,6 +488,7 @@ model Story {
   collections           CollectionStory[]
   createdBy             User?                @relation("StoryCreator", fields: [createdById], references: [id])
   narrationApprovedBy   User?                @relation("StoryNarrationApprover", fields: [narrationApprovedById], references: [id])
+  publicApprovedBy      User?                @relation("StoryPublicApprover", fields: [publicApprovedById], references: [id])
   generatedAudioAsset   Asset?               @relation("StoryGeneratedAudio", fields: [generatedAudioAssetId], references: [id])
   speaker               Person?              @relation("StorySpeaker", fields: [speakerId], references: [id])
   subject               Person?              @relation("StorySubject", fields: [subjectId], references: [id])

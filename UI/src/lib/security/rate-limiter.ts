@@ -40,6 +40,62 @@ const rateLimitConfigs = {
     max: 30, // 30 requests per window
     message: 'Too many billing requests, please try again later',
   },
+
+  // Very strict rate limiting for unauthenticated, public-facing endpoints
+  // (public story/profile viewing, anonymous story submissions). Turnstile
+  // (see lib/security/turnstile.ts) is the primary bot defense when
+  // configured; this is the fallback that always applies.
+  public: {
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 20, // 20 requests per window
+    message: 'Too many requests, please try again later',
+  },
+}
+
+/**
+ * Checks (and consumes) rate-limit quota for a single request, writing the
+ * standard `X-RateLimit-*` headers and, if exceeded, the 429 response body.
+ * Returns `true` if the request is allowed to proceed. Shared by
+ * `withRateLimit` (whole-handler wrapping) and routes that only need to
+ * rate-limit one branch of a multi-method/multi-path handler (e.g. the
+ * anonymous-access branch of an otherwise-authenticated GET route).
+ */
+export async function checkRateLimit(
+  type: keyof typeof rateLimitConfigs,
+  req: NextApiRequest,
+  res: NextApiResponse
+): Promise<boolean> {
+  const config = rateLimitConfigs[type]
+  const clientIp = getClientIp(req)
+  const key = `ratelimit:${type}:${clientIp}`
+
+  const { allowed, remaining, resetAt } = await rateLimitCheck(
+    key,
+    config.max,
+    config.windowMs
+  )
+
+  res.setHeader('X-RateLimit-Limit', config.max)
+  res.setHeader('X-RateLimit-Remaining', remaining)
+  res.setHeader('X-RateLimit-Reset', resetAt.toISOString())
+
+  if (!allowed) {
+    logger.warn({
+      type: 'RATE_LIMIT_EXCEEDED',
+      ip: clientIp,
+      endpoint: req.url,
+      method: req.method,
+      rateLimitType: type,
+    }, 'Rate limit exceeded')
+
+    res.status(429).json({
+      error: config.message,
+      retryAfter: Math.ceil(config.windowMs / 1000),
+    })
+    return false
+  }
+
+  return true
 }
 
 // Rate limiting middleware for Next.js API routes — Redis sliding-window only
@@ -48,41 +104,14 @@ export function withRateLimit(
   handler: (req: NextApiRequest, res: NextApiResponse) => Promise<void>
 ): (req: NextApiRequest, res: NextApiResponse) => Promise<void> {
   return async function wrappedHandler(req: NextApiRequest, res: NextApiResponse): Promise<void> {
-    const config = rateLimitConfigs[type]
-    const clientIp = getClientIp(req)
-    const key = `ratelimit:${type}:${clientIp}`
-
-    const { allowed, remaining, resetAt } = await rateLimitCheck(
-      key,
-      config.max,
-      config.windowMs
-    )
-
-    res.setHeader('X-RateLimit-Limit', config.max)
-    res.setHeader('X-RateLimit-Remaining', remaining)
-    res.setHeader('X-RateLimit-Reset', resetAt.toISOString())
-
-    if (!allowed) {
-      logger.warn({
-        type: 'RATE_LIMIT_EXCEEDED',
-        ip: clientIp,
-        endpoint: req.url,
-        method: req.method,
-        rateLimitType: type,
-      }, 'Rate limit exceeded')
-
-      res.status(429).json({
-        error: config.message,
-        retryAfter: Math.ceil(config.windowMs / 1000),
-      })
-      return
-    }
+    const allowed = await checkRateLimit(type, req, res)
+    if (!allowed) return
 
     return handler(req, res)
   }
 }
 
-function getClientIp(req: NextApiRequest): string {
+export function getClientIp(req: NextApiRequest): string {
   const forwarded = req.headers['x-forwarded-for']
   const realIp = req.headers['x-real-ip']
 

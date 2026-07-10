@@ -14,6 +14,12 @@ import {
 } from '@/contracts'
 import { storyRepository, StoryRepository } from '@/server/repositories/StoryRepository'
 import { personRepository } from '@/server/repositories/PersonRepository'
+import {
+  generateShareToken,
+  computeShareExpiry,
+  isShareLinkValid,
+  type ShareExpiryOption,
+} from '@/lib/security/share-tokens'
 
 // Story inclusion type for Prisma queries
 type StoryInclude = {
@@ -317,6 +323,127 @@ export class StoryService {
    */
   async deleteStory(storyId: string, familyspaceId: string, userId: string): Promise<void> {
     await this.repo.delete(storyId, familyspaceId, userId)
+  }
+
+  /**
+   * Create or refresh a story's public share link (see docs/sharing.md).
+   */
+  async createShareLink(
+    storyId: string,
+    familyspaceId: string,
+    userId: string,
+    expiryOption: ShareExpiryOption
+  ): Promise<{ token: string; expiresAt: Date | null }> {
+    const token = generateShareToken()
+    const expiresAt = computeShareExpiry(expiryOption)
+
+    await this.repo.update(storyId, familyspaceId, {
+      isPublic: true,
+      shareToken: token,
+      shareTokenExpiresAt: expiresAt,
+    }, userId)
+
+    return { token, expiresAt }
+  }
+
+  /**
+   * Revoke a story's public share link.
+   */
+  async revokeShareLink(storyId: string, familyspaceId: string, userId: string): Promise<void> {
+    await this.repo.update(storyId, familyspaceId, {
+      isPublic: false,
+      shareToken: null,
+      shareTokenExpiresAt: null,
+    }, userId)
+  }
+
+  /**
+   * Fetch a story for anonymous viewing via a share link. Returns null if the
+   * story doesn't exist, isn't shared, or the token is missing/wrong/expired.
+   */
+  async getPublicStory(storyId: string, token: string | string[] | undefined): Promise<any | null> {
+    const story = await this.repo.findById(storyId, undefined, {
+      subject: { select: { id: true, firstName: true, lastName: true, displayName: true } },
+    })
+    if (!story || !story.isPublic) return null
+    if (!isShareLinkValid(story.shareToken, story.shareTokenExpiresAt, token)) return null
+
+    return {
+      id: story.id,
+      title: story.title,
+      content: story.content,
+      excerpt: story.excerpt,
+      storyType: story.storyType,
+      storyDate: story.storyDate,
+      tags: story.tags,
+      subject: (story as any).subject ?? null,
+      createdAt: story.createdAt,
+    }
+  }
+
+  /**
+   * Create a story from an anonymous public submission. Always lands in
+   * REVIEW status — never auto-published, per docs/sharing.md's moderation
+   * requirement.
+   */
+  async createPublicSubmission(
+    familyspaceId: string,
+    subjectId: string,
+    data: { title: string; content: string; submittedByName: string; submittedByEmail: string }
+  ): Promise<{ id: string }> {
+    const safeContent = sanitizeStoryContent(data.content)
+    const excerpt = safeContent.replace(/<[^>]*>/g, '').substring(0, 200)
+
+    const story = await this.repo.create({
+      familyspaceId,
+      createdById: null,
+      title: data.title,
+      content: safeContent,
+      excerpt,
+      storyType: StoryType.MEMORY,
+      subjectId,
+      status: StoryStatus.REVIEW,
+      isPublic: false,
+      tags: [],
+      submittedByName: data.submittedByName,
+      submittedByEmail: data.submittedByEmail,
+    } as any, null)
+
+    return { id: story.id }
+  }
+
+  /**
+   * List public submissions awaiting moderation for a familyspace.
+   */
+  async listPendingSubmissions(familyspaceId: string): Promise<any[]> {
+    return this.repo.findMany(familyspaceId, {
+      where: { status: StoryStatus.REVIEW, submittedByEmail: { not: null } },
+      include: {
+        subject: { select: { id: true, firstName: true, lastName: true, displayName: true } },
+      },
+    })
+  }
+
+  /**
+   * Approve or reject a pending public submission. Approving publishes it
+   * (requires at least one family member's approval, per docs/sharing.md);
+   * rejecting deletes it outright.
+   */
+  async moderateSubmission(
+    storyId: string,
+    familyspaceId: string,
+    userId: string,
+    action: 'approve' | 'reject'
+  ): Promise<void> {
+    if (action === 'approve') {
+      await this.repo.update(storyId, familyspaceId, {
+        status: StoryStatus.PUBLISHED,
+        publicApprovedAt: new Date(),
+        publicApprovedById: userId,
+      }, userId)
+    } else {
+      await this.repo.delete(storyId, familyspaceId, userId)
+    }
   }
 
   /**

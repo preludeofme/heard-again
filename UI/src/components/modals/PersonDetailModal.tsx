@@ -44,11 +44,13 @@ import {
   InsertDriveFile as FileIcon,
   Download as DownloadIcon,
   Check as CheckIcon,
+  ShareOutlined as ShareIcon,
 } from '@mui/icons-material'
 import { formatDistanceToNow } from 'date-fns'
 import { fetchWithCSRFAndJSON, fetchWithCSRF } from '@/lib/api-client'
 import { resizeImageFile } from '@/lib/resize-image'
 import { ConfirmDialog } from './ConfirmDialog'
+import { ShareLinkDialog } from './ShareLinkDialog'
 
 interface Person {
   id: string
@@ -171,6 +173,7 @@ export function PersonDetailModal({
   const [deleteTarget, setDeleteTarget] = useState<MediaDocument | null>(null)
   const [isDeletingMedia, setIsDeletingMedia] = useState(false)
   const [isDeletePersonConfirmOpen, setIsDeletePersonConfirmOpen] = useState(false)
+  const [isShareDialogOpen, setIsShareDialogOpen] = useState(false)
   const [editingTitleId, setEditingTitleId] = useState<string | null>(null)
   const [editingTitleValue, setEditingTitleValue] = useState('')
   const [isSavingTitle, setIsSavingTitle] = useState(false)
@@ -1154,6 +1157,18 @@ export function PersonDetailModal({
         onCancel={() => setDeleteTarget(null)}
       />
 
+      {person && (
+        <ShareLinkDialog
+          open={isShareDialogOpen}
+          onClose={() => setIsShareDialogOpen(false)}
+          title="Share this profile"
+          description="Anyone with this link can view a public profile page and submit a story about this person — submissions require your approval before they're published."
+          kind="person"
+          resourceId={person.id}
+          buildShareUrl={(token) => `${window.location.origin}/share/person/${person.id}?token=${token}`}
+        />
+      )}
+
       {/* Person delete confirmation */}
       <ConfirmDialog
         open={isDeletePersonConfirmOpen}
@@ -1208,6 +1223,19 @@ export function PersonDetailModal({
             }}
           >
             View Full Profile
+          </Button>
+          <Button
+            variant="outlined"
+            startIcon={<ShareIcon />}
+            onClick={() => setIsShareDialogOpen(true)}
+            sx={{
+              borderColor: '#16334a',
+              color: '#16334a',
+              textTransform: 'none',
+              borderRadius: 2,
+            }}
+          >
+            Share Profile
           </Button>
         </Box>
 

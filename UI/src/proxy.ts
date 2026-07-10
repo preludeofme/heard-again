@@ -57,6 +57,7 @@ export default async function middleware(request: NextRequest) {
     '/terms',
     '/terms-legacy',
     '/support',
+    '/share',
     '/images',
     '/manifest.json',
     '/icon-192.png',

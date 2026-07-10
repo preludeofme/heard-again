@@ -21,6 +21,7 @@ import { NarrationReviewPanel } from '@/components/stories/NarrationReviewPanel'
 import { StoryNarrationPlayer, type SavedNarration } from '@/components/stories/StoryNarrationPlayer'
 import { fetchWithCSRF } from '@/lib/api-client'
 import { useTTSWarmup } from '@/hooks/useTTSWarmup'
+import { ShareLinkDialog } from '@/components/modals/ShareLinkDialog'
 
 type NarrationStatus = 'NONE' | 'PENDING' | 'READY' | 'APPROVED' | 'STALE' | 'FAILED'
 type TranscriptionStatus = 'NONE' | 'PENDING' | 'COMPLETED' | 'FAILED'
@@ -42,6 +43,8 @@ interface StoryDetail {
   status: string
   isPinned: boolean
   isPublic: boolean
+  shareToken?: string | null
+  shareTokenExpiresAt?: string | null
   authorRelationship?: string | null
   storyDate?: string
   tags: string[]
@@ -97,6 +100,7 @@ export default function StoryDetailPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isFavorited, setIsFavorited] = useState(false)
+  const [shareDialogOpen, setShareDialogOpen] = useState(false)
   const [commentText, setCommentText] = useState('')
   const [isSubmittingComment, setIsSubmittingComment] = useState(false)
   const [voiceProfiles, setVoiceProfiles] = useState<VoiceProfileRow[]>([])
@@ -480,29 +484,9 @@ export default function StoryDetailPage() {
               {isFavorited ? <Favorite /> : <FavoriteBorder />}
             </IconButton>
             <IconButton
-              onClick={async () => {
-                try {
-                  const newIsPublic = !story.isPublic
-                  await fetchWithCSRF(`/api/stories/${story.id}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({ isPublic: newIsPublic }),
-                  })
-                  setStory({ ...story, isPublic: newIsPublic })
-                  if (newIsPublic) {
-                    const shareUrl = `${window.location.origin}/stories/${story.id}`
-                    await navigator.clipboard.writeText(shareUrl)
-                    alert('Story is now public! Anyone with the link can view this story. Link copied to clipboard.')
-                  } else {
-                    alert('Story is now private.')
-                  }
-                } catch (err) {
-                  console.error('Failed to update sharing:', err)
-                }
-              }}
+              onClick={() => setShareDialogOpen(true)}
               sx={{ color: story.isPublic ? '#2e7d32' : '#546669' }}
-              title={story.isPublic ? 'Publicly Shared' : 'Private Story'}
+              title={story.isPublic ? 'Publicly Shared' : 'Share this story'}
             >
               {story.isPublic ? <Share /> : <ShareOutlined />}
             </IconButton>
@@ -1045,6 +1029,18 @@ export default function StoryDetailPage() {
           </Box>
         </Box>
       </Layout>
+
+      <ShareLinkDialog
+        open={shareDialogOpen}
+        onClose={() => setShareDialogOpen(false)}
+        title="Share this story"
+        description="Anyone with this link can view this story, without needing an account. You control when it expires."
+        kind="story"
+        resourceId={story.id}
+        initialToken={story.shareToken}
+        initialExpiresAt={story.shareTokenExpiresAt}
+        buildShareUrl={(token) => `${window.location.origin}/share/story/${story.id}?token=${token}`}
+      />
     </>
   )
 }

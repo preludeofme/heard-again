@@ -25,6 +25,7 @@ export interface PaginationResponse {
 
 export const StoryStatus = {
   DRAFT: 'DRAFT',
+  REVIEW: 'REVIEW',
   PUBLISHED: 'PUBLISHED',
   ARCHIVED: 'ARCHIVED',
 } as const
