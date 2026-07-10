@@ -1,4 +1,4 @@
-import { test, expect, TestUser } from './fixtures'
+import { test, expect, TestUser } from '../fixtures'
 
 /**
  * Voice consent — the consent-first safety model around voice cloning.

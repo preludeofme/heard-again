@@ -1,4 +1,4 @@
-import { test, expect, expectAlert, TestUser, uniqueUserInfo } from './fixtures'
+import { test, expect, expectAlert, TestUser, uniqueUserInfo } from '../fixtures'
 
 /**
  * Authentication: registration, login, logout, password recovery entry point,

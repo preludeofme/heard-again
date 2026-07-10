@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures'
+import { test, expect } from '../fixtures'
 
 /**
  * Browser-level E2E tests for Heard Again pages that had API-only coverage.

@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures'
+import { test, expect } from '../fixtures'
 
 /**
  * Search — deep functional tests beyond page load.

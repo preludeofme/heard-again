@@ -77,12 +77,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // only creates a Checkout Session and never writes the plan itself.
         const plan = planId ? await prisma.plan.findUnique({ where: { id: planId } }) : null
 
+        const existingSub = await prisma.subscription.findUnique({
+          where: { familyspaceId },
+        })
+
+        if (existingSub?.stripeSubscriptionId && existingSub.stripeSubscriptionId !== stripeSubscriptionId) {
+          try {
+            await stripe.subscriptions.cancel(existingSub.stripeSubscriptionId)
+            logger.info(`[Billing] Cancelled previous subscription ${existingSub.stripeSubscriptionId} for familyspace ${familyspaceId}`)
+          } catch (err: any) {
+            logger.warn(`[Billing] Failed to cancel previous subscription ${existingSub.stripeSubscriptionId}: ${err.message}`)
+          }
+        }
+
         await prisma.subscription.updateMany({
           where: { familyspaceId },
           data: {
             stripeCustomerId,
             stripeSubscriptionId,
             billingStatus: 'ACTIVE',
+            cancelAtPeriodEnd: false,
+            cancelledAt: null,
             ...(plan ? { planId: plan.id } : {}),
           },
         })

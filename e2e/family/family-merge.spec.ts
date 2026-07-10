@@ -1,5 +1,5 @@
-import { test, expect, TestUser } from './fixtures'
-import { uniqueUserInfo } from './helpers/api'
+import { test, expect, TestUser } from '../fixtures'
+import { uniqueUserInfo } from '../helpers/api'
 
 /**
  * Family Merge E2E coverage.

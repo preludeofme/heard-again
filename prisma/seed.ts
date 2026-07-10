@@ -31,7 +31,7 @@ async function main() {
       update: {
         slug: 'cloud_lite',
         stripeProductId: 'prod_Uq7eLiteSharing',
-        stripePriceIdMonthly: 'price_1TqRPgLiteSharingMonthly',
+        stripePriceIdMonthly: 'price_1TrVlyCNS9LPcJ0tsHcLTQPI',
       },
       create: {
         slug: 'cloud_lite',
@@ -49,7 +49,7 @@ async function main() {
         prioritySupport: false,
         advancedAnalytics: false,
         stripeProductId: 'prod_Uq7eLiteSharing',
-        stripePriceIdMonthly: 'price_1TqRPgLiteSharingMonthly',
+        stripePriceIdMonthly: 'price_1TrVlyCNS9LPcJ0tsHcLTQPI',
       },
     }),
     // Cloud Access tiers — mirrors UI/src/components/pages/LandingPricingSection.tsx

@@ -1,4 +1,4 @@
-import { test, expect, TestUser } from './fixtures'
+import { test, expect, TestUser } from '../fixtures'
 
 /**
  * Collections, Favorites, Comments, Cross-Tenancy, and Edge Cases.

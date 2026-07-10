@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures'
+import { test, expect } from '../fixtures'
 
 /**
  * Stories / memories: create (UI), read, update, delete, validation, data

@@ -1,6 +1,6 @@
 import { request } from '@playwright/test'
-import { test, expect, expectAlert, TestUser, uniqueUserInfo } from './fixtures'
-import { BASE_URL } from './helpers/api'
+import { test, expect, expectAlert, TestUser, uniqueUserInfo } from '../fixtures'
+import { BASE_URL } from '../helpers/api'
 
 /**
  * Password reset flow: forgot-password, verify-reset-token, and reset-password

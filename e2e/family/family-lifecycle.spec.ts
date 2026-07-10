@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test'
-import { test, expect } from './fixtures'
+import { test, expect } from '../fixtures'
 
 /**
  * Critical-path E2E: the full new-user family lifecycle journey.

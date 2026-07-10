@@ -1,6 +1,6 @@
 import { request } from '@playwright/test'
-import { test, expect, TestUser } from './fixtures'
-import { BASE_URL } from './helpers/api'
+import { test, expect, TestUser } from '../fixtures'
+import { BASE_URL } from '../helpers/api'
 
 /**
  * Support contact: API validation, submission, and page UI.

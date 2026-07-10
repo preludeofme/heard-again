@@ -574,11 +574,12 @@ if [ -z "$_TRIGGER_KEY" ]; then
     TRIGGER_PID=""
 else
     echo "  Starting Trigger.dev dev worker..."
+    mkdir -p "$MAIN_APP_DIR/.trigger/tmp/store"
     cd "$MAIN_APP_DIR"
     if [ "$LOG_MODE" = "live" ]; then
-        npx trigger.dev@4.5.0 dev --api-url "$TRIGGER_API_URL" 2>&1 | tee "$MAIN_APP_DIR/logs/trigger-dev.log" &
+        npx trigger.dev@4.5.1 dev --api-url "$TRIGGER_API_URL" --skip-update-check 2>&1 | tee "$MAIN_APP_DIR/logs/trigger-dev.log" &
     else
-        npx trigger.dev@4.5.0 dev --api-url "$TRIGGER_API_URL" > "$MAIN_APP_DIR/logs/trigger-dev.log" 2>&1 &
+        npx trigger.dev@4.5.1 dev --api-url "$TRIGGER_API_URL" --skip-update-check > "$MAIN_APP_DIR/logs/trigger-dev.log" 2>&1 &
     fi
     TRIGGER_PID=$!
     echo $TRIGGER_PID >> "$PIDS_FILE"

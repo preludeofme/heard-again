@@ -27,6 +27,35 @@ DTYPE_MAP = {
 }
 
 
+def _load_voice_profile(profile_path, device) -> dict:
+    """
+    Load a saved voice-profile .pt file.
+
+    Voice profiles are pickled dicts containing a `VoiceClonePromptItem` (a
+    qwen_tts library class, not a plain tensor), so a bare `weights_only=True`
+    load would fail — but `weights_only=False` runs the full pickle
+    deserializer, which is unsafe against untrusted files (arbitrary code
+    execution). Prefer the safe path (`weights_only=True` + an explicit
+    allow-list of the one custom class we expect) and only fall back to the
+    unsafe path — with a loud warning — if the installed torch version
+    doesn't support `add_safe_globals` (added in PyTorch 2.4) or the profile
+    contains something outside the allow-list.
+    """
+    if hasattr(torch.serialization, "safe_globals"):
+        try:
+            from qwen_tts.inference.qwen3_tts_model import VoiceClonePromptItem
+
+            with torch.serialization.safe_globals([VoiceClonePromptItem]):
+                return torch.load(profile_path, map_location=device, weights_only=True)
+        except Exception as exc:
+            logger.warning(
+                f"Safe (weights_only=True) load failed for {profile_path}, "
+                f"falling back to weights_only=False: {exc}"
+            )
+
+    return torch.load(profile_path, map_location=device, weights_only=False)
+
+
 class TTSModelManager:
     """Manages Qwen3-TTS Base + VoiceDesign models for the hybrid clone workflow."""
 
@@ -375,7 +404,7 @@ class TTSModelManager:
             if profile_path in self._profile_cache:
                 voice_clone_prompt = self._profile_cache[profile_path]
             else:
-                voice_data = torch.load(profile_path, map_location=self.device, weights_only=False)
+                voice_data = _load_voice_profile(profile_path, self.device)
                 voice_clone_prompt = voice_data["items"]
                 # Keep cache small (e.g. 5 profiles)
                 if len(self._profile_cache) >= 5:
@@ -428,7 +457,7 @@ class TTSModelManager:
             if profile_path in self._profile_cache:
                 voice_clone_prompt = self._profile_cache[profile_path]
             else:
-                voice_data = torch.load(profile_path, map_location=self.device, weights_only=False)
+                voice_data = _load_voice_profile(profile_path, self.device)
                 voice_clone_prompt = voice_data["items"]
                 if len(self._profile_cache) >= 5:
                     self._profile_cache.pop(next(iter(self._profile_cache)))

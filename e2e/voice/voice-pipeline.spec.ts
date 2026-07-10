@@ -1,4 +1,4 @@
-import { test, expect, TestUser } from './fixtures'
+import { test, expect, TestUser } from '../fixtures'
 
 /**
  * Voice Pipeline — end-to-end coverage of voice profile management,

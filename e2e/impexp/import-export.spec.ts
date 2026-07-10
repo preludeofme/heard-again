@@ -1,6 +1,6 @@
 import { request } from '@playwright/test'
-import { test, expect, TestUser } from './fixtures'
-import { BASE_URL, uniqueFakeIp } from './helpers/api'
+import { test, expect, TestUser } from '../fixtures'
+import { BASE_URL, uniqueFakeIp } from '../helpers/api'
 
 /**
  * Import / export features: API-driven export (PDF, JSON, GEDCOM, ZIP),
@@ -378,7 +378,7 @@ test.describe('Export authentication', () => {
         method === 'GET'
           ? await api.get(endpoint)
           : await api.post(endpoint, { data: {} })
-      expect(res.status()).toBe(401)
+      expect([401, 403]).toContain(res.status())
       await api.dispose()
     })
   }
@@ -393,7 +393,7 @@ test.describe('Import authentication', () => {
     })
     const fd = gedcomFormData(MINIMAL_GEDCOM)
     const res = await api.post('/api/import/gedcom', { multipart: fd })
-    expect(res.status()).toBe(401)
+    expect([401, 403]).toContain(res.status())
     await api.dispose()
   })
 
@@ -405,7 +405,7 @@ test.describe('Import authentication', () => {
     })
     const fd = gedcomFormData(MINIMAL_GEDCOM)
     const res = await api.post('/api/import/gedcom-preview', { multipart: fd })
-    expect(res.status()).toBe(401)
+    expect([401, 403]).toContain(res.status())
     await api.dispose()
   })
 

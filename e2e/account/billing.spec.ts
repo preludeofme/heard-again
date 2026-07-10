@@ -1,4 +1,23 @@
-import { test, expect } from './fixtures'
+import { test, expect } from '../fixtures'
+import { PrismaClient } from '@prisma/client'
+import Stripe from 'stripe'
+import dotenv from 'dotenv'
+import path from 'node:path'
+
+dotenv.config({ path: path.resolve(__dirname, '../../UI/.env') })
+
+const prisma = new PrismaClient({
+  datasources: {
+    db: {
+      url: process.env.DATABASE_URL || 'postgresql://trubuck-design:heardagain_dev@localhost:5432/heard_again'
+    }
+  }
+})
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: '2026-06-24.dahlia',
+  typescript: true,
+})
 
 /**
  * Billing and plans.
@@ -97,3 +116,123 @@ test.describe('Subscription checkout', () => {
     expect([400, 404]).toContain(res.status())
   })
 })
+
+test.describe('Subscription lifecycle management', () => {
+  test.afterAll(async () => {
+    await prisma.$disconnect()
+  })
+
+  test('user can subscribe to Lite, cancel at period end, resume, cancel immediately (downgrade)', async ({ page, user }) => {
+    // 1. Setup: Create a real Stripe customer and subscription in test mode
+    const customer = await stripe.customers.create({
+      email: user.info.email,
+      name: user.info.displayName,
+    })
+
+    // Find the Lite plan in the database
+    const plan = await prisma.plan.findFirst({
+      where: { slug: 'cloud_lite', isActive: true },
+    })
+    expect(plan).toBeTruthy()
+
+    const subscription = await stripe.subscriptions.create({
+      customer: customer.id,
+      items: [{ price: plan!.stripePriceIdMonthly! }],
+      trial_period_days: 14,
+    })
+
+    // Sync to database
+    await prisma.subscription.update({
+      where: { familyspaceId: user.familyspaceId! },
+      data: {
+        stripeCustomerId: customer.id,
+        stripeSubscriptionId: subscription.id,
+        billingStatus: 'ACTIVE',
+        planId: plan!.id,
+        cancelAtPeriodEnd: false,
+        cancelledAt: null,
+        renewalDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+      },
+    })
+
+    await prisma.familyspace.update({
+      where: { id: user.familyspaceId! },
+      data: {
+        planType: plan!.planType,
+        tunnelEnabled: plan!.tunnelEnabled,
+        cloudGpuEnabled: plan!.cloudGpuEnabled,
+        storageQuotaBytes: plan!.storageQuotaBytes,
+        memberQuota: plan!.memberQuota,
+        generationMinuteQuota: plan!.generationMinutesIncluded,
+      },
+    })
+
+    // 2. Go to account subscription page and cancel at period end
+    await page.goto('/account?tab=subscription')
+    await expect(page.getByText('Current Plan')).toBeVisible({ timeout: 30000 })
+    await expect(page.getByRole('heading', { name: 'Cloud Access — Lite' })).toBeVisible()
+
+    // Click "Cancel Subscription"
+    await page.getByRole('button', { name: 'Cancel Subscription' }).click()
+    
+    // The dialog should appear
+    await expect(page.getByText('Cancel Subscription?')).toBeVisible()
+    
+    // Click "Cancel Subscription" in the dialog (without immediate checkbox)
+    await page.locator('button:has-text("Cancel Subscription")').nth(1).click()
+
+    // Success message should appear
+    await expect(page.getByText(/Subscription will cancel/i)).toBeVisible()
+
+    // Wait for the UI to update to show resumption options
+    await expect(page.getByRole('button', { name: 'Resume Subscription' })).toBeVisible()
+
+    // Verify DB updated
+    let dbSub = await prisma.subscription.findUnique({
+      where: { familyspaceId: user.familyspaceId! },
+    })
+    expect(dbSub?.cancelAtPeriodEnd).toBe(true)
+    expect(dbSub?.cancelledAt).not.toBeNull()
+
+    // 3. Resume the subscription
+    await page.getByRole('button', { name: 'Resume Subscription' }).click()
+    await expect(page.getByText(/Subscription resumed/i)).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Cancel Subscription' })).toBeVisible()
+
+    // Verify DB updated
+    dbSub = await prisma.subscription.findUnique({
+      where: { familyspaceId: user.familyspaceId! },
+    })
+    expect(dbSub?.cancelAtPeriodEnd).toBe(false)
+    expect(dbSub?.cancelledAt).toBeNull()
+
+    // 4. Cancel immediately (downgrade to Free)
+    await page.getByRole('button', { name: 'Cancel Subscription' }).click()
+    await expect(page.getByText('Cancel Subscription?')).toBeVisible()
+
+    // Check "Cancel immediately instead"
+    await page.getByLabel('Cancel immediately instead').check()
+
+    // Click "Cancel Subscription" in the dialog
+    await page.locator('button:has-text("Cancel Subscription")').nth(1).click()
+
+    // Success message should appear
+    await expect(page.getByText(/Subscription cancelled immediately and downgraded/i)).toBeVisible()
+
+    // Verify UI reflects Free plan
+    await expect(page.getByRole('heading', { name: /Free Local/i })).toBeVisible()
+
+    // Verify DB is on Free plan
+    dbSub = await prisma.subscription.findUnique({
+      where: { familyspaceId: user.familyspaceId! },
+      include: { plan: true },
+    })
+    expect(dbSub?.plan?.planType).toBe('FREE')
+
+    const dbFamilyspace = await prisma.familyspace.findUnique({
+      where: { id: user.familyspaceId! },
+    })
+    expect(dbFamilyspace?.planType).toBe('FREE')
+  })
+})
+

@@ -1,4 +1,4 @@
-import { test, expect, expectAlert, signUpFreshUser } from './fixtures'
+import { test, expect, expectAlert, signUpFreshUser } from '../fixtures'
 
 /**
  * Onboarding wizard: family name -> self profile -> family tree.

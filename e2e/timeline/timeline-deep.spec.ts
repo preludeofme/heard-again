@@ -1,6 +1,6 @@
 import { request } from '@playwright/test'
-import { test, expect, TestUser } from './fixtures'
-import { BASE_URL, uniqueFakeIp } from './helpers/api'
+import { test, expect, TestUser } from '../fixtures'
+import { BASE_URL, uniqueFakeIp } from '../helpers/api'
 
 /**
  * Timeline — deep functional tests for the /api/timeline endpoint and the

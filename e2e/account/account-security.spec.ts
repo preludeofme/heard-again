@@ -1,6 +1,6 @@
 import { request } from '@playwright/test'
-import { test, expect, TestUser } from './fixtures'
-import { BASE_URL } from './helpers/api'
+import { test, expect, TestUser } from '../fixtures'
+import { BASE_URL } from '../helpers/api'
 
 /**
  * Account security: password management, MFA (multi-factor authentication),

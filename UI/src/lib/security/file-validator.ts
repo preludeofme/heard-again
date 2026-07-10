@@ -26,6 +26,7 @@ export const ALLOWED_MIME_TYPES = [
   
   // Documents
   'application/pdf',
+  'application/json',
   'text/plain',
   'text/csv',
   'application/msword',
@@ -49,7 +50,7 @@ export const ALLOWED_EXTENSIONS = [
   '.mp3', '.wav', '.m4a', '.ogg', '.flac', '.aac', '.webm',
   
   // Documents
-  '.pdf', '.txt', '.csv', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
+  '.pdf', '.json', '.txt', '.csv', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
   
   // Archives
   '.zip',
@@ -383,6 +384,7 @@ function getExtensionForMimeType(mimeType: string): string {
     'audio/webm': '.webm',
     'video/webm': '.webm',
     'application/pdf': '.pdf',
+    'application/json': '.json',
     'text/plain': '.txt',
     'text/csv': '.csv',
     'application/msword': '.doc',

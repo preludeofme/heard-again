@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures'
+import { test, expect } from '../fixtures'
 
 /**
  * Navigation and layout: desktop top nav, memories lens switching, user menu,

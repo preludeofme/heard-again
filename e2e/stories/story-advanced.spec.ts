@@ -1,4 +1,4 @@
-import { test, expect, TestUser } from './fixtures'
+import { test, expect, TestUser } from '../fixtures'
 
 /**
  * Story advanced — publish / archive lifecycle, AI rewrite, transcribe,
