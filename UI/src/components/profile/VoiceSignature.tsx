@@ -3,6 +3,7 @@ import { Box, Typography, IconButton, Alert, Tooltip } from '@mui/material'
 import { Replay10, Forward30, PlayArrow, Stop, ChevronLeft, ChevronRight } from '@mui/icons-material'
 import Link from 'next/link'
 import { ProfileColors, WAVEFORM_HEIGHTS } from './ProfileConstants'
+import { secureRandom } from '@/lib/random'
 
 interface VoiceSignatureProps {
   personId?: string
@@ -153,7 +154,7 @@ export function VoiceSignature({
                   opacity: isPlaying ? 1 : 0.6,
                   transition: 'height 0.2s',
                   ...(isPlaying && {
-                    animation: `waveform-pulse ${0.5 + Math.random()}s ease-in-out infinite alternate`,
+                    animation: `waveform-pulse ${0.5 + secureRandom()}s ease-in-out infinite alternate`,
                     '@keyframes waveform-pulse': {
                       from: { height: h * 2 },
                       to: { height: h * 5 },

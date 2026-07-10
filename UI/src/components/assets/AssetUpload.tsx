@@ -26,6 +26,7 @@ import {
   Error as ErrorIcon,
 } from '@mui/icons-material'
 import { fetchWithCSRFAndFormData } from '@/lib/api-client'
+import { secureRandom } from '@/lib/random'
 
 interface FileUpload {
   file: File
@@ -55,7 +56,7 @@ export function AssetUpload({
   const [isDragging, setIsDragging] = useState(false)
   const [globalError, setGlobalError] = useState<string | null>(null)
 
-  const generateId = () => Math.random().toString(36).substring(2, 9)
+  const generateId = () => secureRandom().toString(36).substring(2, 9)
 
   const validateFile = (file: File): string | null => {
     if (file.size > maxFileSize * 1024 * 1024) {

@@ -4,6 +4,9 @@ import { fetchWithCSRFAndFormData } from '@/lib/api-client'
 import { logger } from '@/lib/logger'
 import formidable from 'formidable'
 import fs from 'fs'
+import fsPromises from 'fs/promises'
+import os from 'os'
+import path from 'path'
 import { withCSRFProtection } from '@/lib/security/csrf'
 import type { NextApiRequest, NextApiResponse } from 'next'
 
@@ -18,11 +21,22 @@ async function transcribeHandler(req: NextApiRequest, res: NextApiResponse) {
     return errorResponse(res, 'Method not allowed', 405)
   }
 
+  let file: formidable.File | undefined
+
   try {
     const user = await getAuthUserWithFamilyspace(req, res)
     await requireFamilyspaceRole(user.id, user.familyspaceId, 'EDITOR')
 
-    const form = formidable({})
+    // Restrict uploads to a dedicated, per-familyspace temp directory (not the
+    // shared OS temp root) with an explicit size cap.
+    const uploadDir = path.join(os.tmpdir(), 'transcribe-uploads', user.familyspaceId)
+    await fsPromises.mkdir(uploadDir, { recursive: true })
+
+    const form = formidable({
+      maxFileSize: 100 * 1024 * 1024, // 100MB
+      uploadDir,
+      keepExtensions: false,
+    })
     const [fields, files] = await form.parse(req)
     const fileArray = files.file
 
@@ -30,7 +44,7 @@ async function transcribeHandler(req: NextApiRequest, res: NextApiResponse) {
       return errorResponse(res, 'No file provided', 400)
     }
 
-    const file = fileArray[0]
+    file = fileArray[0]
     const fileBuffer = fs.readFileSync(file.filepath)
 
     // Forward to TTS service
@@ -58,6 +72,10 @@ async function transcribeHandler(req: NextApiRequest, res: NextApiResponse) {
   } catch (error: any) {
     logger.error({ error }, 'Transcription API error')
     return errorResponse(res, error.message || 'Transcription failed', 500)
+  } finally {
+    if (file?.filepath) {
+      await fsPromises.unlink(file.filepath).catch(() => {})
+    }
   }
 }
 

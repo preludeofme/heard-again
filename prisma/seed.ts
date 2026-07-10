@@ -26,6 +26,32 @@ async function main() {
         advancedAnalytics: false,
       },
     }),
+    prisma.plan.upsert({
+      where: { name: 'Cloud Access — Lite' },
+      update: {
+        slug: 'cloud_lite',
+        stripeProductId: 'prod_Uq7eLiteSharing',
+        stripePriceIdMonthly: 'price_1TqRPgLiteSharingMonthly',
+      },
+      create: {
+        slug: 'cloud_lite',
+        name: 'Cloud Access — Lite',
+        planType: PlanType.CLOUD,
+        priceMonthlyCents: 499, // $4.99/month
+        priceYearlyCents: null,
+        tunnelEnabled: false,
+        cloudGpuEnabled: false,
+        cloudStorageEnabled: true,
+        generationMinutesIncluded: 0, // No AI generation
+        storageQuotaBytes: BigInt(2 * 1024 * 1024 * 1024), // 2GB
+        memberQuota: 5,
+        voiceProfileQuota: 0,
+        prioritySupport: false,
+        advancedAnalytics: false,
+        stripeProductId: 'prod_Uq7eLiteSharing',
+        stripePriceIdMonthly: 'price_1TqRPgLiteSharingMonthly',
+      },
+    }),
     // Cloud Access tiers — mirrors UI/src/components/pages/LandingPricingSection.tsx
     // Stripe products/prices created in test mode via `stripe products create` / `stripe prices create`.
     prisma.plan.upsert({

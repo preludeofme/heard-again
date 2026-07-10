@@ -30,7 +30,7 @@ export function buildFamilyGraph(people: ApiPersonWithEdges[]): NormalizedFamily
 
   const unitByKey = new Map<string, FamilyUnitNodeModel>()
   for (const person of people) {
-    const parents = Array.from(parentsByPersonId.get(person.id) ?? []).sort()
+    const parents = Array.from(parentsByPersonId.get(person.id) ?? []).sort((a, b) => a.localeCompare(b))
     const key = parents.length ? `fam:${parents.join('::')}` : `fam:single:${person.id}`
     if (!unitByKey.has(key)) unitByKey.set(key, { id: key, spouseIds: parents, childIds: [] })
     unitByKey.get(key)!.childIds.push(person.id)

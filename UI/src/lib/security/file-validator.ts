@@ -1,6 +1,7 @@
 import { logger } from '@/lib/logger'
 import { fileTypeFromBuffer } from 'file-type'
 import path from 'path'
+import crypto from 'crypto'
 
 // Allowed MIME types for family history content
 export const ALLOWED_MIME_TYPES = [
@@ -352,7 +353,7 @@ function validateZIP(buffer: Buffer): FileValidationResult {
  */
 export function generateSecureFilename(originalName: string, detectedType: string): string {
   const timestamp = Date.now()
-  const random = Math.random().toString(36).substring(2, 15)
+  const random = crypto.randomBytes(8).toString('hex')
   const extension = getExtensionForMimeType(detectedType)
   
   // Remove any path separators and special characters

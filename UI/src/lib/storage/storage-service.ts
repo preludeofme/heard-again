@@ -4,6 +4,7 @@ import { GCSStorageProvider } from './providers/gcp-provider'
 import { S3StorageProvider } from './providers/s3-provider'
 import path from 'path'
 import fs from 'fs'
+import crypto from 'crypto'
 
 export interface StorageConfig {
   mode: 'local' | 'gcs' | 'gcp' | 's3' | 'r2'
@@ -120,7 +121,7 @@ export class StorageService {
 
   private generateFilename(originalName: string, folder?: string): string {
     const timestamp = Date.now()
-    const random = Math.random().toString(36).substring(2, 8)
+    const random = crypto.randomBytes(4).toString('hex')
     const extension = originalName.split('.').pop() || ''
     const baseName = originalName.split('.').slice(0, -1).join('.')
     

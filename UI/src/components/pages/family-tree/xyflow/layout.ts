@@ -329,7 +329,7 @@ function buildFamilyUnits(parentsByChild: Map<string, Set<string>>): FamilyUnit[
   const byKey = new Map<string, FamilyUnit>()
 
   Array.from(parentsByChild.entries()).forEach(([childId, parents]) => {
-    const key = Array.from(parents).sort().join('::')
+    const key = Array.from(parents).sort((a, b) => a.localeCompare(b)).join('::')
     if (!byKey.has(key)) {
       byKey.set(key, { key, parentIds: Array.from(parents), childIds: [] })
     }
@@ -911,7 +911,7 @@ export function buildFamilyTreeLayout(
   for (const unit of familyUnits) {
     for (let i = 0; i < unit.parentIds.length; i++) {
       for (let j = i + 1; j < unit.parentIds.length; j++) {
-        const [a, b] = [unit.parentIds[i], unit.parentIds[j]].sort()
+        const [a, b] = [unit.parentIds[i], unit.parentIds[j]].sort((x, y) => x.localeCompare(y))
         unitParentPairs.add(`${a}::${b}`)
       }
     }
@@ -1019,7 +1019,7 @@ export function buildFamilyTreeLayout(
     for (const edge of person.relationshipEdges) {
       if (edge.type !== 'SPOUSE') continue
 
-      const [a, b] = [person.id, edge.relatedPerson.id].sort()
+      const [a, b] = [person.id, edge.relatedPerson.id].sort((x, y) => x.localeCompare(y))
       const pairKey = `${a}::${b}`
       if (seenSpousePairs.has(pairKey)) continue
       seenSpousePairs.add(pairKey)

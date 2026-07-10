@@ -1,3 +1,4 @@
+import crypto from 'crypto'
 import speakeasy from 'speakeasy'
 import QRCode from 'qrcode'
 import { prisma } from '@/lib/prisma'
@@ -375,7 +376,7 @@ function generateBackupCodes(count: number): string[] {
   for (let i = 0; i < count; i++) {
     let code = ''
     for (let j = 0; j < 8; j++) {
-      code += chars.charAt(Math.floor(Math.random() * chars.length))
+      code += chars.charAt(crypto.randomInt(chars.length))
       if (j === 3) code += '-' // Add dash in middle for readability
     }
     codes.push(code)

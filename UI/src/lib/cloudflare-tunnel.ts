@@ -1,9 +1,11 @@
 /**
  * Cloudflare Tunnel API Client
- * 
+ *
  * Handles creation and management of named Cloudflare Tunnels via the Cloudflare API.
  * Named tunnels are persistent and reconnect automatically.
  */
+
+import crypto from 'crypto'
 
 const CLOUDFLARE_API_BASE = 'https://api.cloudflare.com/client/v4'
 
@@ -326,16 +328,7 @@ WantedBy=multi-user.target
   }
 
   private generateTunnelSecret(): string {
-    const array = new Uint8Array(32)
-    if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
-      crypto.getRandomValues(array)
-    } else {
-      // Node.js fallback
-      for (let i = 0; i < 32; i++) {
-        array[i] = Math.floor(Math.random() * 256)
-      }
-    }
-    return Buffer.from(array).toString('base64')
+    return crypto.randomBytes(32).toString('base64')
   }
 }
 

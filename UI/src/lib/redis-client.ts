@@ -1,4 +1,5 @@
 import Redis from 'ioredis'
+import crypto from 'crypto'
 
 const REDIS_URL = process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL
 
@@ -36,7 +37,7 @@ export async function rateLimitCheck(
   const multi = redis.multi()
   multi.zremrangebyscore(key, 0, windowStart)
   multi.zcard(key)
-  multi.zadd(key, now, `${now}-${Math.random()}`)
+  multi.zadd(key, now, `${now}-${crypto.randomBytes(4).toString('hex')}`)
   multi.pexpire(key, windowMs)
 
   const results = await multi.exec()

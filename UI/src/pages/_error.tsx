@@ -5,7 +5,7 @@ interface ErrorProps {
   statusCode?: number
 }
 
-export default function Error({ statusCode }: ErrorProps) {
+function ErrorPage({ statusCode }: ErrorProps) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', fontFamily: 'sans-serif' }}>
       <h1 style={{ fontSize: '4rem', margin: 0 }}>{statusCode ?? 'Error'}</h1>
@@ -15,7 +15,9 @@ export default function Error({ statusCode }: ErrorProps) {
   )
 }
 
-Error.getInitialProps = ({ res, err }: NextPageContext) => {
+ErrorPage.getInitialProps = ({ res, err }: NextPageContext) => {
   const statusCode = res ? res.statusCode : err ? err.statusCode : 404
   return { statusCode }
 }
+
+export default ErrorPage

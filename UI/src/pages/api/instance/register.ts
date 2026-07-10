@@ -1,22 +1,18 @@
+import crypto from 'crypto'
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
 import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-helpers'
 import { validate, rules } from '@/lib/validation'
 
-// Generate a secure random token
+// Generate a cryptographically secure random token
 function generateToken(length = 32): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
-  let result = ''
-  for (let i = 0; i < length; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length))
-  }
-  return result
+  return crypto.randomBytes(length).toString('base64url')
 }
 
 // Generate a subdomain from familyspace slug
 function generateSubdomain(slug: string): string {
   const base = slug.toLowerCase().replace(/[^a-z0-9-]/g, '-').substring(0, 20)
-  const random = Math.random().toString(36).substring(2, 6)
+  const random = crypto.randomBytes(3).toString('hex')
   return `${base}-${random}`
 }
 

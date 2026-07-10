@@ -30,7 +30,10 @@ export async function processFileInSandbox(
     // Use restricted child process for sandboxing
     const scriptPath = path.join(__dirname, 'sandbox-script.js')
     
-    const child = spawn('node', [scriptPath, JSON.stringify(job)], {
+    // Use the absolute path to the current Node binary instead of relying on
+    // a PATH lookup for "node" (avoids any ambiguity about which binary runs,
+    // even though PATH below is already restricted to fixed system dirs).
+    const child = spawn(process.execPath, [scriptPath, JSON.stringify(job)], {
       timeout: 30000, // 30 second timeout
       killSignal: 'SIGTERM',
       env: {

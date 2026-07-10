@@ -56,7 +56,7 @@ export function MemoriesGrid({
         {documents.length === 0 ? (
           <Box sx={{ py: 5, textAlign: 'center' }}>
             <Typography sx={{ color: ProfileColors.onSurfaceVariant, fontFamily: 'var(--font-newsreader), serif', fontSize: '1.1rem', fontStyle: 'italic' }}>
-              {isGlobal ? 'No keepsakes here yet.' : 'No keepsakes here yet.'}
+              {isGlobal ? 'No keepsakes here yet.' : 'No keepsakes for this person yet.'}
             </Typography>
             {onUploadSuccess ? (
               <FileUpload

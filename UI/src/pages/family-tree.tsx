@@ -151,7 +151,7 @@ function mapPeopleToTree(people: ApiPersonWithEdges[], activePersonId?: string):
       (current.relationshipEdges.some(e => e.type === 'PARENT') ? 10 : 0) +
       (current.relationshipEdges.some(e => e.type === 'CHILD') ? 10 : 0)
     return currentScore > prevScore ? current : prev
-  })
+  }, people[0])
 
   const generationByPersonId = new Map<string, number>([[subject.id, 0]])
   const queue: string[] = [subject.id]
@@ -237,7 +237,7 @@ function mapPeopleToTree(people: ApiPersonWithEdges[], activePersonId?: string):
       const targetId = edge.relatedPerson.id
 
       if (edge.type === 'SPOUSE') {
-        const [leftId, rightId] = [sourceId, targetId].sort()
+        const [leftId, rightId] = [sourceId, targetId].sort((a, b) => a.localeCompare(b))
         const key = `SPOUSE:${leftId}:${rightId}`
         if (seenRelationshipEdgeKeys.has(key)) continue
         seenRelationshipEdgeKeys.add(key)

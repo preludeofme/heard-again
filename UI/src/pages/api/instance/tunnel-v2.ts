@@ -1,3 +1,4 @@
+import crypto from 'crypto'
 import { logger } from '@/lib/logger'
 import { prisma } from '@/lib/prisma'
 import { apiHandler, successResponse, Errors } from '@/lib/api-helpers'
@@ -5,14 +6,9 @@ import { getAuthUserWithFamilyspace, requireFamilyspaceRole } from '@/lib/auth-h
 import { createCloudflareService, CloudflareTunnelService } from '@/lib/cloudflare-tunnel'
 import { validate, rules } from '@/lib/validation'
 
-// Generate a secure random token
+// Generate a cryptographically secure random token
 function generateToken(length = 32): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
-  let result = ''
-  for (let i = 0; i < length; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length))
-  }
-  return result
+  return crypto.randomBytes(length).toString('base64url')
 }
 
 // Check if Cloudflare API is configured
@@ -107,7 +103,7 @@ export default apiHandler({
         })
 
         const baseSlug = familyspace?.slug || 'instance'
-        const uniqueId = Math.random().toString(36).substring(2, 6)
+        const uniqueId = crypto.randomBytes(3).toString('hex')
         const tunnelName = `heardagain-${baseSlug}-${uniqueId}`
         const hostname = `${baseSlug}-${uniqueId}.${process.env.CLOUDFLARE_TUNNEL_DOMAIN || 'heardagain.com'}`
 
@@ -316,7 +312,7 @@ export default apiHandler({
         })
 
         const base = ws?.slug || 'instance'
-        const subdomain = `${base}-${Math.random().toString(36).substring(2, 6)}`.toLowerCase()
+        const subdomain = `${base}-${crypto.randomBytes(3).toString('hex')}`.toLowerCase()
 
         updatedInstance = await prisma.instance.update({
           where: { id: instance.id },

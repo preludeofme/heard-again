@@ -13,6 +13,7 @@ import {
 } from '@mui/icons-material'
 import { useState, useEffect, useRef } from 'react'
 import { useSnackbar } from 'notistack'
+import { secureRandom } from '@/lib/random'
 import { VoiceTrainingModal } from '@/components/audio/VoiceTrainingModal'
 import { VoiceConsentModal } from '@/components/audio/VoiceConsentModal'
 import { useSelectedFamilyMember } from '@/contexts/SelectedFamilyMemberContext'
@@ -433,7 +434,7 @@ export function VoiceLabPage({ voiceModels, controller, autoCreate }: VoiceLabPa
                             key={i} 
                             sx={{ 
                               width: 3, 
-                              height: 10 + Math.random() * 20, 
+                              height: 10 + secureRandom() * 20,
                               bgcolor: ProfileColors.primary, 
                               borderRadius: 1,
                               animation: 'pulse 1s infinite ease-in-out',

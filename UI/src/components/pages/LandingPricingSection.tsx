@@ -8,6 +8,30 @@ import { SystemRequirements } from './SystemRequirements'
 export function LandingPricingSection() {
   const cloudPlans = [
     {
+      id: 'cloud_lite',
+      name: 'Cloud Access — Lite',
+      planType: 'CLOUD',
+      subtitle: 'For sharing and hosting stories, images, and data without AI features.',
+      pricing: { monthlyDisplay: '4.99' },
+      features: [
+        <strong key="no-setup">No setup required</strong>,
+        <strong key="managed-hosting">Secure managed hosting</strong>,
+        <strong key="auto-backups">Automatic backups & updates</strong>,
+        <span key="storage">
+          <strong>2 GB</strong> cloud storage
+        </span>,
+        'Easy family sharing',
+        'Consent and privacy tools',
+        'Support included',
+        <span key="no-ai" style={{ opacity: 0.7 }}>
+          No AI narration or voice clones
+        </span>,
+      ],
+      bestFor: 'Best for families who just want standard hosting and media/story sharing.',
+      isRecommended: false,
+      ctaText: 'Start free trial',
+    },
+    {
       id: 'cloud_min',
       name: 'Cloud Access — Starter',
       planType: 'CLOUD',
@@ -89,10 +113,10 @@ export function LandingPricingSection() {
       </Box>
 
       {/* Main Pricing Cards Grid */}
-      <Box sx={{ maxWidth: 1200, mx: 'auto', mb: 8 }}>
+      <Box sx={{ maxWidth: 1400, mx: 'auto', mb: 8 }}>
         <Grid container spacing={4} justifyContent="center" alignItems="stretch">
           {cloudPlans.map((plan) => (
-            <Grid key={plan.id} size={{ xs: 12, md: 6, lg: 4 }}>
+            <Grid key={plan.id} size={{ xs: 12, md: 6, lg: 3 }}>
               <Card
                 sx={{
                   p: 4,

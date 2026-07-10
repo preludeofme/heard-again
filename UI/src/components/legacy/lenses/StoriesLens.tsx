@@ -7,6 +7,7 @@ import { useStoriesController } from '@/controllers/useStoriesController'
 import { useSelectedFamilyMember } from '@/contexts/SelectedFamilyMemberContext'
 import { useDashboardController } from '@/controllers/useDashboardController'
 import { ProfileColors } from '@/components/profile/ProfileConstants'
+import { secureRandom } from '@/lib/random'
 import type { StoryContribution } from '@/types'
 
 export function StoriesLens() {
@@ -24,7 +25,7 @@ export function StoriesLens() {
     if (selectedSubjectId) {
       return controller.stories
     }
-    const shuffled = [...controller.stories].sort(() => Math.random() - 0.5)
+    const shuffled = [...controller.stories].sort(() => secureRandom() - 0.5)
     return shuffled.slice(0, 6)
   }, [controller.stories, selectedSubjectId])
 
