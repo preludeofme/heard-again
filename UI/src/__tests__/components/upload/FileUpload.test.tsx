@@ -1,16 +1,15 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from '@jest/globals';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { FileUpload } from '@/components/upload/FileUpload';
 
 // Mock the api-client to avoid actual network calls
-vi.mock('@/lib/api-client', () => ({
-  fetchWithCSRFAndFormData: vi.fn()
+jest.mock('@/lib/api-client', () => ({
+  fetchWithCSRFAndFormData: jest.fn()
 }));
 
 describe('FileUpload Component', () => {
-  const mockOnUploadSuccess = vi.fn();
-  const mockOnUploadError = vi.fn();
+  const mockOnUploadSuccess = jest.fn();
+  const mockOnUploadError = jest.fn();
 
   beforeEach(() => {
     mockOnUploadSuccess.mockClear();
@@ -34,17 +33,17 @@ describe('FileUpload Component', () => {
     // Mock file
     const mockFile = new File(['hello'], 'test.txt', { type: 'text/plain' });
     
-    render(
-      <FileUpload 
+    const { container } = render(
+      <FileUpload
         onUploadSuccess={mockOnUploadSuccess}
         onUploadError={mockOnUploadError}
       >
         <div>Upload Area</div>
       </FileUpload>
     );
-    
-    // Mock input element and simulate file selection
-    const inputElement = screen.getByRole('button') as HTMLInputElement;
+
+    // Locate the hidden file input and simulate file selection
+    const inputElement = container.querySelector('input[type="file"]') as HTMLInputElement;
     Object.defineProperty(inputElement, 'files', { value: [mockFile] });
     
     // This test shows that the component renders correctly and can handle the event

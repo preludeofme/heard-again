@@ -3,8 +3,8 @@
 # Enhanced SonarQube Report Export Script for Coding Agents
 # Usage: ./get-sonar-report-enhanced.sh
 
-SONAR_URL="http://localhost:9000"
-TOKEN="squ_3131a69179595d70506b93facb243d413e973df0"
+SONAR_URL="${SONAR_URL:-http://localhost:9000}"
+TOKEN="${SONAR_TOKEN:?SONAR_TOKEN must be set (export SONAR_TOKEN=your_token)}"
 PROJECT_KEY="heard-again"
 OUTPUT_DIR="sonar-reports"
 

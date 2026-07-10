@@ -321,8 +321,8 @@ export function LandingPage() {
               },
               {
                 icon: 'security',
-                title: 'Absolute Privacy & Control',
-                description: 'Securely store your family memories with our encrypted SaaS app, ensuring all your data remains private, secure, and under your absolute control.',
+                title: 'Your Stories, Your Terms',
+                description: 'Every memory you share stays yours — and only yours. No ads, no data brokering, no training AI on your family history. Just a quiet, secure space where your stories live on your terms.',
               },
             ].map((feature, index) => (
               <Grid size={{ xs: 12, md: 6, lg: 4 }} key={index}>

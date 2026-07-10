@@ -1,71 +1,71 @@
 import { renderHook, act } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from '@jest/globals'
 import { useVoiceSynthesis } from '@/controllers/useVoiceSynthesis'
 
-// Mock the dependencies  
-vi.mock('@/hooks/useCSRF', () => ({
-  useCSRF: vi.fn(),
+// Mock the dependencies
+jest.mock('@/hooks/useCSRF', () => ({
+  useCSRF: jest.fn(() => ({ fetchToken: jest.fn().mockResolvedValue('mock-csrf-token') })),
 }))
 
 describe('useVoiceSynthesis', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
-    vi.resetModules()
+    jest.clearAllMocks()
   })
 
   it('should initialize correctly', () => {
     const { result } = renderHook(() => useVoiceSynthesis())
-    
+
     expect(result.current.isSynthesizing).toBe(false)
     expect(result.current.synthesisCache).toEqual({})
   })
 
-  it('should get cached audio from cache', () => {
-    const mockCache = {
-      'model-1:hello wor': {
-        audioUrl: 'http://localhost/audio.mp3',
-        modelId: 'model-1',
-        text: 'hello world',
-        createdAt: new Date(),
-        duration: 2.5,
-      }
-    }
-    
+  it('should return cached audio after a successful synthesis', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: jest.fn().mockResolvedValue({
+        success: true,
+        data: { audioUrl: 'http://localhost/audio.mp3', duration: 2.5 },
+      }),
+    }) as unknown as typeof fetch
+
     const { result } = renderHook(() => useVoiceSynthesis())
-    
-    // Set up the cache state
-    act(() => {
-      result.current['synthesisCache'] = mockCache
+
+    await act(async () => {
+      await result.current.synthesizeSpeech('model-1', 'hello world')
     })
-    
-    // Test that cached audio is returned
+
     const cachedAudio = result.current.getCachedAudio('model-1', 'hello world')
     expect(cachedAudio).toBe('http://localhost/audio.mp3')
+    expect(result.current.isSynthesizing).toBe(false)
   })
 
-  it('should handle cache expiration properly', () => {
-    const oldDate = new Date()
-    oldDate.setHours(oldDate.getHours() - 2) // 2 hours ago (should be expired)
-    
-    const mockCache = {
-      'model-1:hello wor': {
-        audioUrl: 'http://localhost/audio.mp3',
-        modelId: 'model-1',
-        text: 'hello world',
-        createdAt: oldDate, // Old date (should be expired)
-        duration: 2.5,
-      }
-    }
-    
+  it('should not return cached audio for a synthesis that was never made', () => {
     const { result } = renderHook(() => useVoiceSynthesis())
-    
-    // Set up the cache state
-    act(() => {
-      result.current['synthesisCache'] = mockCache
-    })
-    
-    // Test that expired cached audio is not returned
+
     const cachedAudio = result.current.getCachedAudio('model-1', 'hello world')
     expect(cachedAudio).toBeUndefined()
+  })
+
+  it('clearSynthesisCache empties the cache', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: jest.fn().mockResolvedValue({
+        success: true,
+        data: { audioUrl: 'http://localhost/audio.mp3', duration: 2.5 },
+      }),
+    }) as unknown as typeof fetch
+
+    const { result } = renderHook(() => useVoiceSynthesis())
+
+    await act(async () => {
+      await result.current.synthesizeSpeech('model-1', 'hello world')
+    })
+    expect(result.current.getCachedAudio('model-1', 'hello world')).toBe('http://localhost/audio.mp3')
+
+    act(() => {
+      result.current.clearSynthesisCache()
+    })
+
+    expect(result.current.synthesisCache).toEqual({})
+    expect(result.current.getCachedAudio('model-1', 'hello world')).toBeUndefined()
   })
 })

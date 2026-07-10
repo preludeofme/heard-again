@@ -2,6 +2,9 @@
   "name": "heard-again",
   "version": "1.0.0",
   "private": true,
+  "license": "MIT",
+  "repository": "github:preludeofme/heard-again",
+  "bugs": "https://github.com/preludeofme/heard-again/issues",
   "scripts": {
     "workers:start": "tsx --tsconfig tsconfig.json -r tsconfig-paths/register src/workers/start-workers.ts",
     "dev": "next dev -p 4777 --experimental-https --webpack",

@@ -1,10 +1,10 @@
-import { describe, it, expect, vi} from '@jest/globals';
 import { render, screen } from '@testing-library/react';
+import '@testing-library/jest-dom';
 import { UploadButton } from '@/components/upload/FileUpload';
 
 describe('UploadButton Component', () => {
-  const mockOnUploadSuccess = vi.fn();
-  const mockOnUploadError = vi.fn();
+  const mockOnUploadSuccess = jest.fn();
+  const mockOnUploadError = jest.fn();
 
   it('should render the upload button correctly', () => {
     render(

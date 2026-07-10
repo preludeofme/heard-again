@@ -139,4 +139,17 @@ docs/patent/
 docs/memory-bank/
 .opencode/memory/
 /opensource.md
+/OPENSOURCE_READINESS_REPORT.md
+docs/PUBLIC_AUDIT_*.md
+docs/DUAL_REPO_WORKFLOW.md
+docs/agent-lessons-learned.md
+docs/auth-session-fix-review.md
+docs/auth-session-split-brain-investigation.md
+docs/family-search-contains-fix.md
+docs/qa-blocker-resolution-guide.md
+docs/qa-fix-review.md
+docs/IMPLEMENTATION_GUIDE_UI_IMPROVEMENTS.md
+docs/UI_UX_IMPROVEMENTS.md
+docs/marketing.md
+UI/coverage-improvement-plan.md
 .env*.local

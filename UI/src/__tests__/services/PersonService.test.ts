@@ -1,72 +1,115 @@
-import { describe, it, expect, vi, beforeEach } from '@jest/globals'
 import { PersonService } from '@/services/PersonService'
-import { PersonRepository } from '@/server/repositories'
 
-// Mock the repository
-vi.mock('@/server/repositories', () => ({
-  PersonRepository: vi.fn(),
-}))
+const makePerson = (id: string, overrides: Record<string, unknown> = {}) => ({
+  id,
+  firstName: 'Test',
+  middleName: null,
+  lastName: 'Person',
+  maidenName: null,
+  sex: null,
+  displayName: null,
+  nickname: null,
+  personType: 'FAMILY',
+  birthDate: null,
+  deathDate: null,
+  isDeceased: false,
+  bio: null,
+  tags: [],
+  createdAt: new Date('2024-01-01T00:00:00Z'),
+  avatarAsset: null,
+  _count: { storiesAsSubject: 0, voiceProfiles: 0 },
+  parentInFamilies: [],
+  familyChildLinks: [],
+  ...overrides,
+})
 
 describe('PersonService', () => {
-  let personService: PersonService
-  let mockPersonRepo: any
-
-  beforeEach(() => {
-    vi.clearAllMocks()
-    
-    // Create mock repository
-    mockPersonRepo = {
-      findById: vi.fn(),
-      findByFamilyMemberId: vi.fn(),
-      create: vi.fn(),
-      update: vi.fn(),
-      delete: vi.fn(),
-      search: vi.fn(),
-    }
-    
-    // Mock the repository constructor
-    vi.mocked(PersonRepository).mockImplementation(() => mockPersonRepo)
-    
-    // Create the service instance
-    personService = new PersonService()
-  })
-
   it('should initialize correctly', () => {
-    expect(personService).toBeDefined()
+    const service = new PersonService({} as any)
+    expect(service).toBeDefined()
   })
 
-  it('should search for persons correctly', async () => {
-    const mockResult = [{ id: 'person-1', name: 'Test Person' }]
-    mockPersonRepo.search.mockResolvedValue(mockResult)
-    
-    const result = await personService.search('query')
-    expect(result).toEqual(mockResult)
-    expect(mockPersonRepo.search).toHaveBeenCalledWith('query')
+  it('getPerson returns null when the repository finds nothing', async () => {
+    const repo = { findById: jest.fn().mockResolvedValue(null) }
+    const service = new PersonService(repo as any)
+
+    const result = await service.getPerson('missing-id', 'familyspace-1')
+
+    expect(result).toBeNull()
+    expect(repo.findById).toHaveBeenCalledWith('missing-id', 'familyspace-1', expect.anything())
   })
 
-  it('should find person by ID correctly', async () => {
-    const mockResult = { id: 'person-1', name: 'Test Person' }
-    mockPersonRepo.findById.mockResolvedValue(mockResult)
-    
-    const result = await personService.findById('person-1')
-    expect(result).toEqual(mockResult)
-    expect(mockPersonRepo.findById).toHaveBeenCalledWith('person-1')
+  it('getPerson maps a found person to a PersonListItem', async () => {
+    const person = makePerson('person-1')
+    const repo = { findById: jest.fn().mockResolvedValue(person) }
+    const service = new PersonService(repo as any)
+
+    const result = await service.getPerson('person-1', 'familyspace-1')
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        id: 'person-1',
+        firstName: 'Test',
+        lastName: 'Person',
+        displayName: 'Test Person',
+      })
+    )
   })
 
-  it('should create person correctly', async () => {
-    const mockPerson = { name: 'Test Person' }
-    const mockResult = { id: 'person-1', ...mockPerson }
-    mockPersonRepo.create.mockResolvedValue(mockResult)
-    
-    const result = await personService.create(mockPerson)
-    expect(result).toEqual(mockResult)
-    expect(mockPersonRepo.create).toHaveBeenCalledWith(mockPerson)
+  it('createPerson delegates to the repository and returns the created person', async () => {
+    const createdAt = new Date('2024-01-01T00:00:00Z')
+    const repo = {
+      create: jest.fn().mockResolvedValue({
+        id: 'person-1',
+        firstName: 'New',
+        lastName: 'Person',
+        displayName: null,
+        personType: 'FAMILY',
+        createdAt,
+      }),
+    }
+    const service = new PersonService(repo as any)
+
+    const result = await service.createPerson(
+      'familyspace-1',
+      'user-1',
+      { firstName: 'New', lastName: 'Person' } as any
+    )
+
+    expect(repo.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        familyspaceId: 'familyspace-1',
+        createdById: 'user-1',
+        firstName: 'New',
+        lastName: 'Person',
+      }),
+      'user-1'
+    )
+    expect(result).toEqual(
+      expect.objectContaining({
+        id: 'person-1',
+        firstName: 'New',
+        lastName: 'Person',
+        displayName: 'New Person',
+      })
+    )
   })
 
-  it('should handle errors when creating person', async () => {
-    const mockPerson = { name: 'Test Person' }
-    mockPersonRepo.create.mockRejectedValue(new Error('Database Error'))
-    
-    await expect(personService.create(mockPerson)).rejects.toThrow('Database Error')
+  it('createPerson propagates repository errors', async () => {
+    const repo = { create: jest.fn().mockRejectedValue(new Error('Database Error')) }
+    const service = new PersonService(repo as any)
+
+    await expect(
+      service.createPerson('familyspace-1', 'user-1', { firstName: 'New' } as any)
+    ).rejects.toThrow('Database Error')
+  })
+
+  it('deletePerson delegates to the repository', async () => {
+    const repo = { delete: jest.fn().mockResolvedValue(undefined) }
+    const service = new PersonService(repo as any)
+
+    await service.deletePerson('person-1', 'familyspace-1', 'user-1')
+
+    expect(repo.delete).toHaveBeenCalledWith('person-1', 'familyspace-1', 'user-1')
   })
 })
