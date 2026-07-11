@@ -4,6 +4,7 @@ import type Stripe from 'stripe'
 import { stripe } from '@/lib/stripe'
 import { prisma } from '@/lib/prisma'
 import { errorResponse, successResponse } from '@/lib/api-helpers'
+import { downgradeFamilyspaceToFreePlan } from '@/server/services/billing-reconcile'
 
 /**
  * POST /api/billing/webhook - Handle Stripe webhook events
@@ -211,40 +212,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const stripeSubscriptionId = subscription.id
         
         if (stripeSubscriptionId) {
-          // Downgrade to free plan
-          const freePlan = await prisma.plan.findFirst({
-            where: { planType: 'FREE', isActive: true },
+          const existingSub = await prisma.subscription.findFirst({
+            where: { stripeSubscriptionId },
           })
-          
-          if (freePlan) {
-            const existingSub = await prisma.subscription.findFirst({
-              where: { stripeSubscriptionId },
-            })
-            
-            if (existingSub) {
-              await prisma.subscription.update({
-                where: { id: existingSub.id },
-                data: {
-                  planId: freePlan.id,
-                  billingStatus: 'ACTIVE',
-                  stripeSubscriptionId: null,
-                  renewalDate: null,
-                  cancelledAt: new Date(),
-                },
-              })
-              
-              // Downgrade familyspace
-              await prisma.familyspace.update({
-                where: { id: existingSub.familyspaceId },
-                data: {
-                  planType: 'FREE',
-                  tunnelEnabled: false,
-                  cloudGpuEnabled: false,
-                  storageQuotaBytes: BigInt(0),
-                  generationMinuteQuota: 0,
-                },
-              })
-            }
+
+          if (existingSub) {
+            await downgradeFamilyspaceToFreePlan(existingSub.id, existingSub.familyspaceId)
           }
         }
         
