@@ -2,6 +2,7 @@ import { ReactNode } from 'react'
 import { PreserveFamilyVoicesPost } from './preserve-family-voices-before-its-too-late'
 import { OpenSourceFamilyMemoriesPost } from './why-open-source-matters-for-family-memories'
 import { AiVoiceCloningEthicsPost } from './ai-voice-cloning-ethics-family-consent'
+import { HowToPreserveFamilyMemoriesDigitally } from './how-to-preserve-family-memories-digitally'
 
 export interface BlogPostMeta {
   slug: string
@@ -61,6 +62,16 @@ export const blogPosts: BlogPost[] = [
     author: AiVoiceCloningEthicsPost.meta.author,
     readTime: AiVoiceCloningEthicsPost.meta.readTime,
     content: AiVoiceCloningEthicsPost.content,
+  },
+  {
+    slug: HowToPreserveFamilyMemoriesDigitally.meta.slug,
+    title: HowToPreserveFamilyMemoriesDigitally.meta.title,
+    date: HowToPreserveFamilyMemoriesDigitally.meta.date,
+    excerpt: HowToPreserveFamilyMemoriesDigitally.meta.excerpt,
+    tags: HowToPreserveFamilyMemoriesDigitally.meta.tags,
+    author: HowToPreserveFamilyMemoriesDigitally.meta.author,
+    readTime: HowToPreserveFamilyMemoriesDigitally.meta.readTime,
+    content: HowToPreserveFamilyMemoriesDigitally.content,
   },
 ]
 
