@@ -27,6 +27,7 @@ export function PublicHeader() {
   }
 
   const navLinks = [
+    { label: 'Blog', href: '/blog' },
     { label: 'Pricing', href: '/#pricing' },
     { label: 'FAQ', href: '/#faq' },
     { label: 'Privacy', href: '/privacy' },

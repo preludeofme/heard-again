@@ -10,4 +10,4 @@ Disallow: /api/
 Disallow: /admin/
 
 # Crawl-delay for polite crawling
-Crawl-delay: 10
+Crawl-delay: 5
