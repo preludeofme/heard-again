@@ -7,6 +7,7 @@ import { AuthProvider } from '@/components/auth/AuthProvider'
 import { SnackbarProvider } from 'notistack'
 import { SelectedFamilyMemberProvider } from '@/contexts/SelectedFamilyMemberContext'
 import SessionErrorBoundaryWrapper from '@/components/auth/SessionErrorBoundary'
+import { Analytics } from '@vercel/analytics/next'
 import type { AppProps } from 'next/app'
 import type { Session } from 'next-auth'
 
@@ -42,6 +43,7 @@ export default function App({ Component, pageProps, router }: CustomAppProps) {
               <SessionErrorBoundaryWrapper router={router}>
                 <Component {...restPageProps} />
               </SessionErrorBoundaryWrapper>
+              <Analytics />
             </ThemeProvider>
           </SnackbarProvider>
         </SelectedFamilyMemberProvider>
