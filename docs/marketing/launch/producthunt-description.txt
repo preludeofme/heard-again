@@ -1,0 +1,8 @@
+=== PRIMARY (use this one) ===
+An open-source platform for preserving family voices and stories — with care, not AI trickery. Build a private, consent-first archive of recordings, transcriptions, and voice keepsakes your family actually owns. Self-host for free, or use our cloud plans.
+
+=== ALTERNATE OPTIONS ===
+
+Heard Again helps families preserve what matters: voices, stories, and memories — on their own terms. Voice cloning, smart transcription, and collaborative scrapbooks. Fully open source. Your family's data stays yours. Always.
+
+A family voice archive built around consent and ownership, not surveillance. Record stories, preserve voices, and build a private scrapbook together. Open source and self-hostable. Cloud plans start at $4.99/month.
