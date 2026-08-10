@@ -340,16 +340,11 @@ export default function BlogListing({ posts }: BlogListingProps) {
 
 export async function getServerSideProps() {
   // Extract just the metadata (no content functions, which aren't serializable)
-  const posts: BlogPostMeta[] = blogPosts.map(({ slug, title, date, excerpt, tags, author, readTime, coverImage }) => ({
-    slug,
-    title,
-    date,
-    excerpt,
-    tags,
-    author,
-    readTime,
-    coverImage,
-  }))
+  const posts: BlogPostMeta[] = blogPosts.map(({ slug, title, date, excerpt, tags, author, readTime, coverImage }) => {
+    const meta: BlogPostMeta = { slug, title, date, excerpt, tags, author, readTime }
+    if (coverImage) meta.coverImage = coverImage
+    return meta
+  })
 
   return {
     props: { posts },

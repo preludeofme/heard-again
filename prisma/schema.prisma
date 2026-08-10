@@ -63,6 +63,15 @@ model User {
   accounts                  Account[]
   sessions                  Session[]
 
+  // Legacy Successor configuration
+  legacySuccessorId         String?
+  legacySuccessorStatus     LegacySuccessorStatus?
+  legacySuccessor           User?                 @relation("LegacyRelation", fields: [legacySuccessorId], references: [id])
+  legacySuccessorsOf        User[]                @relation("LegacyRelation")
+  
+  initiatedClaims           LegacyClaim[]         @relation("ClaimantRelation")
+  claimsAgainst             LegacyClaim[]         @relation("DeceasedRelation")
+
   @@index([email])
   @@index([oauthProvider, oauthId])
   @@index([linkedPersonId])
@@ -971,6 +980,7 @@ enum UserStatus {
   ACTIVE
   SUSPENDED
   DELETED
+  DECEASED
 }
 
 enum PlanType {
@@ -1366,4 +1376,38 @@ enum EmbeddingStatus {
   PROCESSING
   COMPLETED
   FAILED
+}
+
+enum LegacySuccessorStatus {
+  PENDING
+  ACCEPTED
+  REVOKED
+}
+
+enum LegacyClaimStatus {
+  COOLING_OFF
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+model LegacyClaim {
+  id              String            @id @default(uuid())
+  deceasedUserId  String
+  claimantId      String
+  status          LegacyClaimStatus @default(COOLING_OFF)
+  proofType       String            // "OBITUARY_LINK" | "DEATH_CERTIFICATE"
+  proofData       String            // URL to document or obituary link
+  notes           String?
+  initiatedAt     DateTime          @default(now())
+  expiresAt       DateTime          // End of cooling-off period (initiatedAt + 14 days)
+  resolvedAt      DateTime?
+  resolutionNotes String?
+  
+  deceasedUser    User              @relation("DeceasedRelation", fields: [deceasedUserId], references: [id], onDelete: Cascade)
+  claimant        User              @relation("ClaimantRelation", fields: [claimantId], references: [id], onDelete: Cascade)
+  
+  @@index([deceasedUserId])
+  @@index([claimantId])
+  @@index([status])
 }

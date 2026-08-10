@@ -132,3 +132,80 @@ export async function requireFamilyspaceRole(
     throw Errors.forbidden(`Requires ${minimumRole} role or higher`)
   }
 }
+
+/**
+ * Checks if a user has permission to manage (edit/delete) a specific story.
+ * A user can manage a story if:
+ * 1. They are an EDITOR (or higher) in the story's familyspace, OR
+ * 2. They are the designated and approved (ACCEPTED) legacy successor of the story's creator, and the creator is deceased.
+ */
+export async function canManageStory(
+  userId: string,
+  storyId: string
+): Promise<boolean> {
+  const story = await prisma.story.findUnique({
+    where: { id: storyId },
+    select: {
+      familyspaceId: true,
+      createdById: true,
+    },
+  })
+
+  if (!story) return false
+
+  // Check 1: Normal space membership role check (Editor or higher)
+  try {
+    await requireFamilyspaceRole(userId, story.familyspaceId, 'EDITOR')
+    return true
+  } catch (e) {
+    // If not editor, check legacy successor permissions
+  }
+
+  // Check 2: Legacy Successor check
+  if (story.createdById) {
+    const creator = await prisma.user.findUnique({
+      where: { id: story.createdById },
+      select: {
+        status: true,
+        legacySuccessorId: true,
+        legacySuccessorStatus: true,
+      },
+    })
+
+    if (
+      creator &&
+      creator.status === 'DECEASED' &&
+      creator.legacySuccessorId === userId &&
+      creator.legacySuccessorStatus === 'ACCEPTED'
+    ) {
+      // Check if claimant has an approved claim
+      const approvedClaim = await prisma.legacyClaim.findFirst({
+        where: {
+          deceasedUserId: story.createdById,
+          claimantId: userId,
+          status: 'APPROVED',
+        },
+      })
+      if (approvedClaim) {
+        return true
+      }
+    }
+  }
+
+  return false
+}
+
+/**
+ * Require that a user is authorized to manage a specific story.
+ * Throws AppError(403) if not authorized.
+ */
+export async function requireCanManageStory(
+  userId: string,
+  storyId: string
+): Promise<void> {
+  const allowed = await canManageStory(userId, storyId)
+  if (!allowed) {
+    throw Errors.forbidden('You do not have permission to manage this story.')
+  }
+}
+

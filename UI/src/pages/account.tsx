@@ -67,9 +67,11 @@ import {
   RecordVoiceOver,
   Group,
   Security as SecurityIcon,
+  SafetyCheck,
 } from '@mui/icons-material'
 import { Layout } from '@/components/layout/Layout'
 import { SecuritySettings } from '@/components/account/SecuritySettings'
+import { DigitalLegacySettings } from '@/components/account/DigitalLegacySettings'
 
 interface User {
   id: string
@@ -191,6 +193,7 @@ export default function AccountPage() {
       security: 1,
       familyspace: 2,
       subscription: 3,
+      legacy: 4,
     }
     if (tabParam in tabIndex) {
       if (tabParam === 'security' && user?.loginProvider === 'google') {
@@ -478,6 +481,7 @@ export default function AccountPage() {
               />
               <Tab icon={<Group />} label="Familyspace" />
               <Tab icon={<CreditCard />} label="Subscription" />
+              <Tab icon={<SafetyCheck />} label="Digital Legacy" />
               {/* <Tab icon={<Cloud />} label="Instance & Tunnel" /> */}
             </Tabs>
           </Box>
@@ -861,6 +865,11 @@ export default function AccountPage() {
                 </Card>
               )}
             </Stack>
+          </TabPanel>
+
+          {/* Digital Legacy Tab */}
+          <TabPanel value={activeTab} index={4}>
+            <DigitalLegacySettings />
           </TabPanel>
 
           {/* Instance & Tunnel Tab */}
