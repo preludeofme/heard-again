@@ -3,6 +3,7 @@ import { PreserveFamilyVoicesPost } from './preserve-family-voices-before-its-to
 import { OpenSourceFamilyMemoriesPost } from './why-open-source-matters-for-family-memories'
 import { AiVoiceCloningEthicsPost } from './ai-voice-cloning-ethics-family-consent'
 import { HowToPreserveFamilyMemoriesDigitally } from './how-to-preserve-family-memories-digitally'
+import { RecordGrandparentsVoicesPost } from './record-grandparents-voices-before-stories-go-quiet'
 
 export interface BlogPostMeta {
   slug: string
@@ -72,6 +73,16 @@ export const blogPosts: BlogPost[] = [
     author: HowToPreserveFamilyMemoriesDigitally.meta.author,
     readTime: HowToPreserveFamilyMemoriesDigitally.meta.readTime,
     content: HowToPreserveFamilyMemoriesDigitally.content,
+  },
+  {
+    slug: RecordGrandparentsVoicesPost.meta.slug,
+    title: RecordGrandparentsVoicesPost.meta.title,
+    date: RecordGrandparentsVoicesPost.meta.date,
+    excerpt: RecordGrandparentsVoicesPost.meta.excerpt,
+    tags: RecordGrandparentsVoicesPost.meta.tags,
+    author: RecordGrandparentsVoicesPost.meta.author,
+    readTime: RecordGrandparentsVoicesPost.meta.readTime,
+    content: RecordGrandparentsVoicesPost.content,
   },
 ]
 
