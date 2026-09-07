@@ -19,6 +19,10 @@ interface BlogListingProps {
 }
 
 export default function BlogListing({ posts }: BlogListingProps) {
+  // Sort newest first (ISO date strings sort lexicographically)
+  const sortedPosts = [...posts].sort(
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+  )
   return (
     <>
       <Head>
@@ -40,14 +44,14 @@ export default function BlogListing({ posts }: BlogListingProps) {
           content="Stories, guides, and reflections on preserving family voices and building a lasting legacy."
         />
         <meta property="og:type" content="website" />
-        <meta property="og:image" content="https://heardagain.com/og-image.png" />
+        <meta property="og:image" content="https://www.heardagain.com/og-image.png" />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta
           property="og:image:alt"
           content="Heard Again Blog — Family Voice Preservation &amp; Legacy Stories"
         />
-        <meta property="og:url" content="https://heardagain.com/blog" />
+        <meta property="og:url" content="https://www.heardagain.com/blog" />
         <meta property="og:site_name" content="Heard Again" />
         <meta name="twitter:card" content="summary_large_image" />
         <meta
@@ -58,12 +62,12 @@ export default function BlogListing({ posts }: BlogListingProps) {
           name="twitter:description"
           content="Stories, guides, and reflections on preserving family voices and building a lasting legacy."
         />
-        <meta name="twitter:image" content="https://heardagain.com/og-image.png" />
+        <meta name="twitter:image" content="https://www.heardagain.com/og-image.png" />
         <meta
           name="twitter:image:alt"
           content="Heard Again Blog — Family Voice Preservation &amp; Legacy Stories"
         />
-        <link rel="canonical" href="https://heardagain.com/blog" />
+        <link rel="canonical" href="https://www.heardagain.com/blog" />
         {/* JSON-LD for Blog */}
         <script
           type="application/ld+json"
@@ -71,14 +75,14 @@ export default function BlogListing({ posts }: BlogListingProps) {
             __html: JSON.stringify({
               '@context': 'https://schema.org',
               '@type': 'Blog',
-              '@id': 'https://heardagain.com/blog',
+              '@id': 'https://www.heardagain.com/blog',
               name: 'Heard Again Blog',
               description:
                 'Stories, guides, and reflections on preserving family voices and building a lasting legacy.',
-              url: 'https://heardagain.com/blog',
+              url: 'https://www.heardagain.com/blog',
               publisher: {
                 '@type': 'Organization',
-                '@id': 'https://heardagain.com/#organization',
+                '@id': 'https://www.heardagain.com/#organization',
                 name: 'Heard Again',
               },
               blogPost: posts.map((post) => ({
@@ -86,7 +90,7 @@ export default function BlogListing({ posts }: BlogListingProps) {
                 headline: post.title,
                 description: post.excerpt,
                 datePublished: post.date,
-                url: `https://heardagain.com/blog/${post.slug}`,
+                url: `https://www.heardagain.com/blog/${post.slug}`,
                 author: {
                   '@type': 'Person',
                   name: post.author.name,
@@ -171,7 +175,7 @@ export default function BlogListing({ posts }: BlogListingProps) {
             </Box>
           ) : (
             <Grid container spacing={4}>
-              {posts.map((post) => (
+              {sortedPosts.map((post) => (
                 <Grid size={{ xs: 12, sm: 6, md: 4 }} key={post.slug}>
                   <Card
                     sx={{
