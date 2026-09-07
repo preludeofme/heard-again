@@ -960,7 +960,7 @@ export function LandingPage() {
                   Terms of Service
                 </Typography>
               </Link>
-              <Link href="/faq" style={{ textDecoration: 'none' }}>
+              <Link href="/#faq" style={{ textDecoration: 'none' }}>
                 <Typography
                   variant="body2"
                   sx={{
@@ -972,7 +972,7 @@ export function LandingPage() {
                   FAQ
                 </Typography>
               </Link>
-              <Link href="/contact" style={{ textDecoration: 'none' }}>
+              <Link href="mailto:privacy@heardagain.com" style={{ textDecoration: 'none' }}>
                 <Typography
                   variant="body2"
                   sx={{

@@ -83,7 +83,7 @@ export default function BlogPostPage({ post, relatedPosts }: BlogPostPageProps) 
   }
 
   const pageTitle = `${post.title} — Heard Again Blog`
-  const canonicalUrl = `https://heardagain.com/blog/${post.slug}`
+  const canonicalUrl = `https://www.heardagain.com/blog/${post.slug}`
 
   // Find the full post to render content client-side
   const fullPost = blogPosts.find((p) => p.slug === post.slug)
@@ -96,7 +96,7 @@ export default function BlogPostPage({ post, relatedPosts }: BlogPostPageProps) 
         <meta property="og:title" content={post.title} />
         <meta property="og:description" content={post.excerpt} />
         <meta property="og:type" content="article" />
-        <meta property="og:image" content={post.coverImage || 'https://heardagain.com/og-image.png'} />
+        <meta property="og:image" content={post.coverImage || 'https://www.heardagain.com/og-image.png'} />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta property="og:image:alt" content={post.title} />
@@ -109,7 +109,7 @@ export default function BlogPostPage({ post, relatedPosts }: BlogPostPageProps) 
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={post.title} />
         <meta name="twitter:description" content={post.excerpt} />
-        <meta name="twitter:image" content={post.coverImage || 'https://heardagain.com/og-image.png'} />
+        <meta name="twitter:image" content={post.coverImage || 'https://www.heardagain.com/og-image.png'} />
         <meta name="twitter:image:alt" content={post.title} />
         <link rel="canonical" href={canonicalUrl} />
         {/* JSON-LD for Article */}
@@ -129,10 +129,10 @@ export default function BlogPostPage({ post, relatedPosts }: BlogPostPageProps) 
               },
               publisher: {
                 '@type': 'Organization',
-                '@id': 'https://heardagain.com/#organization',
+                '@id': 'https://www.heardagain.com/#organization',
                 name: 'Heard Again',
               },
-              image: post.coverImage || 'https://heardagain.com/og-image.png',
+              image: post.coverImage || 'https://www.heardagain.com/og-image.png',
               mainEntityOfPage: {
                 '@type': 'WebPage',
                 '@id': canonicalUrl,

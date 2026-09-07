@@ -511,7 +511,7 @@ export function LoginPage() {
                   Terms of Legacy
                 </Typography>
               </Link>
-              <Link href="/contact" style={{ textDecoration: 'none' }}>
+              <Link href="mailto:privacy@heardagain.com" style={{ textDecoration: 'none' }}>
                 <Typography
                   variant="body2"
                   sx={{
