@@ -1,0 +1,39 @@
+ARTICLE: "How to Preserve Family Memories Digitally (Without Losing What Matters)"
+Date: 2026-08-10
+Author: Ryan Buck
+Slug: how-to-preserve-family-memories-digitally
+Read time: 7 min
+
+CORE NARRATIVE:
+Opens with the author's grandmother's shoebox — letters, photos, and a cassette tape labeled "Christmas 1974" that nobody could play. They eventually found a deck and heard her laugh, their dad as a teenager, dishes clattering. 23 minutes that became priceless.
+
+MAIN POINTS (in order):
+
+1. "Digital Is Not Permanent" — Digital feels solid but isn't. Hard drives last 3-5 years. SSDs can lose data within months unpowered. Platforms shut down. The real problem: the "sort later" folder that grows forever. Preservation is a habit problem, not a tech problem.
+
+2. "Start With What You Already Have" — Pick ONE container (shoebox, folder, drawer). Spend an hour. Label things while people who know are still around. Use your phone's voice recorder — ask one question next time you're with a parent/grandparent. The mic in your pocket is better than anything Ansel Adams had.
+
+3. "The Three-Copy Rule" — 3 copies, 2 media types, 1 offsite. Computer + external drive + cloud. Offsite means different building/region. Test your backup once a year — untested backup = wish, not backup.
+
+4. "Choose Formats That Will Outlast You" — WAV/FLAC for audio, TIFF for archival photos, PDF/A for documents, MP4 H.264 for video. Avoid proprietary formats. Name files descriptively (not IMG_4729.jpg). Add README.txt files explaining who's who.
+
+5. "The Voice Recordings You'll Wish You Had" — Photos show what someone looked like; voices show who they were. Most common regret: never recording a loved one's voice. Don't wait for the right moment — it won't arrive. Just hit record.
+
+6. "A System You'll Actually Use" — Single "Family Archive" folder synced to cloud. Three subfolders: Audio, Photos, Documents. Drop things in weekly for 5 minutes. Share with family so it's collaborative.
+
+CLOSING:
+That shoebox held 23 minutes of a life. They got lucky. "The next generation shouldn't have to get lucky. They should just have to press play."
+
+KEY QUOTES:
+- "The digital stuff we're making now is far more fragile than we think."
+- "The microphone in your pocket is better than anything Ansel Adams had access to."
+- "Don't wait for the right moment. It won't arrive."
+- "A backup you haven't tested is a wish, not a backup."
+- "The next generation shouldn't have to get lucky. They should just have to press play."
+
+BRAND RULES:
+- NEVER lead with AI — lead with human value
+- Never use "resurrect" "reanimate" "digital immortality" "bring back"
+- Frame AI as preservation tool, not replacement
+- Heard Again is mentioned once at the end, gently: "we're building tools that help families preserve the voices that matter most — with care, with consent, and with the belief that these recordings belong to the people who made them, not to a platform"
+- Warm, human-first tone. No marketing-speak.
