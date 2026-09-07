@@ -12,6 +12,7 @@ export const meta = {
     bio: 'Founder of Heard Again. Helping families preserve the voices and stories that matter most.',
   },
   readTime: '7 min read',
+  coverImage: '/blog-covers/how-to-preserve-family-memories-digitally.png',
 }
 
 export function BlogContent() {

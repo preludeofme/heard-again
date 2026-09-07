@@ -43,6 +43,7 @@ export const blogPosts: BlogPost[] = [
     author: PreserveFamilyVoicesPost.meta.author,
     readTime: PreserveFamilyVoicesPost.meta.readTime,
     content: PreserveFamilyVoicesPost.content,
+    ...(PreserveFamilyVoicesPost.meta.coverImage ? { coverImage: `https://www.heardagain.com${PreserveFamilyVoicesPost.meta.coverImage}` } : {}),
   },
   {
     slug: OpenSourceFamilyMemoriesPost.meta.slug,
@@ -53,6 +54,7 @@ export const blogPosts: BlogPost[] = [
     author: OpenSourceFamilyMemoriesPost.meta.author,
     readTime: OpenSourceFamilyMemoriesPost.meta.readTime,
     content: OpenSourceFamilyMemoriesPost.content,
+    ...(OpenSourceFamilyMemoriesPost.meta.coverImage ? { coverImage: `https://www.heardagain.com${OpenSourceFamilyMemoriesPost.meta.coverImage}` } : {}),
   },
   {
     slug: AiVoiceCloningEthicsPost.meta.slug,
@@ -63,6 +65,7 @@ export const blogPosts: BlogPost[] = [
     author: AiVoiceCloningEthicsPost.meta.author,
     readTime: AiVoiceCloningEthicsPost.meta.readTime,
     content: AiVoiceCloningEthicsPost.content,
+    ...(AiVoiceCloningEthicsPost.meta.coverImage ? { coverImage: `https://www.heardagain.com${AiVoiceCloningEthicsPost.meta.coverImage}` } : {}),
   },
   {
     slug: HowToPreserveFamilyMemoriesDigitally.meta.slug,
@@ -73,6 +76,7 @@ export const blogPosts: BlogPost[] = [
     author: HowToPreserveFamilyMemoriesDigitally.meta.author,
     readTime: HowToPreserveFamilyMemoriesDigitally.meta.readTime,
     content: HowToPreserveFamilyMemoriesDigitally.content,
+    ...(HowToPreserveFamilyMemoriesDigitally.meta.coverImage ? { coverImage: `https://www.heardagain.com${HowToPreserveFamilyMemoriesDigitally.meta.coverImage}` } : {}),
   },
   {
     slug: RecordGrandparentsVoicesPost.meta.slug,
@@ -83,6 +87,7 @@ export const blogPosts: BlogPost[] = [
     author: RecordGrandparentsVoicesPost.meta.author,
     readTime: RecordGrandparentsVoicesPost.meta.readTime,
     content: RecordGrandparentsVoicesPost.content,
+    ...(RecordGrandparentsVoicesPost.meta.coverImage ? { coverImage: `https://www.heardagain.com${RecordGrandparentsVoicesPost.meta.coverImage}` } : {}),
   },
 ]
 

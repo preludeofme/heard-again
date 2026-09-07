@@ -12,6 +12,7 @@ export const meta = {
     bio: 'Founder of Heard Again. Helping families preserve the voices and stories that matter most.',
   },
   readTime: '6 min read',
+  coverImage: '/blog-covers/preserve-family-voices.png',
 }
 
 export function BlogContent() {

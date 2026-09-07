@@ -12,6 +12,7 @@ export const meta = {
     bio: 'Founder of Heard Again. Helping families preserve the voices and stories that matter most.',
   },
   readTime: '7 min read',
+  coverImage: '/blog-covers/ai-voice-cloning-ethics.png',
 }
 
 export function BlogContent() {

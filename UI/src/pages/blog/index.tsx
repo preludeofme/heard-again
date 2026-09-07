@@ -201,7 +201,7 @@ export default function BlogListing({ posts }: BlogListingProps) {
                         <Box
                           sx={{
                             height: 200,
-                            backgroundImage: `url(${post.coverImage})`,
+                            backgroundImage: `url(${post.coverImage ? post.coverImage.startsWith('http') ? post.coverImage : `https://www.heardagain.com${post.coverImage}` : ''})`,
                             backgroundSize: 'cover',
                             backgroundPosition: 'center',
                           }}

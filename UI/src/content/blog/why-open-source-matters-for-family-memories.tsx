@@ -12,6 +12,7 @@ export const meta = {
     bio: 'Founder of Heard Again. Helping families preserve the voices and stories that matter most.',
   },
   readTime: '5 min read',
+  coverImage: '/blog-covers/why-open-source-matters.png',
 }
 
 export function BlogContent() {
