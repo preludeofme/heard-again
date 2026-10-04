@@ -1,0 +1,86 @@
+#!/usr/bin/env bash
+# Refuses to push commits that change copy still waiting on Ryan's approval.
+#
+# A gate is a file in Scripts/copy-gates/*.gate listing one path pattern per
+# line. While that file exists, the patterns it names cannot reach a remote.
+# Delete the gate file when the approval card resolves.
+#
+# Escape hatch: COPY_GATE_OVERRIDE=1 git push
+#
+# Unexpected failures inside this hook let the push through. A shared checkout
+# serves several agents at once and a broken hook must not wedge all of them.
+
+GATE_DIR="Scripts/copy-gates"
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
+cd "$REPO_ROOT" 2>/dev/null || exit 0
+
+[ -d "$GATE_DIR" ] || exit 0
+
+if [ "${COPY_GATE_OVERRIDE:-}" = "1" ]; then
+  echo "pre-push: COPY_GATE_OVERRIDE=1 — copy gates skipped." >&2
+  exit 0
+fi
+
+gate_files=$(find "$GATE_DIR" -maxdepth 1 -name '*.gate' 2>/dev/null)
+[ -n "$gate_files" ] || exit 0
+
+ZERO="0000000000000000000000000000000000000000"
+changed=""
+
+while read -r _local_ref local_sha _remote_ref remote_sha; do
+  [ -z "${local_sha:-}" ] && continue
+  case "$local_sha" in "$ZERO") continue ;; esac
+
+  if [ "${remote_sha:-$ZERO}" = "$ZERO" ]; then
+    files=$(git log --name-only --pretty=format: "$local_sha" --not --remotes 2>/dev/null)
+  else
+    files=$(git diff --name-only "$remote_sha" "$local_sha" 2>/dev/null)
+  fi
+  changed="$changed
+$files"
+done
+
+changed=$(printf '%s\n' "$changed" | grep -v '^[[:space:]]*$' | sort -u)
+[ -n "$changed" ] || exit 0
+
+blocked=0
+for gate in $gate_files; do
+  gate_name=$(basename "$gate" .gate)
+  while IFS= read -r pattern; do
+    pattern=$(printf '%s' "$pattern" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
+    [ -z "$pattern" ] && continue
+    case "$pattern" in \#*) continue ;; esac
+
+    while IFS= read -r file; do
+      # shellcheck disable=SC2254
+      case "$file" in
+        $pattern)
+          if [ "$blocked" -eq 0 ]; then
+            echo "" >&2
+            echo "pre-push blocked: this push changes copy that is still waiting on approval." >&2
+            blocked=1
+          fi
+          echo "  $file  (gate: $gate_name)" >&2
+          ;;
+      esac
+    done <<EOF
+$changed
+EOF
+  done < "$gate"
+done
+
+if [ "$blocked" -eq 1 ]; then
+  cat >&2 <<'MSG'
+
+Any wording that touches death or loss goes to Ryan before it ships.
+
+Your options:
+  - Move the gated change onto a side branch and push that instead.
+  - Wait for the approval card, then delete the gate file in Scripts/copy-gates/.
+  - COPY_GATE_OVERRIDE=1 git push   (say so on the issue if you use this)
+
+MSG
+  exit 1
+fi
+
+exit 0
