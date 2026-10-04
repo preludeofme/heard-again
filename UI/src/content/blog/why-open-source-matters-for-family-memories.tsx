@@ -272,6 +272,19 @@ export function BlogContent() {
       </Typography>
 
       <Typography variant="body1" sx={{ color: '#546669', lineHeight: 1.8, mb: 2 }}>
+        Which raises the obvious question: if the code is free, what are the paid plans for? Not
+        features. The hosted plans don&apos;t unlock anything you can&apos;t get by downloading Heard
+        Again and running it yourself under its MIT license. They cover the hosting — a GPU for the
+        voice work, storage, and backups you don&apos;t have to remember to run. The reason that
+        sits comfortably alongside everything above is that it stays reversible: your recordings
+        export in standard formats, the code that reads them is public, and if you ever decide
+        you&apos;d rather own the house than rent it, you take the archive and run the same software
+        at home. You can{' '}
+        <PostLink href="/#pricing">see what the hosted plans cost</PostLink> — but the exit being
+        real is the point, not the subscription.
+      </Typography>
+
+      <Typography variant="body1" sx={{ color: '#546669', lineHeight: 1.8, mb: 2 }}>
         That&apos;s not just good engineering. It&apos;s the only approach that matches the weight
         of what we&apos;re asking families to entrust us with.
       </Typography>

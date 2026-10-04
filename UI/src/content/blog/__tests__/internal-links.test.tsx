@@ -1,21 +1,38 @@
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { render } from '@testing-library/react'
 import { blogPosts } from '..'
 import { buildSitemapXml } from '@/pages/sitemap.xml'
 
+const POSTS_DIR = join(__dirname, '..')
 const PRICING_HREF = '/#pricing'
 
 /**
- * Posts written under the TRU-6 editorial rules, which require one pricing link
- * per post. The five launch posts predate that rule and link post-to-post only.
+ * Every post body in the directory, registered or still behind the editorial
+ * gate. Derived from the filesystem so a new post cannot ship without a pricing
+ * link just by being absent from a hand-maintained list.
  */
-const POSTS_REQUIRING_PRICING_LINK = [
-  'self-hosted-vs-hosted-family-archive',
-  'gedcom-import-with-audio',
-  'restore-old-cassette-recording-family-member',
-  'how-to-clone-a-deceased-relatives-voice',
+const ALL_POST_SLUGS = readdirSync(POSTS_DIR)
+  .filter((file) => file.endsWith('.tsx') && file !== 'post-link.tsx')
+  .map((file) => file.replace(/\.tsx$/, ''))
+
+/**
+ * TRU-20: these three posts touch death and loss, so their drafted pricing
+ * paragraph is held on `content/tru-20-gated-pricing-paragraphs` until Ryan has
+ * read it. Asserted to have *no* pricing link yet, so merging the paragraph
+ * fails this suite and forces the entry out rather than leaving a standing hole
+ * in the guard above.
+ */
+const PENDING_EDITORIAL_READ = [
+  'preserve-family-voices-before-its-too-late',
+  'ai-voice-cloning-ethics-family-consent',
+  'record-grandparents-voices-before-stories-go-quiet',
 ]
+
+function pricingLinkCount(slug: string): number {
+  const source = readFileSync(join(POSTS_DIR, `${slug}.tsx`), 'utf8')
+  return source.split(`href="${PRICING_HREF}"`).length - 1
+}
 
 /** Collect every internal href rendered in a post body. */
 function renderedHrefs(content: () => React.ReactNode): string[] {
@@ -41,14 +58,27 @@ describe('blog internal linking', () => {
     }
   )
 
-  it('should link every post written under the pricing-link rule to the pricing section', () => {
-    const missing = POSTS_REQUIRING_PRICING_LINK.filter((slug) => {
-      const source = readFileSync(join(__dirname, '..', `${slug}.tsx`), 'utf8')
-      return !source.includes(`href="${PRICING_HREF}"`)
-    })
+  it('should guard every post file in the directory, registered or gated', () => {
+    const registered = blogPosts.map((p) => p.slug)
 
-    expect(missing).toEqual([])
+    expect(ALL_POST_SLUGS).toEqual(expect.arrayContaining(registered))
+    expect(ALL_POST_SLUGS.length).toBeGreaterThanOrEqual(registered.length)
   })
+
+  it.each(ALL_POST_SLUGS.filter((slug) => !PENDING_EDITORIAL_READ.includes(slug)))(
+    'should link %s to the pricing section exactly once',
+    (slug) => {
+      expect(pricingLinkCount(slug)).toBe(1)
+    }
+  )
+
+  it.each(PENDING_EDITORIAL_READ)(
+    'should still be holding the pricing paragraph for %s pending an editorial read',
+    (slug) => {
+      expect(ALL_POST_SLUGS).toContain(slug)
+      expect(pricingLinkCount(slug)).toBe(0)
+    }
+  )
 
   it('should only link to posts that are registered', () => {
     const broken = blogPosts.flatMap((post) =>

@@ -352,6 +352,19 @@ export function BlogContent() {
       </Typography>
 
       <Typography variant="body1" sx={{ color: '#546669', lineHeight: 1.8, mb: 2 }}>
+        One note on the third copy — the one that lives somewhere else — because that&apos;s the part
+        of this system that quietly fails. The drive ends up in a drawer in the same house as the
+        computer, and the yearly check never happens. If you&apos;d rather not administer that
+        yourself, a hosted archive can be the off-site copy. Heard Again&apos;s cheapest plan is
+        $4.99 a month for 2&nbsp;GB with managed backups, which holds a lot of audio, and the
+        recordings sit attached to the person they belong to rather than in a folder somebody has to
+        interpret in thirty years. You can{' '}
+        <PostLink href="/#pricing">compare the plans here</PostLink>. The software is MIT licensed,
+        so running it yourself at no cost stays a real option — what you&apos;d be paying for is not
+        having to be the person who remembers.
+      </Typography>
+
+      <Typography variant="body1" sx={{ color: '#546669', lineHeight: 1.8, mb: 2 }}>
         At Heard Again, we&apos;re building tools that help families preserve the voices that matter
         most — with care, with consent, and with the belief that these recordings belong to the
         people who made them, not to a platform. But the tools are only part of it. The most
