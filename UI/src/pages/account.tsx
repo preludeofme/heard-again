@@ -4,7 +4,6 @@ import { fetchWithCSRF } from '@/lib/api-client'
 import { useRouter } from 'next/router'
 import { loadStripe } from '@stripe/stripe-js'
 import { EmbeddedCheckoutProvider, EmbeddedCheckout } from '@stripe/react-stripe-js'
-import { trackCheckoutCompleted, trackCheckoutOpened } from '@/lib/analytics/funnel'
 
 let stripePromise: any = null
 const getStripePromise = () => {
@@ -239,10 +238,6 @@ export default function AccountPage() {
         if (subData.success) {
           setSubscription(subData.data)
           if (sessionId) {
-            // Funnel step 6 — the end of the pay path. The return trip from
-            // Stripe drops pendingPlan, so the tier is read back off the
-            // subscription we just confirmed.
-            trackCheckoutCompleted(subData.data?.plan?.name ?? null)
             setSuccess("Your plan was updated successfully! A confirmation email has been sent.")
             // Clean up session_id from URL without reloading the page
             const newQuery = { ...router.query }
@@ -335,16 +330,6 @@ export default function AccountPage() {
     setIsChangePlanDialogOpen(true)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingPlanMatch?.id])
-
-  // Funnel step 5 — a clientSecret came back, so Stripe Embedded Checkout is the
-  // thing on screen. This is the last step before the card form, and the gap
-  // between it and step 6 is card abandonment specifically.
-  useEffect(() => {
-    if (!stripeClientSecret) return
-    const slug = plans.find((p) => p.id === selectedPlanId)?.slug ?? pendingPlan
-    trackCheckoutOpened(slug)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stripeClientSecret])
 
   const handleCancelSubscription = async () => {
     try {
