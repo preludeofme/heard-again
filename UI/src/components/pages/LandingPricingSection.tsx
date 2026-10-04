@@ -5,8 +5,24 @@ import Link from 'next/link'
 import { FeatureRow } from './FeatureRow'
 import { SystemRequirements } from './SystemRequirements'
 
+type LandingPlan = {
+  id: string
+  name: string
+  planType: string
+  subtitle: string
+  pricing: { monthlyDisplay: string }
+  features: React.ReactNode[]
+  bestFor: string
+  isRecommended: boolean
+  /** False when production cannot sell this tier yet — the card shows the price but never offers a checkout that would fail. */
+  isAvailable: boolean
+  trialNote: string
+  ctaText: string
+  ctaHref: string
+}
+
 export function LandingPricingSection() {
-  const cloudPlans = [
+  const cloudPlans: LandingPlan[] = [
     {
       id: 'cloud_lite',
       name: 'Cloud Access — Lite',
@@ -29,7 +45,10 @@ export function LandingPricingSection() {
       ],
       bestFor: 'Best for families who just want standard hosting and media/story sharing.',
       isRecommended: false,
-      ctaText: 'Start free trial',
+      isAvailable: false,
+      trialNote: 'Not open for signup yet',
+      ctaText: 'Start with Starter instead',
+      ctaHref: '/signup?plan=cloud_min',
     },
     {
       id: 'cloud_min',
@@ -53,7 +72,10 @@ export function LandingPricingSection() {
       ],
       bestFor: 'Best for families just beginning to preserve their stories.',
       isRecommended: false,
+      isAvailable: true,
+      trialNote: 'Includes 14-day free trial',
       ctaText: 'Start free trial',
+      ctaHref: '/signup?plan=cloud_min',
     },
     {
       id: 'cloud_mid',
@@ -75,7 +97,10 @@ export function LandingPricingSection() {
       ],
       bestFor: 'Best for families collecting stories from multiple relatives and contributors.',
       isRecommended: true,
+      isAvailable: true,
+      trialNote: 'Includes 14-day free trial',
       ctaText: 'Start free trial',
+      ctaHref: '/signup?plan=cloud_mid',
     },
     {
       id: 'cloud_max',
@@ -93,7 +118,10 @@ export function LandingPricingSection() {
       ],
       bestFor: 'Best for families building a long-term family legacy library.',
       isRecommended: false,
+      isAvailable: true,
+      trialNote: 'Includes 14-day free trial',
       ctaText: 'Choose Legacy',
+      ctaHref: '/signup?plan=cloud_max',
     },
   ]
 
@@ -215,7 +243,7 @@ export function LandingPricingSection() {
                     variant="caption"
                     sx={{ color: '#546669', display: 'block', mt: 0.5, fontWeight: 600 }}
                   >
-                    Includes 14-day free trial
+                    {plan.trialNote}
                   </Typography>
                 </Box>
                 <Divider sx={{ my: 2, opacity: 0.3 }} />
@@ -244,16 +272,28 @@ export function LandingPricingSection() {
                 </Box>
                 <Button
                   component={Link}
-                  href={`/signup?plan=${plan.id}`}
-                  variant="contained"
+                  href={plan.ctaHref}
+                  variant={plan.isAvailable ? 'contained' : 'outlined'}
                   fullWidth
                   sx={{
                     py: 1.5,
                     borderRadius: 3,
                     textTransform: 'none',
                     fontSize: '1rem',
-                    backgroundColor: '#16334a',
-                    '&:hover': { backgroundColor: '#2e4a62' },
+                    ...(plan.isAvailable
+                      ? {
+                          backgroundColor: '#16334a',
+                          '&:hover': { backgroundColor: '#2e4a62' },
+                        }
+                      : {
+                          borderColor: '#16334a',
+                          color: '#16334a',
+                          '&:hover': {
+                            borderColor: '#2e4a62',
+                            color: '#2e4a62',
+                            bgcolor: 'rgba(22, 51, 74, 0.04)',
+                          },
+                        }),
                   }}
                 >
                   {plan.ctaText}
