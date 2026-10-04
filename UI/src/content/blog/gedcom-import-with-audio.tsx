@@ -207,11 +207,13 @@ export function BlogContent() {
       <Typography variant="body1" sx={{ color: '#546669', lineHeight: 1.8, mb: 2 }}>
         The plain reason to pay instead: an import like this is the moment your archive goes from
         scattered to consolidated, and that is exactly when you want backups you did not have to
-        configure. A hosted plan starts at <strong>$4.99 a month</strong> for storage, sharing, and
-        consent controls, with managed backups and updates included, and the family sharing that makes
-        other relatives able to add their own recordings instead of emailing them to you. That tier
-        includes no voice generation minutes — it is <strong>$9.99</strong> if you want voice
-        generation too. For an import-and-archive job, the cheaper one is the one you want. You can{' '}
+        configure. The plan you can actually start today is <strong>$9.99 a month</strong>: storage,
+        sharing, consent controls, managed backups and updates, the family sharing that makes other
+        relatives able to add their own recordings instead of emailing them to you, and thirty minutes
+        of voice generation a month if you later want it. There is a cheaper <strong>$4.99</strong>{' '}
+        storage-and-sharing tier listed with no generation minutes, which would suit a pure
+        import-and-archive job, but it is not open for signup yet — we would rather tell you that here
+        than let you find out at the checkout. You can{' '}
         <PostLink href="/#pricing">see what each plan includes on the pricing page</PostLink>. Either
         way the software is the same — paying buys you someone else doing the operations.
       </Typography>
