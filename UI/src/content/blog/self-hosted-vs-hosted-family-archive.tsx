@@ -191,9 +191,13 @@ export function BlogContent() {
         are usually the ones you have the least time to look after — because the reason they are
         urgent is that someone is ageing, or ill, or you have just found a box of tapes and the
         family is already asking questions. Standing up a server is the wrong task to take on in that
-        week. A hosted plan starts at <strong>$4.99 a month</strong> for storage and sharing with no
-        AI features, and <strong>$9.99</strong> if you want voice generation included — which is less
-        than the electricity bill on a 24&nbsp;GB GPU, let alone the card. You can{' '}
+        week. The plan you can actually start today is <strong>$9.99 a month</strong>, with voice
+        generation included — thirty minutes of generation a month and up to fifty voice profiles —
+        and a 14-day free trial before anything is charged. There is a cheaper{' '}
+        <strong>$4.99</strong> storage-and-sharing tier with no AI features listed on the pricing
+        page, but it is not open for signup yet, and we would rather tell you that here than let you
+        find out at the checkout. Either figure is less than the card you would need to buy, and
+        comparable to what an always-on machine with that card in it adds to a power bill. You can{' '}
         <PostLink href="/#pricing">compare the plans on the pricing page</PostLink>. You are buying
         the backups, the updates, and someone to email when it breaks.
       </Typography>
