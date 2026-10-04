@@ -195,7 +195,13 @@ export function BlogContent() {
 
       <Typography variant="body1" sx={{ color: '#546669', lineHeight: 1.8, mb: 2 }}>
         You can run Heard Again yourself — it is open source, and a GEDCOM import plus a pile of audio
-        files runs fine on modest hardware. If that is your preference, do it.
+        files runs fine on modest hardware. If that is your preference, do it. The caveat is that
+        voice generation is the part that wants a real GPU, so the hardware question splits depending
+        on whether you only want the archive or the voice features too. We laid out{' '}
+        <PostLink href="/blog/self-hosted-vs-hosted-family-archive">
+          both tiers and what each one actually costs
+        </PostLink>{' '}
+        if you want to price it before committing.
       </Typography>
 
       <Typography variant="body1" sx={{ color: '#546669', lineHeight: 1.8, mb: 2 }}>

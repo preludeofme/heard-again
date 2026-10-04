@@ -236,6 +236,19 @@ export function BlogContent() {
       </Typography>
 
       <Typography variant="body1" sx={{ color: '#546669', lineHeight: 1.8, mb: 2 }}>
+        For the family tree itself, the equivalent is GEDCOM — a plain-text genealogy format old
+        enough that almost every program can read it. It is the right thing to export to, with one
+        catch worth knowing before you rely on it: it carries names, dates, places, and
+        relationships, and it does not carry your audio. Recordings have to be reattached on the
+        other side. We go through{' '}
+        <PostLink href="/blog/gedcom-import-with-audio">
+          what actually survives a GEDCOM import, and how to get recordings back onto the right
+          people
+        </PostLink>{' '}
+        if you are about to move a tree between services.
+      </Typography>
+
+      <Typography variant="body1" sx={{ color: '#546669', lineHeight: 1.8, mb: 2 }}>
         <strong>Practical tip:</strong> Name your files so a stranger could understand them fifty
         years from now. &ldquo;IMG_4729.jpg&rdquo; is useless. &ldquo;grandma-rose-birthday-party-2024.jpg&rdquo;
         tells a story on its own. Add a small text file alongside important folders — call it

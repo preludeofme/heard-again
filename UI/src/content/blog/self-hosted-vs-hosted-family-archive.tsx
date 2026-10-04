@@ -93,6 +93,17 @@ export function BlogContent() {
         compute and for data separately when you register a self-hosted instance.
       </Typography>
 
+      <Typography variant="body1" sx={{ color: '#546669', lineHeight: 1.8, mb: 2 }}>
+        Worth saying before you agonise over it: whichever side you land on, you are not locking the
+        data in. The tree exports to GEDCOM, which every genealogy program reads, and the audio
+        exports as ordinary files. The one thing that does not travel cleanly is the link between the
+        two — GEDCOM carries people, not recordings — so if you expect to move between setups, read{' '}
+        <PostLink href="/blog/gedcom-import-with-audio">
+          what survives a GEDCOM import and what you have to reattach
+        </PostLink>{' '}
+        before you build a filing habit you will have to undo.
+      </Typography>
+
       <Box
         sx={{
           borderLeft: '4px solid #16334a',

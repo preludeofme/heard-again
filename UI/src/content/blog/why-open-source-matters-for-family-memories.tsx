@@ -214,6 +214,17 @@ export function BlogContent() {
         and companies can&apos;t always guarantee.
       </Typography>
 
+      <Typography variant="body1" sx={{ color: '#546669', lineHeight: 1.8, mb: 2 }}>
+        That applies to us as much as to anyone else. Heard Again is MIT licensed, so the exit door
+        is real: you can take the code and run the whole thing on your own machine without asking
+        permission. Whether you should is a separate question, and the honest answer involves a GPU,
+        a power bill, and a backup routine nobody else is going to maintain for you. We wrote{' '}
+        <PostLink href="/blog/self-hosted-vs-hosted-family-archive">
+          a straight comparison of self-hosting versus paying us
+        </PostLink>{' '}
+        rather than leave you to find out the hard way.
+      </Typography>
+
       <Typography
         variant="h2"
         sx={{
