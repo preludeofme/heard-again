@@ -109,6 +109,21 @@ describe('blog internal linking', () => {
     expect(sitemap).not.toContain('/blog/restore-old-cassette-recording-family-member')
   })
 
+  /**
+   * The sitemap generator clamps a future `lastmod`, which hides the fault
+   * rather than fixing it: the page would still render a future
+   * `article:published_time` and schema.org `datePublished`. The two gated posts
+   * carry placeholder dates, so registering one without re-dating it to the real
+   * publish date fails here.
+   */
+  it('should not register a post dated in the future', () => {
+    const today = new Date().toISOString().slice(0, 10)
+
+    const future = blogPosts.filter((post) => post.date > today).map((post) => `${post.slug} (${post.date})`)
+
+    expect(future).toEqual([])
+  })
+
   it('should never emit a lastmod in the future', () => {
     const today = '2026-10-04'
     const sitemap = buildSitemapXml(today)

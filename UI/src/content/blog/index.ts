@@ -14,8 +14,17 @@ import { GedcomImportWithAudioPost } from './gedcom-import-with-audio'
  *   import { RestoreCassetteRecordingPost } from './restore-old-cassette-recording-family-member'
  *   import { CloneDeceasedRelativeVoicePost } from './how-to-clone-a-deceased-relatives-voice'
  *
- * To publish: add the two imports above, append the two entries marked in the
- * array below, and add the matching <url> blocks to UI/public/sitemap.xml.
+ * Each post is approved on its own, so register them independently rather than
+ * as a pair.
+ *
+ * To publish one: uncomment its import above, uncomment its entry in the array
+ * below, and reset its `date` in the post file to the real publish date. The
+ * drafted dates are placeholders; shipping one emits a future
+ * article:published_time and schema.org datePublished, and the test suite will
+ * fail until it is corrected.
+ *
+ * The sitemap is generated from this array by UI/src/pages/sitemap.xml.ts —
+ * there is nothing to add by hand.
  */
 
 export interface BlogPostMeta {
