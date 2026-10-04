@@ -118,3 +118,13 @@ Post as written. LinkedIn is the one channel where a link in the body is normal.
 Not upvotes. Per `docs/marketing.md`: thoughtful conversations, feature requests, people
 asking for the project unprompted, GitHub stars, contributors. Log anything that looks like
 a customer signal — that is what W3 builds on.
+
+## How it gets measured
+
+Read `attribution.md` **before the first post** — attribution cannot be added to a post after it is live.
+Short version: referrer-based, no UTMs on any link (Vercel gates UTM filtering behind a $10/month add-on
+we do not need, because referrer drill-down already separates every channel including the two subreddits).
+
+Record every result in `channel-results.md` within 48 hours. On the Hobby plan Vercel's reporting window
+is one month, so the dashboard is not the record — the ledger is. Capture the **baseline** section of the
+ledger before the first action, or every delta afterwards is unmeasurable.
