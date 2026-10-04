@@ -3,7 +3,7 @@
   <!-- Homepage -->
   <url>
     <loc>https://www.heardagain.com/</loc>
-    <lastmod>2026-08-09</lastmod>
+    <lastmod>2026-10-04</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
@@ -65,7 +65,7 @@
   <!-- Blog -->
   <url>
     <loc>https://www.heardagain.com/blog</loc>
-    <lastmod>2026-08-09</lastmod>
+    <lastmod>2026-10-04</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -101,13 +101,13 @@
   </url>
   <url>
     <loc>https://www.heardagain.com/blog/self-hosted-vs-hosted-family-archive</loc>
-    <lastmod>2026-10-05</lastmod>
+    <lastmod>2026-10-04</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://www.heardagain.com/blog/gedcom-import-with-audio</loc>
-    <lastmod>2026-10-12</lastmod>
+    <lastmod>2026-10-04</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>

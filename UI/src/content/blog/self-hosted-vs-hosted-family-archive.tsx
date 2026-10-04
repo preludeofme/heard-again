@@ -4,7 +4,7 @@ import { PostLink } from './post-link'
 export const meta = {
   slug: 'self-hosted-vs-hosted-family-archive' as const,
   title: 'Self-Hosted or Hosted? An Honest Answer About Your Family Archive',
-  date: '2026-10-05',
+  date: '2026-10-04',
   excerpt:
     'Heard Again is open source, so you can run it yourself for free. Here is a straight comparison of what self-hosting really costs you in hardware, time, and risk — and when paying us is the better call.',
   tags: ['self-hosting', 'open source', 'data sovereignty', 'digital legacy', 'privacy'],

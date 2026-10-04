@@ -4,7 +4,7 @@ import { PostLink } from './post-link'
 export const meta = {
   slug: 'gedcom-import-with-audio' as const,
   title: "GEDCOM Import With Audio: What Transfers, What Doesn't, and How to Attach Recordings",
-  date: '2026-10-12',
+  date: '2026-10-04',
   excerpt:
     'GEDCOM moves names, dates, places, and relationships. It does not carry your audio. Here is what actually survives an import, and the practical way to get recordings attached to the right people afterwards.',
   tags: ['GEDCOM', 'genealogy', 'family tree', 'voice recording', 'digital preservation'],
