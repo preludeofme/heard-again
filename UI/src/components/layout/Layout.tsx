@@ -47,6 +47,7 @@ import { ActiveMemberHeader } from './ActiveMemberHeader'
 import { FamilyspaceSwitcher } from './FamilyspaceSwitcher'
 import { ProfileColors } from '@/components/profile/ProfileConstants'
 import { useSelectedFamilyMember } from '@/contexts/SelectedFamilyMemberContext'
+import { trackMfaWallHit } from '@/lib/analytics/funnel'
 import { AnimatedWaveform } from '../brand/AnimatedWaveform'
 
 interface LayoutProps {
@@ -154,7 +155,14 @@ export function Layout({ children }: LayoutProps) {
     router?.pathname !== '/support' &&
     router?.pathname !== '/login' &&
     !(typeof document !== 'undefined' && document.cookie.includes('e2e-bypass-mfa=true'))
-  
+
+  // Funnel step 4. This wall replaces the page the visitor asked for, so a spike
+  // here is the difference between "they lost interest" and "we stopped them".
+  const mfaWallPath = isMfaRequired ? router?.pathname || 'unknown' : null
+  useEffect(() => {
+    if (mfaWallPath) trackMfaWallHit(mfaWallPath)
+  }, [mfaWallPath])
+
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const { selectedFamilyMember } = useSelectedFamilyMember()

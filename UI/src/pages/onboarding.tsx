@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import { useSession } from 'next-auth/react'
 import { fetchWithCSRFAndJSON } from '@/lib/api-client'
+import { trackOnboardingCompleted } from '@/lib/analytics/funnel'
 import {
   Box,
   Typography,
@@ -108,6 +109,11 @@ export default function OnboardingPage() {
       // silently fell through to the security tab, and a valid Checkout Session
       // was created and thrown away each time.
       const planSlug = typeof router.query.plan === 'string' ? router.query.plan : null
+
+      // Funnel step 3. Fired after complete-onboarding succeeded and before the
+      // redirect, so it is never credited to an account that was not created.
+      trackOnboardingCompleted(planSlug)
+
       if (planSlug) {
         router.push(`/account?tab=subscription&pendingPlan=${encodeURIComponent(planSlug)}`)
         return

@@ -1,7 +1,8 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/router'
 import { signIn } from 'next-auth/react'
 import { fetchWithCSRF } from '@/lib/api-client'
+import { trackSignupFormViewed } from '@/lib/analytics/funnel'
 import {
   Box,
   Typography,
@@ -39,6 +40,13 @@ export function CreateAccountPage() {
     password: '',
     confirmPassword: '',
   })
+
+  // Funnel step 2. Waits for router.isReady so ?plan= is populated — firing
+  // earlier would record every paid arrival as plan=none.
+  useEffect(() => {
+    if (!router.isReady) return
+    trackSignupFormViewed(router.query.plan)
+  }, [router.isReady, router.query.plan])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
