@@ -1,4 +1,4 @@
-import type { NextApiRequest, NextApiResponse } from 'next'
+import { apiHandler, successResponse } from '@/lib/api-helpers'
 import { requireAdmin } from '@/lib/auth-helpers'
 import { readFunnelCounts } from '@/lib/analytics/funnel-counters'
 import { FUNNEL_EVENT_NAMES, FUNNEL_SERVER_EVENTS } from '@/lib/analytics/funnel-steps'
@@ -28,36 +28,41 @@ function parseDays(value: unknown): number {
   return Math.min(parsed, MAX_DAYS)
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' })
-  }
+// Wrapped in apiHandler so requireAdmin's 401/403 is returned as a 401/403.
+// Thrown straight out of a bare handler it surfaces as an opaque 500.
+export default apiHandler(
+  {
+    GET: async (req, res) => {
+      await requireAdmin(req, res)
 
-  await requireAdmin(req, res)
+      const days = parseDays(req.query.days)
+      const { sink, days: byDay } = await readFunnelCounts(days)
 
-  const days = parseDays(req.query.days)
-  const { sink, days: byDay } = await readFunnelCounts(days)
+      // Totals across the window, with every known step present at zero so a
+      // step that never fired reads as a real zero rather than as missing
+      // instrumentation.
+      const totals: Record<string, number> = Object.fromEntries(ALL_STEPS.map((s) => [s, 0]))
+      for (const day of byDay) {
+        for (const [step, count] of Object.entries(day.steps)) {
+          totals[step] = (totals[step] ?? 0) + count
+        }
+      }
 
-  // Totals across the window, with every known step present at zero so a step
-  // that never fired reads as a real zero and not as missing instrumentation.
-  const totals: Record<string, number> = Object.fromEntries(ALL_STEPS.map((step) => [step, 0]))
-  for (const day of byDay) {
-    for (const [step, count] of Object.entries(day.steps)) {
-      totals[step] = (totals[step] ?? 0) + count
-    }
-  }
-
-  return res.status(200).json({
-    range: {
-      days,
-      from: byDay[0]?.date ?? null,
-      to: byDay[byDay.length - 1]?.date ?? null,
+      return successResponse(res, {
+        range: {
+          days,
+          from: byDay[0]?.date ?? null,
+          to: byDay[byDay.length - 1]?.date ?? null,
+        },
+        // Anything other than "ok" means these zeros are not evidence about
+        // conversion. Read the `funnel` log lines before concluding anything
+        // about drop-off.
+        sink,
+        totals,
+        byDay,
+      })
     },
-    // Anything other than "ok" means these zeros are not evidence about
-    // conversion. Read the `funnel` log lines instead before concluding
-    // anything about drop-off.
-    sink,
-    totals,
-    byDay,
-  })
-}
+  },
+  // Read-only and state-free; a GET carries no CSRF token to validate.
+  { csrf: false }
+)
