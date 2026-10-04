@@ -96,33 +96,21 @@ export default function OnboardingPage() {
       // Update session to reflect onboarding is complete
       await update()
 
-      // If the user arrived from a paid pricing tier (?plan=cloud_mid etc.), start
-      // Stripe Checkout for it now that the familyspace exists. Falls through to the
-      // normal dashboard redirect if there's no plan, or if Checkout couldn't start —
-      // they can still subscribe later from /account.
+      // If the user arrived from a paid pricing tier (?plan=cloud_mid etc.), hand
+      // them to the subscription tab, which opens Stripe Embedded Checkout for the
+      // plan they picked. /account is exempt from the MFA wall in Layout.tsx, so
+      // this reaches a card form without a detour through TOTP setup.
+      //
+      // This used to POST /api/billing/subscribe here and redirect to
+      // `checkoutUrl`. That value is always null: the endpoint creates a
+      // `ui_mode: 'embedded_page'` session, and Stripe only populates
+      // `Session.url` for `hosted_page`. So the branch never fired, every signup
+      // silently fell through to the security tab, and a valid Checkout Session
+      // was created and thrown away each time.
       const planSlug = typeof router.query.plan === 'string' ? router.query.plan : null
       if (planSlug) {
-        try {
-          const subRes = await fetchWithCSRFAndJSON('/api/billing/subscribe', {
-            planId: planSlug,
-            billingCycle: 'monthly',
-          })
-          const subData = await subRes.json()
-          if (subRes.ok && subData.data?.checkoutUrl) {
-            window.location.href = subData.data.checkoutUrl
-            return
-          }
-
-          // Most common failure here: familyspace owners must have MFA enabled
-          // before any billing action (see requireFamilyspaceRole in auth-helpers).
-          // Brand-new owners never have MFA set up yet, so send them to set it up
-          // with the chosen plan preserved — /account surfaces a banner and lets
-          // them pick the plan up again once MFA is on.
-          router.push(`/account?tab=security&pendingPlan=${encodeURIComponent(planSlug)}`)
-          return
-        } catch {
-          // Network error — fall through to the normal dashboard redirect below.
-        }
+        router.push(`/account?tab=subscription&pendingPlan=${encodeURIComponent(planSlug)}`)
+        return
       }
 
       // Redirect to dashboard (middleware will allow access since onboarding is now complete)

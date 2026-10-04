@@ -307,6 +307,17 @@ export default function AccountPage() {
     }
   }, [router.isReady])
 
+  // Arriving from a pricing CTA (?pendingPlan=cloud_mid): preselect that plan and
+  // open the plan dialog as soon as the plan list is in, so the visitor sees the
+  // tier they clicked and one confirm button rather than having to find it.
+  useEffect(() => {
+    if (!pendingPlan || plans.length === 0 || isChangePlanDialogOpen || stripeClientSecret) return
+    const matchedPlan = plans.find((p) => p.slug === pendingPlan)
+    setSelectedPlanId(matchedPlan?.id || pendingPlan)
+    setIsChangePlanDialogOpen(true)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingPlan, plans])
+
   const handleCancelSubscription = async () => {
     try {
       const res = await fetchWithCSRF('/api/billing/cancel', {

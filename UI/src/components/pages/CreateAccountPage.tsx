@@ -101,7 +101,14 @@ export function CreateAccountPage() {
   }
 
   const handleGoogleSignUp = () => {
-    signIn('google', { callbackUrl: '/legacy' })
+    // Carry the tier the visitor picked on the pricing section through the Google
+    // round-trip. Without this the plan is lost and they land on /legacy with no
+    // way back to checkout.
+    const plan = typeof router.query.plan === 'string' ? router.query.plan : null
+    const callbackUrl = plan
+      ? `/account?tab=subscription&pendingPlan=${encodeURIComponent(plan)}`
+      : '/legacy'
+    signIn('google', { callbackUrl })
   }
 
   return (
