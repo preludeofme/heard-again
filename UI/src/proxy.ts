@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { getToken } from 'next-auth/jwt'
+import { isBypassedPath, requiresAuth } from '@/lib/security/route-access'
 
 // Define allowed origins - read from env in production
 const getAllowedOrigins = () => {
@@ -42,57 +43,25 @@ export default async function middleware(request: NextRequest) {
     return addCorsHeaders(response, request)
   }
   
-  // Public paths that don't require authentication
-  const publicPaths = [
-    '/',
-    '/login',
-    '/signup',
-    '/pricing',
-    '/api/auth',
-    '/forgot-password',
-    '/reset-password',
-    '/onboarding',
-    '/self-hosting',
-    '/setup-guide',
-    '/privacy',
-    '/terms',
-    '/terms-legacy',
-    '/support',
-    '/blog',
-    '/share',
-    '/images',
-    '/manifest.json',
-    '/icon-192.png',
-    '/icon-512.png',
-    '/favicon.ico',
-    '/robots.txt',
-    '/sitemap.xml',
-  ]
-  const isPublicPath = publicPaths.some((path) => pathname === path || pathname.startsWith(`${path}/`))
-  
-  // Static files, API routes (API routes handle their own auth), and auth routes
-  const isStaticAsset = /\.(png|jpg|jpeg|gif|svg|ico|json|txt|xml|css|js|woff2?|ttf|eot)$/i.test(pathname)
-  if (pathname.startsWith('/_next') || pathname.startsWith('/api/') || isStaticAsset) {
-    const response = NextResponse.next()
-    return addCorsHeaders(response, request)
+  // Framework internals, API routes (they handle their own auth) and static
+  // assets are never guarded here.
+  if (isBypassedPath(pathname)) {
+    return addCorsHeaders(NextResponse.next(), request)
   }
-  
-  // Allow public paths
-  if (isPublicPath) {
-    const response = NextResponse.next()
-    return addCorsHeaders(response, request)
+
+  // Only known private routes demand a session. Unknown paths fall through to
+  // Next.js so they render 404.tsx instead of a login form — see
+  // @/lib/security/route-access for the rule and the lists.
+  if (requiresAuth(pathname)) {
+    const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
+    if (!token) {
+      const loginUrl = new URL('/login', request.url)
+      loginUrl.searchParams.set('callbackUrl', pathname)
+      return addCorsHeaders(NextResponse.redirect(loginUrl), request)
+    }
   }
-  
-  // Redirect to login if not authenticated
-  const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
-  if (!token) {
-    const loginUrl = new URL('/login', request.url)
-    loginUrl.searchParams.set('callbackUrl', pathname)
-    return addCorsHeaders(NextResponse.redirect(loginUrl), request)
-  }
-  
-  const response = NextResponse.next()
-  return addCorsHeaders(response, request)
+
+  return addCorsHeaders(NextResponse.next(), request)
 }
 
 export const config = {
