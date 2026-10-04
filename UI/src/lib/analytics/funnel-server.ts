@@ -1,4 +1,5 @@
 import { logger } from '@/lib/logger'
+import { incrementFunnelCounter } from '@/lib/analytics/funnel-counters'
 import type {
   CheckoutBlockedReason,
   FunnelEventName,
@@ -16,11 +17,14 @@ import {
  * Vercel Web Analytics custom events (`track()`) are documented as Enterprise
  * and Pro only, and this project is not approved for that spend, so a
  * `track()`-only funnel may record nothing at all. Every step therefore also
- * lands here as one structured log line, which costs nothing and is readable
- * wherever the service's stdout goes.
+ * lands here, in two forms:
  *
- * Lines are greppable by the `funnel` marker:
- *   {"evt":"funnel","step":"pay_5_checkout_opened","plan":"cloud_mid",...}
+ * - one structured log line, greppable by the `funnel` marker:
+ *     {"evt":"funnel","step":"pay_5_checkout_opened","plan":"cloud_mid",...}
+ * - a Redis counter per UTC day, readable through /api/admin/funnel-counts
+ *
+ * The log line is the detailed record but needs Vercel dashboard access to
+ * read. The counter is what makes a step count answerable without it.
  */
 
 const FUNNEL_MARKER = 'funnel'
@@ -42,6 +46,11 @@ export function recordFunnelEvent(
   } catch {
     // A funnel counter must never be able to fail a request.
   }
+
+  // Normalized again rather than trusted: this also runs for events posted by
+  // the browser, where `plan` has been through the wire. Step 6 carries
+  // `planName` instead, because the return trip from Stripe drops the slug.
+  incrementFunnelCounter(step, normalizePlanSlug(properties.plan ?? properties.planName))
 }
 
 /** Step 5 — `/api/billing/subscribe` returned a usable Stripe checkout. */
