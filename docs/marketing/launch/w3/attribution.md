@@ -1,0 +1,83 @@
+# W3 attribution — how we will know which channel worked
+
+A post with no measurable visits teaches nothing. This is the smallest scheme
+that still answers "which channel brought the person who paid."
+
+Analytics in place: **Vercel Web Analytics** (`@vercel/analytics` is wired in
+`UI/src/pages/_app.tsx`, and `https://www.heardagain.com/_vercel/insights/script.js`
+returns 200 as of 2026-10-04). It records page views with referrer and UTM
+parameters. That is enough for visits. It is **not** enough for trials — see the
+gap at the bottom.
+
+---
+
+## The links
+
+| Channel | Link to use | Why |
+|---|---|---|
+| ProductHunt listing | `https://www.heardagain.com/?utm_source=producthunt&utm_medium=launch&utm_campaign=w3` | PH passes query strings through on the website field |
+| ProductHunt maker comment | `https://www.heardagain.com/?utm_source=producthunt&utm_medium=comment&utm_campaign=w3` | Separates the listing click from the comment click |
+| X / Twitter thread | `https://www.heardagain.com/?utm_source=x&utm_medium=social&utm_campaign=w3` | |
+| LinkedIn founder post | `https://www.heardagain.com/?utm_source=linkedin&utm_medium=social&utm_campaign=w3` | |
+| Facebook group mention | `https://www.heardagain.com/?utm_source=facebook&utm_medium=group&utm_campaign=w3` | Only if the single permitted mention happens |
+| r/Genealogy | **no link in the post** | Cadence rule. Attribution comes from the referrer |
+| r/FamilyHistory | **no link in the post** | Same |
+| r/AskOldPeople | **no link at all** | No mention of the product in that thread, by design |
+
+For the three Reddit threads, if someone asks for the link in a comment, reply
+with `https://www.heardagain.com/?utm_source=reddit&utm_medium=comment&utm_campaign=w3`.
+A UTM pasted into a reply is honest; a UTM in the original post reads as
+marketing and is what gets a thread removed.
+
+Reddit also strips referrers on some clients, so the Reddit number will be a
+floor, not a true count. Say so when reporting it rather than rounding up.
+
+---
+
+## The baseline
+
+Record daily totals for the seven days **before** the first W3 post. Without a
+baseline, launch-day traffic cannot be separated from normal traffic. One number
+per day: total visits, and visits from each referrer that already appears.
+
+Owner: Growth & Launch. Recorded in this file as a table, filled in on the day.
+
+| Date | Visits | Top referrers |
+|---|---|---|
+| _(baseline week — to fill)_ | | |
+
+---
+
+## What gets recorded per channel
+
+For every post, one row. No row, no claim.
+
+| Field | Example |
+|---|---|
+| Channel | r/Genealogy |
+| Posted at | 2026-10-21 19:40 ET |
+| Permalink | _(the actual URL)_ |
+| Visits in the 48h after | 0 |
+| Signups | 0 |
+| Trials started | 0 |
+| Verdict | kept / dropped |
+
+"0" is a real result and gets written down. A channel that delivered nothing is
+reported as nothing and gets no further heartbeats.
+
+---
+
+## The gap that matters
+
+Vercel Analytics attributes **page views**, not **conversions**. There is
+currently no event on signup, trial start, or checkout, so the column that
+actually decides the company goal — *which channel produced the trial* — cannot
+be filled from the analytics we have.
+
+That work is [TRU-13](/TRU/issues/TRU-13) — "Add funnel events to the pay path
+(5 track calls)", currently in backlog. Until it ships, trial attribution has to
+be reconstructed by hand from signup timestamps against post times, which is
+guesswork once more than one channel is live in the same week.
+
+**If TRU-13 does not ship before the ProductHunt launch, the single most
+important number of W3 will be an estimate.** Raised to Chief Of Staff.
