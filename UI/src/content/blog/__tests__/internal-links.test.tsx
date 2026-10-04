@@ -2,8 +2,8 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { render } from '@testing-library/react'
 import { blogPosts } from '..'
+import { buildSitemapXml } from '@/pages/sitemap.xml'
 
-const SITEMAP_PATH = join(process.cwd(), 'public', 'sitemap.xml')
 const PRICING_HREF = '/#pricing'
 
 /**
@@ -62,15 +62,31 @@ describe('blog internal linking', () => {
     expect(broken).toEqual([])
   })
 
-  it('should list every registered post in sitemap.xml', () => {
-    const sitemap = readFileSync(SITEMAP_PATH, 'utf8')
-    // Strip comments so gated (unpublished) entries do not count as listed.
-    const liveSitemap = sitemap.replace(/<!--[\s\S]*?-->/g, '')
+  it('should list every registered post in the generated sitemap', () => {
+    const sitemap = buildSitemapXml('2026-10-04')
 
     const missing = blogPosts
       .map((p) => `https://www.heardagain.com/blog/${p.slug}`)
-      .filter((loc) => !liveSitemap.includes(`<loc>${loc}</loc>`))
+      .filter((loc) => !sitemap.includes(`<loc>${loc}</loc>`))
 
     expect(missing).toEqual([])
+  })
+
+  it('should omit posts that are written but not registered', () => {
+    const sitemap = buildSitemapXml('2026-10-04')
+
+    expect(sitemap).not.toContain('/blog/how-to-clone-a-deceased-relatives-voice')
+    expect(sitemap).not.toContain('/blog/restore-old-cassette-recording-family-member')
+  })
+
+  it('should never emit a lastmod in the future', () => {
+    const today = '2026-10-04'
+    const sitemap = buildSitemapXml(today)
+
+    const future = Array.from(sitemap.matchAll(/<lastmod>(.*?)<\/lastmod>/g))
+      .map(([, date]) => date)
+      .filter((date) => date > today)
+
+    expect(future).toEqual([])
   })
 })
