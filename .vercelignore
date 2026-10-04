@@ -22,5 +22,8 @@ logs/
 *.log
 *.txt
 
+# Static files that must ship despite the *.txt rule above (negations must follow it)
+!UI/public/robots.txt
+
 # Git
 .git/
