@@ -264,6 +264,17 @@ export function BlogContent() {
       </Typography>
 
       <Typography variant="body1" sx={{ color: '#546669', lineHeight: 1.8, mb: 2 }}>
+        If you already keep the family tree in a genealogy program, that is the shortest route to
+        having a person to attach it to — export the tree and import it, and Nan Hughes already exists
+        with her dates and her parents, so the file has somewhere to go. The one thing the export will
+        not bring with it is the audio itself;{' '}
+        <PostLink href="/blog/gedcom-import-with-audio">
+          what a GEDCOM import does and does not carry
+        </PostLink>{' '}
+        covers why, and how the recordings get attached afterwards.
+      </Typography>
+
+      <Typography variant="body1" sx={{ color: '#546669', lineHeight: 1.8, mb: 2 }}>
         Heard Again is open source and you can run it on your own hardware for free if you want to. The
         plain reason to pay for hosting instead: you have just spent an afternoon producing a file that
         cannot be produced again, and this is the wrong file to be your only copy on your only disk. A

@@ -150,6 +150,17 @@ export function BlogContent() {
       </Typography>
 
       <Typography variant="body1" sx={{ color: '#546669', lineHeight: 1.8, mb: 2 }}>
+        One thing worth sorting out before you get to this step: some of what you want to attach may
+        not be a file yet. If the recordings are on cassette, minidisc, or a camcorder tape, they have
+        to be transferred before there is anything to upload, and that is an afternoon of its own.{' '}
+        <PostLink href="/blog/restore-old-cassette-recording-family-member">
+          Restoring an old cassette recording
+        </PostLink>{' '}
+        walks through the transfer and the cleanup. Do that first and the import becomes one job
+        instead of two half-finished ones.
+      </Typography>
+
+      <Typography variant="body1" sx={{ color: '#546669', lineHeight: 1.8, mb: 2 }}>
         If you are also moving photos and documents at the same time, the broader checklist in{' '}
         <PostLink href="/blog/how-to-preserve-family-memories-digitally">
           how to preserve family memories digitally
