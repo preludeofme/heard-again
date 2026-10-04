@@ -2,6 +2,10 @@
 
 Pre-written listings for software directories. Copy/paste into each platform.
 
+**Links verified 2026-10-04:** heardagain.com (200), heardagain.com/self-hosting (200),
+github.com/preludeofme/heard-again (200). All three directories require a logged-in
+account before you can submit — create those first, see the W2 run sheet.
+
 ---
 
 ## AlternativeTo

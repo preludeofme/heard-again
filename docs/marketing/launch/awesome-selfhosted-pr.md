@@ -1,30 +1,62 @@
-# Awesome-Selfhosted PR Submission for Heard Again
+# Awesome-Selfhosted Submission — Heard Again
 
-## PR Title
-Add Heard Again to Awesome-Selfhosted — Family Voice Preservation
+> **Corrected 2026-10-04.** The earlier version of this file told you to edit the
+> awesome-selfhosted README markdown list. That is wrong and would be closed without
+> review. Entries have lived in a separate data repo as YAML files since 2022.
 
-## PR Description
-Heard Again is an open-source (MIT) platform for preserving family voices and stories. It helps families record, transcribe, and build voice profiles of loved ones — all self-hosted with full data ownership.
+## Where the PR goes
 
-- **License:** MIT
-- **Language:** TypeScript/Next.js
-- **Dependencies:** Node.js, PostgreSQL, Redis (Docker Compose available)
-- **Website:** https://heardagain.com
-- **Demo:** https://heardagain.com (cloud version available; self-host guide at /setup-guide)
+Repo: `https://github.com/awesome-selfhosted/awesome-selfhosted-data`
+File to add: `software/heard-again.yml`
+Content: copy `docs/marketing/launch/awesome-selfhosted/heard-again.yml` (strip the comment header).
+
+One file, one PR. Nothing else changes.
+
+## Eligibility check (verified 2026-10-04)
+
+| Requirement | Status |
+|---|---|
+| First released more than 4 months ago | Public repo first commit 2026-03-20 (~6.5 months) — **but no tagged release exists** |
+| Actively developed | Yes, commits through October 2026 |
+| Working install instructions | Yes — `docker-compose.yml`, `DEPLOYMENT_GUIDE.md`, https://heardagain.com/self-hosting |
+| FOSS license | MIT, `LICENSE` present in public repo |
+| Self-hostable, not cloud-dependent | Yes — TTS runs locally via Qwen3-TTS, no third-party API required |
+| Not already listed | Confirmed absent |
+
+**Do before opening the PR:** tag a release on the public repo (`v0.1.0`) so the
+"released more than 4 months ago" rule is unarguable. Right now a reviewer can say
+"there is no release." Takes two minutes and removes the only rejection risk.
 
 ## Category
-**Media Streaming - Audio Streaming** (or alternative: **Genealogy**)
 
-Current categories don't perfectly fit "family voice preservation." The closest match is:
+There **is** a `Genealogy` tag — the earlier note claiming otherwise was wrong.
+Use `Genealogy` as primary and `Archiving and Digital Preservation (DP)` as secondary.
+Do not use Media Streaming; that category is for playback servers and a reviewer will
+push back.
 
-1. **Media Streaming - Audio Streaming** — since the platform handles audio recording, transcription, and AI voice processing
-2. **Genealogy** — if there were such a category, but there isn't one currently
+## PR title
 
-## One-liner (matching awesome-selfhosted format)
-`[Heard Again](https://heardagain.com) - Open-source family voice preservation platform. Record, transcribe, and preserve family stories with AI voice profiles. Consent-first, self-hosted. ([Source Code](https://github.com/preludeofme/heard-again)) \`MIT\` \`TypeScript\`\``
-
-## Suggested placement
-Under `Media Streaming - Audio Streaming`, after existing entries. Example format:
 ```
-- [Heard Again](https://heardagain.com) - Open-source family voice preservation platform. Record, transcribe, and preserve family stories with AI voice profiles. Consent-first, self-hosted. ([Source Code](https://github.com/preludeofme/heard-again)) `MIT` `TypeScript`
+Add Heard Again
 ```
+
+Keep it plain. The repo maintainers prefer boring titles.
+
+## PR body — Ryan writes this himself
+
+The repo **requires a human attestation that the submission was not machine-generated,
+and bans LLM-written contributions**. Do not paste agent prose. Write three or four
+sentences in your own words covering:
+
+- what Heard Again does, in one sentence
+- that it is MIT and self-hosts via Docker Compose
+- why `Genealogy` is the right tag
+- confirmation you are a human submitting your own project
+
+The YAML file itself is factual metadata (name, URL, license, tags) and is fine to use
+as-is, but read the `description` line and reword it if it does not sound like you.
+
+## After submitting
+
+- Watch the PR for CI lint failures (the repo validates YAML schema automatically).
+- Respond to maintainer comments the same day. These PRs stall when authors go quiet.

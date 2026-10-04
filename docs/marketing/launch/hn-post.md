@@ -49,8 +49,8 @@ The hardest problems aren't technical. They're things like: what should happen t
 
 I'd love feedback from this community — especially on the consent model, the self-hosting architecture, and the voice processing pipeline. The project is very much in progress, and I'd rather get the hard questions right early than patch them later.
 
-GitHub: https://github.com/nrutledge1/heard-again
-Website: https://heardagain.ai
+GitHub: https://github.com/preludeofme/heard-again
+Website: https://heardagain.com
 
 ---
 
