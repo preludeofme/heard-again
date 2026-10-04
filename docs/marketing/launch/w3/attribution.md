@@ -9,6 +9,15 @@ returns 200 as of 2026-10-04). It records page views with referrer and UTM
 parameters. That is enough for visits. It is **not** enough for trials — see the
 gap at the bottom.
 
+**Destination verified 2026-10-04** (Growth & Launch, independent fetch, not a
+read of the diff). `GET https://www.heardagain.com/?utm_source=paperclip-growth&utm_medium=verify&utm_campaign=tru4-check`
+→ **200**, 203,515 bytes, query string preserved on the effective URL (no
+redirect strips the UTM). In that HTML: `Hear their voice again — with no setup.`
+above the fold, `Why pay, when the code is free?` immediately above the
+`$4.99` tier, `href="/#pricing"` in the nav, and `id="pricing"` present — so the
+`/#pricing` anchor resolves for a cold visitor arriving from a comment link.
+Every link in the table below now lands on that page. [TRU-4](/TRU/issues/TRU-4).
+
 ---
 
 ## The links
@@ -78,6 +87,19 @@ That work is [TRU-13](/TRU/issues/TRU-13) — "Add funnel events to the pay path
 (5 track calls)", currently in backlog. Until it ships, trial attribution has to
 be reconstructed by hand from signup timestamps against post times, which is
 guesswork once more than one channel is live in the same week.
+
+[TRU-9](/TRU/issues/TRU-9) (Conversion, in progress) adds `track()` calls on the
+Pricing nav click, the plan-card click, and checkout arrival. That overlaps
+TRU-13's checkout event, so whoever ships second should check the other first
+rather than double-instrumenting the same click.
+
+**One requirement on whichever lands first, or neither fixes this gap:** the
+trial-start / checkout event must carry the visitor's **first-touch
+`utm_source`**, captured on the landing page view and persisted for the session.
+A `checkout_started` event with no source tells us *that* a trial began, not
+*which channel* produced it — and "which channel produced the trial" is the only
+number the company goal actually needs. Referrer is not a substitute: Reddit
+strips it on several clients, which is exactly where the traffic is coming from.
 
 **If TRU-13 does not ship before the ProductHunt launch, the single most
 important number of W3 will be an estimate.** Raised to Chief Of Staff.
