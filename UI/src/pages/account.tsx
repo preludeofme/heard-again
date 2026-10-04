@@ -69,6 +69,7 @@ import {
   Security as SecurityIcon,
   SafetyCheck,
 } from '@mui/icons-material'
+import { describeCheckoutFailure, formatPlanSlug } from '@/lib/billing/checkout-messages'
 import { Layout } from '@/components/layout/Layout'
 import { SecuritySettings } from '@/components/account/SecuritySettings'
 import { DigitalLegacySettings } from '@/components/account/DigitalLegacySettings'
@@ -174,6 +175,7 @@ export default function AccountPage() {
   const [isChangePlanDialogOpen, setIsChangePlanDialogOpen] = useState(false)
   const [stripeClientSecret, setStripeClientSecret] = useState<string | null>(null)
   const [selectedPlanId, setSelectedPlanId] = useState('')
+  const [checkoutError, setCheckoutError] = useState<string | null>(null)
 
   // Refunds (owner/admin only)
   const [refunds, setRefunds] = useState<Refund[]>([])
@@ -181,9 +183,15 @@ export default function AccountPage() {
   const [refundAmount, setRefundAmount] = useState('')
   const [refundReason, setRefundReason] = useState('')
 
-  // Deep-link support: /account?tab=security&pendingPlan=cloud_mid (onboarding
-  // redirects here when a brand-new owner picks a paid plan before MFA is set up)
+  // Deep-link support: /account?tab=subscription&pendingPlan=cloud_mid — onboarding
+  // and the pricing CTAs send a buyer here with the tier they clicked. The plan list
+  // arrives async, so `pendingPlanMatch` is null until /api/billing/plans resolves;
+  // `isPendingPlanUnavailable` is only true once we know the slug is not purchasable.
   const pendingPlan = typeof router.query.pendingPlan === 'string' ? router.query.pendingPlan : null
+  const pendingPlanMatch = pendingPlan
+    ? plans.find((p) => p.slug === pendingPlan || p.id === pendingPlan) || null
+    : null
+  const isPendingPlanUnavailable = Boolean(pendingPlan) && plans.length > 0 && !pendingPlanMatch
 
   useEffect(() => {
     const tabParam = router.query.tab
@@ -310,13 +318,18 @@ export default function AccountPage() {
   // Arriving from a pricing CTA (?pendingPlan=cloud_mid): preselect that plan and
   // open the plan dialog as soon as the plan list is in, so the visitor sees the
   // tier they clicked and one confirm button rather than having to find it.
+  //
+  // Only auto-open for a plan that is actually purchasable. Opening the dialog on an
+  // unmatched slug used to show an empty "Select Plan" dropdown with a live Confirm
+  // button that posted the slug and failed — the Subscription tab banner explains it
+  // instead.
   useEffect(() => {
-    if (!pendingPlan || plans.length === 0 || isChangePlanDialogOpen || stripeClientSecret) return
-    const matchedPlan = plans.find((p) => p.slug === pendingPlan)
-    setSelectedPlanId(matchedPlan?.id || pendingPlan)
+    if (!pendingPlanMatch || isChangePlanDialogOpen || stripeClientSecret) return
+    setSelectedPlanId(pendingPlanMatch.id)
+    setCheckoutError(null)
     setIsChangePlanDialogOpen(true)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pendingPlan, plans])
+  }, [pendingPlanMatch?.id])
 
   const handleCancelSubscription = async () => {
     try {
@@ -375,6 +388,7 @@ export default function AccountPage() {
 
   const handleChangePlan = async () => {
     if (!selectedPlanId) return
+    setCheckoutError(null)
     try {
       const res = await fetchWithCSRF('/api/billing/subscribe', {
         method: 'POST',
@@ -382,8 +396,14 @@ export default function AccountPage() {
         credentials: 'include',
         body: JSON.stringify({ planId: selectedPlanId, billingCycle: 'monthly' }),
       })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Failed to change plan')
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        // The dialog is modal, so the page-level error Alert renders behind the
+        // backdrop: a failed checkout start looked like the Confirm button doing
+        // nothing. Say why, in the dialog, and say nothing has been charged.
+        setCheckoutError(describeCheckoutFailure(res.status, data?.error))
+        return
+      }
       if (data.data?.clientSecret) {
         setStripeClientSecret(data.data.clientSecret)
         return
@@ -395,8 +415,10 @@ export default function AccountPage() {
       setSuccess('Plan changed successfully')
       setIsChangePlanDialogOpen(false)
       await loadData()
-    } catch (err: any) {
-      setError(err.message)
+    } catch {
+      setCheckoutError(
+        'We could not reach the payment form. Nothing has been charged. Check your connection and try again.'
+      )
     }
   }
 
@@ -550,15 +572,18 @@ export default function AccountPage() {
             <TabPanel value={activeTab} index={1}>
               {pendingPlan && (
                 <Alert severity="info" sx={{ mb: 3 }}>
-                  Almost there — familyspace owners need two-factor security set up before
-                  subscribing. Set it up below, then head to the{' '}
+                  You picked the{' '}
+                  <strong>{pendingPlanMatch?.name || formatPlanSlug(pendingPlan)}</strong> plan.
+                  Nothing has been charged. Finish up on the{' '}
                   <Button
                     size="small"
                     onClick={() => {
                       setActiveTab(3)
-                      const matchedPlan = plans.find((p) => p.slug === pendingPlan)
-                      setSelectedPlanId(matchedPlan?.id || pendingPlan)
-                      setIsChangePlanDialogOpen(true)
+                      if (pendingPlanMatch) {
+                        setSelectedPlanId(pendingPlanMatch.id)
+                        setCheckoutError(null)
+                        setIsChangePlanDialogOpen(true)
+                      }
                     }}
                     sx={{ verticalAlign: 'baseline', textTransform: 'none', p: 0, minWidth: 0 }}
                   >
@@ -660,6 +685,46 @@ export default function AccountPage() {
           {/* Subscription Tab */}
           <TabPanel value={activeTab} index={3}>
             <Stack spacing={3}>
+              {/* Pending plan from a pricing CTA or a checkout that could not start.
+                  This tab renders for every login provider, including Google, so the
+                  plan the buyer picked is never silently dropped. */}
+              {pendingPlan && !subscription?.plan && (
+                isPendingPlanUnavailable ? (
+                  <Alert severity="warning">
+                    The <strong>{formatPlanSlug(pendingPlan)}</strong> plan is not open for
+                    cloud checkout yet, so we could not open a payment form. Nothing has been
+                    charged. Pick one of the plans below — they all start with a 14-day free
+                    trial.
+                  </Alert>
+                ) : (
+                  <Alert
+                    severity="info"
+                    action={
+                      pendingPlanMatch ? (
+                        <Button
+                          size="small"
+                          onClick={() => {
+                            setSelectedPlanId(pendingPlanMatch.id)
+                            setCheckoutError(null)
+                            setIsChangePlanDialogOpen(true)
+                          }}
+                        >
+                          Continue
+                        </Button>
+                      ) : undefined
+                    }
+                  >
+                    You picked the{' '}
+                    <strong>{pendingPlanMatch?.name || formatPlanSlug(pendingPlan)}</strong>{' '}
+                    plan
+                    {pendingPlanMatch
+                      ? ` — $${pendingPlanMatch.pricing.monthlyDisplay}/month after a 14-day free trial.`
+                      : '.'}{' '}
+                    Nothing has been charged yet.
+                  </Alert>
+                )
+              )}
+
               {/* Current Plan */}
               <Card>
                 <CardContent>
@@ -786,11 +851,19 @@ export default function AccountPage() {
                       <Alert severity="info" sx={{ mb: 3 }}>
                         You don&apos;t have an active subscription. Subscribe to a plan to unlock premium features.
                       </Alert>
+                      {/* This used to call setActiveTab(3) from inside tab 3, so the
+                          one CTA every new buyer sees did nothing at all. */}
                       <Button
                         variant="contained"
-                        onClick={() => setActiveTab(3)}
+                        disabled={plans.length === 0}
+                        onClick={() => {
+                          const firstPaidPlan = plans.find((p) => p.planType !== 'FREE')
+                          setSelectedPlanId(pendingPlanMatch?.id || firstPaidPlan?.id || '')
+                          setCheckoutError(null)
+                          setIsChangePlanDialogOpen(true)
+                        }}
                       >
-                        View Plans
+                        Choose a Plan
                       </Button>
                     </>
                   )}
@@ -968,18 +1041,24 @@ export default function AccountPage() {
 
           {/* Change Plan Dialog */}
           <Dialog 
-            open={isChangePlanDialogOpen} 
+            open={isChangePlanDialogOpen}
             onClose={() => {
               setIsChangePlanDialogOpen(false)
               setStripeClientSecret(null)
-            }} 
-            maxWidth="sm" 
+              setCheckoutError(null)
+            }}
+            maxWidth="sm"
             fullWidth
           >
             <DialogTitle sx={{ pb: 1, fontWeight: 700, color: '#16334a' }}>
               {stripeClientSecret ? 'Complete Subscription' : 'Confirm Plan Change'}
             </DialogTitle>
             <DialogContent>
+              {checkoutError && (
+                <Alert severity="error" sx={{ mb: 2 }} onClose={() => setCheckoutError(null)}>
+                  {checkoutError}
+                </Alert>
+              )}
               {stripeClientSecret ? (
                 <Box sx={{ mt: 1, minHeight: '400px' }}>
                   {getStripePromise() ? (
@@ -1004,7 +1083,7 @@ export default function AccountPage() {
                       <FormControl fullWidth sx={{ mt: 2 }}>
                         <InputLabel>Select Plan</InputLabel>
                         <Select
-                          value={selectedPlanId}
+                          value={plans.some((p) => p.id === selectedPlanId) ? selectedPlanId : ''}
                           onChange={(e) => setSelectedPlanId(e.target.value)}
                         >
                           {plans.map((plan) => (
@@ -1093,17 +1172,18 @@ export default function AccountPage() {
               )}
             </DialogContent>
             <DialogActions sx={{ px: 3, pb: 2 }}>
-              <Button 
+              <Button
                 onClick={() => {
                   setIsChangePlanDialogOpen(false)
                   setStripeClientSecret(null)
+                  setCheckoutError(null)
                 }}
               >
                 {stripeClientSecret ? 'Close' : 'Cancel'}
               </Button>
               {!stripeClientSecret && (
                 <Button onClick={handleChangePlan} variant="contained" disabled={!selectedPlanId} sx={{ bgcolor: '#16334a', '&:hover': { bgcolor: '#2e4a62' } }}>
-                  Confirm Change
+                  {checkoutError ? 'Try Again' : 'Confirm Change'}
                 </Button>
               )}
             </DialogActions>

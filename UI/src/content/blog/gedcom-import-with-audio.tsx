@@ -209,7 +209,9 @@ export function BlogContent() {
         scattered to consolidated, and that is exactly when you want backups you did not have to
         configure. A hosted plan starts at <strong>$4.99 a month</strong> for storage, sharing, and
         consent controls, with managed backups and updates included, and the family sharing that makes
-        other relatives able to add their own recordings instead of emailing them to you. You can{' '}
+        other relatives able to add their own recordings instead of emailing them to you. That tier
+        includes no voice generation minutes — it is <strong>$9.99</strong> if you want voice
+        generation too. For an import-and-archive job, the cheaper one is the one you want. You can{' '}
         <PostLink href="/#pricing">see what each plan includes on the pricing page</PostLink>. Either
         way the software is the same — paying buys you someone else doing the operations.
       </Typography>
