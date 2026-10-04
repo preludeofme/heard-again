@@ -5,8 +5,8 @@
 Fill this in within 48 hours of each post. The Vercel dashboard is not the record — on the Hobby plan
 its reporting window is one month and this data disappears in mid-November.
 
-Dates below follow **Plan A** from `W2-run-sheet.md`. The schedule is not confirmed yet — see the open
-question on TRU-5. Correct the dates once it is.
+Dates below follow the confirmed schedule in `W2-run-sheet.md`, which starts 2026-10-05.
+Plan A/Plan B are gone — Plan A put Show HN one day past the last date a 14-day trial can clear by 2026-11-03.
 
 Status values: `not posted` · `posted` · `measured` · `dead` (delivered nothing; stop spending time on it)
 
@@ -15,6 +15,8 @@ Status values: `not posted` · `posted` · `measured` · `dead` (delivered nothi
 ## Baseline
 
 Record this **once**, before the first action, so every delta has something to subtract from.
+The GitHub row is already filled from the API. The Vercel and Stripe rows need a dashboard login,
+which no agent holds — Ryan fills those on Sun 2026-10-05 before the first submission goes out.
 
 | Metric | Value | Captured on |
 |---|---|---|
@@ -22,7 +24,7 @@ Record this **once**, before the first action, so every delta has something to s
 | Visitors, trailing 7-day total | | |
 | Top 3 referrers | | |
 | Direct visitors, 7-day total | | |
-| GitHub stars on `preludeofme/heard-again` | | |
+| GitHub stars on `preludeofme/heard-again` | **0** (also 0 forks, 0 watchers) | 2026-10-04 |
 | Total signups to date | | |
 | Active Stripe trials | | |
 | Cleared Stripe payments | | |
@@ -33,12 +35,17 @@ Record this **once**, before the first action, so every delta has something to s
 
 ### 1. awesome-selfhosted PR
 - **Destination:** PR against `awesome-selfhosted/awesome-selfhosted-data`
-- **Planned:** 2026-10-13 · **Posted:** — · **Status:** not posted
-- **PR URL:** —
-- **Merged:** —
-- Referrer to watch: `github.com`, `awesome-selfhosted.net`
-- Note: merge latency is days to weeks and is outside our control. Traffic from this one will almost
-  certainly land after 2026-11-03, so it is a backlink play, not a conversion play.
+- **Planned:** — · **Posted:** never · **Status:** `dead` for the W2 window (recheck 2027-02-03)
+- **PR URL:** — (no PR opened, and none should be)
+- Referrer that would have been watched: `github.com`, `awesome-selfhosted.net`
+- **Why dead, verified 2026-10-04 against the destination repo's own files:**
+  1. The PR template requires ticking "first released more than 4 months ago". `preludeofme/heard-again`
+     has **0 tags and 0 releases**. Tagging `v0.1.0` now dates the first release to now, so the earliest
+     honest submission is **2027-02-03** — four months past the company deadline.
+  2. `CONTRIBUTING.md` forbids agents from opening the PR, writing the entry YAML for a human to submit
+     as their own, writing the PR body, or ticking the human attestation box.
+- Secondary risk if revisited: public repo last pushed 2026-09-07, which also strains "actively maintained".
+- Full reasoning: `awesome-selfhosted-pr.md`. Do not spend more W2 time here.
 
 | | +24h | +48h | on merge |
 |---|---|---|---|
@@ -49,7 +56,7 @@ Record this **once**, before the first action, so every delta has something to s
 
 ### 2. AlternativeTo
 - **Destination:** https://alternativeto.net/ — listed as alternative to StoryCorps, MyHeritage DeepStory
-- **Planned:** 2026-10-13 · **Posted:** — · **Status:** not posted
+- **Planned:** 2026-10-06 · **Posted:** — · **Status:** not posted
 - **Listing URL:** —
 - Referrer: `alternativeto.net`
 - Note: of the three directories this is the one that actually sends traffic. Do it properly.
@@ -62,7 +69,7 @@ Record this **once**, before the first action, so every delta has something to s
 
 ### 3. SaaSHub
 - **Destination:** https://www.saashub.com/
-- **Planned:** 2026-10-13 · **Posted:** — · **Status:** not posted
+- **Planned:** 2026-10-06 · **Posted:** — · **Status:** not posted
 - **Listing URL:** —
 - Referrer: `saashub.com`
 
@@ -74,7 +81,7 @@ Record this **once**, before the first action, so every delta has something to s
 
 ### 4. Slant
 - **Destination:** https://www.slant.co/ — "What is the best tool for preserving family voices and stories?"
-- **Planned:** 2026-10-13 · **Posted:** — · **Status:** not posted
+- **Planned:** 2026-10-06 · **Posted:** — · **Status:** not posted
 - **Answer URL:** —
 - Referrer: `slant.co`
 
@@ -86,7 +93,7 @@ Record this **once**, before the first action, so every delta has something to s
 
 ### 5. r/selfhosted
 - **Destination:** r/selfhosted — *"Would you self-host something as personal as family memories?"*
-- **Planned:** 2026-10-14, 12:00–15:00 ET · **Posted:** — · **Status:** not posted
+- **Planned:** 2026-10-07, 12:00–15:00 ET · **Posted:** — · **Status:** not posted
 - **Thread URL:** —
 - **No link in the body.** Attribution is before/after plus the Direct line. If the repo link is given in
   a reply, note the reply time here: —
@@ -106,7 +113,7 @@ unprompted, offers to contribute:
 
 ### 6. r/opensource
 - **Destination:** r/opensource — *"Why I'm building an open-source alternative for family voice preservation instead of another AI startup"*
-- **Planned:** 2026-10-16, 09:00–11:00 ET · **Posted:** — · **Status:** not posted
+- **Planned:** 2026-10-09, 09:00–11:00 ET · **Posted:** — · **Status:** not posted
 - **Thread URL:** —
 - Same method as above. The draft ends on a real question about open-source voice models; this thread is
   worth more as a conversation than as traffic.
@@ -124,7 +131,7 @@ unprompted, offers to contribute:
 ---
 
 ### 7. LinkedIn founder post
-- **Planned:** 2026-10-19, 08:00–10:00 ET · **Posted:** — · **Status:** not posted
+- **Planned:** 2026-10-13, 08:00–10:00 ET · **Posted:** — · **Status:** not posted
 - **Post URL:** —
 - Referrer: `linkedin.com`, `lnkd.in`. Expect a chunk in Direct — the LinkedIn mobile app strips referrers.
 - The only channel in the kit where a link in the body is normal.
@@ -138,7 +145,7 @@ unprompted, offers to contribute:
 ---
 
 ### 8. X thread
-- **Planned:** 2026-10-20, 09:00–11:00 ET · **Posted:** — · **Status:** not posted
+- **Planned:** 2026-10-14, 09:00–11:00 ET · **Posted:** — · **Status:** not posted
 - **Thread URL:** —
 - Referrer: `t.co`. Use Vercel's `t.co` drill-down to resolve it back to the thread.
 - Link is in tweet 7, not tweet 1.
@@ -153,7 +160,7 @@ unprompted, offers to contribute:
 
 ### 9. Show HN
 - **Destination:** Hacker News — *Show HN: Heard Again — Open-source family voice preservation (consent-first, self-hosted)*
-- **Planned:** 2026-10-21, 08:00–09:00 ET · **Posted:** — · **Status:** not posted
+- **Planned:** 2026-10-15, 08:00–09:00 ET · **Posted:** — · **Status:** not posted
 - **Submission URL:** —
 - Referrer: `news.ycombinator.com`
 - **The highest-upside item in the kit.** A front-page Show HN is the one event that can deliver the
