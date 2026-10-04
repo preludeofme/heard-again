@@ -1,4 +1,5 @@
 import { Box, Typography } from '@mui/material'
+import { PostLink } from './post-link'
 
 export const meta = {
   slug: 'how-to-preserve-family-memories-digitally' as const,
@@ -194,7 +195,11 @@ export function BlogContent() {
         as your computer doesn&apos;t help if there&apos;s a fire or a flood. Keep a backup at a
         relative&apos;s house, in a safety deposit box, or in a cloud service that stores your data
         in a different geographic region from where you live. It sounds paranoid until you need it,
-        and by then it&apos;s too late.
+        and by then it&apos;s too late. Before you pick that service, it is worth reading{' '}
+        <PostLink href="/blog/why-open-source-matters-for-family-memories">
+          why open source matters for your family&apos;s digital legacy
+        </PostLink>{' '}
+        — a backup is only as safe as the company holding it.
       </Typography>
 
       <Typography variant="body1" sx={{ color: '#546669', lineHeight: 1.8, mb: 2 }}>
@@ -268,7 +273,11 @@ export function BlogContent() {
         <strong>Practical tip:</strong> Don&apos;t wait for the right moment. It won&apos;t arrive.
         Next time you&apos;re together, say &ldquo;can I record this?&rdquo; and hit the button. If
         they ask why, tell them the truth: because someday you&apos;ll want to hear their voice, and
-        you want to make sure you can.
+        you want to make sure you can. For the full method, read{' '}
+        <PostLink href="/blog/preserve-family-voices-before-its-too-late">
+          how to preserve your family&apos;s voices
+        </PostLink>
+        .
       </Typography>
 
       <Box

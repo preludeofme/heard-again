@@ -489,6 +489,39 @@ export default function BlogPostPage({ post, relatedPosts }: BlogPostPageProps) 
             </Stack>
           </Paper>
 
+          {/* Pricing CTA */}
+          <Paper
+            elevation={0}
+            sx={{
+              p: 4,
+              mb: 6,
+              borderRadius: 4,
+              bgcolor: 'rgba(208, 227, 230, 0.2)',
+              border: '1px solid rgba(22, 51, 74, 0.06)',
+              textAlign: 'center',
+            }}
+          >
+            <Typography
+              variant="h4"
+              sx={{
+                fontFamily: 'var(--font-newsreader), serif',
+                color: '#16334a',
+                fontWeight: 600,
+                mb: 1,
+              }}
+            >
+              Want help doing this?
+            </Typography>
+            <Typography variant="body2" sx={{ color: '#546669', mb: 3, maxWidth: 520, mx: 'auto' }}>
+              Heard Again is open source, so you can run it yourself for free. A cloud plan is for
+              families who would rather not run a GPU — we keep the hardware, updates, and backups
+              going.
+            </Typography>
+            <Link href="/#pricing" style={{ color: '#16334a', fontWeight: 600, fontSize: '0.95rem' }}>
+              See plans and pricing →
+            </Link>
+          </Paper>
+
           {/* Related Posts */}
           {relatedPosts.length > 0 && (
             <Box sx={{ mb: 4 }}>

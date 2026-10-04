@@ -1,4 +1,5 @@
 import { Box, Typography } from '@mui/material'
+import { PostLink } from './post-link'
 
 export const meta = {
   slug: 'record-grandparents-voices-before-stories-go-quiet' as const,
@@ -206,7 +207,12 @@ export function BlogContent() {
       </Typography>
 
       <Typography variant="body1" sx={{ color: '#546669', lineHeight: 1.8, mb: 2 }}>
-        <strong>Practical tip:</strong> Record in short sessions rather than one marathon. Twenty
+        <strong>Practical tip:</strong> If you want more prompts and a broader plan for the whole
+        family, see{' '}
+        <PostLink href="/blog/preserve-family-voices-before-its-too-late">
+          how to preserve your family&apos;s voices
+        </PostLink>
+        . Record in short sessions rather than one marathon. Twenty
         minutes of focused conversation, repeated a few times across different visits, produces richer
         material than a single exhausting hour. It also gives you natural chapters — which makes the
         recordings easier to revisit and share later.
@@ -227,7 +233,11 @@ export function BlogContent() {
       <Typography variant="body1" sx={{ color: '#546669', lineHeight: 1.8, mb: 2 }}>
         A recording sitting by itself on a single phone is a recording you could lose to a cracked
         screen or a forgotten password. Preserve it the way you&apos;d preserve anything precious:
-        keep more than one copy, in more than one place, and label what you&apos;ve got.
+        keep more than one copy, in more than one place, and label what you&apos;ve got. Our guide to{' '}
+        <PostLink href="/blog/how-to-preserve-family-memories-digitally">
+          preserving family memories digitally
+        </PostLink>{' '}
+        covers the three-copy rule and the file formats most likely to still open in thirty years.
       </Typography>
 
       <Typography variant="body1" sx={{ color: '#546669', lineHeight: 1.8, mb: 2 }}>

@@ -112,6 +112,25 @@ export function LandingPricingSection() {
         </Typography>
       </Box>
 
+      {/* Why pay when the code is free */}
+      <Box sx={{ maxWidth: 820, mx: 'auto', mb: 8 }}>
+        <Box sx={{ p: 3, bgcolor: '#f6f3ee', borderRadius: 2, textAlign: 'left' }}>
+          <Typography variant="subtitle1" sx={{ color: '#16334a', fontWeight: 700, mb: 1 }}>
+            Why pay, when the code is free?
+          </Typography>
+          <Typography variant="body2" sx={{ color: '#546669', lineHeight: 1.7 }}>
+            Heard Again is MIT licensed. You can download it and run it yourself at no cost, forever
+            — and the paid plans do not unlock extra features you cannot get that way.
+            <br />
+            <br />
+            What you pay for is not having to run a GPU. Voice work needs one. Self-hosting means you
+            buy or rent that hardware, install the models, keep the machine patched, and do your own
+            backups. On a cloud plan we keep the GPU, the updates, and the backups running, and you
+            just upload audio. That is the whole difference.
+          </Typography>
+        </Box>
+      </Box>
+
       {/* Main Pricing Cards Grid */}
       <Box sx={{ maxWidth: 1400, mx: 'auto', mb: 8 }}>
         <Grid container spacing={4} justifyContent="center" alignItems="stretch">

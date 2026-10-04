@@ -1,4 +1,5 @@
 import { Box, Typography } from '@mui/material'
+import { PostLink } from './post-link'
 
 export const meta = {
   slug: 'why-open-source-matters-for-family-memories' as const,
@@ -138,7 +139,12 @@ export function BlogContent() {
         nowhere to hide a privacy violation. You can verify — or have someone you trust verify — that
         your family&apos;s recordings aren&apos;t being used to train models, sold to third parties,
         or mined for behavioral data. The transparency isn&apos;t a feature you have to request.
-        It&apos;s built into the way the software exists in the world.
+        It&apos;s built into the way the software exists in the world. That matters most for voice,
+        where we think{' '}
+        <PostLink href="/blog/ai-voice-cloning-ethics-family-consent">
+          consent has to come before any AI voice work
+        </PostLink>
+        .
       </Typography>
 
       <Typography variant="body1" sx={{ color: '#546669', lineHeight: 1.8, mb: 2 }}>
@@ -239,7 +245,11 @@ export function BlogContent() {
         An external hard drive, a home server, or even a second cloud provider — the key is that
         you&apos;re not relying on a single point of failure. This is the digital equivalent of
         keeping copies of old family photographs in more than one album. It takes a little effort,
-        but the peace of mind is real.
+        but the peace of mind is real. Our guide to{' '}
+        <PostLink href="/blog/how-to-preserve-family-memories-digitally">
+          preserving family memories digitally
+        </PostLink>{' '}
+        sets out the three-copy rule in full.
       </Typography>
 
       <Typography variant="body1" sx={{ color: '#546669', lineHeight: 1.8, mb: 2 }}>

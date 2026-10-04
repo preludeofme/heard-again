@@ -130,7 +130,7 @@ export function LandingPage() {
                   textAlign: 'center',
                 }}
               >
-                Family stories, preserved with care.
+                Hear their voice again — with no setup.
               </Typography>
 
               {/* Pill-shaped badges */}
@@ -173,7 +173,9 @@ export function LandingPage() {
                 mx: 'auto',
               }}
             >
-              Preserve the voices, stories, and memories of the people who shaped your family. Heard Again gives your family a private place to collect recordings, photos, letters, and personal stories — and, when you choose, hear those memories narrated in a familiar voice again.
+              Upload the recordings your family already has — voicemails, voice memos, old video. Heard Again builds a private voice profile from them, so written family stories can be read aloud in a familiar voice. <b>No GPU, no install, nothing to configure.</b> We run it for you.
+              <br /><br />
+              It is also a private place to keep the photos, letters, and stories that go with those voices.
               <br /><br />
               <b>Your family&apos;s memories are never sold</b>, never used to train public models, and never shared with third parties. Your family&apos;s legacy stays your way.
             </Typography>

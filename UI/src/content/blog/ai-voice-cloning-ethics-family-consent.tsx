@@ -1,4 +1,5 @@
 import { Box, Typography } from '@mui/material'
+import { PostLink } from './post-link'
 
 export const meta = {
   slug: 'ai-voice-cloning-ethics-family-consent' as const,
@@ -101,7 +102,11 @@ export function BlogContent() {
         person understands what&apos;s being recorded, how it will be stored, who will have access to
         it, and what it might be used for — now and in the future. It means checking in, not just
         once but over time, because someone&apos;s comfort with the technology may change as they
-        learn more about it.
+        learn more about it. If you are not sure how to open that conversation, our guide on{' '}
+        <PostLink href="/blog/record-grandparents-voices-before-stories-go-quiet">
+          recording your grandparents&apos; voices
+        </PostLink>{' '}
+        has wording that works.
       </Typography>
 
       <Typography variant="body1" sx={{ color: '#546669', lineHeight: 1.8, mb: 2 }}>
@@ -201,7 +206,11 @@ export function BlogContent() {
       <Typography variant="body1" sx={{ color: '#546669', lineHeight: 1.8, mb: 2 }}>
         The code that handles your family&apos;s most personal recordings is public and auditable.
         Anyone can inspect how voice data is stored, processed, and protected. Trust is built on
-        transparency, not promises.
+        transparency, not promises — we go into{' '}
+        <PostLink href="/blog/why-open-source-matters-for-family-memories">
+          why open source matters for your family&apos;s digital legacy
+        </PostLink>{' '}
+        separately.
       </Typography>
 
       <Typography variant="body1" sx={{ color: '#546669', lineHeight: 1.8, mb: 1, fontWeight: 600 }}>

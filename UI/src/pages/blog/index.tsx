@@ -151,6 +151,12 @@ export default function BlogListing({ posts }: BlogListingProps) {
               Reflections, guides, and stories on preserving family voices, building a lasting
               legacy, and the art of remembering well — from the Heard Again team and community.
             </Typography>
+            <Typography variant="body2" sx={{ color: '#546669', mt: 3 }}>
+              Ready to start?{' '}
+              <Link href="/#pricing" style={{ color: '#16334a', fontWeight: 600 }}>
+                See plans and pricing
+              </Link>
+            </Typography>
           </Container>
         </Box>
 

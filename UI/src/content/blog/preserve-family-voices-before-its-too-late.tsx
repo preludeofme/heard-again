@@ -1,4 +1,5 @@
 import { Box, Typography } from '@mui/material'
+import { PostLink } from './post-link'
 
 export const meta = {
   slug: 'preserve-family-voices-before-its-too-late' as const,
@@ -215,7 +216,12 @@ export function BlogContent() {
 
       <Typography variant="body1" sx={{ color: '#546669', lineHeight: 1.8, mb: 2 }}>
         <strong>Practical tip:</strong> Make this a family activity, not a solo project. Invite
-        siblings or cousins to contribute questions. Record together when you can — the
+        siblings or cousins to contribute questions. If the person you want to record is a
+        grandparent, we wrote a separate guide on{' '}
+        <PostLink href="/blog/record-grandparents-voices-before-stories-go-quiet">
+          how to ask your grandparents without making it weird
+        </PostLink>
+        . Record together when you can — the
         back-and-forth between family members often brings out stories that a one-on-one conversation
         might miss. Laughter is contagious, and shared memories multiply when you&apos;re in the same
         room.
@@ -242,7 +248,12 @@ export function BlogContent() {
       </Typography>
 
       <Typography variant="body1" sx={{ color: '#546669', lineHeight: 1.8, mb: 2 }}>
-        Keep multiple copies in different places. Share recordings with family members while everyone
+        Keep multiple copies in different places — our guide to{' '}
+        <PostLink href="/blog/how-to-preserve-family-memories-digitally">
+          preserving family memories digitally
+        </PostLink>{' '}
+        walks through the three-copy rule and which file formats to choose. Share recordings with
+        family members while everyone
         can still gather around them together — listening as a group, adding their own memories, and
         building on the stories that were started. These recordings become richer when they&apos;re
         part of an ongoing family conversation, not just files sitting alone on a drive.
