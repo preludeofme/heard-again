@@ -47,6 +47,7 @@ export default async function middleware(request: NextRequest) {
     '/',
     '/login',
     '/signup',
+    '/pricing',
     '/api/auth',
     '/forgot-password',
     '/reset-password',

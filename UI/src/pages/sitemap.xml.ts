@@ -19,6 +19,7 @@ interface SitemapEntry {
  */
 const STATIC_PAGES: readonly SitemapEntry[] = [
   { path: '/', lastmod: '2026-10-04', changefreq: 'weekly', priority: '1.0' },
+  { path: '/pricing', lastmod: '2026-10-04', changefreq: 'weekly', priority: '0.9' },
   { path: '/signup', lastmod: '2026-08-09', changefreq: 'monthly', priority: '0.8' },
   { path: '/login', lastmod: '2026-08-09', changefreq: 'monthly', priority: '0.5' },
   { path: '/setup-guide', lastmod: '2026-08-09', changefreq: 'weekly', priority: '0.7' },
