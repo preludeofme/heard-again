@@ -18,6 +18,12 @@ above the fold, `Why pay, when the code is free?` immediately above the
 `/#pricing` anchor resolves for a cold visitor arriving from a comment link.
 Every link in the table below now lands on that page. [TRU-4](/TRU/issues/TRU-4).
 
+**Update, later the same day.** A standalone `/pricing` page has since deployed.
+Re-fetched: `https://www.heardagain.com/pricing` → **200** (previously
+`307 → /login`), and `…/pricing?utm_source=…` → **200**, so it carries UTMs too.
+Reply-bank answers to "what does it cost" now point at that clean URL instead of
+the `/#pricing` anchor; the anchor still resolves and is still fine for the nav.
+
 ---
 
 ## The links
@@ -29,6 +35,7 @@ Every link in the table below now lands on that page. [TRU-4](/TRU/issues/TRU-4)
 | X / Twitter thread | `https://www.heardagain.com/?utm_source=x&utm_medium=social&utm_campaign=w3` | |
 | LinkedIn founder post | `https://www.heardagain.com/?utm_source=linkedin&utm_medium=social&utm_campaign=w3` | |
 | Facebook group mention | `https://www.heardagain.com/?utm_source=facebook&utm_medium=group&utm_campaign=w3` | Only if the single permitted mention happens |
+| Pricing answer in any thread | `https://www.heardagain.com/pricing?utm_source=reply&utm_medium=comment&utm_campaign=w3` | Verified 200 with UTMs attached. Use when someone asks the cost directly |
 | r/Genealogy | **no link in the post** | Cadence rule. Attribution comes from the referrer |
 | r/FamilyHistory | **no link in the post** | Same |
 | r/AskOldPeople | **no link at all** | No mention of the product in that thread, by design |

@@ -1,4 +1,5 @@
-// Renders the five ProductHunt gallery images at 1270x760.
+// Renders the five ProductHunt gallery images at 1270x760, plus the required
+// 240x240 listing thumbnail.
 //
 // Typography and palette are taken from the live site (Newsreader + Manrope,
 // navy #0b2b45 on cream #f8ebd6) so the gallery matches heardagain.com and the
@@ -8,7 +9,7 @@
 // Requires the system chromium at /usr/bin/chromium-browser.
 
 import { chromium } from '@playwright/test';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -34,10 +35,10 @@ const SHOT_SELFHOSTED = dataUri('shot-selfhosted.png', 'image/png');
 const BASE_CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&family=Manrope:wght@300..800&display=swap');
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { width: ${WIDTH}px; height: ${HEIGHT}px; overflow: hidden;
+body { width: var(--w, ${WIDTH}px); height: var(--h, ${HEIGHT}px); overflow: hidden;
        font-family: Manrope, sans-serif; color: ${NAVY};
        -webkit-font-smoothing: antialiased; }
-.frame { position: relative; width: ${WIDTH}px; height: ${HEIGHT}px; overflow: hidden; background: ${CREAM}; }
+.frame { position: relative; width: var(--w, ${WIDTH}px); height: var(--h, ${HEIGHT}px); overflow: hidden; background: ${CREAM}; }
 .serif { font-family: Newsreader, serif; }
 .rule { position: absolute; left: 0; right: 0; bottom: 0; height: 9px;
         background: linear-gradient(90deg, ${WAVE.join(',')}); }
@@ -194,6 +195,22 @@ const images = [
         <div class="rule"></div>
       </div>`,
   },
+  {
+    // ProductHunt's square listing thumbnail. It renders down to roughly 60px
+    // in the homepage feed, where a wordmark turns to mush, so this is the
+    // waveform alone at the largest size the square will hold.
+    file: 'thumbnail-240.png',
+    width: 240,
+    height: 240,
+    html: `
+      <div class="frame">
+        <div class="paper"></div>
+        <div style="position:absolute;inset:0;display:flex;
+                    align-items:center;justify-content:center;">
+          <div style="transform:scale(.62);transform-origin:center;">${waveMark(190)}</div>
+        </div>
+      </div>`,
+  },
 ];
 
 const browser = await chromium.launch({
@@ -205,15 +222,21 @@ const page = await browser.newPage({
   deviceScaleFactor: 1,
 });
 
-for (const { file, html } of images) {
-  const doc = `<!doctype html><html><head><meta charset="utf-8"><style>${BASE_CSS}</style></head><body>${html}</body></html>`;
-  const tmp = join(HERE, '.render.html');
-  writeFileSync(tmp, doc);
-  await page.goto(`file://${tmp}`, { waitUntil: 'networkidle' });
+const tmpPath = join(HERE, '.render.html');
+
+for (const { file, html, width = WIDTH, height = HEIGHT } of images) {
+  const sizeVars = `:root { --w: ${width}px; --h: ${height}px; }`;
+  // sizeVars goes after BASE_CSS: the @import must stay the first rule in the
+  // sheet or Chromium drops the webfonts.
+  const doc = `<!doctype html><html><head><meta charset="utf-8"><style>${BASE_CSS}${sizeVars}</style></head><body>${html}</body></html>`;
+  writeFileSync(tmpPath, doc);
+  await page.setViewportSize({ width, height });
+  await page.goto(`file://${tmpPath}`, { waitUntil: 'networkidle' });
   await page.evaluate(() => document.fonts.ready);
   await page.waitForTimeout(600);
   await page.screenshot({ path: join(HERE, file) });
-  console.log('wrote', file);
+  console.log('wrote', file, `${width}x${height}`);
 }
 
 await browser.close();
+rmSync(tmpPath, { force: true });

@@ -91,16 +91,20 @@ Say it once. Do not argue after that. If the thread turns, stop replying.
 **"What's the pricing?"**
 
 > Free and unlimited if you self-host. Cloud starts at $4.99/month and goes to $39.99 for
-> the family tier. Prices are on the landing page: heardagain.com/#pricing.
+> the family tier. Prices are on heardagain.com/pricing.
 >
 > Note that $4.99 Cloud Access Lite has no voice generation minutes — voice starts on
 > Starter at $9.99.
 
-Do **not** write `heardagain.com/pricing` in a reply yet. Checked 2026-10-04: that URL
-returns `307 → /login?callbackUrl=%2Fpricing`, so it drops a stranger on a login form.
-`heardagain.com/#pricing` returns 200 and the `id="pricing"` section is present in the
-live HTML. A real `/pricing` page exists in the repo (commit `6b56a810`) but is **not
-pushed**, so it is not deployed. Once it is live, swap this line back to the clean URL.
+`heardagain.com/pricing` is the link to use. Re-checked 2026-10-04 after the page
+deployed: it returns 200 on its own and 200 with UTM parameters attached, titled
+"Pricing — Heard Again", with a canonical tag and an entry in the live sitemap. The
+earlier `307 → /login` redirect is gone.
+
+Use the clean URL rather than the `/#pricing` anchor. The anchor cannot carry a
+canonical or a meta description, and for a "what does it cost" question in a thread the
+real page is the better place to land someone. The Lite caveat above is also printed on
+the page itself, so the link will not mislead anyone who follows it.
 
 **"Why did you build this?"**
 
