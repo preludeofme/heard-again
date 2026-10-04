@@ -99,4 +99,33 @@
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
+  <url>
+    <loc>https://www.heardagain.com/blog/self-hosted-vs-hosted-family-archive</loc>
+    <lastmod>2026-10-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://www.heardagain.com/blog/gedcom-import-with-audio</loc>
+    <lastmod>2026-10-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <!--
+    TRU-6 editorial gate — add these two only when the death/loss posts are
+    registered in UI/src/content/blog/index.ts, so the sitemap never lists a 404:
+
+    <url>
+      <loc>https://www.heardagain.com/blog/restore-old-cassette-recording-family-member</loc>
+      <lastmod>2026-10-19</lastmod>
+      <changefreq>monthly</changefreq>
+      <priority>0.5</priority>
+    </url>
+    <url>
+      <loc>https://www.heardagain.com/blog/how-to-clone-a-deceased-relatives-voice</loc>
+      <lastmod>2026-10-26</lastmod>
+      <changefreq>monthly</changefreq>
+      <priority>0.5</priority>
+    </url>
+  -->
 </urlset>

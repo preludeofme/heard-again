@@ -4,6 +4,19 @@ import { OpenSourceFamilyMemoriesPost } from './why-open-source-matters-for-fami
 import { AiVoiceCloningEthicsPost } from './ai-voice-cloning-ethics-family-consent'
 import { HowToPreserveFamilyMemoriesDigitally } from './how-to-preserve-family-memories-digitally'
 import { RecordGrandparentsVoicesPost } from './record-grandparents-voices-before-stories-go-quiet'
+import { SelfHostedVsHostedPost } from './self-hosted-vs-hosted-family-archive'
+import { GedcomImportWithAudioPost } from './gedcom-import-with-audio'
+
+/**
+ * Written but intentionally NOT registered yet (TRU-6 editorial gate):
+ * these two posts cover death and loss and need Ryan's read before they ship.
+ *
+ *   import { RestoreCassetteRecordingPost } from './restore-old-cassette-recording-family-member'
+ *   import { CloneDeceasedRelativeVoicePost } from './how-to-clone-a-deceased-relatives-voice'
+ *
+ * To publish: add the two imports above, append the two entries marked in the
+ * array below, and add the matching <url> blocks to UI/public/sitemap.xml.
+ */
 
 export interface BlogPostMeta {
   slug: string
@@ -89,6 +102,47 @@ export const blogPosts: BlogPost[] = [
     content: RecordGrandparentsVoicesPost.content,
     ...(RecordGrandparentsVoicesPost.meta.coverImage ? { coverImage: `https://www.heardagain.com${RecordGrandparentsVoicesPost.meta.coverImage}` } : {}),
   },
+  {
+    slug: SelfHostedVsHostedPost.meta.slug,
+    title: SelfHostedVsHostedPost.meta.title,
+    date: SelfHostedVsHostedPost.meta.date,
+    excerpt: SelfHostedVsHostedPost.meta.excerpt,
+    tags: SelfHostedVsHostedPost.meta.tags,
+    author: SelfHostedVsHostedPost.meta.author,
+    readTime: SelfHostedVsHostedPost.meta.readTime,
+    content: SelfHostedVsHostedPost.content,
+  },
+  {
+    slug: GedcomImportWithAudioPost.meta.slug,
+    title: GedcomImportWithAudioPost.meta.title,
+    date: GedcomImportWithAudioPost.meta.date,
+    excerpt: GedcomImportWithAudioPost.meta.excerpt,
+    tags: GedcomImportWithAudioPost.meta.tags,
+    author: GedcomImportWithAudioPost.meta.author,
+    readTime: GedcomImportWithAudioPost.meta.readTime,
+    content: GedcomImportWithAudioPost.content,
+  },
+  // --- TRU-6 editorial gate: append after Ryan approves the death/loss posts ---
+  // {
+  //   slug: RestoreCassetteRecordingPost.meta.slug,
+  //   title: RestoreCassetteRecordingPost.meta.title,
+  //   date: RestoreCassetteRecordingPost.meta.date,
+  //   excerpt: RestoreCassetteRecordingPost.meta.excerpt,
+  //   tags: RestoreCassetteRecordingPost.meta.tags,
+  //   author: RestoreCassetteRecordingPost.meta.author,
+  //   readTime: RestoreCassetteRecordingPost.meta.readTime,
+  //   content: RestoreCassetteRecordingPost.content,
+  // },
+  // {
+  //   slug: CloneDeceasedRelativeVoicePost.meta.slug,
+  //   title: CloneDeceasedRelativeVoicePost.meta.title,
+  //   date: CloneDeceasedRelativeVoicePost.meta.date,
+  //   excerpt: CloneDeceasedRelativeVoicePost.meta.excerpt,
+  //   tags: CloneDeceasedRelativeVoicePost.meta.tags,
+  //   author: CloneDeceasedRelativeVoicePost.meta.author,
+  //   readTime: CloneDeceasedRelativeVoicePost.meta.readTime,
+  //   content: CloneDeceasedRelativeVoicePost.content,
+  // },
 ]
 
 /** Lookup post by slug */
