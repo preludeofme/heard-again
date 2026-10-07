@@ -1,129 +1,142 @@
 import React from 'react'
-import { Box, Typography, Card, Grid, Button, Chip, Divider } from '@mui/material'
+import { Box, Typography, Card, Grid, Button, Divider } from '@mui/material'
 import { Check, Close } from '@mui/icons-material'
 import Link from 'next/link'
+import { useRouter } from 'next/router'
+import { trackPlanSelected, surfaceForPath } from '@/lib/analytics/funnel'
 import { FeatureRow } from './FeatureRow'
 import { SystemRequirements } from './SystemRequirements'
+import {
+  LANDING_PLAN_COPY,
+  PUBLIC_PLAN_SLUGS,
+  type LandingFeature,
+  type LandingPlanCopy,
+  type PlanFactFeature,
+} from '@/lib/billing/landing-plan-copy'
+import {
+  generationMinutesFact,
+  prioritySupportFact,
+  storageQuotaFact,
+  voiceProfileQuotaFact,
+  type PlanFact,
+} from '@/lib/billing/plan-display'
+import type { PublicPlan } from '@/lib/billing/public-plans.types'
 
-type LandingPlan = {
-  id: string
-  name: string
-  planType: string
-  subtitle: string
-  pricing: { monthlyDisplay: string }
-  features: React.ReactNode[]
-  bestFor: string
-  isRecommended: boolean
-  /** False when production cannot sell this tier yet — the card shows the price but never offers a checkout that would fail. */
-  isAvailable: boolean
-  trialNote: string
-  ctaText: string
-  ctaHref: string
+export type LandingPricingSectionProps = {
+  /** The advertised cloud tiers, read from the `Plan` table by the page that mounts this. */
+  plans: PublicPlan[]
 }
 
-export function LandingPricingSection() {
-  const cloudPlans: LandingPlan[] = [
-    {
-      id: 'cloud_lite',
-      name: 'Cloud Access — Lite',
-      planType: 'CLOUD',
-      subtitle: 'For sharing and hosting stories, images, and data without AI features.',
-      pricing: { monthlyDisplay: '4.99' },
-      features: [
-        <strong key="no-setup">No setup required</strong>,
-        <strong key="managed-hosting">Secure managed hosting</strong>,
-        <strong key="auto-backups">Automatic backups & updates</strong>,
-        <span key="storage">
-          <strong>2 GB</strong> cloud storage
-        </span>,
-        'Easy family sharing',
-        'Consent and privacy tools',
-        'Support included',
-        <span key="no-ai" style={{ opacity: 0.7 }}>
-          No AI narration or voice clones
-        </span>,
-      ],
-      bestFor: 'Best for families who just want standard hosting and media/story sharing.',
-      isRecommended: false,
-      isAvailable: false,
-      trialNote: 'Not open for signup yet',
-      ctaText: 'Start with Starter instead',
-      ctaHref: '/signup?plan=cloud_min',
-    },
-    {
-      id: 'cloud_min',
-      name: 'Cloud Access — Starter',
-      planType: 'CLOUD',
-      subtitle: 'For families who want a simple, secure hosted option.',
-      pricing: { monthlyDisplay: '9.99' },
-      features: [
-        <strong key="no-setup">No setup required</strong>,
-        <strong key="managed-hosting">Secure managed hosting</strong>,
-        <strong key="auto-backups">Automatic backups & updates</strong>,
-        <span key="voice-minutes">
-          <strong>30 minutes</strong> of voice generation / mo
-        </span>,
-        <span key="voice-profiles">
-          Up to <strong>50 voice profiles</strong>
-        </span>,
-        'Easy family sharing',
-        'Consent and privacy tools',
-        'Support included',
-      ],
-      bestFor: 'Best for families just beginning to preserve their stories.',
-      isRecommended: false,
-      isAvailable: true,
-      trialNote: 'Includes 14-day free trial',
-      ctaText: 'Start free trial',
-      ctaHref: '/signup?plan=cloud_min',
-    },
-    {
-      id: 'cloud_mid',
-      name: 'Cloud Access — Family',
-      planType: 'CLOUD',
-      subtitle: 'For families actively building their legacy library.',
-      pricing: { monthlyDisplay: '19.99' },
-      features: [
-        <span key="bold-plus" style={{ color: '#16334a', fontWeight: 600 }}>
-          Includes all Starter features PLUS:
-        </span>,
-        <span key="voice-minutes">
-          <strong>60 minutes</strong> of voice generation / mo
-        </span>,
-        <strong key="priority-processing">Priority voice processing</strong>,
-        'Advanced family tree linking',
-        <strong key="priority-support">Priority support response</strong>,
-        'Easy family sharing',
-      ],
-      bestFor: 'Best for families collecting stories from multiple relatives and contributors.',
-      isRecommended: true,
-      isAvailable: true,
-      trialNote: 'Includes 14-day free trial',
-      ctaText: 'Start free trial',
-      ctaHref: '/signup?plan=cloud_mid',
-    },
-    {
-      id: 'cloud_max',
-      name: 'Cloud Access — Legacy',
-      planType: 'CLOUD',
-      subtitle: 'For families preserving a large collection of voices, memories, and stories.',
-      pricing: { monthlyDisplay: '39.99' },
-      features: [
-        <span key="bold-plus" style={{ color: '#16334a', fontWeight: 600 }}>
-          Includes all Family features PLUS:
-        </span>,
-        <strong key="unlimited-voice">Unlimited voice generation</strong>,
-        <strong key="priority-support">Priority support response</strong>,
-        <strong key="success-manager">Dedicated success manager</strong>,
-      ],
-      bestFor: 'Best for families building a long-term family legacy library.',
-      isRecommended: false,
-      isAvailable: true,
-      trialNote: 'Includes 14-day free trial',
-      ctaText: 'Choose Legacy',
-      ctaHref: '/signup?plan=cloud_max',
-    },
-  ]
+/** A tier the page can draw: a live `Plan` row paired with the prose we wrote for it. */
+type LandingCard = {
+  plan: PublicPlan
+  copy: LandingPlanCopy
+  ctaText: string
+  ctaHref: string
+  note: string
+}
+
+/** `/signup?plan=cloud_mid` -> `cloud_mid`; the tier the click actually buys. */
+function planFromCtaHref(ctaHref: string): string {
+  const query = ctaHref.split('?')[1]
+  if (!query) return 'none'
+  return new URLSearchParams(query).get('plan') ?? 'none'
+}
+
+function resolveFact(field: PlanFactFeature['field'], plan: PublicPlan): PlanFact | null {
+  switch (field) {
+    case 'minutes':
+      return generationMinutesFact(plan.generationMinutesIncluded)
+    case 'storage':
+      return storageQuotaFact(plan.storageQuotaBytes)
+    case 'voiceProfiles':
+      return voiceProfileQuotaFact(plan.voiceProfileQuota)
+    case 'prioritySupport':
+      return prioritySupportFact(plan.prioritySupport)
+  }
+}
+
+function FactLabel({ fact }: { fact: PlanFact }) {
+  return (
+    <>
+      {fact.segments.map((segment, i) =>
+        segment.isStrong ? (
+          <strong key={i}>{segment.text}</strong>
+        ) : (
+          <span key={i}>{segment.text}</span>
+        )
+      )}
+    </>
+  )
+}
+
+function PlanFeatureList({ plan, copy }: { plan: PublicPlan; copy: LandingPlanCopy }) {
+  return (
+    <Box sx={{ mt: 2 }}>
+      {copy.features.map((feature: LandingFeature, i) => {
+        if (feature.kind === 'prose') {
+          const label = feature.isLead ? (
+            <span style={{ color: '#16334a', fontWeight: 600 }}>{feature.text}</span>
+          ) : feature.isStrong ? (
+            <strong>{feature.text}</strong>
+          ) : (
+            feature.text
+          )
+          return (
+            <FeatureRow key={i} icon={<Check fontSize="small" />} label={label} included={true} />
+          )
+        }
+
+        const fact = resolveFact(feature.field, plan)
+        if (!fact) {
+          return null
+        }
+
+        // A zero allowance stays on the card as an explicit "not included" line.
+        // Dropping it would let Lite look like it might still do voice work.
+        return (
+          <FeatureRow
+            key={i}
+            icon={fact.isMuted ? <Close fontSize="small" /> : <Check fontSize="small" />}
+            label={<FactLabel fact={fact} />}
+            included={!fact.isMuted}
+            strikeThrough={false}
+          />
+        )
+      })}
+    </Box>
+  )
+}
+
+/**
+ * Pairs each advertised slug with its row. A slug with no row is skipped rather
+ * than drawn from a literal, so the page can never quote a price we cannot verify.
+ */
+function buildCards(plans: PublicPlan[]): LandingCard[] {
+  const planBySlug = new Map(plans.map((plan) => [plan.slug, plan]))
+
+  return PUBLIC_PLAN_SLUGS.flatMap((slug) => {
+    const plan = planBySlug.get(slug)
+    const copy = LANDING_PLAN_COPY[slug]
+    if (!plan || !copy) {
+      return []
+    }
+
+    return [
+      {
+        plan,
+        copy,
+        ctaText: plan.isAvailable ? copy.ctaText : copy.unavailable.ctaText,
+        ctaHref: plan.isAvailable ? `/signup?plan=${slug}` : copy.unavailable.ctaHref,
+        note: plan.isAvailable ? copy.trialNote : copy.unavailable.note,
+      },
+    ]
+  })
+}
+
+export function LandingPricingSection({ plans }: LandingPricingSectionProps) {
+  const router = useRouter()
+  const cards = buildCards(plans)
 
   return (
     <Box id="pricing" component="section" sx={{ py: 16, px: { xs: 4, md: 8 }, bgcolor: '#fcf9f4' }}>
@@ -161,9 +174,34 @@ export function LandingPricingSection() {
 
       {/* Main Pricing Cards Grid */}
       <Box sx={{ maxWidth: 1400, mx: 'auto', mb: 8 }}>
+        {cards.length === 0 ? (
+          // The plan rows could not be read. Say that plainly instead of leaving a
+          // silent gap where four prices used to be — and never fall back to a
+          // literal, because an unverified price is the bug this section fixes.
+          <Box
+            sx={{
+              maxWidth: 820,
+              mx: 'auto',
+              p: 4,
+              bgcolor: '#f6f3ee',
+              borderRadius: 2,
+              textAlign: 'center',
+            }}
+          >
+            <Typography variant="subtitle1" sx={{ color: '#16334a', fontWeight: 700, mb: 1 }}>
+              Plan prices are temporarily unavailable
+            </Typography>
+            <Typography variant="body2" sx={{ color: '#546669', lineHeight: 1.7 }}>
+              We could not load the current cloud plan prices, and we would rather show you nothing
+              than show you a price we cannot confirm. Please try again in a few minutes, or{' '}
+              <Link href="/support">ask us</Link> and we will quote you directly. Self-hosting is
+              free and always available below.
+            </Typography>
+          </Box>
+        ) : (
         <Grid container spacing={4} justifyContent="center" alignItems="stretch">
-          {cloudPlans.map((plan) => (
-            <Grid key={plan.id} size={{ xs: 12, md: 6, lg: 3 }}>
+          {cards.map(({ plan, copy, ctaText, ctaHref, note }) => (
+            <Grid key={plan.slug} size={{ xs: 12, md: 6, lg: 3 }}>
               <Card
                 sx={{
                   p: 4,
@@ -174,8 +212,8 @@ export function LandingPricingSection() {
                   position: 'relative',
                   overflow: 'visible',
                   transition: 'transform 0.2s',
-                  border: plan.isRecommended ? '2.5px solid #16334a' : '1px solid rgba(0,0,0,0.05)',
-                  boxShadow: plan.isRecommended
+                  border: copy.isRecommended ? '2.5px solid #16334a' : '1px solid rgba(0,0,0,0.05)',
+                  boxShadow: copy.isRecommended
                     ? '0 8px 30px rgba(22, 51, 74, 0.08)'
                     : '0 4px 20px rgba(0,0,0,0.02)',
                   '&:hover': {
@@ -184,7 +222,7 @@ export function LandingPricingSection() {
                   },
                 }}
               >
-                {plan.isRecommended && (
+                {copy.isRecommended && (
                   <Box
                     sx={{
                       position: 'absolute',
@@ -209,7 +247,7 @@ export function LandingPricingSection() {
                   </Box>
                 )}
 
-                <Box sx={{ mb: 3, mt: plan.isRecommended ? 1 : 0 }}>
+                <Box sx={{ mb: 3, mt: copy.isRecommended ? 1 : 0 }}>
                   <Typography
                     variant="overline"
                     sx={{ color: '#999', letterSpacing: 1, display: 'block', mb: 1 }}
@@ -229,11 +267,11 @@ export function LandingPricingSection() {
                     {plan.name}
                   </Typography>
                   <Typography variant="body2" sx={{ color: '#546669', mb: 2, minHeight: 40 }}>
-                    {plan.subtitle}
+                    {copy.subtitle}
                   </Typography>
                   <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5 }}>
                     <Typography variant="h3" sx={{ color: '#16334a', fontWeight: 700 }}>
-                      ${plan.pricing.monthlyDisplay}
+                      ${plan.priceMonthlyDisplay}
                     </Typography>
                     <Typography variant="body2" sx={{ color: '#999' }}>
                       /mo
@@ -243,7 +281,7 @@ export function LandingPricingSection() {
                     variant="caption"
                     sx={{ color: '#546669', display: 'block', mt: 0.5, fontWeight: 600 }}
                   >
-                    {plan.trialNote}
+                    {note}
                   </Typography>
                 </Box>
                 <Divider sx={{ my: 2, opacity: 0.3 }} />
@@ -251,11 +289,7 @@ export function LandingPricingSection() {
                   <Typography variant="subtitle2" sx={{ color: '#546669', mb: 2 }}>
                     Includes:
                   </Typography>
-                  <Box sx={{ mt: 2 }}>
-                    {plan.features.map((feature, i) => (
-                      <FeatureRow key={i} icon={<Check fontSize="small" />} label={feature} included={true} />
-                    ))}
-                  </Box>
+                  <PlanFeatureList plan={plan} copy={copy} />
                   <Typography
                     variant="body2"
                     sx={{
@@ -267,12 +301,19 @@ export function LandingPricingSection() {
                       borderRadius: 2,
                     }}
                   >
-                    {plan.bestFor}
+                    {copy.bestFor}
                   </Typography>
                 </Box>
                 <Button
                   component={Link}
-                  href={plan.ctaHref}
+                  href={ctaHref}
+                  onClick={() =>
+                    trackPlanSelected({
+                      card: plan.slug,
+                      plan: planFromCtaHref(ctaHref),
+                      surface: surfaceForPath(router.pathname),
+                    })
+                  }
                   variant={plan.isAvailable ? 'contained' : 'outlined'}
                   fullWidth
                   sx={{
@@ -296,12 +337,13 @@ export function LandingPricingSection() {
                         }),
                   }}
                 >
-                  {plan.ctaText}
+                  {ctaText}
                 </Button>
               </Card>
             </Grid>
           ))}
         </Grid>
+        )}
       </Box>
 
       {/* Community Self-hosted Callout Banner */}

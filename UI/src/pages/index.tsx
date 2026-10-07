@@ -3,8 +3,15 @@ import type { GetServerSideProps } from 'next'
 import { getServerSession } from 'next-auth/next'
 import { LandingPage } from '@/components/pages/LandingPage'
 import { authOptions } from '@/lib/auth'
+import { fetchPublicCloudPlans } from '@/lib/billing/public-plans'
+import { formatMonthlyPrice } from '@/lib/billing/plan-display'
+import type { PublicPlan } from '@/lib/billing/public-plans.types'
 
-export const getServerSideProps: GetServerSideProps = async (context) => {
+type HomeProps = {
+  plans: PublicPlan[]
+}
+
+export const getServerSideProps: GetServerSideProps<HomeProps> = async (context) => {
   const session = await getServerSession(context.req, context.res, authOptions)
 
   if (session) {
@@ -17,11 +24,15 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
   }
 
   return {
-    props: {},
+    props: { plans: await fetchPublicCloudPlans() },
   }
 }
 
-export default function Home() {
+export default function Home({ plans }: HomeProps) {
+  // Google reads this offer range and can show it as a rich result, so it has to
+  // track the `Plan` rows too. `lowPrice` stays 0 because self-hosting is free.
+  const highPrice = plans.reduce((max, plan) => Math.max(max, plan.priceMonthlyCents), 0)
+
   return (
     <>
       <Head>
@@ -74,9 +85,9 @@ export default function Home() {
                   offers: {
                     '@type': 'AggregateOffer',
                     lowPrice: '0',
-                    highPrice: '39.99',
+                    highPrice: formatMonthlyPrice(highPrice),
                     priceCurrency: 'USD',
-                    offerCount: '4',
+                    offerCount: String(plans.length),
                   },
                   author: {
                     '@type': 'Organization',
@@ -88,7 +99,7 @@ export default function Home() {
           }}
         />
       </Head>
-      <LandingPage />
+      <LandingPage plans={plans} />
     </>
   )
 }

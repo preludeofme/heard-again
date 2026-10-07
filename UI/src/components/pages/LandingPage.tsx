@@ -24,6 +24,7 @@ import {
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import Link from 'next/link'
 import { LandingPricingSection } from './LandingPricingSection'
+import type { PublicPlan } from '@/lib/billing/public-plans.types'
 import { PublicHeader } from '../layout/PublicHeader'
 import { AnimatedWaveform } from '../brand/AnimatedWaveform'
 
@@ -66,7 +67,12 @@ const testimonials = [
   },
 ]
 
-export function LandingPage() {
+export type LandingPageProps = {
+  /** The advertised cloud tiers, read from the `Plan` table by `pages/index.tsx`. */
+  plans: PublicPlan[]
+}
+
+export function LandingPage({ plans }: LandingPageProps) {
   const theme = useTheme()
 
   return (
@@ -711,7 +717,7 @@ export function LandingPage() {
       </Box>
 
       {/* Pricing Section */}
-      <LandingPricingSection />
+      <LandingPricingSection plans={plans} />
 
       <Box
         id="faq"

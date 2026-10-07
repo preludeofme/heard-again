@@ -1,25 +1,55 @@
 import React from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
+import type { GetStaticProps } from 'next'
 import { Box, Container, Typography } from '@mui/material'
 import { PublicHeader } from '@/components/layout/PublicHeader'
 import { LandingPricingSection } from '@/components/pages/LandingPricingSection'
 import { ProfileColors } from '@/components/profile/ProfileConstants'
+import { fetchPublicCloudPlans } from '@/lib/billing/public-plans'
+import { findEntryVoiceTier, findNoVoiceTier } from '@/lib/billing/plan-display'
+import type { PublicPlan } from '@/lib/billing/public-plans.types'
 
 const PAGE_TITLE = 'Pricing — Heard Again'
-const PAGE_DESCRIPTION =
-  'Heard Again pricing: self-host free, or managed cloud from $4.99/mo. Voice generation starts on Starter at $9.99/mo — Cloud Access Lite includes no voice minutes.'
 const CANONICAL_URL = 'https://www.heardagain.com/pricing'
 
-export default function PricingPage(): React.ReactElement {
+/** Re-read the `Plan` rows at most every 5 minutes, so a price edit reaches the page on its own. */
+const REVALIDATE_SECONDS = 300
+
+type PricingPageProps = {
+  plans: PublicPlan[]
+}
+
+export const getStaticProps: GetStaticProps<PricingPageProps> = async () => {
+  return {
+    props: { plans: await fetchPublicCloudPlans() },
+    revalidate: REVALIDATE_SECONDS,
+  }
+}
+
+export default function PricingPage({ plans }: PricingPageProps): React.ReactElement {
+  // The two tiers this page's lede turns on: the cheapest one with no voice at all,
+  // and the cheapest one you can actually buy voice on. Both come from the rows so
+  // the prose cannot quote a price the cards disagree with.
+  const noVoiceTier = findNoVoiceTier(plans)
+  const entryVoiceTier = findEntryVoiceTier(plans)
+
+  const pageDescription = entryVoiceTier
+    ? `Heard Again pricing: self-host free, or managed cloud from $${
+        noVoiceTier?.priceMonthlyDisplay ?? entryVoiceTier.priceMonthlyDisplay
+      }/mo. Voice generation starts on ${entryVoiceTier.name} at $${
+        entryVoiceTier.priceMonthlyDisplay
+      }/mo${noVoiceTier ? ` — ${noVoiceTier.name} includes no voice minutes` : ''}.`
+    : 'Heard Again pricing: self-host the open-source platform free, or choose a managed cloud plan so you do not have to run a GPU.'
+
   return (
     <>
       <Head>
         <title>{PAGE_TITLE}</title>
-        <meta name="description" content={PAGE_DESCRIPTION} />
+        <meta name="description" content={pageDescription} />
         <link rel="canonical" href={CANONICAL_URL} />
         <meta property="og:title" content={PAGE_TITLE} />
-        <meta property="og:description" content={PAGE_DESCRIPTION} />
+        <meta property="og:description" content={pageDescription} />
         <meta property="og:type" content="website" />
         <meta property="og:url" content={CANONICAL_URL} />
       </Head>
@@ -54,17 +84,25 @@ export default function PricingPage(): React.ReactElement {
                 The code is MIT licensed and free to self-host forever. Paid plans exist so you do
                 not have to run the GPU that voice work needs.
               </Typography>
-              <Typography variant="body1" sx={{ color: '#546669', lineHeight: 1.7 }}>
-                One thing to be clear about before you choose:{' '}
-                <strong>Cloud Access Lite ($4.99/mo) includes no voice generation minutes</strong>.
-                It is hosting and sharing only. Voice narration and voice clones start on{' '}
-                <strong>Starter ($9.99/mo)</strong>. If voice is why you are here, Starter is the
-                lowest plan that does it.
-              </Typography>
+              {noVoiceTier && entryVoiceTier && (
+                <Typography variant="body1" sx={{ color: '#546669', lineHeight: 1.7 }}>
+                  One thing to be clear about before you choose:{' '}
+                  <strong>
+                    {noVoiceTier.name} (${noVoiceTier.priceMonthlyDisplay}/mo) includes no voice
+                    generation minutes
+                  </strong>
+                  . It is hosting and sharing only. Voice narration and voice clones start on{' '}
+                  <strong>
+                    {entryVoiceTier.name} (${entryVoiceTier.priceMonthlyDisplay}/mo)
+                  </strong>
+                  . If voice is why you are here, {entryVoiceTier.name} is the lowest plan that does
+                  it.
+                </Typography>
+              )}
             </Container>
           </Box>
 
-          <LandingPricingSection />
+          <LandingPricingSection plans={plans} />
 
           <Box
             component="section"
