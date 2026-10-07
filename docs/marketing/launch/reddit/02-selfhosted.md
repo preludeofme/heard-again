@@ -1,7 +1,8 @@
 # Reddit Post: r/selfhosted
-**Posting Day:** Tuesday 2026-10-07 (per `../W2-run-sheet.md`)
+**Posting Day:** Friday 2026-10-09 (per `../W2-run-sheet.md`)
 **Suggested Time:** 12:00–3:00 PM ET (16:00–19:00 UTC) — self-hosted community skews toward evenings/weekend tinkerers
 **Posted by:** Ryan, from his own account. Warm up in the subreddit for 20 minutes first.
+**Copy approved by Ryan 2026-10-07. Hold only on login readiness.**
 
 > **Body edited 2026-10-04.** The original was written as if self-hosting were still an idea
 > under consideration. It shipped — there is a `docker-compose.yml`, a `/self-hosting` page, and

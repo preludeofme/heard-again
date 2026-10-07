@@ -5,8 +5,9 @@
 Fill this in within 48 hours of each post. The Vercel dashboard is not the record — on the Hobby plan
 its reporting window is one month and this data disappears in mid-November.
 
-Dates below follow the confirmed schedule in `W2-run-sheet.md`, which starts 2026-10-05.
-Plan A/Plan B are gone — Plan A put Show HN one day past the last date a 14-day trial can clear by 2026-11-03.
+Dates below follow the confirmed schedule in `W2-run-sheet.md`, revised 2026-10-07 (one-day
+slip to start Oct 8; weekday labels corrected; LinkedIn moved off Oct 13 which is W3's locked
+ProductHunt launch; Show HN stays Thu Oct 15).
 
 Status values: `not posted` · `posted` · `measured` · `dead` (delivered nothing; stop spending time on it)
 
@@ -16,7 +17,7 @@ Status values: `not posted` · `posted` · `measured` · `dead` (delivered nothi
 
 Record this **once**, before the first action, so every delta has something to subtract from.
 The GitHub row is already filled from the API. The Vercel and Stripe rows need a dashboard login,
-which no agent holds — Ryan fills those on Sun 2026-10-05 before the first submission goes out.
+which no agent holds — Ryan fills those on Thu 2026-10-08 before the first submission goes out.
 
 | Metric | Value | Captured on |
 |---|---|---|
@@ -56,7 +57,7 @@ which no agent holds — Ryan fills those on Sun 2026-10-05 before the first sub
 
 ### 2. AlternativeTo
 - **Destination:** https://alternativeto.net/ — listed as alternative to StoryCorps, MyHeritage DeepStory
-- **Planned:** 2026-10-06 · **Posted:** — · **Status:** not posted
+- **Planned:** 2026-10-08 · **Posted:** — · **Status:** not posted — **paused: owner creating the account** (Ryan, 2026-10-07)
 - **Listing URL:** —
 - Referrer: `alternativeto.net`
 - Note: of the three directories this is the one that actually sends traffic. Do it properly.
@@ -69,7 +70,7 @@ which no agent holds — Ryan fills those on Sun 2026-10-05 before the first sub
 
 ### 3. SaaSHub
 - **Destination:** https://www.saashub.com/
-- **Planned:** 2026-10-06 · **Posted:** — · **Status:** not posted
+- **Planned:** 2026-10-08 · **Posted:** — · **Status:** not posted — **paused: owner creating the account** (Ryan, 2026-10-07)
 - **Listing URL:** —
 - Referrer: `saashub.com`
 
@@ -81,7 +82,7 @@ which no agent holds — Ryan fills those on Sun 2026-10-05 before the first sub
 
 ### 4. Slant
 - **Destination:** https://www.slant.co/ — "What is the best tool for preserving family voices and stories?"
-- **Planned:** 2026-10-06 · **Posted:** — · **Status:** not posted
+- **Planned:** 2026-10-08 · **Posted:** — · **Status:** not posted — **paused: owner creating the account** (Ryan, 2026-10-07)
 - **Answer URL:** —
 - Referrer: `slant.co`
 
@@ -93,7 +94,7 @@ which no agent holds — Ryan fills those on Sun 2026-10-05 before the first sub
 
 ### 5. r/selfhosted
 - **Destination:** r/selfhosted — *"Would you self-host something as personal as family memories?"*
-- **Planned:** 2026-10-07, 12:00–15:00 ET · **Posted:** — · **Status:** not posted
+- **Planned:** 2026-10-09, 12:00–15:00 ET · **Posted:** — · **Status:** not posted — **copy approved 2026-10-07, held on login readiness**
 - **Thread URL:** —
 - **No link in the body.** Attribution is before/after plus the Direct line. If the repo link is given in
   a reply, note the reply time here: —
@@ -113,7 +114,7 @@ unprompted, offers to contribute:
 
 ### 6. r/opensource
 - **Destination:** r/opensource — *"Why I'm building an open-source alternative for family voice preservation instead of another AI startup"*
-- **Planned:** 2026-10-09, 09:00–11:00 ET · **Posted:** — · **Status:** not posted
+- **Planned:** 2026-10-12, 09:00–11:00 ET · **Posted:** — · **Status:** not posted — **copy approved 2026-10-07, held on login readiness**
 - **Thread URL:** —
 - Same method as above. The draft ends on a real question about open-source voice models; this thread is
   worth more as a conversation than as traffic.
@@ -131,7 +132,7 @@ unprompted, offers to contribute:
 ---
 
 ### 7. LinkedIn founder post
-- **Planned:** 2026-10-13, 08:00–10:00 ET · **Posted:** — · **Status:** not posted
+- **Planned:** 2026-10-16, 08:00–10:00 ET · **Posted:** — · **Status:** not posted — **draft touches loss, needs Ryan's read before posting**
 - **Post URL:** —
 - Referrer: `linkedin.com`, `lnkd.in`. Expect a chunk in Direct — the LinkedIn mobile app strips referrers.
 - The only channel in the kit where a link in the body is normal.
@@ -145,7 +146,7 @@ unprompted, offers to contribute:
 ---
 
 ### 8. X thread
-- **Planned:** 2026-10-14, 09:00–11:00 ET · **Posted:** — · **Status:** not posted
+- **Planned:** 2026-10-14, 09:00–11:00 ET · **Posted:** — · **Status:** not posted — **draft touches loss, needs Ryan's read before posting**
 - **Thread URL:** —
 - Referrer: `t.co`. Use Vercel's `t.co` drill-down to resolve it back to the thread.
 - Link is in tweet 7, not tweet 1.
@@ -160,7 +161,7 @@ unprompted, offers to contribute:
 
 ### 9. Show HN
 - **Destination:** Hacker News — *Show HN: Heard Again — Open-source family voice preservation (consent-first, self-hosted)*
-- **Planned:** 2026-10-15, 08:00–09:00 ET · **Posted:** — · **Status:** not posted
+- **Planned:** 2026-10-15, 08:00–09:00 ET · **Posted:** — · **Status:** not posted — **draft touches loss, needs Ryan's read before posting**
 - **Submission URL:** —
 - Referrer: `news.ycombinator.com`
 - **The highest-upside item in the kit.** A front-page Show HN is the one event that can deliver the

@@ -1,7 +1,8 @@
 # Reddit Post: r/opensource
-**Posting Day:** Thursday 2026-10-09 (per `../W2-run-sheet.md`)
+**Posting Day:** Monday 2026-10-12 (per `../W2-run-sheet.md`)
 **Suggested Time:** 9:00–11:00 AM ET (14:00–16:00 UTC) — tech subreddits peak during US/EU workday overlap
-**Posted by:** Ryan, from his own account. Two clear days after the r/selfhosted post.
+**Posted by:** Ryan, from his own account. Three days after the r/selfhosted post.
+**Copy approved by Ryan 2026-10-07. Hold only on login readiness.**
 
 > **Body edited 2026-10-04.** Two factual corrections: "the last year" became "since the spring"
 > (first commit is 2026-03-20), and the closing question no longer implies the project is
