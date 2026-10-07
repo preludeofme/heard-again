@@ -10,6 +10,8 @@ import SessionErrorBoundaryWrapper from '@/components/auth/SessionErrorBoundary'
 import { Analytics } from '@vercel/analytics/next'
 import type { AppProps } from 'next/app'
 import type { Session } from 'next-auth'
+import { useEffect } from 'react'
+import { captureFirstTouchUtm } from '@/lib/analytics/funnel'
 
 // Configure fonts with Next.js optimization
 const manrope = Manrope({
@@ -32,6 +34,13 @@ interface CustomAppProps extends AppProps {
 
 export default function App({ Component, pageProps, router }: CustomAppProps) {
   const { session, ...restPageProps } = pageProps
+
+  // First-touch attribution: the URL that carried the visitor's utm_* params
+  // is remembered for the session and attached to every pay-funnel step, so
+  // "which channel produced the trial" is answerable from the funnel events.
+  useEffect(() => {
+    captureFirstTouchUtm()
+  }, [])
 
   return (
     <div className={`${manrope.variable} ${newsreader.variable}`}>

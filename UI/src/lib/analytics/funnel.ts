@@ -10,6 +10,65 @@ type FunnelProperties = Record<string, string | number | boolean | null>
 /** Where `sendToFirstParty` posts. Mirrors `pages/api/analytics/funnel.ts`. */
 const FIRST_PARTY_ENDPOINT = '/api/analytics/funnel'
 
+const FIRST_TOUCH_UTM_KEY = 'ha_funnel:first_touch_utm'
+
+/** Attribution params the funnel events carry so the channel is answerable. */
+const UTM_PARAMS = ['utm_source', 'utm_medium', 'utm_campaign'] as const
+type UtmKey = (typeof UTM_PARAMS)[number]
+
+/** Keep channel cardinality low: a hand-typed utm_source must not fragment counts. */
+function sanitizeUtmValue(value: string | null): string {
+  if (!value) return ''
+  const cleaned = value.trim().slice(0, 64)
+  return cleaned.length > 0 ? cleaned : ''
+}
+
+/**
+ * Capture the visitor's first-touch UTM params once per tab. Called on every
+ * page mount; only the first URL that carries a utm_* param is kept, so a
+ * mid-funnel reload cannot overwrite the channel that actually brought the
+ * visitor. This is how `docs/marketing/launch/w3/attribution.md` answers
+ * "which channel produced the trial": the params ride on every later step.
+ */
+export function captureFirstTouchUtm(): void {
+  if (typeof window === 'undefined') return
+
+  try {
+    if (window.sessionStorage.getItem(FIRST_TOUCH_UTM_KEY) !== null) return
+
+    const params = new URLSearchParams(window.location.search)
+    const captured: Partial<Record<UtmKey, string>> = {}
+    for (const key of UTM_PARAMS) {
+      const value = sanitizeUtmValue(params.get(key))
+      if (value) captured[key] = value
+    }
+
+    if (Object.keys(captured).length > 0) {
+      window.sessionStorage.setItem(FIRST_TOUCH_UTM_KEY, JSON.stringify(captured))
+    }
+  } catch {
+    // Storage-disabled: the funnel still counts; it just loses the channel.
+  }
+}
+
+function readFirstTouchUtm(): FunnelProperties {
+  if (typeof window === 'undefined') return {}
+
+  try {
+    const raw = window.sessionStorage.getItem(FIRST_TOUCH_UTM_KEY)
+    if (!raw) return {}
+    const parsed = JSON.parse(raw) as Partial<Record<UtmKey, string>>
+    const out: FunnelProperties = {}
+    for (const key of UTM_PARAMS) {
+      const value = parsed[key]
+      if (value) out[key] = value
+    }
+    return out
+  } catch {
+    return {}
+  }
+}
+
 /**
  * Vercel Web Analytics custom events are documented as Enterprise and Pro
  * only, and this project has no approved spend for that, so `track()` alone
@@ -55,15 +114,19 @@ function sendToFirstParty(name: FunnelEventName, properties: FunnelProperties): 
  * customer.
  */
 function send(name: FunnelEventName, properties: FunnelProperties): void {
+  // Attribution rides on every step: the first-touch channel must survive all
+  // the way to checkout_completed, or "which channel produced the trial" has
+  // no answer. Step properties win if they ever collide with a utm key.
+  const enriched = { ...readFirstTouchUtm(), ...properties }
   try {
-    track(name, properties)
+    track(name, enriched)
   } catch (error) {
     if (process.env.NODE_ENV === 'development') {
       console.warn(`[funnel] failed to send ${name}`, error)
     }
   }
 
-  sendToFirstParty(name, properties)
+  sendToFirstParty(name, enriched)
 }
 
 /**
