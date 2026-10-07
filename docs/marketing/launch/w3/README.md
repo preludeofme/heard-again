@@ -54,13 +54,14 @@ until it goes live. Ryan schedules it. No agent touches the listing.
 | 00:01 | Listing goes live. Confirm it renders and the website field still carries `?utm_source=producthunt…`. |
 | 00:05 | Post the maker comment. |
 | 00:05 → 02:00 | Reply to every comment inside 30 minutes. PH weights early maker replies heavily. |
-| 06:00 | The **LinkedIn founder post** rides today — it is W2's 10-13 slot and this is its intended launch-day. Post it here, once. |
+| 06:00 | No W2 post today. W2's re-confirmed sheet (2026-10-07) **stands W2 down on PH day** and moved the **LinkedIn founder post to Fri 10-16**. Do not post it today. |
 | All day | Reply to everything. Comment on 3–5 other launches, honestly. |
 | 11:59 | Day closes. Screenshot the final rank, votes, comments. |
 
-Do not post anything on Reddit today. The **X thread is W2's Wed 10-14 asset — do not
-post it today, it goes out once, tomorrow**. Two launches in one day looks coordinated,
-which is exactly the thing genealogy communities punish.
+Do not post anything on Reddit or LinkedIn today. The **X thread is W2's Wed 10-14 asset
+— do not post it today, it goes out once, tomorrow**. The **LinkedIn founder post is W2's
+Fri 10-16 asset**. Two launches in one day looks coordinated, which is exactly the thing
+genealogy communities punish.
 
 ### Wed 2026-10-14 → Thu 2026-10-15 — PH replies continue
 
@@ -166,13 +167,14 @@ on — but it should not be counted toward 11-03. (Lens: *trial clock*, *channel
 
 ## Known risks
 
-**1. W2's rescheduled dates touch PH day.** W2's confirmed sheet (`W2-run-sheet.md`,
-rescheduled 2026-10-04) runs 10-05 → 10-15: r/selfhosted 10-07, r/opensource 10-09,
-**LinkedIn 10-13**, X thread 10-14, Show HN 10-15.
+**1. W2's confirmed dates keep PH day clear.** W2's sheet (`W2-run-sheet.md`, re-confirmed
+2026-10-07 after the owner answered) now runs 10-08 → 10-16: directories 10-08,
+r/selfhosted 10-09, r/opensource 10-12, **PH day 10-13 — W2 stands down**, X thread
+10-14, Show HN 10-15, **LinkedIn 10-16**.
 
-- **LinkedIn on 10-13 is not a collision** — the LinkedIn founder post is W2's asset and
-  its 10-13 slot is exactly the launch-day companion the W3 plan wants. It is posted
-  once, that day. This sheet schedules it at 06:00 PT.
+- **No W2 post on 10-13.** W2 stands down on PH day; its sheet says so explicitly. The
+  LinkedIn founder post, formerly scheduled at 06:00 on PH day, is now W2's **Fri 10-16**
+  post. W3 must not post it on 10-13. One post, one day.
 - **Show HN on 10-15 is two days after PH.** Both are "spike" days and both split the
   founder's attention, but each is inside the trial window (a Show HN trial started
   10-15 is charged 10-29, still clear of 11-03) and neither is posted by an agent.
@@ -181,10 +183,8 @@ rescheduled 2026-10-04) runs 10-05 → 10-15: r/selfhosted 10-07, r/opensource 1
 - The **X thread is 10-14** (W2). This sheet must not post it on 10-13. One X thread,
   one day.
 
-**2. W2's weekday labels are off by one.** `W2-run-sheet.md` labels 10-13 as "Mon",
-10-14 "Tue", 10-15 "Wed" — the calendar says Tue/Wed/Thu. The **dates** are the schedule
-(the sheet's own prose fixes Show HN "on a Wednesday", which the date 10-15 is not).
-Flagged for TRU-5; W3 plans against the dates, not the labels.
+**2. (Fixed 2026-10-07)** W2's weekday labels were off by one; the re-confirmed sheet
+corrected them. The **dates** are the schedule; W3 plans against the dates.
 
 **3. Reddit repost risk.** If W2 already posted r/Genealogy or r/FamilyHistory on the
 original Week 2 schedule, do not repost. Replace that day with comment engagement in the

@@ -58,15 +58,16 @@ path. The signup check, not the artwork, is now the thing that can sink the day.
 | 00:05 | Maker comment posted if it was not pre-filled. |
 | 00:05–02:00 | Reply to every comment within 30 minutes. This window carries the most algorithmic weight. |
 | 02:00 | Sleep. Set an alarm for 06:00. |
-| 06:00 | **LinkedIn founder post** (`../linkedin-founder-post.md`) — this is W2's 10-13 slot, and its intended launch-day. Post it here, once. |
+| 06:00 | **No W2 post today.** W2 stands down on PH day; its sheet moves the **LinkedIn founder post to Fri 10-16**. Do not post it here. |
 | 06:00–12:00 | Replies. Comment honestly on 3–5 other launches. |
 | 12:00 | Check the leaderboard. Top 5 by mid-morning usually holds. If close, share once more. |
 | 12:00–23:00 | Replies. Check heardagain.com analytics for referral traffic and signups. |
 | 23:00 | Thank the commenters publicly, by name. |
 | 23:59 | Screenshot final rank, votes, comments, and the day's traffic. |
 
-No Reddit posts today. The **X thread is W2's Wed 10-14 asset — do not post it today.**
-One X thread, one day.
+No Reddit or LinkedIn posts today. The **X thread is W2's Wed 10-14 asset — do not post
+it today.** The **LinkedIn founder post is W2's Fri 10-16 asset — W2 stands down on PH
+day.** One post, one day.
 
 ---
 

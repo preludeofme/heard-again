@@ -72,9 +72,11 @@ analytics connection exists). To be captured **before 00:01 PT on 10-13**.
 | Sat 2026-10-11 | | |
 | Sun 2026-10-12 | | |
 
-Note: W2's own posts land inside this baseline week (r/selfhosted 10-07, r/opensource
-10-09, LinkedIn 10-13). The baseline is "ordinary traffic with W2 already live" — it is
-a delta reference for the W3 spike, not a clean-room week. Say so when reporting.
+Note: W2's own posts land inside this baseline week (directories 10-08, r/selfhosted
+10-09, r/opensource 10-12 — per W2's re-confirmed sheet of 2026-10-07). LinkedIn moved
+to Fri 10-16, outside this baseline. The baseline is "ordinary traffic with W2 already
+live" — it is a delta reference for the W3 spike, not a clean-room week. Say so when
+reporting.
 
 ---
 
