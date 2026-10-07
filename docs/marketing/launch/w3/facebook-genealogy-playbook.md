@@ -28,7 +28,7 @@ rule that differs from this table into this file.
 
 ---
 
-## Warm-up — Tue 2026-10-06 to Sun 2026-10-19
+## Warm-up — Mon 2026-10-05 to Sun 2026-10-19
 
 Minimum before any mention is allowed:
 

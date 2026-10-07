@@ -52,15 +52,29 @@ floor, not a true count. Say so when reporting it rather than rounding up.
 
 ## The baseline
 
-Record daily totals for the seven days **before** the first W3 post. Without a
-baseline, launch-day traffic cannot be separated from normal traffic. One number
-per day: total visits, and visits from each referrer that already appears.
+Record daily totals for the seven days **before** the first W3 post. The first W3
+post is now ProductHunt on **Tue 2026-10-13** (approved 2026-10-07), so the baseline
+week is **Mon 2026-10-06 → Sun 2026-10-12**. Without a baseline, launch-day traffic
+cannot be separated from normal traffic. One number per day: total visits, and visits
+from each referrer that already appears.
 
-Owner: Growth & Launch. Recorded in this file as a table, filled in on the day.
+Owner: Growth & Launch. The numbers come from Vercel Analytics (dashboard login — no
+agent holds it; Ryan reads the dashboard, or Growth & Launch pulls them once an
+analytics connection exists). To be captured **before 00:01 PT on 10-13**.
 
 | Date | Visits | Top referrers |
 |---|---|---|
-| _(baseline week — to fill)_ | | |
+| Mon 2026-10-06 | | |
+| Tue 2026-10-07 | | |
+| Wed 2026-10-08 | | |
+| Thu 2026-10-09 | | |
+| Fri 2026-10-10 | | |
+| Sat 2026-10-11 | | |
+| Sun 2026-10-12 | | |
+
+Note: W2's own posts land inside this baseline week (r/selfhosted 10-07, r/opensource
+10-09, LinkedIn 10-13). The baseline is "ordinary traffic with W2 already live" — it is
+a delta reference for the W3 spike, not a clean-room week. Say so when reporting.
 
 ---
 
