@@ -25,6 +25,34 @@ export const config = {
   },
 }
 
+type InvoiceWithSubscription = {
+  id?: string
+  customer?: string
+  /** Pre-2025-04-30.basil shape. The live webhook endpoint is still pinned to 2025-01-27.acacia. */
+  subscription?: string | { id?: string } | null
+  /** 2025-04-30.basil and later, including the SDK's pinned 2026-06-24.dahlia. */
+  parent?: {
+    subscription_details?: { subscription?: string | { id?: string } | null } | null
+  } | null
+}
+
+/**
+ * Resolve the subscription id from an invoice regardless of which Stripe API version
+ * shaped the event. `invoice.subscription` was removed in 2025-04-30.basil and replaced
+ * by `invoice.parent.subscription_details.subscription`, so reading only one of the two
+ * makes these handlers no-op silently the moment the endpoint's API version changes.
+ */
+function resolveInvoiceSubscriptionId(invoice: InvoiceWithSubscription): string | undefined {
+  const candidates = [invoice.parent?.subscription_details?.subscription, invoice.subscription]
+
+  for (const candidate of candidates) {
+    if (typeof candidate === 'string' && candidate) return candidate
+    if (candidate && typeof candidate === 'object' && candidate.id) return candidate.id
+  }
+
+  return undefined
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return errorResponse(res, 'Method not allowed', 405)
@@ -124,81 +152,80 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       case 'invoice.paid': {
-        const invoice = event.data.object as {
-          id?: string
-          customer?: string
-          subscription?: string
-          period_end?: number
+        const invoice = event.data.object as InvoiceWithSubscription
+
+        const stripeSubscriptionId = resolveInvoiceSubscriptionId(invoice)
+
+        if (!stripeSubscriptionId) {
+          logger.warn(`[Billing] invoice.paid ${invoice.id} carried no subscription id — skipping`)
+          break
         }
 
-        const stripeSubscriptionId = invoice.subscription as string
-
-        if (stripeSubscriptionId) {
-          // Resolve the payment intent behind this invoice so a refund can be issued
-          // against it later (see api/billing/refund.ts) without another Stripe round
-          // trip at refund time. Best-effort — a failure here shouldn't fail the webhook.
-          let paymentIntentId: string | undefined
-          if (invoice.id) {
-            try {
-              const fullInvoice = await stripe.invoices.retrieve(invoice.id, {
-                expand: ['payments.data.payment.payment_intent'],
-              })
-              const pi = fullInvoice.payments?.data?.[0]?.payment?.payment_intent
-              paymentIntentId = typeof pi === 'string' ? pi : pi?.id
-            } catch (err: any) {
-              logger.warn(`[Billing] Could not resolve payment intent for invoice ${invoice.id}: ${err.message}`)
-            }
-          }
-
-          // Don't trust this invoice's own `period_end` for the renewal date: the
-          // invoice Stripe fires immediately when a trialing subscription starts
-          // covers a zero-length $0 period (its period_end is "now", not the actual
-          // trial end), which would show the wrong renewal date for the whole trial.
-          // The subscription object's own current_period_end is authoritative in
-          // both the trial and steady-state-renewal cases.
-          let renewalDate: Date | undefined
+        // Resolve the payment intent behind this invoice so a refund can be issued
+        // against it later (see api/billing/refund.ts) without another Stripe round
+        // trip at refund time. Best-effort — a failure here shouldn't fail the webhook.
+        let paymentIntentId: string | undefined
+        if (invoice.id) {
           try {
-            const subscription = await stripe.subscriptions.retrieve(stripeSubscriptionId)
-            const periodEnd = subscription.items.data[0]?.current_period_end
-            if (periodEnd) {
-              renewalDate = new Date(periodEnd * 1000)
-            }
+            const fullInvoice = await stripe.invoices.retrieve(invoice.id, {
+              expand: ['payments.data.payment.payment_intent'],
+            })
+            const pi = fullInvoice.payments?.data?.[0]?.payment?.payment_intent
+            paymentIntentId = typeof pi === 'string' ? pi : pi?.id
           } catch (err: any) {
-            logger.warn(`[Billing] Could not resolve current period end for subscription ${stripeSubscriptionId}: ${err.message}`)
+            logger.warn(`[Billing] Could not resolve payment intent for invoice ${invoice.id}: ${err.message}`)
           }
-
-          // Extend subscription renewal date
-          await prisma.subscription.updateMany({
-            where: { stripeSubscriptionId },
-            data: {
-              billingStatus: 'ACTIVE',
-              ...(renewalDate ? { renewalDate } : {}),
-              lastBillingResetAt: new Date(),
-              generationMinutesUsed: 0, // Reset usage for new period
-              ...(paymentIntentId ? { stripeLatestPaymentIntentId: paymentIntentId } : {}),
-            },
-          })
         }
+
+        // Don't trust this invoice's own `period_end` for the renewal date: the
+        // invoice Stripe fires immediately when a trialing subscription starts
+        // covers a zero-length $0 period (its period_end is "now", not the actual
+        // trial end), which would show the wrong renewal date for the whole trial.
+        // The subscription object's own current_period_end is authoritative in
+        // both the trial and steady-state-renewal cases.
+        let renewalDate: Date | undefined
+        try {
+          const subscription = await stripe.subscriptions.retrieve(stripeSubscriptionId)
+          const periodEnd = subscription.items.data[0]?.current_period_end
+          if (periodEnd) {
+            renewalDate = new Date(periodEnd * 1000)
+          }
+        } catch (err: any) {
+          logger.warn(`[Billing] Could not resolve current period end for subscription ${stripeSubscriptionId}: ${err.message}`)
+        }
+
+        // Extend subscription renewal date
+        await prisma.subscription.updateMany({
+          where: { stripeSubscriptionId },
+          data: {
+            billingStatus: 'ACTIVE',
+            ...(renewalDate ? { renewalDate } : {}),
+            lastBillingResetAt: new Date(),
+            generationMinutesUsed: 0, // Reset usage for new period
+            ...(paymentIntentId ? { stripeLatestPaymentIntentId: paymentIntentId } : {}),
+          },
+        })
 
         logger.info(`[Billing] Invoice paid for subscription ${stripeSubscriptionId}`)
         break
       }
 
       case 'invoice.payment_failed': {
-        const invoice = event.data.object as {
-          customer?: string
-          subscription?: string
+        const invoice = event.data.object as InvoiceWithSubscription
+
+        const stripeSubscriptionId = resolveInvoiceSubscriptionId(invoice)
+
+        if (!stripeSubscriptionId) {
+          logger.warn(`[Billing] invoice.payment_failed ${invoice.id} carried no subscription id — skipping`)
+          break
         }
-        
-        const stripeSubscriptionId = invoice.subscription as string
-        
-        if (stripeSubscriptionId) {
-          await prisma.subscription.updateMany({
-            where: { stripeSubscriptionId },
-            data: { billingStatus: 'PAST_DUE' },
-          })
-        }
-        
+
+        await prisma.subscription.updateMany({
+          where: { stripeSubscriptionId },
+          data: { billingStatus: 'PAST_DUE' },
+        })
+
+
         logger.info(`[Billing] Payment failed for subscription ${stripeSubscriptionId}`)
         break
       }
