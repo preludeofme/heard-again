@@ -6,7 +6,6 @@ import {
   Container,
   Grid,
   Card,
-  Avatar,
   useTheme,
   Accordion,
   AccordionSummary,
@@ -46,24 +45,33 @@ const MaterialSymbol = ({ icon, sx }: { icon: string; sx?: any }) => (
 
 
 
-const testimonials = [
+/**
+ * Replaces the old "Voices of the Story" testimonials (TRU-29). There are no
+ * paying customers yet, so there are no customers to quote. Every claim below
+ * is something a visitor can check in the public repo or in their own account
+ * before they pay anything.
+ */
+const verifiableClaims = [
   {
-    quote: "I had old recordings of my mother, but they were scattered everywhere. Heard Again gave our family one place to preserve them and share the stories behind them.",
-    name: 'Heritage Member',
-    role: '',
-    avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&h=200&fit=crop&crop=face',
+    icon: 'code',
+    title: 'Read the code before you trust it',
+    body: 'Heard Again is MIT licensed and the whole application is public. You can read exactly how uploads and voice profiles are handled before you send us a single recording.',
+    linkLabel: 'View the source',
+    linkHref: 'https://github.com/preludeofme/heard-again',
   },
   {
-    quote: "My dad’s friends added memories I had never heard before. It felt like meeting another side of him.",
-    name: 'Legacy Builder',
-    role: '',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=face',
+    icon: 'memory',
+    title: 'No third-party voice API sees your family',
+    body: 'Voice synthesis runs on our own GPU service using the open Qwen3-TTS model. Your recordings are not sent to ElevenLabs, OpenAI or any other outside voice provider, and they are never used to train public models.',
+    linkLabel: 'See the voice service',
+    linkHref: 'https://github.com/preludeofme/heard-again/tree/main/TTS',
   },
   {
-    quote: "We started this for my grandmother, but it became something our whole family built together.",
-    name: 'Family Contributor',
-    role: '',
-    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&h=200&fit=crop&crop=face',
+    icon: 'logout',
+    title: 'Leave whenever, and take everything',
+    body: 'Export a complete archive of your stories and recordings from your account at any time. The 14-day trial asks for a card at signup but charges nothing until day 15 — cancel before then and you are not billed.',
+    linkLabel: 'See what each plan costs',
+    linkHref: '#pricing',
   },
 ]
 
@@ -610,9 +618,10 @@ export function LandingPage({ plans }: LandingPageProps) {
         </Container>
       </Box>
 
-      {/* Testimonials Section */}
+      {/* What you can check yourself (replaced fabricated testimonials — TRU-29) */}
       <Box
         component="section"
+        id="what-you-can-check"
         sx={{
           py: 16,
           px: { xs: 4, md: 8 },
@@ -634,80 +643,74 @@ export function LandingPage({ plans }: LandingPageProps) {
               sx={{
                 fontSize: { xs: '2rem', md: '3rem' },
                 color: 'primary.main',
-                maxWidth: 500,
+                maxWidth: 560,
                 fontFamily: 'var(--font-newsreader), serif',
               }}
             >
-              Voices of the Story
+              We have no customer quotes yet
             </Typography>
             <Typography
               variant="body1"
               sx={{
                 color: 'secondary.main',
-                maxWidth: 300,
-                fontStyle: 'italic',
+                maxWidth: 340,
                 borderLeft: 2,
                 borderColor: 'primary.main',
                 pl: 3,
+                lineHeight: 1.7,
               }}
             >
-              &quot;Over time, your family&apos;s contributions become a private family memory library.&quot;
+              Heard Again is new and nobody is paying for it yet. Rather than invent a family, here
+              are three things you can verify yourself before you trust us with a recording.
             </Typography>
           </Box>
 
-          <Grid container spacing={4}>
-            {testimonials.map((testimonial, index) => (
-              <Grid size={{ xs: 12, lg: 6 }} key={index}>
+          <Grid container spacing={4} alignItems="stretch">
+            {verifiableClaims.map((claim) => (
+              <Grid size={{ xs: 12, md: 4 }} key={claim.icon}>
                 <Card
                   sx={{
                     bgcolor: 'background.paper',
-                    p: 5,
+                    p: 4,
                     borderRadius: 6,
+                    height: '100%',
                     display: 'flex',
-                    flexDirection: { xs: 'column', md: 'row' },
-                    gap: 4,
-                    alignItems: 'center',
+                    flexDirection: 'column',
+                    gap: 2,
                     boxShadow: '0 10px 40px rgba(28, 28, 25, 0.04)',
-                    transform: index === 1 ? 'translateY(32px)' : 'none',
                   }}
                 >
-                  <Avatar
-                    src={testimonial.avatar}
-                    alt={testimonial.name}
-                    sx={{ width: 128, height: 128, flexShrink: 0 }}
-                  />
-                  <Box>
-                    <Typography
-                      variant="body1"
-                      sx={{
-                        fontSize: '1.125rem',
-                        color: 'primary.main',
-                        fontFamily: 'var(--font-newsreader), serif',
-                        fontStyle: 'italic',
-                        mb: 3,
-                        lineHeight: 1.5,
-                      }}
-                    >
-                      &quot;{testimonial.quote}&quot;
-                    </Typography>
-                    <Box>
-                      <Typography
-                        variant="subtitle1"
-                        sx={{ fontWeight: 700, color: 'primary.main' }}
-                      >
-                        {testimonial.name}
-                      </Typography>
-                      <Typography
-                        variant="caption"
-                        sx={{
-                          color: 'secondary.main',
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.1em',
-                        }}
-                      >
-                        {testimonial.role}
-                      </Typography>
-                    </Box>
+                  <Box sx={{ color: '#c19a6b', display: 'flex' }}>
+                    <MaterialSymbol icon={claim.icon} sx={{ fontSize: 36 }} />
+                  </Box>
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      color: 'primary.main',
+                      fontFamily: 'var(--font-newsreader), serif',
+                      lineHeight: 1.3,
+                    }}
+                  >
+                    {claim.title}
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    sx={{ color: 'secondary.main', lineHeight: 1.7, flexGrow: 1 }}
+                  >
+                    {claim.body}
+                  </Typography>
+                  <Box
+                    component={Link}
+                    href={claim.linkHref}
+                    sx={{
+                      color: 'primary.main',
+                      fontWeight: 600,
+                      fontSize: '0.875rem',
+                      textDecoration: 'none',
+                      '&:hover': { textDecoration: 'underline' },
+                    }}
+                  >
+                    {claim.linkLabel} &rarr;
                   </Box>
                 </Card>
               </Grid>
