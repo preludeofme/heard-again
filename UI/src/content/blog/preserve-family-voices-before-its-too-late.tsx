@@ -19,6 +19,7 @@ export const meta = {
 export function BlogContent() {
   return (
     <Box component="article">
+      <link rel="canonical" href="https://www.heardagain.com/blog/preserve-family-voices-before-its-too-late" />
       <Typography
         variant="h2"
         sx={{

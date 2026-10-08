@@ -19,6 +19,7 @@ export const meta = {
 export function BlogContent() {
   return (
     <Box component="article">
+      <link rel="canonical" href="https://www.heardagain.com/blog/why-open-source-matters-for-family-memories" />
       <Typography
         variant="h2"
         sx={{

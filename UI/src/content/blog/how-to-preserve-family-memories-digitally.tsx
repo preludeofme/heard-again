@@ -3,22 +3,23 @@ import { PostLink } from './post-link'
 
 export const meta = {
   slug: 'how-to-preserve-family-memories-digitally' as const,
-  title: 'How to Preserve Family Memories Digitally (Without Losing What Matters)',
-  date: '2026-08-10',
+  title: 'How to Preserve Your Family Memories Digitally: A Guide to Safe, Long-term Storage',
+  date: '2026-08-09',
   excerpt:
-    'A practical guide to recording, organizing, and safeguarding your family stories — with tools and habits that keep your legacy accessible for generations.',
-  tags: ['family memories', 'digital preservation', 'oral history', 'legacy', 'recording tips'],
+    'A practical guide to digital preservation of family voices, stories, and documents for future generations.',
+  tags: ['digital preservation', 'family archives', 'data management', 'legacy preservation'],
   author: {
     name: 'Ryan Buck',
     bio: 'Founder of Heard Again. Helping families preserve the voices and stories that matter most.',
   },
-  readTime: '7 min read',
+  readTime: '6 min read',
   coverImage: '/blog-covers/how-to-preserve-family-memories-digitally.png',
 }
 
 export function BlogContent() {
   return (
     <Box component="article">
+      <link rel="canonical" href="https://www.heardagain.com/blog/how-to-preserve-family-memories-digitally" />
       <Typography
         variant="h2"
         sx={{

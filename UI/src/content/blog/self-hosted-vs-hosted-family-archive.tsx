@@ -18,6 +18,7 @@ export const meta = {
 export function BlogContent() {
   return (
     <Box component="article">
+      <link rel="canonical" href="https://www.heardagain.com/blog/self-hosted-vs-hosted-family-archive" />
       <Typography variant="body1" sx={{ color: '#546669', lineHeight: 1.8, mb: 2 }}>
         Heard Again is open source. You can download it, run it on your own machine, and never pay us
         a cent. That is not a loophole in our business model — it is the point. We wrote about

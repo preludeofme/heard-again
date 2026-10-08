@@ -78,7 +78,8 @@ export function isBypassedPath(pathname: string): boolean {
   return (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api/') ||
-    STATIC_ASSET_PATTERN.test(pathname)
+    STATIC_ASSET_PATTERN.test(pathname) ||
+    pathname === '/robots.txt'
   )
 }
 

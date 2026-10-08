@@ -18,6 +18,7 @@ export const meta = {
 export function BlogContent() {
   return (
     <Box component="article">
+      <link rel="canonical" href="https://www.heardagain.com/blog/gedcom-import-with-audio" />
       <Typography variant="body1" sx={{ color: '#546669', lineHeight: 1.8, mb: 2 }}>
         If you have spent years in Ancestry, FamilySearch, Gramps, or Family Tree Maker, your tree
         almost certainly exports as a GEDCOM file. And if you have also collected recordings —

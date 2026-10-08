@@ -153,3 +153,4 @@ docs/UI_UX_IMPROVEMENTS.md
 docs/marketing.md
 UI/coverage-improvement-plan.md
 .env*.local
+.local/

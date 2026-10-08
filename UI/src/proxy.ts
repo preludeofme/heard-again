@@ -67,6 +67,6 @@ export default async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     '/_next/:path*',
-    '/((?!_next/image|favicon.ico).*)',
+    '/((?!_next/image|favicon.ico|robots.txt).*)',
   ],
 }

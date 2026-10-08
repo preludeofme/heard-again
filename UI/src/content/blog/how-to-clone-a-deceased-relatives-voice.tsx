@@ -18,6 +18,7 @@ export const meta = {
 export function BlogContent() {
   return (
     <Box component="article">
+      <link rel="canonical" href="https://www.heardagain.com/blog/how-to-clone-a-deceased-relatives-voice" />
       <Typography variant="body1" sx={{ color: '#546669', lineHeight: 1.8, mb: 2 }}>
         People search for this quietly. Usually within a year of losing someone, usually after finding
         a voicemail they cannot bring themselves to delete. The question is simple and it is not

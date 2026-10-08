@@ -3,21 +3,22 @@ import { PostLink } from './post-link'
 
 export const meta = {
   slug: 'restore-old-cassette-recording-family-member' as const,
-  title: "How to Restore an Old Cassette Recording of a Family Member",
-  date: '2026-10-19',
+  title: 'How to Restore an Old Cassette Recording from a Family Member and Preserve It Digitally',
+  date: '2026-10-04',
   excerpt:
-    'A step-by-step guide to rescuing a cassette of a relative speaking — how to play it safely, digitise it once and properly, clean it up without destroying the voice, and store it so this is the last time you have to do it.',
-  tags: ['cassette', 'audio restoration', 'digital preservation', 'family voices', 'oral history'],
+    'A guide to restoring and digitizing old cassette recordings to preserve family voices and stories.',
+  tags: ['cassette tapes', 'audio restoration', 'family memories', 'digital preservation'],
   author: {
     name: 'Ryan Buck',
     bio: 'Founder of Heard Again. Helping families preserve the voices and stories that matter most.',
   },
-  readTime: '9 min read',
+  readTime: '8 min read',
 }
 
 export function BlogContent() {
   return (
     <Box component="article">
+      <link rel="canonical" href="https://www.heardagain.com/blog/restore-old-cassette-recording-family-member" />
       <Typography variant="body1" sx={{ color: '#546669', lineHeight: 1.8, mb: 2 }}>
         Somebody in your family has a shoebox with a cassette in it. Maybe it is a labelled interview,
         maybe it is an unmarked tape that turned up when a house was cleared. Either way, there is a

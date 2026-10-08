@@ -19,6 +19,7 @@ export const meta = {
 export function BlogContent() {
   return (
     <Box component="article">
+      <link rel="canonical" href="https://www.heardagain.com/blog/record-grandparents-voices-before-stories-go-quiet" />
       <Typography
         variant="h2"
         sx={{
